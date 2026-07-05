@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Orbit icon">
+  <rect width="512" height="512" rx="112" fill="oklch(0.55 0.149 250)" />
+  <circle cx="256" cy="256" r="122" fill="none" stroke="white" stroke-width="36" />
+  <circle cx="356" cy="156" r="34" fill="oklch(0.66 0.14 75)" />
+  <path d="M92 270c58 78 157 118 253 90 32-9 58-23 78-40" fill="none" stroke="white" stroke-width="28" stroke-linecap="round" opacity=".68" />
+</svg>
