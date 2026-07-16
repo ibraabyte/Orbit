@@ -8,7 +8,7 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 
 export function FocusPage() {
   const { user } = useAuth();
-  const { data, loading, error, refresh } = useDashboardData(user?.id);
+  const { data, loading, error, refresh } = useDashboardData();
   if (!user) return null;
 
   return (

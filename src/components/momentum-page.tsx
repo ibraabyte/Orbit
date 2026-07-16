@@ -28,7 +28,7 @@ function rangeDays(range: RangeValue) {
 
 export function MomentumPage() {
   const { user } = useAuth();
-  const { data, loading, error } = useDashboardData(user?.id);
+  const { data, loading, error } = useDashboardData();
   const [range, setRange] = useState<RangeValue>("daily");
   const days = rangeDays(range);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { getSupabase } from "@/lib/supabase";
 import { flushQueuedCaptures, loadCachedDashboard, saveDashboardCache } from "@/lib/offline-queue";
 import type {
@@ -54,7 +54,11 @@ const emptyData: DashboardData = {
   bills: []
 };
 
-export function useDashboardData(userId: string | undefined) {
+type DashboardDataValue = ReturnType<typeof useDashboardDataSource>;
+
+// Fetches the full owner-scoped dataset. Mounted once via DashboardDataProvider so
+// tab switches read from context instead of re-firing 22 queries per navigation.
+export function useDashboardDataSource(userId: string | undefined) {
   const [data, setData] = useState<DashboardData>(emptyData);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -234,4 +238,19 @@ export function useDashboardData(userId: string | undefined) {
   }, [syncQueuedCaptures, userId]);
 
   return { data, loading, error, refresh, syncMessage };
+}
+
+const DashboardDataContext = createContext<DashboardDataValue | null>(null);
+
+export function DashboardDataProvider({ userId, children }: { userId: string; children: React.ReactNode }) {
+  const value = useDashboardDataSource(userId);
+  return createElement(DashboardDataContext.Provider, { value }, children);
+}
+
+export function useDashboardData() {
+  const value = useContext(DashboardDataContext);
+  if (!value) {
+    throw new Error("useDashboardData must be used inside DashboardDataProvider.");
+  }
+  return value;
 }

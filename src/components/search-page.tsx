@@ -15,7 +15,7 @@ import { buildSearchResults, searchResultLabels, searchResultTypes, type SearchT
 
 export function SearchPage() {
   const { user } = useAuth();
-  const { data, loading, error } = useDashboardData(user?.id);
+  const { data, loading, error } = useDashboardData();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<SearchTypeFilter>("all");
   const results = useMemo(() => buildSearchResults(data, query, typeFilter), [data, query, typeFilter]);

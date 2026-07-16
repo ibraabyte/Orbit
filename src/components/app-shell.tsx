@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, type RefObject, useEffect, useRef, useState } from "react";
 import { BarChart3, ClipboardList, Eye, EyeOff, Home, LogOut, Menu, Plus, Shield, type LucideIcon } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
+import { DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { GlobalShortcuts } from "@/components/global-shortcuts";
 import { OfflineStatusBanner } from "@/components/offline-status-banner";
 import { SetupRequired } from "@/components/setup-required";
@@ -204,7 +205,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </div>
           ) : null}
           <OfflineStatusBanner userId={activeUser.id} />
-          {children}
+          <DashboardDataProvider userId={activeUser.id}>{children}</DashboardDataProvider>
         </main>
 
         <nav

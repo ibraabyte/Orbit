@@ -24,7 +24,7 @@ type PlanTone = "danger" | "warning" | "success";
 
 export function PlanPage() {
   const { user } = useAuth();
-  const { data, loading, error } = useDashboardData(user?.id);
+  const { data, loading, error } = useDashboardData();
   const plan = useMemo(() => buildWeeklyPlan(data), [data]);
   const agendaDays = useMemo(() => buildPlanAgenda(data), [data]);
   const upcomingDays = useMemo(() => buildCalendarDays(data, 7), [data]);

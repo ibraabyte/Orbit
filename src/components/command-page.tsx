@@ -35,7 +35,7 @@ const examples = [
 export function CommandPage() {
   const { user } = useAuth();
   const userId = user?.id;
-  const { data, refresh } = useDashboardData(userId);
+  const { data, refresh } = useDashboardData();
   const [input, setInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);

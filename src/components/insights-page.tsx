@@ -18,7 +18,7 @@ import { formatSleepDuration, sleepByDay } from "@/lib/sleep";
 
 export function InsightsPage() {
   const { user } = useAuth();
-  const { data, loading, error } = useDashboardData(user?.id);
+  const { data, loading, error } = useDashboardData();
   if (!user) return null;
 
   const summary = insightSummary(data);

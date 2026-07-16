@@ -35,7 +35,7 @@ const moodOptions: Array<{ value: JournalMood; label: string }> = [
 
 export function ReviewPage() {
   const { user } = useAuth();
-  const { data, loading, error, refresh } = useDashboardData(user?.id);
+  const { data, loading, error, refresh } = useDashboardData();
   const [mode, setMode] = useState<ReviewMode>("evening");
   const review = useMemo(() => buildReviewSummary(data, mode), [data, mode]);
 

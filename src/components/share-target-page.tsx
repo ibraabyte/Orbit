@@ -15,7 +15,7 @@ import { readSharedCapture, removeSharedCapture, type StoredSharedCapture } from
 export function ShareTargetPage() {
   const params = useSearchParams();
   const { user } = useAuth();
-  const { refresh } = useDashboardData(user?.id);
+  const { refresh } = useDashboardData();
   const shareId = params.get("shareId");
   const shareErrorParam = params.get("shareError");
   const titleParam = params.get("title");

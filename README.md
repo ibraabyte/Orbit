@@ -71,6 +71,20 @@ npm run preflight -- --env-file .env.local
 npm run smoke -- --origin http://localhost:3000
 ```
 
+## Docker
+
+Create `.env.local` from `.env.example`, then build and run:
+
+```bash
+docker compose --env-file .env.local up --build
+```
+
+The app is available at `http://localhost:3000`.
+
+Next.js public environment variables are built into the browser bundle, so
+rebuild the image after changing `NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`, or `NEXT_PUBLIC_VAPID_PUBLIC_KEY`.
+
 ## Production Checklist
 
 - Configure Supabase Auth redirect URLs for local and production domains.

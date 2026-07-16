@@ -10,7 +10,7 @@ import { isToday } from "@/lib/dates";
 
 export function TasksPage() {
   const { user } = useAuth();
-  const { data, loading, error, refresh } = useDashboardData(user?.id);
+  const { data, loading, error, refresh } = useDashboardData();
   if (!user) return null;
 
   const openTasks = data.tasks.filter((task) => task.status === "open");

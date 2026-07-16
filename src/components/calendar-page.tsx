@@ -34,7 +34,7 @@ const kindLabels: Record<CalendarEventKind, string> = {
 
 export function CalendarPage() {
   const { user } = useAuth();
-  const { data, loading, error } = useDashboardData(user?.id);
+  const { data, loading, error } = useDashboardData();
   const days = useMemo(() => buildCalendarDays(data, 14), [data]);
   const counts = useMemo(() => calendarEventCounts(days), [days]);
   const visibleEvents = useMemo(() => days.flatMap((day) => day.events), [days]);

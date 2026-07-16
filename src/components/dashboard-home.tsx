@@ -37,7 +37,7 @@ import { getSupabase } from "@/lib/supabase";
 
 export function DashboardHome() {
   const { user } = useAuth();
-  const { data, loading, error, refresh, syncMessage } = useDashboardData(user?.id);
+  const { data, loading, error, refresh, syncMessage } = useDashboardData();
   const [snoozingId, setSnoozingId] = useState<string | null>(null);
   const [reminderError, setReminderError] = useState<string | null>(null);
 

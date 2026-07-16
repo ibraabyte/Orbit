@@ -50,7 +50,7 @@ const kindIcons: Record<TriageKind, ReactNode> = {
 
 export function InboxPage() {
   const { user } = useAuth();
-  const { data, loading, error, refresh } = useDashboardData(user?.id);
+  const { data, loading, error, refresh } = useDashboardData();
   const [savingActionKey, setSavingActionKey] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const triage = useMemo(() => buildTriageSummary(data), [data]);

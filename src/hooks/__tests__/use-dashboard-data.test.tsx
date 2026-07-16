@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useDashboardDataSource } from "@/hooks/use-dashboard-data";
 import type { DashboardData } from "@/lib/types";
 
 const mocks = vi.hoisted(() => ({
@@ -46,7 +46,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 function Probe({ userId = "user-1" }: { userId?: string | null }) {
-  const { data, loading, syncMessage, error } = useDashboardData(userId ?? undefined);
+  const { data, loading, syncMessage, error } = useDashboardDataSource(userId ?? undefined);
   return React.createElement(
     "div",
     null,
