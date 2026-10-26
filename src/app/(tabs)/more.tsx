@@ -9,6 +9,7 @@ const sections = [
   ["/goals", "Goals", "Goals and milestones"],
   ["/journal", "Journal", "Entries and mood"],
   ["/library", "Library", "Saved links and notes"],
+  ["/vehicles", "Car", "Istimara, insurance, فحص, oil change"],
   ["/settings", "Settings", "Face ID and account"]
 ] as const;
 

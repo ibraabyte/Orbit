@@ -17,6 +17,7 @@ const stackScreens = [
   ["goals", "Goals"],
   ["journal", "Journal"],
   ["library", "Library"],
+  ["vehicles", "Car"],
   ["settings", "Settings"]
 ] as const;
 
