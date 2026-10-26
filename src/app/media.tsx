@@ -44,7 +44,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SeerrResult[]>([]);
   const [searched, setSearched] = useState(false);
-  const [pending, setPending] = useState<SeerrRequest[]>([]);
+  const [pending, setPending] = useState<{ request: SeerrRequest; title: string | null }[]>([]);
   const [loading, setLoading] = useState(false);
 
   const load = async (text = query) => {
@@ -52,7 +52,10 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
     try {
       setResults(text.trim() ? await client.search(text.trim()) : await client.trending());
       setSearched(Boolean(text.trim()));
-      if (seerr.isAdmin) setPending(await client.requests(20, "pending"));
+      if (seerr.isAdmin) {
+        const requests = await client.requests(20, "pending");
+        setPending(await Promise.all(requests.map(async (request) => ({ request, title: await client.details(request.type, request.media.tmdbId).then(seerrTitle).catch(() => null) }))));
+      }
     } catch (error) {
       Alert.alert("Seerr", error instanceof Error ? error.message : "Try again.");
     } finally {
@@ -81,15 +84,15 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
       <TextInput style={styles.input} placeholder="Search movies & TV" value={query} onChangeText={setQuery} onSubmitEditing={() => load()} returnKeyType="search" clearButtonMode="while-editing" />
       {pending.length ? (
         <Section title="Waiting for your approval">
-          {pending.map((request) => (
+          {pending.map(({ request, title }) => (
             <Row
               key={request.id}
-              title={`${request.type === "tv" ? "Series" : "Movie"} request`}
+              title={title ?? `${request.type === "tv" ? "Series" : "Movie"} request`}
               detail={`${request.requestedBy?.displayName ?? "Someone"} · ${new Date(request.createdAt).toLocaleDateString()}`}
               tone="warning"
               right="Review"
               onPress={() =>
-                Alert.alert("Request", REQUEST_STATUS[request.status], [
+                Alert.alert(title ?? "Request", REQUEST_STATUS[request.status], [
                   { text: "Approve", onPress: () => act(() => client.approve(request.id)) },
                   { text: "Decline", style: "destructive", onPress: () => act(() => client.decline(request.id)) },
                   { text: "Cancel", style: "cancel" }
