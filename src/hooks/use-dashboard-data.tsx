@@ -1,3 +1,5 @@
+import * as Haptics from "expo-haptics";
+import { Alert } from "react-native";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { getSupabase } from "@/lib/supabase";
 import type { DashboardData } from "@/lib/types";
@@ -96,7 +98,23 @@ function useDashboardDataSource(userId: string) {
     void refresh();
   }, [refresh]);
 
-  return { userId, data, loading, error, refresh };
+  // Run a write, then reload. Shows an alert instead of throwing so screens stay one-liners.
+  const act = useCallback(
+    async (write: () => PromiseLike<unknown>) => {
+      try {
+        const result = await write();
+        const failure = result && typeof result === "object" && "error" in result ? (result.error as { message: string } | null) : null;
+        if (failure) throw new Error(failure.message);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        await refresh();
+      } catch (actError) {
+        Alert.alert("Could not save", actError instanceof Error ? actError.message : "Try again.");
+      }
+    },
+    [refresh]
+  );
+
+  return { userId, data, loading, error, refresh, act };
 }
 
 const DashboardDataContext = createContext<ReturnType<typeof useDashboardDataSource> | null>(null);

@@ -7,6 +7,18 @@ import { AppLock } from "@/components/app-lock";
 import { DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { getSupabase, hasSupabaseEnv } from "@/lib/supabase";
 
+const stackScreens = [
+  ["health", "Health"],
+  ["food", "Food"],
+  ["finance", "Finance"],
+  ["people", "People"],
+  ["habits", "Habits"],
+  ["goals", "Goals"],
+  ["journal", "Journal"],
+  ["library", "Library"],
+  ["settings", "Settings"]
+] as const;
+
 export default function RootLayout() {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
 
@@ -38,6 +50,9 @@ export default function RootLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={Boolean(session)}>
         <Stack.Screen name="(tabs)" />
+        {stackScreens.map(([name, title]) => (
+          <Stack.Screen key={name} name={name} options={{ headerShown: true, title, headerLargeTitle: true, headerBackTitle: "More" }} />
+        ))}
       </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="sign-in" />

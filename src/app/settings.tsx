@@ -14,7 +14,7 @@ export default function Settings() {
   }, []);
 
   return (
-    <Screen title="Settings">
+    <Screen>
       <View style={ui.card}>
         <Text style={ui.label}>Signed in as</Text>
         <Text style={ui.body}>{data.profile?.display_name ?? "Orbit user"}</Text>
