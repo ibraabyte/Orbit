@@ -10,6 +10,7 @@ const sections = [
   ["/journal", "Journal", "Entries and mood"],
   ["/library", "Library", "Saved links and notes"],
   ["/vehicles", "Car", "Istimara, insurance, فحص, oil change"],
+  ["/media", "Movies & TV", "Search and request on Seerr"],
   ["/settings", "Settings", "Face ID and account"]
 ] as const;
 
