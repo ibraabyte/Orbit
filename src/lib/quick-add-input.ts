@@ -46,6 +46,8 @@ export function naturalToCommand(input: string, options: { defaultCurrency?: str
     const [first, ...rest] = text.split(" ");
     kind = firstWordKinds[first.toLowerCase()] ?? null;
     if (kind) text = rest.join(" ");
+    // "subscription netflix 45" / "اشتراك نتفلكس 45" should land in Subscriptions.
+    if (/^(?:subscription|اشتراك)$/i.test(first) && !/#subscriptions\b/.test(text)) text += " #subscriptions";
   }
 
   text = arabicUnits(text);

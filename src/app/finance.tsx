@@ -1,7 +1,7 @@
 import { QuickAddBar } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section, Stats } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
-import { financeSummary, formatMoney, nextBillDueDate, spendingByCategory } from "@/lib/finance";
+import { activeSubscriptions, financeSummary, formatMoney, nextBillDueDate, spendingByCategory, subscriptionMonthlyTotal } from "@/lib/finance";
 import { getSupabase } from "@/lib/supabase";
 import type { Bill } from "@/lib/types";
 
@@ -11,6 +11,7 @@ export default function Finance() {
   // ponytail: totals assume one currency, same as the web app.
   const currency = data.expenses[0]?.currency ?? data.bills[0]?.currency ?? "SAR";
   const bills = [...finance.overdueBills, ...finance.upcomingBills];
+  const subscriptions = activeSubscriptions(data.bills);
 
   const markPaid = (bill: Bill) => {
     const nextDue = nextBillDueDate(bill);
@@ -35,6 +36,13 @@ export default function Finance() {
           ))
         ) : (
           <Empty>No bills due in 30 days.</Empty>
+        )}
+      </Section>
+      <Section title={`Subscriptions · ${formatMoney(subscriptionMonthlyTotal(data.bills), currency)}/mo`}>
+        {subscriptions.length ? (
+          subscriptions.map((bill) => <Row key={bill.id} title={bill.name} detail={`Renews ${bill.due_at}`} right={formatMoney(bill.amount, bill.currency)} />)
+        ) : (
+          <Empty>Add one: "subscription netflix 45".</Empty>
         )}
       </Section>
       <Section title="By category this month">

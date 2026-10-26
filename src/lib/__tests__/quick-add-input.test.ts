@@ -11,6 +11,10 @@ describe("natural quick add", () => {
     expect(parseNatural("https://example.com", opts).draft).toMatchObject({ kind: "capture", url: "https://example.com" });
   });
 
+  it("files subscriptions under the subscriptions category", () => {
+    expect(parseNatural("اشتراك نتفلكس 45", opts).draft).toMatchObject({ kind: "bill", title: "نتفلكس", amount: 45, currency: "SAR", financeCategory: "subscriptions" });
+  });
+
   it("keeps explicit commands and currencies", () => {
     expect(parseNatural("expense: 4.50 USD coffee", opts).draft).toMatchObject({ kind: "expense", amount: 4.5, currency: "USD" });
   });
