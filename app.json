@@ -14,7 +14,17 @@
     "android": {
       "package": "com.ibraabyte.orbit"
     },
-    "plugins": ["expo-router", "expo-status-bar", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Orbit uses Face ID to keep your data private."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     }

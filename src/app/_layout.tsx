@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
+import { AppLock } from "@/components/app-lock";
 import { DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { getSupabase, hasSupabaseEnv } from "@/lib/supabase";
 
@@ -47,7 +48,13 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="auto" />
-      {session ? <DashboardDataProvider userId={session.user.id}>{stack}</DashboardDataProvider> : stack}
+      {session ? (
+        <AppLock>
+          <DashboardDataProvider userId={session.user.id}>{stack}</DashboardDataProvider>
+        </AppLock>
+      ) : (
+        stack
+      )}
     </>
   );
 }
