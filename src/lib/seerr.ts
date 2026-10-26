@@ -79,6 +79,8 @@ export function createSeerrClient(config: SeerrConfig, fetcher: typeof fetch = f
     // Asks for every season of a series; Seerr skips ones already on the server.
     request: (mediaType: SeerrMediaType, tmdbId: number) =>
       call<SeerrRequest>("/request", { method: "POST", body: JSON.stringify(mediaType === "tv" ? { mediaType, mediaId: tmdbId, seasons: "all" } : { mediaType, mediaId: tmdbId }) }),
+    // Requests carry only a TMDB id; this fetches the name and poster to show with them.
+    details: (mediaType: SeerrMediaType, tmdbId: number) => call<SeerrResult>(`/${mediaType}/${tmdbId}`),
     approve: (requestId: number) => call<SeerrRequest>(`/request/${requestId}/approve`, { method: "POST" }),
     decline: (requestId: number) => call<SeerrRequest>(`/request/${requestId}/decline`, { method: "POST" }),
     cancel: (requestId: number) => call<void>(`/request/${requestId}`, { method: "DELETE" })

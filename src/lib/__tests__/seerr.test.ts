@@ -32,6 +32,13 @@ describe("seerr", () => {
     expect(JSON.parse(String(calls[1].init.body))).toEqual({ mediaType: "tv", mediaId: 1399, seasons: "all" });
   });
 
+  it("looks up a request's title by TMDB id", async () => {
+    const { fetcher, calls } = fakeFetch({ "GET https://s.example/api/v1/tv/1399": { body: { id: 1399, name: "Game of Thrones", firstAirDate: "2011-04-17" } } });
+    const item = await createSeerrClient({ url: "https://s.example", apiKey: "k" }, fetcher).details("tv", 1399);
+    expect(calls[0].url).toBe("https://s.example/api/v1/tv/1399");
+    expect(seerrTitle(item)).toBe("Game of Thrones (2011)");
+  });
+
   it("explains a rejected key", async () => {
     const { fetcher } = fakeFetch({ "GET https://s.example/api/v1/auth/me": { status: 401 } });
     await expect(createSeerrClient({ url: "https://s.example", apiKey: "bad" }, fetcher).me()).rejects.toThrow("rejected the API key");
