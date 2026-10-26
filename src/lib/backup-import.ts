@@ -26,6 +26,7 @@ export const IMPORT_TABLES = [
   "habits",
   "goals",
   "journal_entries",
+  "vehicles",
   "reminders",
   "attachments",
   "taggings",
@@ -126,7 +127,22 @@ const IMPORT_COLUMNS: Record<ImportTableName, readonly string[]> = {
   habit_logs: ["id", "user_id", "habit_id", "logged_at", "note", "created_at"],
   goals: ["id", "user_id", "title", "notes", "status", "target_at", "created_at", "updated_at"],
   goal_milestones: ["id", "user_id", "goal_id", "title", "completed_at", "created_at"],
-  journal_entries: ["id", "user_id", "mood", "title", "body", "entry_date", "created_at", "updated_at"]
+  journal_entries: ["id", "user_id", "mood", "title", "body", "entry_date", "created_at", "updated_at"],
+  vehicles: [
+    "id",
+    "user_id",
+    "name",
+    "plate",
+    "odometer_km",
+    "registration_expires_at",
+    "insurance_expires_at",
+    "inspection_expires_at",
+    "next_oil_change_at",
+    "next_oil_change_km",
+    "notes",
+    "created_at",
+    "updated_at"
+  ]
 };
 
 const UPSERT_CONFLICTS: Record<ImportTableName, string> = {
@@ -151,7 +167,8 @@ const UPSERT_CONFLICTS: Record<ImportTableName, string> = {
   habit_logs: "id",
   goals: "id",
   goal_milestones: "id",
-  journal_entries: "user_id,entry_date"
+  journal_entries: "user_id,entry_date",
+  vehicles: "id"
 };
 
 const TAGGING_TARGET_TABLES = {

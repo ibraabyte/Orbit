@@ -305,6 +305,22 @@ export type Bill = {
   updated_at: string;
 };
 
+export type Vehicle = {
+  id: string;
+  user_id: string;
+  name: string;
+  plate: string | null;
+  odometer_km: number | null;
+  registration_expires_at: string | null;
+  insurance_expires_at: string | null;
+  inspection_expires_at: string | null;
+  next_oil_change_at: string | null;
+  next_oil_change_km: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 type TableDefinition<Row, Insert, Update> = {
   Row: Row;
   Insert: Insert;
@@ -373,6 +389,11 @@ export type Database = {
         GroceryItem,
         Omit<GroceryItem, "id" | "created_at" | "updated_at"> & { id?: string; created_at?: string; updated_at?: string },
         Partial<Omit<GroceryItem, "id" | "user_id" | "created_at" | "updated_at">>
+      >;
+      vehicles: TableDefinition<
+        Vehicle,
+        Omit<Vehicle, "id" | "created_at" | "updated_at"> & { id?: string; created_at?: string; updated_at?: string },
+        Partial<Omit<Vehicle, "id" | "user_id" | "created_at" | "updated_at">>
       >;
       people: TableDefinition<
         Person,
