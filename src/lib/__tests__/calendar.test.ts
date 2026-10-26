@@ -202,4 +202,12 @@ describe("calendar", () => {
       goal: 1
     });
   });
+
+  it("files a late-night UTC timestamp under the local day it happens on", () => {
+    // 22:00 UTC is 01:00 the next day in Riyadh (the pinned test zone).
+    const lateTask = { ...data.tasks[0], id: "late", due_at: "2026-07-01T22:00:00.000Z", reminder_at: null };
+    const days = buildCalendarDays({ ...data, tasks: [lateTask], reminders: [] }, 3, new Date("2026-07-01T12:00:00.000Z"));
+    expect(days[1].events.map((event) => event.id)).toContain("task-due-late");
+    expect(days[0].events.map((event) => event.id)).not.toContain("task-due-late");
+  });
 });

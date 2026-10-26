@@ -39,7 +39,7 @@ export function buildCalendarDays(data: DashboardData, days = 14, now = new Date
   const byDate = new Map(range.map((day) => [day.date, { ...day, events: [] as CalendarEvent[] }]));
 
   for (const event of buildCalendarEvents(data, now)) {
-    const day = byDate.get(event.at.slice(0, 10));
+    const day = byDate.get(localDateKey(new Date(event.at)));
     if (day) day.events.push(event);
   }
 
