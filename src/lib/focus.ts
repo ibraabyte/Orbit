@@ -1,4 +1,4 @@
-import type { DailyMetric } from "@/lib/insights";
+import { localDayOf, type DailyMetric } from "@/lib/insights";
 import type { DashboardData, FocusSession } from "@/lib/types";
 
 export function formatFocusDuration(minutes: number) {
@@ -25,13 +25,13 @@ export function completedFocusMinutes(sessions: FocusSession[]) {
 export function focusMinutesByDay(data: Pick<DashboardData, "focusSessions">, days = 7, now = new Date()): DailyMetric[] {
   return lastDays(days, now).map((day) => ({
     ...day,
-    value: completedFocusMinutes(data.focusSessions.filter((session) => session.started_at.slice(0, 10) === day.date))
+    value: completedFocusMinutes(data.focusSessions.filter((session) => localDayOf(session.started_at) === day.date))
   }));
 }
 
 export function todaysFocusMinutes(sessions: FocusSession[], now = new Date()) {
   const today = localDate(now);
-  return completedFocusMinutes(sessions.filter((session) => session.started_at.slice(0, 10) === today));
+  return completedFocusMinutes(sessions.filter((session) => localDayOf(session.started_at) === today));
 }
 
 export function upcomingFocusSessions(sessions: FocusSession[], days = 7, now = new Date()) {

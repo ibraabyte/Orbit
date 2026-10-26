@@ -67,4 +67,11 @@ describe("focus sessions", () => {
       plannedOverdue: [{ id: "overdue" }]
     });
   });
+
+  it("counts a late-night UTC session on the local day it happened", () => {
+    // 22:30 UTC on Jul 6 is 01:30 on Jul 7 in Riyadh (the pinned test zone).
+    const late = session({ id: "late", started_at: "2026-07-06T22:30:00.000Z", status: "completed", duration_minutes: 30 });
+    const days = focusMinutesByDay({ focusSessions: [late] }, 2, now);
+    expect(days.map((day) => day.value)).toEqual([0, 30]);
+  });
 });

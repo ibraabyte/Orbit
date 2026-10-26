@@ -1,4 +1,4 @@
-import { localDateKey, lastDays, type DailyMetric } from "@/lib/insights";
+import { localDateKey, localDayOf, lastDays, type DailyMetric } from "@/lib/insights";
 import type { Bill, BillRecurrence, DashboardData, Expense, FinanceCategory } from "@/lib/types";
 
 export const financeCategories: FinanceCategory[] = [
@@ -61,7 +61,7 @@ export function spendingByDay(data: Pick<DashboardData, "expenses">, days = 7, n
   return lastDays(days, now).map((day) => ({
     ...day,
     value: data.expenses
-      .filter((expense) => expense.spent_at.slice(0, 10) === day.date)
+      .filter((expense) => localDayOf(expense.spent_at) === day.date)
       .reduce((sum, expense) => sum + Number(expense.amount), 0)
   }));
 }
@@ -100,7 +100,7 @@ export function financeSummary(data: Pick<DashboardData, "expenses" | "bills">, 
   const monthSpend = monthExpenses.reduce((sum, expense) => sum + Number(expense.amount), 0);
   const today = localDateKey(now);
   const todaySpend = data.expenses
-    .filter((expense) => expense.spent_at.slice(0, 10) === today)
+    .filter((expense) => localDayOf(expense.spent_at) === today)
     .reduce((sum, expense) => sum + Number(expense.amount), 0);
   const categories = spendingByCategory(data.expenses, now);
 
