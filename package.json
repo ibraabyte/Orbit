@@ -1,47 +1,40 @@
 {
   "name": "orbit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "type": "module",
+  "main": "expo-router/entry",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint src --max-warnings=0",
+    "start": "expo start",
+    "ios": "expo start --ios",
+    "android": "expo start --android",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build",
-    "audit": "npm audit --audit-level=moderate",
-    "preflight": "node scripts/deployment-preflight.mjs",
-    "migrations:bundle": "node scripts/migration-bundle.mjs",
-    "smoke": "node scripts/smoke-check.mjs",
-    "vapid:generate": "web-push generate-vapid-keys --json"
+    "verify": "npm run typecheck && npm test",
+    "migrations:bundle": "node scripts/migration-bundle.mjs"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.50.0",
-    "lucide-react": "^0.468.0",
-    "next": "^15.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "web-push": "^3.6.7"
+    "expo": "~58.0.19",
+    "expo-constants": "~58.0.13",
+    "expo-haptics": "~58.0.7",
+    "expo-linking": "~58.0.14",
+    "expo-router": "~58.0.26",
+    "expo-secure-store": "~58.0.2",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "react-native-url-polyfill": "^4.0.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.2",
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.1.0",
     "@types/node": "^22.10.2",
-    "@types/react": "^19.0.2",
-    "@types/react-dom": "^19.0.2",
-    "@types/web-push": "^3.6.4",
-    "eslint": "^9.17.0",
-    "eslint-config-next": "^15.0.0",
+    "@types/react": "~19.3.0",
     "jsdom": "^25.0.1",
-    "tailwindcss": "^4.3.2",
-    "typescript": "^5.7.2",
+    "typescript": "~6.0.3",
     "vitest": "^4.1.9"
-  },
-  "overrides": {
-    "postcss": "^8.5.10"
   }
 }

@@ -1,4 +1,3 @@
-.next
 node_modules
 dist
 coverage
@@ -9,3 +8,8 @@ coverage
 supabase/.branches
 supabase/.temp
 *.tsbuildinfo
+.expo
+expo-env.d.ts
+/ios
+/android
+.next
