@@ -3,14 +3,17 @@ import { Button, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
 import { Screen, ui } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { arePrayerAlertsEnabled, setPrayerAlertsEnabled } from "@/hooks/use-prayer-times";
 import { getSupabase } from "@/lib/supabase";
 
 export default function Settings() {
   const { data } = useDashboardData();
   const [lock, setLock] = useState(true);
+  const [prayers, setPrayers] = useState(true);
 
   useEffect(() => {
     void isAppLockEnabled().then(setLock);
+    void arePrayerAlertsEnabled().then(setPrayers);
   }, []);
 
   return (
@@ -26,6 +29,16 @@ export default function Settings() {
           onValueChange={(next) => {
             setLock(next);
             void setAppLockEnabled(next);
+          }}
+        />
+      </View>
+      <View style={[ui.card, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}>
+        <Text style={ui.body}>Prayer time alerts</Text>
+        <Switch
+          value={prayers}
+          onValueChange={(next) => {
+            setPrayers(next);
+            void setPrayerAlertsEnabled(next);
           }}
         />
       </View>
