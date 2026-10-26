@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { AppLock } from "@/components/app-lock";
 import { DashboardDataProvider } from "@/hooks/use-dashboard-data";
+import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { getSupabase, hasSupabaseEnv } from "@/lib/supabase";
 
 const stackScreens = [
@@ -65,7 +66,10 @@ export default function RootLayout() {
       <StatusBar style="auto" />
       {session ? (
         <AppLock>
-          <DashboardDataProvider userId={session.user.id}>{stack}</DashboardDataProvider>
+          <DashboardDataProvider userId={session.user.id}>
+            <ReminderNotifications />
+            {stack}
+          </DashboardDataProvider>
         </AppLock>
       ) : (
         stack

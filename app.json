@@ -23,6 +23,13 @@
         {
           "faceIDPermission": "Orbit uses Face ID to keep your data private."
         }
+      ],
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Orbit uses your location to calculate prayer times."
+        }
       ]
     ],
     "experiments": {
