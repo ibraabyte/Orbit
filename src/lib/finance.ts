@@ -166,3 +166,37 @@ function billDate(value: string) {
 function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
+
+// Subscriptions are bills in the "subscriptions" category (Netflix, Spotify, ...).
+export function activeSubscriptions(bills: Bill[]) {
+  return bills
+    .filter((bill) => bill.category === "subscriptions" && bill.status === "active")
+    .sort((a, b) => billDate(a.due_at).getTime() - billDate(b.due_at).getTime());
+}
+
+export function subscriptionMonthlyTotal(bills: Bill[]) {
+  return monthlyCommitments(activeSubscriptions(bills));
+}
+
+export type BillAlert = { id: string; title: string; body: string; at: Date; url: string };
+
+// A heads-up `daysBefore` a bill is due, at 9:00 local, so a renewal can still be cancelled.
+export function billRenewalAlerts(bills: Bill[], now = new Date(), daysBefore = 3): BillAlert[] {
+  return bills
+    .filter((bill) => bill.status === "active")
+    .map((bill) => {
+      const at = billDate(bill.due_at);
+      at.setDate(at.getDate() - daysBefore);
+      at.setHours(9, 0, 0, 0);
+      const renews = bill.category === "subscriptions" || bill.autopay;
+      return {
+        id: `bill-${bill.id}-${bill.due_at}`,
+        title: renews ? `${bill.name} renews in ${daysBefore} days` : `${bill.name} is due in ${daysBefore} days`,
+        body: `${formatMoney(bill.amount, bill.currency)} on ${bill.due_at}${renews ? ". Cancel before then if you don't need it." : "."}`,
+        at,
+        url: "/finance"
+      };
+    })
+    .filter((alert) => alert.at.getTime() > now.getTime())
+    .sort((a, b) => a.at.getTime() - b.at.getTime());
+}

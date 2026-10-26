@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  activeSubscriptions,
+  billRenewalAlerts,
+  subscriptionMonthlyTotal,
   financeSummary,
   formatMoney,
   nextBillDueDate,
@@ -95,3 +98,26 @@ describe("finance", () => {
     expect(nextBillDueDate(bill({ recurrence: "once" }), now)).toBeNull();
   });
 });
+
+describe("subscriptions", () => {
+  const netflix = bill({ id: "netflix", name: "Netflix", category: "subscriptions", amount: 45, currency: "SAR", due_at: "2026-07-20", recurrence: "monthly" });
+  const icloud = bill({ id: "icloud", name: "iCloud", category: "subscriptions", amount: 120, currency: "SAR", due_at: "2026-07-17", recurrence: "yearly" });
+  const paused = bill({ id: "paused", category: "subscriptions", status: "paused", due_at: "2026-07-18" });
+  const rent = bill({ id: "rent", name: "Rent", category: "home", amount: 3000, currency: "SAR", due_at: "2026-08-01", autopay: false });
+
+  it("lists active subscriptions by renewal date and totals them per month", () => {
+    expect(activeSubscriptions([netflix, icloud, paused, rent]).map((item) => item.id)).toEqual(["icloud", "netflix"]);
+    expect(subscriptionMonthlyTotal([netflix, icloud, paused, rent])).toBe(55);
+  });
+
+  it("alerts three days before each active bill, skipping ones already inside the window", () => {
+    const alerts = billRenewalAlerts([netflix, icloud, paused, rent], now);
+    // iCloud's heads-up (Jul 14) is already past on Jul 15.
+    expect(alerts.map((alert) => alert.id)).toEqual(["bill-netflix-2026-07-20", "bill-rent-2026-08-01"]);
+    expect(alerts[0].title).toBe("Netflix renews in 3 days");
+    expect(alerts[0].at.getDate()).toBe(17);
+    expect(alerts[0].at.getHours()).toBe(9);
+    expect(alerts[1].title).toBe("Rent is due in 3 days");
+  });
+});
+

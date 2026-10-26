@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useEffect } from "react";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
+import { billRenewalAlerts } from "@/lib/finance";
 import { buildLocalReminderSchedule } from "@/lib/reminder-notifications";
 
 Notifications.setNotificationHandler({
@@ -22,9 +23,11 @@ export function useReminderNotifications() {
       // Only clear our own alarms; prayer alerts are scheduled separately.
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
       await Promise.all(
-        scheduled.filter((item) => /^(reminder|task)-/.test(item.identifier)).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
+        scheduled.filter((item) => /^(reminder|task|bill)-/.test(item.identifier)).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
       );
-      for (const item of buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks })) {
+      // iOS keeps 64 pending alarms: 44 reminders + 8 bill heads-ups + 10 prayers = 62.
+      const items = [...buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 44 }), ...billRenewalAlerts(data.bills).slice(0, 8)];
+      for (const item of items) {
         await Notifications.scheduleNotificationAsync({
           identifier: item.id,
           content: { title: item.title, body: item.body, data: { url: item.url } },
@@ -35,7 +38,7 @@ export function useReminderNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [data.reminders, data.tasks]);
+  }, [data.reminders, data.tasks, data.bills]);
 
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
