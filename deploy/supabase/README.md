@@ -41,14 +41,14 @@ db.example.com {
 افتح نفقًا آمنًا لقاعدة الخادم في نافذة منفصلة:
 
 ```bash
-ssh -N -L 5433:localhost:5432 server
+ssh -N -L 5440:localhost:5432 server
 ```
 
 ثم من مجلد المشروع:
 
 ```bash
 OLD_DB_URL='رابط Session pooler من لوحة Supabase القديمة' \
-NEW_DB_URL='postgresql://postgres.your-tenant-id:POSTGRES_PASSWORD@host.docker.internal:5433/postgres' \
+NEW_DB_URL='postgresql://postgres.your-tenant-id:POSTGRES_PASSWORD@host.docker.internal:5440/postgres' \
 bash deploy/supabase/move-data.sh
 ```
 
@@ -78,5 +78,12 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=<ANON_KEY من ~/supabase/.env>
 
 ## بعد النقل
 
-- النسخ الاحتياطي: Supabase الذاتي لا يأخذ نسخًا تلقائية. أضف `pg_dump` يومي بـ cron على الخادم.
+- النسخ الاحتياطي: Supabase الذاتي لا يأخذ نسخًا تلقائية. على الخادم شغّل `crontab -e` وأضف هذا السطر.
+  يأخذ نسخة كل ليلة الساعة 3 ويحذف ما هو أقدم من 14 يومًا:
+
+  ```
+  0 3 * * * mkdir -p ~/backups && docker exec supabase-db pg_dump -U postgres -Fc postgres > ~/backups/orbit-$(date +\%F).dump && find ~/backups -name 'orbit-*.dump' -mtime +14 -delete
+  ```
+
+  الملفات المرفقة محفوظة في `~/supabase/volumes/storage`. انسخها مع النسخ لو تبي نسخة كاملة.
 - لوحة التحكم (Studio) على المنفذ 8000 نفسه، ومحمية بـ `DASHBOARD_USERNAME` و`DASHBOARD_PASSWORD`.
