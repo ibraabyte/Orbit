@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
 import { Alert } from "react-native";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
@@ -54,7 +55,6 @@ const listQueries = [
   ["bills", "bills", "due_at", true, 80]
 ] as const;
 
-// ponytail: no offline cache yet; the plan swaps the web IndexedDB queue for expo-sqlite later.
 async function loadDashboard(userId: string): Promise<DashboardData> {
   const supabase = getSupabase();
   const [profile, ...lists] = await Promise.all([
@@ -77,6 +77,24 @@ async function loadDashboard(userId: string): Promise<DashboardData> {
   return data as DashboardData;
 }
 
+// Last good copy per user, so the app opens with data when offline. Writes still need a connection.
+const CACHE_PREFIX = "orbit.cache.";
+type CachedDashboard = { savedAt: string; data: DashboardData };
+
+async function readCache(userId: string): Promise<CachedDashboard | null> {
+  try {
+    const raw = await AsyncStorage.getItem(CACHE_PREFIX + userId);
+    return raw ? (JSON.parse(raw) as CachedDashboard) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function clearDashboardCache() {
+  const keys = (await AsyncStorage.getAllKeys()).filter((key) => key.startsWith(CACHE_PREFIX));
+  await AsyncStorage.multiRemove(keys);
+}
+
 function useDashboardDataSource(userId: string) {
   const [data, setData] = useState<DashboardData>(emptyData);
   const [loading, setLoading] = useState(true);
@@ -86,17 +104,35 @@ function useDashboardDataSource(userId: string) {
     setLoading(true);
     setError(null);
     try {
-      setData(await loadDashboard(userId));
+      const fresh = await loadDashboard(userId);
+      setData(fresh);
+      void AsyncStorage.setItem(CACHE_PREFIX + userId, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh } satisfies CachedDashboard)).catch(() => undefined);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Data could not be loaded.");
+      const cached = await readCache(userId);
+      if (cached) {
+        setData(cached.data);
+        setError(`Offline. Showing what was saved ${new Date(cached.savedAt).toLocaleString()}.`);
+      } else {
+        setError(loadError instanceof Error ? loadError.message : "Data could not be loaded.");
+      }
     } finally {
       setLoading(false);
     }
   }, [userId]);
 
   useEffect(() => {
+    // Show the saved copy at once, then replace it with fresh data.
+    void readCache(userId).then((cached) => cached && setData((current) => (current === emptyData ? cached.data : current)));
     void refresh();
-  }, [refresh]);
+  }, [refresh, userId]);
+
+  // Personal data shouldn't outlive the session on a shared phone.
+  useEffect(() => {
+    const { data: listener } = getSupabase().auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") void clearDashboardCache();
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   // Run a write, then reload. Shows an alert instead of throwing so screens stay one-liners.
   const act = useCallback(
