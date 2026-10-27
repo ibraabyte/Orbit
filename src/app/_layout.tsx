@@ -6,6 +6,7 @@ import { ActivityIndicator, Text, View } from "react-native";
 import { AppLock } from "@/components/app-lock";
 import { DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
+import { ServerStatusProvider } from "@/hooks/use-server-status";
 import { getSupabase, hasSupabaseEnv } from "@/lib/supabase";
 
 const stackScreens = [
@@ -70,7 +71,7 @@ export default function RootLayout() {
         <AppLock>
           <DashboardDataProvider userId={session.user.id}>
             <ReminderNotifications />
-            {stack}
+            <ServerStatusProvider>{stack}</ServerStatusProvider>
           </DashboardDataProvider>
         </AppLock>
       ) : (
