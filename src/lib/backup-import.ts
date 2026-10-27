@@ -27,6 +27,7 @@ export const IMPORT_TABLES = [
   "goals",
   "journal_entries",
   "vehicles",
+  "watch_items",
   "reminders",
   "attachments",
   "taggings",
@@ -142,7 +143,8 @@ const IMPORT_COLUMNS: Record<ImportTableName, readonly string[]> = {
     "notes",
     "created_at",
     "updated_at"
-  ]
+  ],
+  watch_items: ["id", "user_id", "tmdb_id", "media_type", "title", "poster_path", "status", "season", "episode", "notes", "created_at", "updated_at"]
 };
 
 const UPSERT_CONFLICTS: Record<ImportTableName, string> = {
@@ -168,7 +170,8 @@ const UPSERT_CONFLICTS: Record<ImportTableName, string> = {
   goals: "id",
   goal_milestones: "id",
   journal_entries: "user_id,entry_date",
-  vehicles: "id"
+  vehicles: "id",
+  watch_items: "user_id,media_type,tmdb_id"
 };
 
 const TAGGING_TARGET_TABLES = {

@@ -23,7 +23,7 @@ cp .env.example .env.local   # fill in EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_
 npm start
 ```
 
-Apply the SQL files in `supabase/migrations/` in number order first (`0015_vehicles.sql` is new for the car screen). To make
+Apply the SQL files in `supabase/migrations/` in number order first (`0015_vehicles.sql` for the car screen and `0016_watch_items.sql` for the watch list are new). To make
 one bundle: `npm run migrations:bundle -- --out /path/to/orbit-migrations.sql`.
 
 ## Commands

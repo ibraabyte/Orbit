@@ -45,7 +45,8 @@ describe("migration bundle", () => {
       "0012_macro_targets.sql",
       "0013_owner_reference_guards.sql",
       "0014_owner_query_indexes.sql",
-      "0015_vehicles.sql"
+      "0015_vehicles.sql",
+      "0016_watch_items.sql"
     ]);
     expect(report.sourceChecksum).toMatch(/^[a-f0-9]{64}$/);
     expect(report.bundleChecksum).toMatch(/^[a-f0-9]{64}$/);

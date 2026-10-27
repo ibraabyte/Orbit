@@ -34,6 +34,7 @@ export const ACCOUNT_DELETE_TABLES = [
   { name: "goals", ownerColumn: "user_id" },
   { name: "journal_entries", ownerColumn: "user_id" },
   { name: "vehicles", ownerColumn: "user_id" },
+  { name: "watch_items", ownerColumn: "user_id" },
   { name: "profiles", ownerColumn: "id" }
 ] as const satisfies readonly AccountDeleteTable[];
 
