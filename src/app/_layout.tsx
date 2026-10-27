@@ -20,6 +20,7 @@ const stackScreens = [
   ["library", "Library"],
   ["vehicles", "Car"],
   ["media", "Movies & TV"],
+  ["servers", "Servers"],
   ["settings", "Settings"]
 ] as const;
 
