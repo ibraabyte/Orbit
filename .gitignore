@@ -13,3 +13,4 @@ expo-env.d.ts
 /ios
 /android
 .next
+deploy/supabase/.dump/
