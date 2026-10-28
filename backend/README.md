@@ -65,7 +65,9 @@ ORBIT_TEST_DATABASE_URL=postgresql+psycopg://orbit:orbit@localhost:5432/orbit_te
 `app/crud.py` فيه `owned_crud_router`: تعطيه الجدول وشكل الإدخال والترتيب، ويطلع لك قائمة وإضافة وتعديل وحذف محمية بحساب المستخدم. مثال من `app/routers/tasks.py`:
 
 ```python
-reminders_router = owned_crud_router(Reminder, prefix="/reminders", create=ReminderCreate, update=ReminderUpdate, order_by=Reminder.remind_at.asc())
+reminders_router = owned_crud_router(
+    Reminder, prefix="/reminders", create=ReminderCreate, update=ReminderUpdate, order_by=Reminder.remind_at.asc()
+)
 ```
 
 ## الخطوات الجاية
