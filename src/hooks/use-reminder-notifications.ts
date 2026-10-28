@@ -35,6 +35,8 @@ export function useReminderNotifications() {
         ...vehicleAlerts(vehicles).slice(0, 4)
       ];
       for (const item of items) {
+        // A newer load took over; stop so a deleted reminder isn't put back.
+        if (cancelled) return;
         await Notifications.scheduleNotificationAsync({
           identifier: item.id,
           content: { title: item.title, body: item.body, data: { url: item.url } },
@@ -48,10 +50,15 @@ export function useReminderNotifications() {
   }, [data.reminders, data.tasks, data.bills, vehicles]);
 
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const url = response.notification.request.content.data?.url;
-      if (typeof url === "string") router.push(url as never);
-    });
+    function open(response: Notifications.NotificationResponse | null) {
+      const url = response?.notification.request.content.data?.url;
+      if (typeof url !== "string") return;
+      Notifications.clearLastNotificationResponse();
+      router.push(url as never);
+    }
+    // A tap that launched the app from closed arrives before any listener exists.
+    open(Notifications.getLastNotificationResponse());
+    const subscription = Notifications.addNotificationResponseReceivedListener(open);
     return () => subscription.remove();
   }, []);
 }

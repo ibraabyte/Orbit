@@ -54,19 +54,25 @@ export function AppLock({ children }: { children: ReactNode }) {
     return () => subscription.remove();
   }, [unlock]);
 
-  if (locked || covered) {
-    return (
-      <View style={styles.cover}>
-        <Text style={styles.title}>Orbit</Text>
-        {locked && !covered ? <Button title="Unlock" onPress={unlock} /> : null}
+  // Cover the app instead of unmounting it, so the open screen and anything typed survive a lock.
+  const hidden = locked || covered;
+  return (
+    <View style={styles.fill}>
+      <View style={styles.fill} accessibilityElementsHidden={hidden} importantForAccessibility={hidden ? "no-hide-descendants" : "auto"}>
+        {children}
       </View>
-    );
-  }
-
-  return children;
+      {hidden ? (
+        <View style={[StyleSheet.absoluteFill, styles.cover]}>
+          <Text style={styles.title}>Orbit</Text>
+          {locked && !covered ? <Button title="Unlock" onPress={unlock} /> : null}
+        </View>
+      ) : null}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
-  cover: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, backgroundColor: "#f2f2f7" },
+  fill: { flex: 1 },
+  cover: { alignItems: "center", justifyContent: "center", gap: 16, backgroundColor: "#f2f2f7" },
   title: { fontSize: 34, fontWeight: "700", color: "#111" }
 });
