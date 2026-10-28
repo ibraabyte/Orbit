@@ -5,12 +5,25 @@
 set -euo pipefail
 
 PUBLIC_URL="${PUBLIC_URL:?set PUBLIC_URL, e.g. https://db.example.com}"
-DIR="$HOME/supabase"
+PUBLIC_URL="${PUBLIC_URL%/}"
+DIR="${SUPABASE_DIR:-$HOME/supabase}"
+# Upstream's Docker setup changes often (gateway, key names); pin the version this script was tested with.
+SUPABASE_REF=167c633ed06da4da7b545f083b999fd7d8c669c5
+
+for tool in docker git openssl; do
+  command -v "$tool" >/dev/null || { echo "Install $tool first." >&2; exit 1; }
+done
+docker compose version >/dev/null 2>&1 || { echo "Install the Docker Compose plugin (docker compose)." >&2; exit 1; }
 
 if [ ! -d "$DIR" ]; then
-  git clone --depth 1 https://github.com/supabase/supabase /tmp/supabase-src
-  cp -r /tmp/supabase-src/docker "$DIR"
-  rm -rf /tmp/supabase-src
+  SRC=$(mktemp -d)
+  git -C "$SRC" init -q
+  git -C "$SRC" remote add origin https://github.com/supabase/supabase
+  git -C "$SRC" sparse-checkout set docker # only the docker folder, not the whole monorepo
+  git -C "$SRC" fetch -q --depth 1 --filter=blob:none origin "$SUPABASE_REF"
+  git -C "$SRC" checkout -q FETCH_HEAD
+  cp -r "$SRC/docker" "$DIR"
+  rm -rf "$SRC"
 fi
 cd "$DIR"
 
@@ -39,14 +52,30 @@ if [ ! -f .env ]; then
   set_env PG_META_CRYPTO_KEY "$(openssl rand -hex 16)"
   set_env LOGFLARE_PUBLIC_ACCESS_TOKEN "$(openssl rand -hex 24)"
   set_env LOGFLARE_PRIVATE_ACCESS_TOKEN "$(openssl rand -hex 24)"
+  set_env REALTIME_DB_ENC_KEY "$(openssl rand -hex 8)"
+  set_env POOLER_TENANT_ID orbit
   set_env SITE_URL "$PUBLIC_URL"
-  set_env API_EXTERNAL_URL "$PUBLIC_URL"
+  set_env API_EXTERNAL_URL "$PUBLIC_URL/auth/v1"
   set_env SUPABASE_PUBLIC_URL "$PUBLIC_URL"
   # ponytail: Orbit is single-user; accounts come over from the old project, no new sign-ups.
   set_env DISABLE_SIGNUP true
   chmod 600 .env
 fi
 
+# Docker publishes ports past the firewall (ufw), so bind them to localhost only.
+# Caddy reaches the API on 127.0.0.1:8000 and move-data.sh reaches the database through an SSH tunnel.
+cat > docker-compose.orbit.yml <<'YAML'
+services:
+  api-gw:
+    ports: !override
+      - 127.0.0.1:${API_GW_HTTP_PORT:-8000}:8000/tcp
+  supavisor:
+    ports: !override
+      - 127.0.0.1:${POSTGRES_PORT}:5432
+      - 127.0.0.1:${POOLER_PROXY_PORT_TRANSACTION}:6543
+YAML
+set_env COMPOSE_FILE docker-compose.yml:docker-compose.orbit.yml
+
 docker compose pull
-docker compose up -d
-echo "Supabase is up on port 8000. Keys are in $DIR/.env (ANON_KEY, SERVICE_ROLE_KEY, POSTGRES_PASSWORD)."
+docker compose up -d --wait --wait-timeout 600
+echo "Supabase is up on 127.0.0.1:8000. Keys are in $DIR/.env (ANON_KEY, SERVICE_ROLE_KEY, POSTGRES_PASSWORD)."

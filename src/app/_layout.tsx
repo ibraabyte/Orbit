@@ -71,8 +71,9 @@ export default function RootLayout() {
       {session ? (
         <AppLock>
           <DashboardDataProvider userId={session.user.id}>
-            <ReminderNotifications />
             <ServerStatusProvider>{stack}</ServerStatusProvider>
+            {/* After the stack, so a notification tap that opened the app navigates once it's mounted. */}
+            <ReminderNotifications />
           </DashboardDataProvider>
         </AppLock>
       ) : (

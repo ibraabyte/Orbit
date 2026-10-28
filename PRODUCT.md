@@ -10,7 +10,7 @@ Orbit is for a single owner who wants one reliable place to organize daily life 
 
 ## Product Purpose
 
-Orbit exists to be a personal command center: a focused PWA that combines today’s plan, focus blocks, people follow-ups and birthdays, review loops, calendar export, food plans and groceries, health and recovery logs, spending and bills, reliable reminders, and a searchable library for captured links/screenshots without turning into an overbuilt productivity suite. Success means the dashboard is useful every day, reminder notifications reach the user from every task entry path, the capture flow is fast enough to use in the moment, saved social/bookmark material can be found again, relationships do not disappear from view, reviews help close the loop, and personal data stays private under authenticated cloud accounts.
+Orbit exists to be a personal command center: a focused phone app that combines today’s plan, focus blocks, people follow-ups and birthdays, review loops, calendar export, food plans and groceries, health and recovery logs, spending and bills, reliable reminders, and a searchable library for captured links/screenshots without turning into an overbuilt productivity suite. Success means the dashboard is useful every day, reminder notifications reach the user from every task entry path, the capture flow is fast enough to use in the moment, saved social/bookmark material can be found again, relationships do not disappear from view, reviews help close the loop, and personal data stays private under authenticated cloud accounts.
 
 ## Brand Personality
 
@@ -32,4 +32,4 @@ Avoid marketing landing-page composition, gamified habit apps with noisy streak 
 
 ## Accessibility & Inclusion
 
-Target WCAG 2.2 AA contrast and keyboard accessibility. Support reduced motion, clear focus states, non-color-only status cues, and graceful behavior when web push notifications are denied or unsupported.
+Target WCAG 2.2 AA contrast and VoiceOver support. Support reduced motion, Dynamic Type, non-color-only status cues, and graceful behavior when notification, location, or Face ID permission is denied.

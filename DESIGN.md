@@ -1,5 +1,8 @@
 # Orbit Design System — "Drift"
 
+> This describes the web version (git tag `web-final`), built with Tailwind. The Expo app does not use it yet:
+> its screens use plain iOS styling from `src/components/screen.tsx`. Keep this as the target look when porting it.
+
 ## Overview
 
 Orbit is a personal life command center for repeated daily use. Drift is its visual language: a **mobile-first** interface with a dark forest gradient shell, warm cream cards, and a single vivid lime accent. It should feel calm, tactile, and legible — content on cream, chrome on forest, one accent for what matters.

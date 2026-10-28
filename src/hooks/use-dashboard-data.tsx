@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
+import * as Notifications from "expo-notifications";
 import { Alert } from "react-native";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { getSupabase } from "@/lib/supabase";
@@ -129,7 +130,11 @@ function useDashboardDataSource(userId: string) {
   // Personal data shouldn't outlive the session on a shared phone.
   useEffect(() => {
     const { data: listener } = getSupabase().auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") void clearDashboardCache();
+      if (event === "SIGNED_OUT") {
+        void clearDashboardCache();
+        // Scheduled alarms carry task and reminder titles; drop them with the session.
+        void Notifications.cancelAllScheduledNotificationsAsync();
+      }
     });
     return () => listener.subscription.unsubscribe();
   }, []);

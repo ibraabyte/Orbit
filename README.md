@@ -4,8 +4,8 @@ Orbit is a private life dashboard for iPhone and Android, built with Expo.
 It brings daily planning, tasks, reminders, health, money, relationships, and
 personal notes into one app, backed by Supabase.
 
-The Next.js web/PWA version is archived at the git tag `web-final`. Screens are
-being moved over one by one; see the migration plan.
+The Next.js web/PWA version is archived at the git tag `web-final`. `APP_PAGES.md`
+lists the screens and `BACKLOG.md` what is left.
 
 ## Tech stack
 
@@ -24,8 +24,9 @@ cp .env.example .env.local   # fill in EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_
 npm start
 ```
 
-Apply the SQL files in `supabase/migrations/` in number order first (`0015_vehicles.sql` for the car screen and `0016_watch_items.sql` for the watch list are new). To make
-one bundle: `npm run migrations:bundle -- --out /path/to/orbit-migrations.sql`.
+The database is self-hosted Supabase: `deploy/supabase/README.md` sets it up and builds
+every table from `supabase/migrations/`. For another Supabase project, apply those SQL files in
+number order, or make one bundle with `npm run migrations:bundle -- --out /path/to/orbit-migrations.sql`.
 
 ## Commands
 
@@ -44,4 +45,5 @@ one bundle: `npm run migrations:bundle -- --out /path/to/orbit-migrations.sql`.
 - `src/hooks/` — data loading shared across tabs
 - `src/lib/` — plain TypeScript logic and Supabase actions, with tests
 - `supabase/migrations/` — database schema and row-level security
+- `deploy/supabase/` — self-hosted Supabase setup and the scripts to move data and files
 - `backend/` — Orbit's own API (FastAPI + Postgres) that is replacing Supabase; see `backend/README.md`
