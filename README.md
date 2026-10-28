@@ -12,6 +12,7 @@ being moved over one by one; see the migration plan.
 - Expo SDK 58, Expo Router, React Native, TypeScript
 - Supabase Auth and Postgres (session stored with AsyncStorage)
 - Vitest for the shared logic in `src/lib`
+- Moving to: `backend/`, a FastAPI + Postgres API hosted on Coolify. The app still talks to Supabase until its hooks are switched over.
 
 ## Getting started
 
@@ -43,3 +44,4 @@ one bundle: `npm run migrations:bundle -- --out /path/to/orbit-migrations.sql`.
 - `src/hooks/` — data loading shared across tabs
 - `src/lib/` — plain TypeScript logic and Supabase actions, with tests
 - `supabase/migrations/` — database schema and row-level security
+- `backend/` — Orbit's own API (FastAPI + Postgres) that is replacing Supabase; see `backend/README.md`
