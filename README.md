@@ -26,6 +26,11 @@ npm start
 Apply the SQL files in `supabase/migrations/` in number order first (`0015_vehicles.sql` for the car screen and `0016_watch_items.sql` for the watch list are new). To make
 one bundle: `npm run migrations:bundle -- --out /path/to/orbit-migrations.sql`.
 
+Local database instead (needs Docker): `npx supabase start` runs Supabase on ports 553xx and applies every
+migration. Put its `API_URL` (`http://127.0.0.1:55321`) and `ANON_KEY` from `npx supabase status` in `.env.local`.
+The app swaps `127.0.0.1` for the Mac's address that Expo already uses, so the phone reaches it on the same Wi-Fi.
+Add your account in Studio (http://127.0.0.1:55323 → Authentication → Add user). Stop with `npx supabase stop`.
+
 ## Commands
 
 | Command | What it does |
