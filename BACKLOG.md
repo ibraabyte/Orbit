@@ -1,30 +1,26 @@
 # Orbit Backlog
 
-## Production Launch Blockers
+The Expo app. The web/PWA backlog is in git at the tag `web-final`.
 
-- Configure real `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, VAPID keys, `VAPID_SUBJECT`, and a strong `CRON_SECRET` in local production-like env and Vercel.
-- Configure Supabase Auth redirect URLs for local and production domains.
-- Apply the generated Supabase migration bundle, or each numbered migration, to the production Supabase project.
-- Run `npm run preflight -- --env-file .env.local` with real production values before deploy.
-- Deploy to Vercel with HTTPS and Vercel Cron calling `/api/reminders/send`.
-- Run `npm run smoke -- --origin https://your-production-domain.example` after deploy.
+## Waiting on the owner
 
-## Manual Production QA
+- Try the app on the phone in Expo Go (`npm start`, scan the QR code).
+- Server for the database move: provider, OS, RAM (4GB+), SSH access, and a subdomain for HTTPS.
+  Then follow `deploy/supabase/README.md`; it builds every table, including `0015_vehicles` and `0016_watch_items`.
+- Seerr: the server URL, and whether the Seerr account is an admin (needed to approve requests).
+  The URL and API key are typed into the app, never sent in chat.
+- Apple Developer account, for a real build (TestFlight), home screen widgets, and Apple Health.
 
-- Complete a full signup and onboarding setup pass against production.
-- Verify Inbox triage, weekly plan, review save, command quick-add, global search, tag search, calendar agenda, and `.ics` export.
-- Verify task reminders, standalone reminders, snooze behavior, Vercel Cron delivery, and push diagnostics.
-- Test web push on Chrome/Edge desktop, Android Chrome, and an installed iOS PWA.
-- Verify PWA install, service worker update behavior, offline fallback, cached dashboard fallback, and Settings readiness checks with evidence notes.
-- Verify mobile share target with normal links/text/images and large-image rejection.
-- Verify screenshot upload, signed attachment viewing, and large-file rejection.
-- Verify food planning, grocery items, workouts, sleep logs, weight logs, focus blocks, expenses, recurring bills, people follow-ups, birthdays, habits, goals, milestones, and journal entries.
-- Verify full JSON export/import, CSV export, browser-local backup health reminders, sign-out rescue download for pending offline captures, and full account deletion.
-- After sign-out and account deletion, confirm push unsubscribe and cleanup of cached personal pages, offline queue data, share-target payloads, and local backup/readiness state.
+## Needs a service key (paused)
 
-## Follow-Up Engineering
+- Shipment tracking.
+- In-app AI assistant.
+- Receipt scanning.
 
-- Add authenticated browser/E2E coverage once real local Supabase env is available; the in-app browser currently shows the setup screen, so authenticated shell interactions cannot be visually clicked locally yet.
-- Add a visual QA pass for the local privacy shield overlay on desktop and mobile after local auth is configured.
-- Consider adding a small Playwright or React component-test setup if future UI behavior needs click-level regression coverage beyond the current source-level drift tests.
-- Re-run `npm run verify`, `npm run audit`, `npm run migrations:bundle -- --check`, `npm run preflight -- --env-file .env.local`, and production smoke after every launch-blocker change.
+## Engineering follow-ups
+
+- Server checks run only while Orbit is open. Round-the-clock alerts need a scheduled job on the server.
+- Car screen: editing a date uses `Alert.prompt`, which is iPhone-only; Android gets one-tap renew only.
+- Port the Drift look (see `DESIGN.md`) to the native screens; they use plain iOS styling for now.
+- Add component or end-to-end tests once the app runs against the self-hosted database.
+- Re-run `npm run verify` after every change.
