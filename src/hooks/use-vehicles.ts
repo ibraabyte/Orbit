@@ -12,9 +12,15 @@ export function useVehicles(userId: string) {
   const [available, setAvailable] = useState(true);
 
   const refresh = useCallback(async () => {
-    const { data, error } = await getSupabase().from("vehicles").select("*").eq("user_id", userId).order("created_at", { ascending: true });
-    setAvailable(!error);
-    setVehicles(error ? [] : (data ?? []));
+    try {
+      const { data, error } = await getSupabase().from("vehicles").select("*").eq("user_id", userId).order("created_at", { ascending: true });
+      setAvailable(!error);
+      setVehicles(error ? [] : (data ?? []));
+    } catch {
+      // getSupabase throws while this screen isn't on Orbit's own server yet.
+      setAvailable(false);
+      setVehicles([]);
+    }
   }, [userId]);
 
   useEffect(() => {

@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
 import { Alert } from "react-native";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { backendMode, getApi } from "@/lib/backend";
 import { getSupabase } from "@/lib/supabase";
 import type { DashboardData } from "@/lib/types";
 
@@ -57,6 +58,8 @@ const listQueries = [
 ] as const;
 
 async function loadDashboard(userId: string): Promise<DashboardData> {
+  // Orbit's own server returns this whole bundle in one call, same shape (backend/app/routers/dashboard.py).
+  if (backendMode() === "api") return { ...emptyData, ...(await getApi().get<Partial<DashboardData>>("/dashboard")) };
   const supabase = getSupabase();
   const [profile, ...lists] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
@@ -129,12 +132,18 @@ function useDashboardDataSource(userId: string) {
 
   // Personal data shouldn't outlive the session on a shared phone.
   useEffect(() => {
+    const forgetSession = () => {
+      void clearDashboardCache();
+      // Scheduled alarms carry task and reminder titles; drop them with the session.
+      void Notifications.cancelAllScheduledNotificationsAsync();
+    };
+    if (backendMode() === "api") {
+      return getApi().onSessionChange((session) => {
+        if (!session) forgetSession();
+      });
+    }
     const { data: listener } = getSupabase().auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") {
-        void clearDashboardCache();
-        // Scheduled alarms carry task and reminder titles; drop them with the session.
-        void Notifications.cancelAllScheduledNotificationsAsync();
-      }
+      if (event === "SIGNED_OUT") forgetSession();
     });
     return () => listener.subscription.unsubscribe();
   }, []);

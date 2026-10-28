@@ -3,6 +3,8 @@ import * as Haptics from "expo-haptics";
 import { type ComponentRef, useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { apiQuickAdd } from "@/lib/api-actions";
+import { backendMode, getApi } from "@/lib/backend";
 import { executeQuickAdd } from "@/lib/quick-add-executor";
 import { describeDraft, parseNatural } from "@/lib/quick-add-input";
 
@@ -38,7 +40,8 @@ export function QuickAddBar() {
     }
     setBusy(true);
     try {
-      await executeQuickAdd(userId, draft);
+      if (backendMode() === "api") await apiQuickAdd(getApi(), draft);
+      else await executeQuickAdd(userId, draft);
       setText("");
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       const next = [line.trim(), ...recent.filter((item) => item !== line.trim())].slice(0, 5);

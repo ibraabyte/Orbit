@@ -16,13 +16,17 @@ lists the screens and `BACKLOG.md` what is left.
 
 ## Getting started
 
-Requirements: Node.js 22, npm, a Supabase project, and Expo Go or a simulator.
+Requirements: Node.js 22, npm, Orbit's server (`backend/`) or a Supabase project, and Expo Go or a simulator.
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY
+cp .env.example .env.local   # set EXPO_PUBLIC_API_URL to Orbit's server, e.g. https://api.example.com
 npm start
 ```
+
+With `EXPO_PUBLIC_API_URL` set, sign-in, sign-up, Today, Plan, Tasks and quick add (tasks and reminders)
+use Orbit's own server. Other screens say they aren't on the new server yet until they move over.
+Leave it empty to keep using Supabase (`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`).
 
 The database is self-hosted Supabase: `deploy/supabase/README.md` sets it up and builds
 every table from `supabase/migrations/`. For another Supabase project, apply those SQL files in

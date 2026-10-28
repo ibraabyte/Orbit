@@ -3,6 +3,8 @@ import { QuickAddBar } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, ui } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { openTasks } from "@/lib/dashboard";
+import { apiCompleteTask } from "@/lib/api-actions";
+import { backendMode, getApi } from "@/lib/backend";
 import { getSupabase } from "@/lib/supabase";
 import { completeTaskWithReminders } from "@/lib/task-completion";
 
@@ -23,7 +25,13 @@ export default function Tasks() {
           detail={task.due_at ? `Due ${new Date(task.due_at).toLocaleString()}` : null}
           tone={task.due_at && new Date(task.due_at).getTime() < now ? "danger" : task.priority === "high" ? "warning" : "neutral"}
           right="Done"
-          onPress={() => act(() => completeTaskWithReminders(getSupabase(), task, { tags: data.tags, taggings: data.taggings }))}
+          onPress={() =>
+            act(() =>
+              backendMode() === "api"
+                ? apiCompleteTask(getApi(), task.id)
+                : completeTaskWithReminders(getSupabase(), task, { tags: data.tags, taggings: data.taggings })
+            )
+          }
         />
       ))}
     </Screen>

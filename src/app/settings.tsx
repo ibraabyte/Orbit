@@ -4,7 +4,7 @@ import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
 import { Screen, ui } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { arePrayerAlertsEnabled, setPrayerAlertsEnabled } from "@/hooks/use-prayer-times";
-import { getSupabase } from "@/lib/supabase";
+import { signOut } from "@/lib/backend";
 
 export default function Settings() {
   const { data } = useDashboardData();
@@ -42,7 +42,7 @@ export default function Settings() {
           }}
         />
       </View>
-      <Button title="Sign out" color="#c0392b" onPress={() => getSupabase().auth.signOut()} />
+      <Button title="Sign out" color="#c0392b" onPress={() => void signOut()} />
     </Screen>
   );
 }
