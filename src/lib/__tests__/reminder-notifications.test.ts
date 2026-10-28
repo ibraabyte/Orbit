@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildLocalReminderSchedule,
   REMINDER_PUSH_BODY_LIMIT,
   REMINDER_PUSH_TITLE_LIMIT,
   buildDueReminderNotifications,
@@ -158,6 +159,30 @@ describe("reminder notifications", () => {
     await expect(
       markReminderNotificationDelivered(client as never, { userId: "user-1", reminderId: "reminder-1" }, "2026-07-01T12:01:00.000Z")
     ).resolves.toEqual({ marked: false, error: "reminders failed" });
+  });
+});
+
+describe("local reminder schedule", () => {
+  it("keeps only future, still-relevant reminders, soonest first, without doubling a task", () => {
+    const schedule = buildLocalReminderSchedule({
+      reminders: [
+        reminder({ id: "past", remind_at: "2026-07-01T11:00:00.000Z" }),
+        reminder({ id: "later", task_id: null, remind_at: "2026-07-03T09:00:00.000Z" }),
+        reminder({ id: "for-task", task_id: "t1", remind_at: "2026-07-02T09:00:00.000Z" })
+      ],
+      tasks: [
+        task({ id: "t1", reminder_at: "2026-07-02T09:00:00.000Z" }),
+        task({ id: "t2", reminder_at: "2026-07-01T18:00:00.000Z" }),
+        task({ id: "done", status: "done", reminder_at: "2026-07-01T19:00:00.000Z" })
+      ],
+      now
+    });
+    expect(schedule.map((item) => item.id)).toEqual(["task-t2", "reminder-for-task", "reminder-later"]);
+  });
+
+  it("caps the schedule for the iOS pending limit", () => {
+    const tasks = Array.from({ length: 70 }, (_, index) => task({ id: `t${index}`, reminder_at: new Date(now.getTime() + (index + 1) * 60_000).toISOString() }));
+    expect(buildLocalReminderSchedule({ reminders: [], tasks, now })).toHaveLength(60);
   });
 });
 

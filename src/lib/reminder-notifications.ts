@@ -129,3 +129,52 @@ function safePushPath(value: string) {
   if (!value.startsWith("/") || value.startsWith("//")) return "/dashboard";
   return value;
 }
+
+export type LocalReminder = {
+  id: string;
+  title: string;
+  body: string;
+  at: Date;
+  url: string;
+};
+
+// What the phone should alarm for next. iOS keeps at most 64 pending local notifications,
+// so we keep the soonest `limit` and reschedule every time the data reloads.
+export function buildLocalReminderSchedule({
+  reminders,
+  tasks,
+  now = new Date(),
+  limit = 60
+}: {
+  reminders: Reminder[];
+  tasks: Task[];
+  now?: Date;
+  limit?: number;
+}): LocalReminder[] {
+  const tasksById = new Map(tasks.map((task) => [task.id, task]));
+  const upcomingReminders = reminders.filter(
+    (reminder) => reminder.status === "scheduled" && new Date(reminder.remind_at).getTime() > now.getTime() && linkedTaskReminderIsActive(reminder, tasksById)
+  );
+  const coveredTaskIds = new Set(upcomingReminders.map((reminder) => reminder.task_id).filter(Boolean));
+
+  return [
+    ...upcomingReminders.map((reminder) => ({
+      id: `reminder-${reminder.id}`,
+      title: reminder.title,
+      body: reminder.body ?? "A reminder is due.",
+      at: new Date(reminder.remind_at),
+      url: reminder.task_id ? "/tasks" : "/"
+    })),
+    ...tasks
+      .filter((task) => task.status === "open" && task.reminder_at && !task.reminder_sent_at && new Date(task.reminder_at).getTime() > now.getTime() && !coveredTaskIds.has(task.id))
+      .map((task) => ({
+        id: `task-${task.id}`,
+        title: task.title,
+        body: task.notes ?? "A task reminder is due.",
+        at: new Date(task.reminder_at as string),
+        url: "/tasks"
+      }))
+  ]
+    .sort((a, b) => a.at.getTime() - b.at.getTime())
+    .slice(0, limit);
+}

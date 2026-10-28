@@ -16,6 +16,11 @@ export function localDateKey(date: Date) {
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 10);
 }
 
+// The local calendar day of a stored UTC timestamp (slicing the ISO string gives the UTC day).
+export function localDayOf(timestamp: string) {
+  return localDateKey(new Date(timestamp));
+}
+
 export function lastDays(days: number, now = new Date()) {
   return Array.from({ length: days }, (_, index) => {
     const date = new Date(now);
@@ -31,7 +36,7 @@ export function lastDays(days: number, now = new Date()) {
 export function caloriesByDay(data: DashboardData, days = 7, now = new Date()): DailyMetric[] {
   return lastDays(days, now).map((day) => ({
     ...day,
-    value: data.meals.filter((meal) => meal.logged_at.slice(0, 10) === day.date).reduce((sum, meal) => sum + meal.calories, 0)
+    value: data.meals.filter((meal) => localDayOf(meal.logged_at) === day.date).reduce((sum, meal) => sum + meal.calories, 0)
   }));
 }
 
@@ -39,7 +44,7 @@ export function workoutMinutesByDay(data: DashboardData, days = 7, now = new Dat
   return lastDays(days, now).map((day) => ({
     ...day,
     value: data.workouts
-      .filter((workout) => workout.logged_at.slice(0, 10) === day.date)
+      .filter((workout) => localDayOf(workout.logged_at) === day.date)
       .reduce((sum, workout) => sum + (workout.duration_minutes ?? 0), 0)
   }));
 }
@@ -57,7 +62,7 @@ export function journalMoodByDay(data: DashboardData, days = 7, now = new Date()
 export function habitCheckInsByDay(data: DashboardData, days = 7, now = new Date()): DailyMetric[] {
   return lastDays(days, now).map((day) => ({
     ...day,
-    value: data.habitLogs.filter((log) => log.logged_at.slice(0, 10) === day.date).length
+    value: data.habitLogs.filter((log) => localDayOf(log.logged_at) === day.date).length
   }));
 }
 

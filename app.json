@@ -1,0 +1,39 @@
+{
+  "expo": {
+    "name": "Orbit",
+    "slug": "orbit",
+    "scheme": "orbit",
+    "version": "0.2.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.ibraabyte.orbit"
+    },
+    "android": {
+      "package": "com.ibraabyte.orbit"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Orbit uses Face ID to keep your data private."
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Orbit uses your location to calculate prayer times."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
