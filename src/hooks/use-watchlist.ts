@@ -9,9 +9,15 @@ export function useWatchlist(userId: string) {
   const [available, setAvailable] = useState(true);
 
   const refresh = useCallback(async () => {
-    const { data, error } = await getSupabase().from("watch_items").select("*").eq("user_id", userId).order("updated_at", { ascending: false });
-    setAvailable(!error);
-    setItems(error ? [] : (data ?? []));
+    try {
+      const { data, error } = await getSupabase().from("watch_items").select("*").eq("user_id", userId).order("updated_at", { ascending: false });
+      setAvailable(!error);
+      setItems(error ? [] : (data ?? []));
+    } catch {
+      // getSupabase throws while this screen isn't on Orbit's own server yet.
+      setAvailable(false);
+      setItems([]);
+    }
   }, [userId]);
 
   useEffect(() => {
