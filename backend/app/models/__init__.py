@@ -9,6 +9,7 @@ from app.models.life import Goal, GoalMilestone, Habit, HabitLog, JournalEntry, 
 from app.models.profile import Profile
 from app.models.tasks import FocusSession, Reminder, Task
 from app.models.things import Vehicle, WatchItem
+from app.models.whoop import WhoopConnection, WhoopCycle, WhoopInsight, WhoopRecovery, WhoopSleep, WhoopWorkout
 
 __all__ = [
     "Attachment",
@@ -38,5 +39,11 @@ __all__ = [
     "Vehicle",
     "WatchItem",
     "WeightLog",
+    "WhoopConnection",
+    "WhoopCycle",
+    "WhoopInsight",
+    "WhoopRecovery",
+    "WhoopSleep",
+    "WhoopWorkout",
     "Workout",
 ]

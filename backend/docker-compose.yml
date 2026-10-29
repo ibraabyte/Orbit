@@ -9,6 +9,11 @@ services:
       ORBIT_DATABASE_URL: postgresql+psycopg://${SERVICE_USER_POSTGRES}:${SERVICE_PASSWORD_64_POSTGRES}@db:5432/orbit
       ORBIT_JWT_SECRET: ${SERVICE_BASE64_64_JWT}
       ORBIT_ALLOW_SIGNUPS: ${ORBIT_ALLOW_SIGNUPS:-false}
+      # WHOOP and the AI summary stay off until these are set in Coolify's Environment Variables.
+      ORBIT_WHOOP_CLIENT_ID: ${WHOOP_CLIENT_ID:-}
+      ORBIT_WHOOP_CLIENT_SECRET: ${WHOOP_CLIENT_SECRET:-}
+      ORBIT_WHOOP_REDIRECT_URI: ${WHOOP_REDIRECT_URI:-}
+      ORBIT_ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy

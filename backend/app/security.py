@@ -1,3 +1,4 @@
+import base64
 import hashlib
 import secrets
 import uuid
@@ -6,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerifyMismatchError
+from cryptography.fernet import Fernet, InvalidToken
 
 from app.config import get_settings
 
@@ -53,3 +55,21 @@ def new_refresh_token() -> str:
 def hash_refresh_token(token: str) -> str:
     # Refresh tokens are long random strings, so a fast hash is enough; it keeps a DB leak from handing out sessions.
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def _fernet() -> Fernet:
+    # Derived from the signing secret so production needs no extra key. Rotating that secret means reconnecting WHOOP.
+    digest = hashlib.sha256(b"orbit:stored-secrets:" + get_settings().jwt_secret.encode()).digest()
+    return Fernet(base64.urlsafe_b64encode(digest))
+
+
+def encrypt_secret(value: str) -> str:
+    """For third-party tokens (WHOOP) at rest: a database dump alone doesn't hand them out."""
+    return _fernet().encrypt(value.encode()).decode()
+
+
+def decrypt_secret(value: str) -> str | None:
+    try:
+        return _fernet().decrypt(value.encode()).decode()
+    except InvalidToken:
+        return None
