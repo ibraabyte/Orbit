@@ -21,6 +21,21 @@ class Settings(BaseSettings):
     login_attempts: int = 10
     login_window_minutes: int = 15
 
+    # WHOOP (developer.whoop.com). Empty client id means the integration is off.
+    whoop_client_id: str = ""
+    whoop_client_secret: str = ""
+    # Must match the redirect URL registered in the WHOOP app, e.g. https://api.example.com/whoop/callback
+    whoop_redirect_uri: str = ""
+    # Where the browser goes after WHOOP sign-in; the app's scheme from app.json.
+    whoop_app_redirect: str = "orbit://whoop"
+    # Background sync every N minutes (0 turns it off). The first sync reaches back backfill_days.
+    whoop_sync_minutes: int = 120
+    whoop_backfill_days: int = 180
+
+    # Claude writes the Arabic WHOOP summary. Empty key means the AI summary is off.
+    anthropic_api_key: str = ""
+    insights_model: str = "claude-opus-5-5"
+
 
 @lru_cache
 def get_settings() -> Settings:

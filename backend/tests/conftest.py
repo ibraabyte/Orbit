@@ -11,6 +11,8 @@ import pytest
 DATABASE_URL = os.environ.get("ORBIT_TEST_DATABASE_URL", "postgresql+psycopg://orbit:orbit@localhost:5432/orbit_test")
 os.environ["ORBIT_DATABASE_URL"] = DATABASE_URL
 os.environ.setdefault("ORBIT_JWT_SECRET", "test-secret-that-is-long-enough-for-hs256-signing")
+# Tests drive WHOOP syncs themselves; no background thread.
+os.environ["ORBIT_WHOOP_SYNC_MINUTES"] = "0"
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402

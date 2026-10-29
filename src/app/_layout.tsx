@@ -10,6 +10,7 @@ import { backendMode, watchSession, type AppSession } from "@/lib/backend";
 
 const stackScreens = [
   ["health", "Health"],
+  ["whoop", "WHOOP"],
   ["food", "Food"],
   ["finance", "Finance"],
   ["people", "People"],

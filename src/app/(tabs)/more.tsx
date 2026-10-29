@@ -2,6 +2,7 @@ import { Row, Screen } from "@/components/screen";
 
 const sections = [
   ["/health", "Health", "Calories, macros, workouts, sleep, weight"],
+  ["/whoop", "WHOOP", "Recovery, sleep, strain, with a written summary"],
   ["/food", "Food", "Meal plans and groceries"],
   ["/finance", "Finance", "Spending and bills"],
   ["/people", "People", "Follow-ups and birthdays"],

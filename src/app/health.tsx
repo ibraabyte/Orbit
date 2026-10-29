@@ -19,6 +19,7 @@ export default function Health() {
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
       <QuickAddBar />
+      <Row title="WHOOP" detail="Recovery, sleep and strain from your band" href="/whoop" />
       <Stats
         items={[
           ["Calories", `${health.todayCalories}${target(health.calorieTarget)}`],
