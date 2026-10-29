@@ -3,12 +3,13 @@ import { QuickAddBar } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section, Stats, ui } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { focusMinutesByDay, focusSummary, formatFocusDuration } from "@/lib/focus";
-import { getSupabase } from "@/lib/supabase";
+import { apiUpdate } from "@/lib/api-actions";
+import { getApi } from "@/lib/backend";
 import type { FocusSession } from "@/lib/types";
 
 // Focus + the old Momentum page (its stats live in "This week").
 export default function Focus() {
-  const { userId, data, loading, refresh, act } = useDashboardData();
+  const { data, loading, refresh, act } = useDashboardData();
   const summary = focusSummary(data);
   const week = focusMinutesByDay(data, 7);
   const best = week.reduce((top, day) => (day.value > top.value ? day : top), week[0]);
@@ -16,7 +17,7 @@ export default function Focus() {
   const recent = data.focusSessions.filter((session) => session.status === "completed").slice(0, 8);
 
   const finish = (session: FocusSession) =>
-    act(() => getSupabase().from("focus_sessions").update({ status: "completed", ended_at: new Date().toISOString() }).eq("id", session.id).eq("user_id", userId));
+    act(() => apiUpdate(getApi(), "/focus-sessions", session.id, { status: "completed", ended_at: new Date().toISOString() }));
 
   return (
     <Screen title="Focus" refreshing={loading} onRefresh={refresh}>

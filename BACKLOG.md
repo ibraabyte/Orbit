@@ -5,8 +5,7 @@ The Expo app. The web/PWA backlog is in git at the tag `web-final`.
 ## Waiting on the owner
 
 - Try the app on the phone in Expo Go (`npm start`, scan the QR code).
-- Server for the database move: provider, OS, RAM (4GB+), SSH access, and a subdomain for HTTPS.
-  Then follow `deploy/supabase/README.md`; it builds every table, including `0015_vehicles` and `0016_watch_items`.
+- Deploy `backend/` on Coolify and set `EXPO_PUBLIC_API_URL` in the app (see `backend/README.md`).
 - Seerr: the server URL, and whether the Seerr account is an admin (needed to approve requests).
   The URL and API key are typed into the app, never sent in chat.
 - Apple Developer account, for a real build (TestFlight), home screen widgets, and Apple Health.

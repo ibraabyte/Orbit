@@ -6,7 +6,6 @@ import {
   buildFullExportSummary,
   buildZipArchive,
   downloadText,
-  loadFullExportAttachmentFiles,
   loadFullExportData,
   redactFullExportData,
   rowsToCsv,
@@ -101,52 +100,20 @@ describe("full data export", () => {
     expect(csv).not.toContain("browser-public-key");
   });
 
-  it("redacts push subscription secrets while loading export rows", async () => {
-    const tableRows = new Map<string, Record<string, unknown>[]>(
-      EXPORT_TABLES.map((definition) => [definition.name, [] as Record<string, unknown>[]])
-    );
-    tableRows.set("push_subscriptions", [
-      {
-        id: "push-1",
-        user_id: "user-1",
-        endpoint: "https://push.example/subscription-1",
-        p256dh: "browser-public-key",
-        auth: "browser-auth-secret"
-      }
-    ]);
-
-    const client = {
-      from(table: string) {
-        const chain = {
-          select() {
-            return chain;
-          },
-          eq() {
-            return chain;
-          },
-          order() {
-            return chain;
-          },
-          async range(from: number, to: number) {
-            return {
-              data: (tableRows.get(table) ?? []).slice(from, to + 1),
-              error: null
-            };
-          }
-        };
-        return chain;
-      }
+  it("loads the export from the server, fills missing tables, and redacts push secrets", async () => {
+    const api = {
+      get: vi.fn(async () => ({
+        meals: [{ id: "meal-1", name: "Lunch" }],
+        push_subscriptions: [{ id: "push-1", endpoint: "https://push.example/subscription-1", p256dh: "browser-public-key", auth: "browser-auth-secret" }]
+      }))
     };
 
-    await expect(loadFullExportData("user-1", client as never)).resolves.toMatchObject({
-      push_subscriptions: [
-        {
-          endpoint: "[redacted]",
-          p256dh: "[redacted]",
-          auth: "[redacted]"
-        }
-      ]
-    });
+    const data = await loadFullExportData(api as never);
+    expect(api.get).toHaveBeenCalledWith("/export");
+    expect(Object.keys(data)).toEqual(EXPORT_TABLES.map((definition) => definition.name));
+    expect(data.meals).toEqual([{ id: "meal-1", name: "Lunch" }]);
+    expect(data.tasks).toEqual([]);
+    expect(data.push_subscriptions[0]).toMatchObject({ endpoint: "[redacted]", p256dh: "[redacted]", auth: "[redacted]" });
   });
 
   it("summarizes every configured export table", () => {
@@ -242,252 +209,6 @@ describe("full data export", () => {
     expect(blob.type).toBe("text/markdown;charset=utf-8");
     expect(click).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:orbit-report");
-  });
-
-  it("loads all pages for every owner-scoped table", async () => {
-    const tableRows = new Map<string, Record<string, unknown>[]>(
-      EXPORT_TABLES.map((definition) => [definition.name, [] as Record<string, unknown>[]])
-    );
-    tableRows.set("profiles", [{ id: "user-1" }]);
-    tableRows.set(
-      "tasks",
-      Array.from({ length: 1001 }, (_, index) => ({
-        id: `task-${index}`,
-        user_id: "user-1"
-      }))
-    );
-
-    const requests: Array<{ table: string; ownerColumn: string; value: string; from: number; to: number }> = [];
-    const client = {
-      from(table: string) {
-        const chain = {
-          select() {
-            return chain;
-          },
-          eq(ownerColumn: string, value: string) {
-            state.ownerColumn = ownerColumn;
-            state.value = value;
-            return chain;
-          },
-          order() {
-            return chain;
-          },
-          async range(from: number, to: number) {
-            requests.push({ table, ownerColumn: state.ownerColumn, value: state.value, from, to });
-            return {
-              data: (tableRows.get(table) ?? []).slice(from, to + 1),
-              error: null
-            };
-          }
-        };
-        const state = { ownerColumn: "", value: "" };
-        return chain;
-      }
-    };
-
-    const data = await loadFullExportData("user-1", client as never);
-
-    expect(data.profiles).toHaveLength(1);
-    expect(data.tasks).toHaveLength(1001);
-    expect(requests.filter((request) => request.table === "tasks")).toEqual([
-      { table: "tasks", ownerColumn: "user_id", value: "user-1", from: 0, to: 999 },
-      { table: "tasks", ownerColumn: "user_id", value: "user-1", from: 1000, to: 1999 }
-    ]);
-    expect(requests.find((request) => request.table === "profiles")).toMatchObject({
-      ownerColumn: "id",
-      value: "user-1"
-    });
-  });
-
-  it("embeds private attachment files as base64 payloads", async () => {
-    const downloads: Array<{ bucket: string; path: string }> = [];
-    const client = {
-      storage: {
-        from(bucket: string) {
-          return {
-            async download(path: string) {
-              downloads.push({ bucket, path });
-              return {
-                data: {
-                  async arrayBuffer() {
-                    return new TextEncoder().encode("hello").buffer;
-                  }
-                },
-                error: null
-              };
-            }
-          };
-        }
-      }
-    };
-
-    await expect(
-      loadFullExportAttachmentFiles(
-        "user-1",
-        [
-          {
-            id: "attachment-1",
-            bucket: "orbit-attachments",
-            object_path: "user-1/capture/file.png",
-            filename: "file.png",
-            content_type: "image/png",
-            size_bytes: 5
-          }
-        ],
-        client as never
-      )
-    ).resolves.toEqual([
-      {
-        attachmentId: "attachment-1",
-        bucket: "orbit-attachments",
-        objectPath: "user-1/capture/file.png",
-        filename: "file.png",
-        contentType: "image/png",
-        sizeBytes: 5,
-        sha256: "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
-        dataBase64: "aGVsbG8="
-      }
-    ]);
-    expect(downloads).toEqual([{ bucket: "orbit-attachments", path: "user-1/capture/file.png" }]);
-  });
-
-  it("rejects attachment downloads that do not match metadata", async () => {
-    const client = {
-      storage: {
-        from() {
-          return {
-            async download() {
-              return {
-                data: {
-                  async arrayBuffer() {
-                    return new TextEncoder().encode("hello").buffer;
-                  }
-                },
-                error: null
-              };
-            }
-          };
-        }
-      }
-    };
-
-    await expect(
-      loadFullExportAttachmentFiles(
-        "user-1",
-        [
-          {
-            id: "attachment-1",
-            bucket: "orbit-attachments",
-            object_path: "user-1/capture/file.png",
-            filename: "file.png",
-            size_bytes: 6
-          }
-        ],
-        client as never
-      )
-    ).rejects.toThrow("downloaded file size does not match attachment metadata");
-  });
-
-  it("rejects oversized attachment downloads before embedding", async () => {
-    const client = {
-      storage: {
-        from() {
-          return {
-            async download() {
-              return {
-                data: {
-                  async arrayBuffer() {
-                    return new ArrayBuffer(10 * 1024 * 1024 + 1);
-                  }
-                },
-                error: null
-              };
-            }
-          };
-        }
-      }
-    };
-
-    await expect(
-      loadFullExportAttachmentFiles(
-        "user-1",
-        [
-          {
-            id: "attachment-1",
-            bucket: "orbit-attachments",
-            object_path: "user-1/capture/file.png",
-            filename: "file.png",
-            size_bytes: null
-          }
-        ],
-        client as never
-      )
-    ).rejects.toThrow("downloaded file exceeds the 10 MB attachment limit");
-  });
-
-  it("skips unsafe attachment metadata when embedding export files", async () => {
-    const downloads: Array<{ bucket: string; path: string }> = [];
-    const client = {
-      storage: {
-        from(bucket: string) {
-          return {
-            async download(path: string) {
-              downloads.push({ bucket, path });
-              return {
-                data: new Blob(["safe"], { type: "image/png" }),
-                error: null
-              };
-            }
-          };
-        }
-      }
-    };
-
-    await expect(
-      loadFullExportAttachmentFiles(
-        "user-1",
-        [
-          {
-            id: "safe",
-            bucket: "orbit-attachments",
-            object_path: "user-1/capture/file.png",
-            filename: "file.png"
-          },
-          {
-            id: "other-user",
-            bucket: "orbit-attachments",
-            object_path: "user-2/capture/file.png",
-            filename: "file.png"
-          },
-          {
-            id: "other-bucket",
-            bucket: "public-assets",
-            object_path: "user-1/capture/file.png",
-            filename: "file.png"
-          },
-          {
-            id: "traversal",
-            bucket: "orbit-attachments",
-            object_path: "user-1/../file.png",
-            filename: "file.png"
-          },
-          {
-            id: "backslash",
-            bucket: "orbit-attachments",
-            object_path: "user-1\\capture\\file.png",
-            filename: "file.png"
-          }
-        ],
-        client as never
-      )
-    ).resolves.toMatchObject([
-      {
-        attachmentId: "safe",
-        bucket: "orbit-attachments",
-        objectPath: "user-1/capture/file.png"
-      }
-    ]);
-    expect(downloads).toEqual([{ bucket: "orbit-attachments", path: "user-1/capture/file.png" }]);
   });
 });
 

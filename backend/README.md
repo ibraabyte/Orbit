@@ -3,7 +3,7 @@
 بديل Supabase. خادم Python تملكه بالكامل، يشتغل على سيرفرك في Coolify.
 
 - **FastAPI**: الـ API، ويعطيك توثيق تفاعلي على `/docs`.
-- **PostgreSQL**: نفس الجداول اللي كانت في `supabase/migrations` (الـ 16 ملف) في ملف Alembic واحد: `alembic/versions/0001_initial_schema.py`.
+- **PostgreSQL**: نفس الجداول اللي كانت في Supabase، في ملفات Alembic تحت `alembic/versions/`.
 - **SQLAlchemy + Alembic**: الجداول كـ كود، وأي تعديل بعدين يصير migration جديد.
 - **الدخول**: إيميل وباسورد (Argon2). توكن دخول قصير (JWT، 15 دقيقة) وتوكن تجديد (60 يوم) يتغير مع كل تجديد. لو رجع توكن قديم مستخدم، تنقفل الجلسة كلها لأن هذا معناه إن أحد نسخه.
 

@@ -2,8 +2,7 @@ import { Link } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Button, KeyboardAvoidingView, Platform, Text, TextInput } from "react-native";
 import { authStyles as styles } from "@/components/auth-styles";
-import { backendMode, getApi } from "@/lib/backend";
-import { getSupabase } from "@/lib/supabase";
+import { getApi } from "@/lib/backend";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -13,7 +12,6 @@ export default function SignIn() {
 
   // Orbit's server allows the first account, then closes sign-ups unless the owner opens them.
   useEffect(() => {
-    if (backendMode() !== "api") return;
     void getApi()
       .signupsOpen()
       .then(setSignupsOpen)
@@ -23,12 +21,7 @@ export default function SignIn() {
   async function signIn() {
     setBusy(true);
     try {
-      if (backendMode() === "api") {
-        await getApi().signIn(email, password);
-      } else {
-        const { error } = await getSupabase().auth.signInWithPassword({ email: email.trim(), password });
-        if (error) throw error;
-      }
+      await getApi().signIn(email, password);
     } catch (error) {
       Alert.alert("Sign in failed", error instanceof Error ? error.message : "Try again.");
     } finally {

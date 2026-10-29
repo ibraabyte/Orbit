@@ -3,10 +3,11 @@ import { QuickAddBar } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section, ui } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { activeGoals, goalProgress, milestonesForGoal } from "@/lib/goals";
-import { getSupabase } from "@/lib/supabase";
+import { apiUpdate } from "@/lib/api-actions";
+import { getApi } from "@/lib/backend";
 
 export default function Goals() {
-  const { userId, data, loading, refresh, act } = useDashboardData();
+  const { data, loading, refresh, act } = useDashboardData();
   const goals = activeGoals(data.goals);
 
   return (
@@ -27,7 +28,7 @@ export default function Goals() {
                 title={milestone.title}
                 tone={milestone.completed_at ? "success" : "neutral"}
                 right={milestone.completed_at ? "Done" : "Mark done"}
-                onPress={() => act(() => getSupabase().from("goal_milestones").update({ completed_at: milestone.completed_at ? null : new Date().toISOString() }).eq("id", milestone.id).eq("user_id", userId))}
+                onPress={() => act(() => apiUpdate(getApi(), "/goal-milestones", milestone.id, { completed_at: milestone.completed_at ? null : new Date().toISOString() }))}
               />
             ))}
           </Section>

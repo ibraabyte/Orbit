@@ -2,11 +2,12 @@ import { QuickAddBar } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section, Stats } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { activeSubscriptions, financeSummary, formatMoney, nextBillDueDate, spendingByCategory, subscriptionMonthlyTotal } from "@/lib/finance";
-import { getSupabase } from "@/lib/supabase";
+import { apiUpdate } from "@/lib/api-actions";
+import { getApi } from "@/lib/backend";
 import type { Bill } from "@/lib/types";
 
 export default function Finance() {
-  const { userId, data, loading, refresh, act } = useDashboardData();
+  const { data, loading, refresh, act } = useDashboardData();
   const finance = financeSummary(data);
   // ponytail: totals assume one currency, same as the web app.
   const currency = data.expenses[0]?.currency ?? data.bills[0]?.currency ?? "SAR";
@@ -16,7 +17,7 @@ export default function Finance() {
   const markPaid = (bill: Bill) => {
     const nextDue = nextBillDueDate(bill);
     const update = nextDue ? { due_at: nextDue, status: "active" as const } : { status: "paid" as const };
-    return act(() => getSupabase().from("bills").update(update).eq("id", bill.id).eq("user_id", userId));
+    return act(() => apiUpdate(getApi(), "/bills", bill.id, update));
   };
 
   return (

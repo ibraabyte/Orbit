@@ -2,7 +2,7 @@
 
 Orbit is a private life dashboard for iPhone and Android, built with Expo.
 It brings daily planning, tasks, reminders, health, money, relationships, and
-personal notes into one app, backed by Supabase.
+personal notes into one app, backed by its own server (`backend/`).
 
 The Next.js web/PWA version is archived at the git tag `web-final`. `APP_PAGES.md`
 lists the screens and `BACKLOG.md` what is left.
@@ -10,13 +10,13 @@ lists the screens and `BACKLOG.md` what is left.
 ## Tech stack
 
 - Expo SDK 58, Expo Router, React Native, TypeScript
-- Supabase Auth and Postgres (session stored with AsyncStorage)
-- Vitest for the shared logic in `src/lib`
-- Moving to: `backend/`, a FastAPI + Postgres API hosted on Coolify. The app still talks to Supabase until its hooks are switched over.
+- `backend/`: FastAPI + Postgres 17, hosted on Coolify. Sign-in, sessions and every section's data
+  (session tokens kept in SecureStore)
+- Vitest for the shared logic in `src/lib`, pytest for the server
 
 ## Getting started
 
-Requirements: Node.js 22, npm, Orbit's server (`backend/`) or a Supabase project, and Expo Go or a simulator.
+Requirements: Node.js 22, npm, Orbit's server (`backend/`, see `backend/README.md`), and Expo Go or a simulator.
 
 ```bash
 npm install
@@ -24,13 +24,8 @@ cp .env.example .env.local   # set EXPO_PUBLIC_API_URL to Orbit's server, e.g. h
 npm start
 ```
 
-With `EXPO_PUBLIC_API_URL` set, sign-in, sign-up, Today, Plan, Tasks and quick add (tasks and reminders)
-use Orbit's own server. Other screens say they aren't on the new server yet until they move over.
-Leave it empty to keep using Supabase (`EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`).
-
-The database is self-hosted Supabase: `deploy/supabase/README.md` sets it up and builds
-every table from `supabase/migrations/`. For another Supabase project, apply those SQL files in
-number order, or make one bundle with `npm run migrations:bundle -- --out /path/to/orbit-migrations.sql`.
+Every screen reads and writes through Orbit's own server. The database schema lives in
+`backend/alembic/versions/`; the server applies it on start.
 
 ## Commands
 
@@ -47,7 +42,5 @@ number order, or make one bundle with `npm run migrations:bundle -- --out /path/
 - `src/app/` — Expo Router screens (`(tabs)` for the tab bar, `sign-in`)
 - `src/components/` — shared UI and the quick-add bar
 - `src/hooks/` — data loading shared across tabs
-- `src/lib/` — plain TypeScript logic and Supabase actions, with tests
-- `supabase/migrations/` — database schema and row-level security
-- `deploy/supabase/` — self-hosted Supabase setup and the scripts to move data and files
-- `backend/` — Orbit's own API (FastAPI + Postgres) that is replacing Supabase; see `backend/README.md`
+- `src/lib/` — plain TypeScript logic, the API client (`api.ts`) and its writes (`api-actions.ts`), with tests
+- `backend/` — Orbit's own API (FastAPI + Postgres); see `backend/README.md`

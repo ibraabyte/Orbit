@@ -6,9 +6,6 @@
 
 export type ApiSession = { userId: string };
 
-// Shown when a screen that still writes through Supabase is used against Orbit's own server.
-export const NOT_ON_SERVER_YET = "This part of Orbit isn't on the new server yet.";
-
 export type TokenStorage = {
   get(): Promise<string | null>;
   set(token: string): Promise<void>;
@@ -199,6 +196,7 @@ export function createApiClient({
     request,
     get: <T = unknown>(path: string) => request<T>("GET", path),
     post: <T = unknown>(path: string, body?: unknown) => request<T>("POST", path, body ?? {}),
+    put: <T = unknown>(path: string, body: unknown) => request<T>("PUT", path, body),
     patch: <T = unknown>(path: string, body: unknown) => request<T>("PATCH", path, body),
     delete: (path: string) => request<null>("DELETE", path)
   };

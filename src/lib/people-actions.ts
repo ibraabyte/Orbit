@@ -1,9 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ApiClient } from "@/lib/api";
 import { localDateKey } from "@/lib/insights";
-import { getSupabase } from "@/lib/supabase";
-import type { Database } from "@/lib/types";
-
-export type PeopleActionClient = SupabaseClient<Database>;
 
 export type ContactedUpdate = {
   last_contacted_at: string;
@@ -17,16 +13,9 @@ export function contactedUpdate(nextFollowUpDays: number | null = 30, now = new 
   };
 }
 
-export async function markPersonContacted(
-  userId: string,
-  personId: string,
-  nextFollowUpDays: number | null = 30,
-  now = new Date(),
-  supabase: PeopleActionClient = getSupabase()
-) {
+export async function markPersonContacted(api: Pick<ApiClient, "patch">, personId: string, nextFollowUpDays: number | null = 30, now = new Date()) {
   const update = contactedUpdate(nextFollowUpDays, now);
-  const { error } = await supabase.from("people").update(update).eq("id", personId).eq("user_id", userId);
-  if (error) throw new Error(error.message);
+  await api.patch(`/people/${encodeURIComponent(personId)}`, update);
   return update;
 }
 

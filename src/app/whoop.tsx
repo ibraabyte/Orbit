@@ -4,7 +4,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Button, StyleSheet, Text, View } from "react-native";
 import { Empty, Row, Screen, Section, Stats, ui } from "@/components/screen";
-import { backendMode, getApi } from "@/lib/backend";
+import { getApi, hasServer } from "@/lib/backend";
 import {
   connectResultMessage,
   describeChange,
@@ -23,7 +23,7 @@ import {
 const zoneColors = { green: "#2f855a", yellow: "#b7791f", red: "#c0392b" } as const;
 
 export default function Whoop() {
-  const onServer = backendMode() === "api";
+  const onServer = hasServer();
   const params = useLocalSearchParams<{ status?: string }>();
   const [status, setStatus] = useState<WhoopStatus | null>(null);
   const [summary, setSummary] = useState<WhoopSummary | null>(null);

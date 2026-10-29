@@ -3,8 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as Notifications from "expo-notifications";
 import { Alert } from "react-native";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { backendMode, getApi } from "@/lib/backend";
-import { getSupabase } from "@/lib/supabase";
+import { getApi } from "@/lib/backend";
 import type { DashboardData } from "@/lib/types";
 
 export const emptyData: DashboardData = {
@@ -32,53 +31,9 @@ export const emptyData: DashboardData = {
   bills: []
 };
 
-// key in DashboardData, table, order column, ascending, limit
-const listQueries = [
-  ["tasks", "tasks", "created_at", false, 80],
-  ["reminders", "reminders", "remind_at", true, 80],
-  ["captures", "captures", "created_at", false, 60],
-  ["attachments", "attachments", "created_at", false, 80],
-  ["tags", "tags", "name", true, 120],
-  ["taggings", "taggings", "created_at", false, 240],
-  ["meals", "meals", "logged_at", false, 80],
-  ["mealPlans", "meal_plans", "plan_date", false, 120],
-  ["groceryItems", "grocery_items", "created_at", false, 160],
-  ["people", "people", "updated_at", false, 120],
-  ["weightLogs", "weight_logs", "logged_at", false, 40],
-  ["workouts", "workouts", "logged_at", false, 50],
-  ["sleepLogs", "sleep_logs", "sleep_date", false, 90],
-  ["focusSessions", "focus_sessions", "started_at", false, 120],
-  ["habits", "habits", "created_at", false, 60],
-  ["habitLogs", "habit_logs", "logged_at", false, 240],
-  ["goals", "goals", "updated_at", false, 60],
-  ["goalMilestones", "goal_milestones", "created_at", false, 240],
-  ["journalEntries", "journal_entries", "entry_date", false, 90],
-  ["expenses", "expenses", "spent_at", false, 120],
-  ["bills", "bills", "due_at", true, 80]
-] as const;
-
-async function loadDashboard(userId: string): Promise<DashboardData> {
-  // Orbit's own server returns this whole bundle in one call, same shape (backend/app/routers/dashboard.py).
-  if (backendMode() === "api") return { ...emptyData, ...(await getApi().get<Partial<DashboardData>>("/dashboard")) };
-  const supabase = getSupabase();
-  const [profile, ...lists] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-    ...listQueries.map(([key, table, column, ascending, limit]) => {
-      let query = supabase.from(table).select("*").eq("user_id", userId);
-      if (key === "habits") query = query.is("archived_at", null);
-      if (key === "goals") query = query.neq("status" as never, "archived");
-      return query.order(column, { ascending }).limit(limit);
-    })
-  ]);
-
-  const firstError = [profile, ...lists].find((result) => result.error)?.error;
-  if (firstError) throw new Error(firstError.message);
-
-  const data = { ...emptyData, profile: profile.data ?? null } as Record<string, unknown>;
-  listQueries.forEach(([key], index) => {
-    data[key] = lists[index].data ?? [];
-  });
-  return data as DashboardData;
+// Orbit's own server returns the whole bundle in one call, same shape (backend/app/routers/dashboard.py).
+async function loadDashboard(): Promise<DashboardData> {
+  return { ...emptyData, ...(await getApi().get<Partial<DashboardData>>("/dashboard")) };
 }
 
 // Last good copy per user, so the app opens with data when offline. Writes still need a connection.
@@ -108,7 +63,7 @@ function useDashboardDataSource(userId: string) {
     setLoading(true);
     setError(null);
     try {
-      const fresh = await loadDashboard(userId);
+      const fresh = await loadDashboard();
       setData(fresh);
       void AsyncStorage.setItem(CACHE_PREFIX + userId, JSON.stringify({ savedAt: new Date().toISOString(), data: fresh } satisfies CachedDashboard)).catch(() => undefined);
     } catch (loadError) {
@@ -137,24 +92,16 @@ function useDashboardDataSource(userId: string) {
       // Scheduled alarms carry task and reminder titles; drop them with the session.
       void Notifications.cancelAllScheduledNotificationsAsync();
     };
-    if (backendMode() === "api") {
-      return getApi().onSessionChange((session) => {
-        if (!session) forgetSession();
-      });
-    }
-    const { data: listener } = getSupabase().auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_OUT") forgetSession();
+    return getApi().onSessionChange((session) => {
+      if (!session) forgetSession();
     });
-    return () => listener.subscription.unsubscribe();
   }, []);
 
   // Run a write, then reload. Shows an alert instead of throwing so screens stay one-liners.
   const act = useCallback(
     async (write: () => PromiseLike<unknown>) => {
       try {
-        const result = await write();
-        const failure = result && typeof result === "object" && "error" in result ? (result.error as { message: string } | null) : null;
-        if (failure) throw new Error(failure.message);
+        await write();
         void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         await refresh();
       } catch (actError) {

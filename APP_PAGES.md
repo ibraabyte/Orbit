@@ -16,7 +16,7 @@ not gamified and not a generic SaaS dashboard.
 
 ## App Structure
 
-- `src/app/_layout.tsx`: checks the Supabase session. Signed out shows only Sign in. Signed in wraps
+- `src/app/_layout.tsx`: checks the session with Orbit's server. Signed out shows only Sign in. Signed in wraps
   everything in the Face ID lock, the shared data provider, the server checker, and the notification scheduler.
 - `src/app/(tabs)/_layout.tsx`: native tab bar with five tabs: Today, Tasks, Plan, Focus, More.
 - The rest are stack screens opened from More, with a large title and a back button.
