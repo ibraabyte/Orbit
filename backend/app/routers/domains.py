@@ -141,9 +141,11 @@ WatchRow = row_schema(m.WatchItem)
 
 @watch_items.put("", response_model=WatchRow)
 def save_title(body: s.WatchItemCreate, user_id: UserId, db: Db):
-    """Adds a movie or series, or updates it if it's already on the list (one row per title)."""
+    """Adds a movie or series, or updates it if it's already on the list (one row per title).
+    An update changes only the fields sent, so notes survive re-adding a title."""
     values = body.model_dump()
-    changes = {key: value for key, value in values.items() if key not in ("tmdb_id", "media_type")} | {"updated_at": func.now()}
+    sent = body.model_dump(exclude_unset=True, exclude={"tmdb_id", "media_type"})
+    changes = sent | {"updated_at": func.now()}
     db.execute(
         insert(m.WatchItem)
         .values(**values, user_id=user_id)

@@ -140,9 +140,10 @@ def test_journal_keeps_one_entry_per_day(client: TestClient, auth: dict):
 def test_watch_list_keeps_one_row_per_title(client: TestClient, auth: dict):
     body = {"tmdb_id": 1399, "media_type": "tv", "title": "A Series"}
     first = client.put("/watch-items", headers=auth, json=body).json()
+    client.patch(f"/watch-items/{first['id']}", headers=auth, json={"notes": "Recommended"})
     second = client.put("/watch-items", headers=auth, json={**body, "status": "watching", "season": 2, "episode": 3}).json()
     assert second["id"] == first["id"]
-    assert (second["status"], second["season"], second["episode"]) == ("watching", 2, 3)
+    assert (second["status"], second["season"], second["episode"], second["notes"]) == ("watching", 2, 3, "Recommended")
     assert len(client.get("/watch-items", headers=auth).json()) == 1
 
     other = bearer(sign_up(client, "other@example.com"))
