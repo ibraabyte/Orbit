@@ -8,7 +8,7 @@ import secrets
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse
 from zoneinfo import ZoneInfo
 
 import jwt
@@ -28,6 +28,8 @@ router = APIRouter(prefix="/whoop", tags=["whoop"])
 STATE_MINUTES = 10
 # Claude costs money per call; one summary every couple of minutes is plenty.
 INSIGHT_COOLDOWN = timedelta(minutes=2)
+# Deep link schemes the callback may send the browser back to, besides the configured app link.
+APP_SCHEMES = {"exp", "exps"}
 DATA_MODELS = (WhoopCycle, WhoopRecovery, WhoopSleep, WhoopWorkout)
 
 
@@ -37,6 +39,11 @@ class WhoopStatus(BaseModel):
     connected: bool
     last_synced_at: datetime | None = None
     last_sync_error: str | None = None
+
+
+class ConnectRequest(BaseModel):
+    # The app's own deep link, e.g. orbit://whoop or exp://192.168.1.5:8081/--/whoop in Expo Go.
+    return_to: str | None = None
 
 
 class ConnectUrl(BaseModel):
@@ -66,28 +73,45 @@ def _require_configured() -> None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "WHOOP isn't set up on this server yet.")
 
 
-def _new_state(user_id: uuid.UUID) -> str:
+def _return_url(requested: str | None) -> str:
+    """Where the browser goes back to. The app may ask for its own deep link (Expo Go uses exp://), but only app
+    schemes are allowed, so this can't be turned into a redirect to some website."""
+    default = get_settings().whoop_app_redirect
+    if not requested:
+        return default
+    allowed = {urlparse(default).scheme, *APP_SCHEMES}
+    if urlparse(requested).scheme not in allowed:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "return_to must be a link into the Orbit app.")
+    return requested
+
+
+def _new_state(user_id: uuid.UUID, return_to: str) -> str:
     now = datetime.now(UTC)
     payload = {
         "sub": str(user_id),
         "typ": "whoop_state",
         "iat": now,
         "exp": now + timedelta(minutes=STATE_MINUTES),
+        "r": return_to,
         "n": secrets.token_urlsafe(8),
     }
     return jwt.encode(payload, get_settings().jwt_secret, algorithm="HS256")
 
 
-def _read_state(state: str) -> uuid.UUID | None:
+def _read_state(state: str) -> tuple[uuid.UUID, str] | None:
     try:
         payload = jwt.decode(state, get_settings().jwt_secret, algorithms=["HS256"], options={"require": ["sub", "exp"]})
-        return uuid.UUID(payload["sub"]) if payload.get("typ") == "whoop_state" else None
+        if payload.get("typ") != "whoop_state":
+            return None
+        return uuid.UUID(payload["sub"]), payload.get("r") or get_settings().whoop_app_redirect
     except (jwt.PyJWTError, ValueError):
         return None
 
 
-def _back_to_app(result: str) -> RedirectResponse:
-    return RedirectResponse(f"{get_settings().whoop_app_redirect}?{urlencode({'status': result})}", status.HTTP_302_FOUND)
+def _back_to_app(result: str, return_to: str | None = None) -> RedirectResponse:
+    target = return_to or get_settings().whoop_app_redirect
+    separator = "&" if urlparse(target).query else "?"
+    return RedirectResponse(f"{target}{separator}{urlencode({'status': result})}", status.HTTP_302_FOUND)
 
 
 def _user_today(db: Db, user_id: uuid.UUID) -> date:
@@ -117,10 +141,11 @@ def whoop_status(user_id: UserId, db: Db):
 
 
 @router.post("/connect", response_model=ConnectUrl)
-def connect(user_id: UserId):
+def connect(user_id: UserId, body: ConnectRequest | None = None):
     """WHOOP's sign-in page for this user. The state ties the answer back to them and expires in 10 minutes."""
     _require_configured()
-    return ConnectUrl(url=whoop_api.authorize_url(_new_state(user_id)))
+    return_to = _return_url(body.return_to if body else None)
+    return ConnectUrl(url=whoop_api.authorize_url(_new_state(user_id, return_to)))
 
 
 @router.get("/callback", include_in_schema=False)
@@ -134,16 +159,17 @@ def callback(
     """WHOOP redirects the browser here. No Orbit token on this request: the signed state says who it is."""
     if not whoop_api.configured():
         return _back_to_app("not_configured")
-    user_id = _read_state(state) if state else None
-    if user_id is None or db.get(User, user_id) is None:
+    found = _read_state(state) if state else None
+    if found is None or db.get(User, found[0]) is None:
         return _back_to_app("expired")
+    user_id, return_to = found
     if error or not code:
-        return _back_to_app("denied")
+        return _back_to_app("denied", return_to)
     try:
         tokens = whoop_api.exchange_code(code)
         whoop_user_id = whoop_api.get(tokens["access_token"], "/v2/user/profile/basic").get("user_id")
     except whoop_api.WhoopError:
-        return _back_to_app("error")
+        return _back_to_app("error", return_to)
 
     connection = db.get(WhoopConnection, user_id)
     if connection is None:
@@ -158,7 +184,7 @@ def callback(
     whoop_sync.save_tokens(connection, tokens)
     db.commit()
     background.add_task(whoop_sync.sync_in_background, user_id)
-    return _back_to_app("connected")
+    return _back_to_app("connected", return_to)
 
 
 @router.post("/sync", response_model=SyncResult)

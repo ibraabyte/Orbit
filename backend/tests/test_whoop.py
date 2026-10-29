@@ -213,6 +213,17 @@ def test_connect_stores_encrypted_tokens_and_syncs(client: TestClient, auth: dic
     assert status["connected"] is True and status["last_sync_error"] is None
 
 
+def test_callback_returns_to_the_apps_own_link(client: TestClient, auth: dict, whoop: FakeWhoop):
+    expo_go = "exp://192.168.1.5:8081/--/whoop"
+    url = client.post("/whoop/connect", headers=auth, json={"return_to": expo_go}).json()["url"]
+    state = parse_qs(urlparse(url).query)["state"][0]
+    response = client.get("/whoop/callback", params={"code": "good-code", "state": state}, follow_redirects=False)
+    assert response.headers["location"] == f"{expo_go}?status=connected"
+    # Never a website: that would make Orbit an open redirect.
+    for target in ("https://evil.example.com/", "javascript:alert(1)", "//evil.example.com"):
+        assert client.post("/whoop/connect", headers=auth, json={"return_to": target}).status_code == 422
+
+
 def test_callback_rejects_bad_or_foreign_state(client: TestClient, auth: dict, whoop: FakeWhoop, db: Session):
     bad = client.get("/whoop/callback", params={"code": "good-code", "state": "not-a-state"}, follow_redirects=False)
     assert bad.headers["location"] == "orbit://whoop?status=expired"

@@ -25,6 +25,36 @@
 كل تشغيل للخدمة يطبق الـ migrations الجديدة تلقائياً قبل ما يبدأ (`docker-entrypoint.sh`).
 قاعدة البيانات داخل الـ compose وما لها منفذ مفتوح للإنترنت.
 
+## ربط WHOOP والملخص بالذكاء الاصطناعي
+
+اختياري. بدون هذي القيم، شاشة WHOOP في التطبيق تقول إنه مو مفعّل، وباقي الخادم يشتغل عادي.
+
+### 1. تطبيق في موقع WHOOP للمطورين
+
+1. ادخل `developer-dashboard.whoop.com` بحساب WHOOP حقك، وسوّ **Team** لو طلب، ثم **Create App**.
+2. **Redirect URL**: `https://<دومين الـ API>/whoop/callback` (نفس دومين Coolify، مثل `https://api.example.com/whoop/callback`).
+3. **Scopes**: `read:recovery`، `read:cycles`، `read:sleep`، `read:workout`، `read:profile`. والخادم يطلب `offline` بنفسه عشان يقدر يزامن وأنت مو فاتح التطبيق.
+4. احفظ، وانسخ **Client ID** و**Client Secret**.
+
+### 2. القيم في Coolify (Environment Variables)
+
+| المتغير | القيمة |
+| --- | --- |
+| `WHOOP_CLIENT_ID` | من تطبيق WHOOP |
+| `WHOOP_CLIENT_SECRET` | من تطبيق WHOOP (سري) |
+| `WHOOP_REDIRECT_URI` | نفس الـ Redirect URL بالضبط |
+| `ANTHROPIC_API_KEY` | مفتاح من `console.anthropic.com` للملخص المكتوب (سري، اختياري) |
+
+بعدها Redeploy. لا ترسل القيم السرية في أي محادثة.
+
+### كيف يشتغل
+
+- **الربط**: التطبيق يفتح صفحة دخول WHOOP، وWHOOP يرجّع المتصفح لـ `/whoop/callback`، والخادم يحفظ التوكنات **مشفّرة** ويرجّعك للتطبيق.
+- **المزامنة**: أول مرة تسحب آخر 180 يوم. بعدها كل ساعتين، وكل مرة تعيد قراءة آخر 7 أيام لأن WHOOP يعدّل الأرقام بعد ما يكمل حسابها.
+- **النبض**: WHOOP ما يعطي نبض لحظي في الـ API. اللي متوفر: النبض وقت الراحة ومتوسط وأعلى نبض لكل يوم ولكل تمرين، والـ HRV.
+- **الملخص**: يرسل لـ Claude (`claude-opus-5-5`) الأرقام المحسوبة فقط (بدون اسمك أو إيميلك)، ويرجع ملخص وتوصيات بالعربي. ينحفظ آخر ملخص، وما ينكتب جديد إلا لما تضغط الزر.
+- **فصل الربط**: يلغي صلاحية Orbit عند WHOOP ويمسح التوكنات. تقدر تحتفظ بالبيانات أو تمسحها.
+
 ## التشغيل محلياً
 
 ```bash
@@ -57,6 +87,10 @@ ORBIT_TEST_DATABASE_URL=postgresql+psycopg://orbit:orbit@localhost:5432/orbit_te
 | `POST /tasks/{id}/complete` | إنهاء مهمة: يلغي تذكيراتها، ولو متكررة يسوي اللي بعدها بنفس الوسوم |
 | `/reminders` و `/reminders/{id}` | التذكيرات |
 | `GET /dashboard` | كل بيانات "اليوم" و"الخطة" في طلب واحد، بنفس شكل `DashboardData` في التطبيق |
+| `GET /whoop/status`، `POST /whoop/connect`، `GET /whoop/callback` | حالة WHOOP والربط |
+| `POST /whoop/sync`، `DELETE /whoop/connection` | مزامنة الآن، وفصل الربط (`?delete_data=true` يمسح البيانات) |
+| `GET /whoop/summary?days=30` | الأرقام يوم بيوم، والمتوسطات، وهذا الأسبوع مقابل اللي قبله، ومناطق التعافي، والتمارين |
+| `GET /whoop/insights/latest`، `POST /whoop/insights` | آخر ملخص بالعربي، وكتابة ملخص جديد |
 
 القوائم تقبل `limit` و`offset`. الحقول بنفس أسماء أعمدة Supabase، فأنواع التطبيق في `src/lib/types.ts` تشتغل بدون تغيير.
 
