@@ -5,7 +5,6 @@ import {
   REMINDER_PUSH_TITLE_LIMIT,
   buildDueReminderNotifications,
   buildReminderPushPayload,
-  markReminderNotificationDelivered,
   shouldMarkNotificationDelivered
 } from "@/lib/reminder-notifications";
 import type { Reminder, Task } from "@/lib/types";
@@ -123,43 +122,6 @@ describe("reminder notifications", () => {
     });
     expect(buildReminderPushPayload({ title: "Reminder", body: "Body", url: "//example.com/path" }).url).toBe("/dashboard");
   });
-
-  it("marks linked reminders delivered by updating the task before the reminder row", async () => {
-    const { client, operations } = mockDeliveryMarkClient();
-
-    await expect(
-      markReminderNotificationDelivered(
-        client as never,
-        { userId: "user-1", taskId: "task-1", reminderId: "reminder-1" },
-        "2026-07-01T12:01:00.000Z"
-      )
-    ).resolves.toEqual({ marked: true, error: null });
-    expect(operations.map((operation) => [operation.table, operation.payload])).toEqual([
-      ["tasks", { reminder_sent_at: "2026-07-01T12:01:00.000Z" }],
-      ["reminders", { status: "sent", sent_at: "2026-07-01T12:01:00.000Z" }]
-    ]);
-  });
-
-  it("does not mark a linked reminder sent when the task mark fails", async () => {
-    const { client, operations } = mockDeliveryMarkClient({ failTable: "tasks" });
-
-    await expect(
-      markReminderNotificationDelivered(
-        client as never,
-        { userId: "user-1", taskId: "task-1", reminderId: "reminder-1" },
-        "2026-07-01T12:01:00.000Z"
-      )
-    ).resolves.toEqual({ marked: false, error: "tasks failed" });
-    expect(operations.map((operation) => operation.table)).toEqual(["tasks"]);
-  });
-
-  it("reports reminder mark failures for standalone reminders", async () => {
-    const { client } = mockDeliveryMarkClient({ failTable: "reminders" });
-
-    await expect(
-      markReminderNotificationDelivered(client as never, { userId: "user-1", reminderId: "reminder-1" }, "2026-07-01T12:01:00.000Z")
-    ).resolves.toEqual({ marked: false, error: "reminders failed" });
-  });
 });
 
 describe("local reminder schedule", () => {
@@ -186,29 +148,3 @@ describe("local reminder schedule", () => {
   });
 });
 
-function mockDeliveryMarkClient(options: { failTable?: "tasks" | "reminders" } = {}) {
-  const operations: Array<{ table: string; payload: unknown; filters: Array<[string, string]> }> = [];
-  const client = {
-    from(table: string) {
-      return {
-        update(payload: unknown) {
-          const operation = { table, payload, filters: [] as Array<[string, string]> };
-          operations.push(operation);
-          const builder = {
-            eq(column: string, value: string) {
-              operation.filters.push([column, value]);
-              return builder;
-            },
-            then(resolve: (value: { error: { message: string } | null }) => void, reject?: (reason: unknown) => void) {
-              const result = { error: options.failTable === table ? { message: `${table} failed` } : null };
-              return Promise.resolve(result).then(resolve, reject);
-            }
-          };
-          return builder;
-        }
-      };
-    }
-  };
-
-  return { client, operations };
-}

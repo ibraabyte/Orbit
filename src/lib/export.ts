@@ -1,11 +1,6 @@
-"use client";
+import type { ApiClient } from "@/lib/api";
+import type { DashboardData } from "@/lib/types";
 
-import { getSupabase } from "@/lib/supabase";
-import type { DashboardData, Database } from "@/lib/types";
-
-const EXPORT_PAGE_SIZE = 1000;
-const ATTACHMENT_BUCKET = "orbit-attachments";
-const ATTACHMENT_MAX_FILE_BYTES = 10 * 1024 * 1024;
 const REDACTED_EXPORT_VALUE = "[redacted]";
 const PUSH_SUBSCRIPTION_REDACTED_FIELDS = ["endpoint", "p256dh", "auth"] as const;
 
@@ -40,32 +35,10 @@ export const EXPORT_TABLES = [
 type ExportTableName = (typeof EXPORT_TABLES)[number]["name"];
 
 type ExportTableDefinition = {
-  name: keyof Database["public"]["Tables"];
+  name: string;
   ownerColumn: "id" | "user_id";
   orderColumn: string;
   ascending: boolean;
-};
-
-type ExportQuery = {
-  select: (columns: string) => ExportQuery;
-  eq: (column: string, value: string) => ExportQuery;
-  order: (column: string, options: { ascending: boolean }) => ExportQuery;
-  range: (from: number, to: number) => Promise<{
-    data: Record<string, unknown>[] | null;
-    error: { message: string } | null;
-  }>;
-};
-
-type ExportClient = {
-  from: (table: string) => ExportQuery;
-  storage?: {
-    from: (bucket: string) => {
-      download: (path: string) => Promise<{
-        data: Blob | null;
-        error: { message: string } | null;
-      }>;
-    };
-  };
 };
 
 export type FullExportData = Record<ExportTableName, Record<string, unknown>[]>;
@@ -97,15 +70,11 @@ export function buildExportPayload(userId: string, data: DashboardData) {
   };
 }
 
-export async function loadFullExportData(userId: string, client: ExportClient = getSupabase() as unknown as ExportClient): Promise<FullExportData> {
-  const entries = await Promise.all(
-    EXPORT_TABLES.map(async (definition) => {
-      const rows = await fetchAllRows(client, definition, userId);
-      return [definition.name, redactExportRows(definition.name, rows)] as const;
-    })
-  );
-
-  return Object.fromEntries(entries) as FullExportData;
+// The server returns every row the user owns, already keyed by table and with secrets redacted
+// (GET /export, backend/app/routers/export.py). Redacting again keeps an old server honest.
+export async function loadFullExportData(api: Pick<ApiClient, "get">): Promise<FullExportData> {
+  const data = await api.get<Partial<FullExportData>>("/export");
+  return Object.fromEntries(EXPORT_TABLES.map((definition) => [definition.name, redactExportRows(definition.name, data[definition.name] ?? [])])) as FullExportData;
 }
 
 export function buildFullExportPayload(
@@ -346,104 +315,6 @@ function concatBytes(parts: Uint8Array[]) {
   return output;
 }
 
-export async function loadFullExportAttachmentFiles(
-  userId: string,
-  attachments: Record<string, unknown>[],
-  client: ExportClient = getSupabase() as unknown as ExportClient
-): Promise<FullExportAttachmentFile[]> {
-  if (!attachments.length) return [];
-  if (!client.storage) {
-    throw new Error("Attachment export requires Supabase storage support.");
-  }
-
-  const files: FullExportAttachmentFile[] = [];
-
-  for (const attachment of attachments) {
-    const payload = attachmentExportDescriptor(attachment, userId);
-    if (!payload) continue;
-
-    const { data, error } = await client.storage.from(payload.bucket).download(payload.objectPath);
-    if (error || !data) {
-      throw new Error(`attachments: ${payload.objectPath}: ${error?.message ?? "file could not be downloaded"}`);
-    }
-
-    const buffer = await blobToArrayBuffer(data);
-    assertDownloadedAttachmentSize(payload, buffer.byteLength);
-
-    files.push({
-      ...payload,
-      sha256: await sha256Hex(buffer),
-      dataBase64: arrayBufferToBase64(buffer)
-    });
-  }
-
-  return files;
-}
-
-function assertDownloadedAttachmentSize(file: Omit<FullExportAttachmentFile, "dataBase64">, byteLength: number) {
-  if (typeof file.sizeBytes === "number" && file.sizeBytes !== byteLength) {
-    throw new Error(`attachments: ${file.objectPath}: downloaded file size does not match attachment metadata`);
-  }
-
-  if (byteLength > ATTACHMENT_MAX_FILE_BYTES) {
-    throw new Error(`attachments: ${file.objectPath}: downloaded file exceeds the 10 MB attachment limit`);
-  }
-}
-
-async function fetchAllRows(client: ExportClient, definition: ExportTableDefinition, userId: string) {
-  const rows: Record<string, unknown>[] = [];
-  let page = 0;
-
-  while (true) {
-    const from = page * EXPORT_PAGE_SIZE;
-    const to = from + EXPORT_PAGE_SIZE - 1;
-    const { data, error } = await client
-      .from(definition.name)
-      .select("*")
-      .eq(definition.ownerColumn, userId)
-      .order(definition.orderColumn, { ascending: definition.ascending })
-      .range(from, to);
-
-    if (error) {
-      throw new Error(`${definition.name}: ${error.message}`);
-    }
-
-    const pageRows = (data ?? []) as Record<string, unknown>[];
-    rows.push(...pageRows);
-
-    if (pageRows.length < EXPORT_PAGE_SIZE) {
-      return rows;
-    }
-
-    page += 1;
-  }
-}
-
-function attachmentExportDescriptor(row: Record<string, unknown>, userId: string) {
-  if (typeof row.id !== "string" || typeof row.bucket !== "string" || typeof row.object_path !== "string" || typeof row.filename !== "string") {
-    return null;
-  }
-  if (row.bucket !== ATTACHMENT_BUCKET || !isSafeAttachmentObjectPath(row.object_path, userId)) {
-    return null;
-  }
-
-  return {
-    attachmentId: row.id,
-    bucket: row.bucket,
-    objectPath: row.object_path,
-    filename: row.filename,
-    contentType: typeof row.content_type === "string" ? row.content_type : null,
-    sizeBytes: typeof row.size_bytes === "number" ? row.size_bytes : null
-  };
-}
-
-function isSafeAttachmentObjectPath(path: string, userId: string) {
-  const ownerId = userId.trim();
-  if (!ownerId || ownerId.includes("/") || ownerId.includes("\\")) return false;
-  if (!path.startsWith(`${ownerId}/`) || path.includes("\\")) return false;
-  return path.split("/").every((segment) => segment && segment !== "." && segment !== "..");
-}
-
 export function redactFullExportData(data: FullExportData): FullExportData {
   return Object.fromEntries(EXPORT_TABLES.map((definition) => [definition.name, redactExportRows(definition.name, data[definition.name])])) as FullExportData;
 }
@@ -458,31 +329,4 @@ function redactExportRows(table: ExportTableName, rows: Record<string, unknown>[
     }
     return next;
   });
-}
-
-function blobToArrayBuffer(blob: Blob) {
-  const withArrayBuffer = blob as Blob & { arrayBuffer?: () => Promise<ArrayBuffer> };
-  if (typeof withArrayBuffer.arrayBuffer === "function") return withArrayBuffer.arrayBuffer();
-  return new Response(blob).arrayBuffer();
-}
-
-function arrayBufferToBase64(buffer: ArrayBuffer) {
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  const chunkSize = 0x8000;
-
-  for (let index = 0; index < bytes.length; index += chunkSize) {
-    binary += String.fromCharCode(...bytes.slice(index, index + chunkSize));
-  }
-
-  return btoa(binary);
-}
-
-async function sha256Hex(buffer: ArrayBuffer) {
-  if (!globalThis.crypto?.subtle) {
-    throw new Error("Attachment export requires Web Crypto checksum support.");
-  }
-
-  const digest = await globalThis.crypto.subtle.digest("SHA-256", new Uint8Array(buffer));
-  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }

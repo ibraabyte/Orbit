@@ -153,7 +153,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
           ))}
         </Section>
       ) : null}
-      {!watchlist.available ? <Empty>Watch list needs the 0016_watch_items.sql migration in Supabase.</Empty> : null}
+      {!watchlist.available ? <Empty>Your watch list could not be loaded. Check your connection, then pull to refresh.</Empty> : null}
       <Section title={searched ? "Results" : "Trending"}>
         {results.length ? (
           results.map((item) => {

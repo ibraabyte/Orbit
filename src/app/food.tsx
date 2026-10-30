@@ -2,10 +2,11 @@ import { QuickAddBar } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section, Stats } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { foodSummary, mealTypeLabel } from "@/lib/food";
-import { getSupabase } from "@/lib/supabase";
+import { apiUpdate } from "@/lib/api-actions";
+import { getApi } from "@/lib/backend";
 
 export default function Food() {
-  const { userId, data, loading, refresh, act } = useDashboardData();
+  const { data, loading, refresh, act } = useDashboardData();
   const food = foodSummary(data);
   const plans = [...food.overdueMealPlans, ...food.upcomingMealPlans];
 
@@ -31,7 +32,7 @@ export default function Food() {
                 title={item.name}
                 detail={[item.quantity, mealPlan?.name].filter(Boolean).join(" · ") || null}
                 right="Bought"
-                onPress={() => act(() => getSupabase().from("grocery_items").update({ status: "bought" }).eq("id", item.id).eq("user_id", userId))}
+                onPress={() => act(() => apiUpdate(getApi(), "/grocery-items", item.id, { status: "bought" }))}
               />
             ))}
           </Section>

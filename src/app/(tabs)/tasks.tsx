@@ -4,9 +4,7 @@ import { Empty, Row, Screen, ui } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { openTasks } from "@/lib/dashboard";
 import { apiCompleteTask } from "@/lib/api-actions";
-import { backendMode, getApi } from "@/lib/backend";
-import { getSupabase } from "@/lib/supabase";
-import { completeTaskWithReminders } from "@/lib/task-completion";
+import { getApi } from "@/lib/backend";
 
 export default function Tasks() {
   const { data, loading, error, refresh, act } = useDashboardData();
@@ -25,13 +23,7 @@ export default function Tasks() {
           detail={task.due_at ? `Due ${new Date(task.due_at).toLocaleString()}` : null}
           tone={task.due_at && new Date(task.due_at).getTime() < now ? "danger" : task.priority === "high" ? "warning" : "neutral"}
           right="Done"
-          onPress={() =>
-            act(() =>
-              backendMode() === "api"
-                ? apiCompleteTask(getApi(), task.id)
-                : completeTaskWithReminders(getSupabase(), task, { tags: data.tags, taggings: data.taggings })
-            )
-          }
+          onPress={() => act(() => apiCompleteTask(getApi(), task.id))}
         />
       ))}
     </Screen>

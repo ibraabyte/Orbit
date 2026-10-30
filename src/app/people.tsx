@@ -2,20 +2,21 @@ import { Alert } from "react-native";
 import { QuickAddBar } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { getApi } from "@/lib/backend";
 import { markPersonContacted } from "@/lib/people-actions";
 import { peopleSummary } from "@/lib/people";
 import type { Person } from "@/lib/types";
 
 export default function People() {
-  const { userId, data, loading, refresh, act } = useDashboardData();
+  const { data, loading, refresh, act } = useDashboardData();
   const people = peopleSummary(data);
   const followUps = [...people.overdueFollowUps, ...people.dueFollowUps.filter((person) => !people.overdueFollowUps.includes(person))];
 
   const contacted = (person: Person) =>
     Alert.alert(`Talked to ${person.name}`, "Next follow-up in", [
-      { text: "1 week", onPress: () => act(() => markPersonContacted(userId, person.id, 7)) },
-      { text: "1 month", onPress: () => act(() => markPersonContacted(userId, person.id, 30)) },
-      { text: "No follow-up", onPress: () => act(() => markPersonContacted(userId, person.id, null)) },
+      { text: "1 week", onPress: () => act(() => markPersonContacted(getApi(), person.id, 7)) },
+      { text: "1 month", onPress: () => act(() => markPersonContacted(getApi(), person.id, 30)) },
+      { text: "No follow-up", onPress: () => act(() => markPersonContacted(getApi(), person.id, null)) },
       { text: "Cancel", style: "cancel" }
     ]);
 

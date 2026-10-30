@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database, Reminder, Task } from "@/lib/types";
+import type { Reminder, Task } from "@/lib/types";
 
 export type ReminderNotification = {
   id: string;
@@ -91,32 +90,6 @@ function linkedTaskReminderIsActive(reminder: Reminder, tasksById: Map<string, T
 
 export function shouldMarkNotificationDelivered(successfulDeliveries: number) {
   return successfulDeliveries > 0;
-}
-
-export async function markReminderNotificationDelivered(
-  supabase: SupabaseClient<Database>,
-  notification: Pick<ReminderNotification, "reminderId" | "taskId" | "userId">,
-  sentAt = new Date().toISOString()
-) {
-  if (notification.taskId) {
-    const { error } = await supabase
-      .from("tasks")
-      .update({ reminder_sent_at: sentAt })
-      .eq("id", notification.taskId)
-      .eq("user_id", notification.userId);
-    if (error) return { marked: false, error: error.message };
-  }
-
-  if (notification.reminderId) {
-    const { error } = await supabase
-      .from("reminders")
-      .update({ status: "sent", sent_at: sentAt })
-      .eq("id", notification.reminderId)
-      .eq("user_id", notification.userId);
-    if (error) return { marked: false, error: error.message };
-  }
-
-  return { marked: true, error: null };
 }
 
 function compactPushText(value: string, fallback: string, limit: number) {

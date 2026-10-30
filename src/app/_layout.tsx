@@ -6,7 +6,7 @@ import { AppLock } from "@/components/app-lock";
 import { DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { ServerStatusProvider } from "@/hooks/use-server-status";
-import { backendMode, watchSession, type AppSession } from "@/lib/backend";
+import { hasServer, watchSession, type AppSession } from "@/lib/backend";
 
 const stackScreens = [
   ["health", "Health"],
@@ -24,14 +24,14 @@ const stackScreens = [
   ["settings", "Settings"]
 ] as const;
 
-const mode = backendMode();
+const configured = hasServer();
 
 export default function RootLayout() {
   const [session, setSession] = useState<AppSession | null | undefined>(undefined);
 
-  useEffect(() => (mode === "none" ? undefined : watchSession(setSession)), []);
+  useEffect(() => (configured ? watchSession(setSession) : undefined), []);
 
-  if (mode === "none") {
+  if (!configured) {
     return (
       <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
         <Text>Add EXPO_PUBLIC_API_URL (Orbit's server) to .env.local, then restart.</Text>

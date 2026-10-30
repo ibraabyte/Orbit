@@ -79,8 +79,8 @@ export default function Vehicles() {
 
   if (!available) {
     return (
-      <Screen>
-        <Empty>Car upkeep needs one database update. Run migration 0015_vehicles.sql in Supabase, then pull to refresh.</Empty>
+      <Screen refreshing={loading} onRefresh={reload}>
+        <Empty>Your cars could not be loaded. Check your connection, then pull to refresh.</Empty>
       </Screen>
     );
   }

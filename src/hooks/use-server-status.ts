@@ -8,7 +8,7 @@ const SERVERS_KEY = "orbit.servers";
 const CHECK_EVERY_MS = 5 * 60_000;
 
 // ponytail: checks run only while Orbit is open (on launch, on return, every 5 min).
-// Round-the-clock alerts need a Supabase Edge Function on a cron; add when wanted.
+// Round-the-clock alerts need a scheduled job on the server; add when wanted.
 function useServerStatusSource() {
   const [servers, setServers] = useState<Server[]>([]);
   const [checks, setChecks] = useState<ServerCheck[]>([]);
