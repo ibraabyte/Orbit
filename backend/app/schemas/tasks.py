@@ -22,6 +22,8 @@ class TaskCreate(Input):
     due_at: datetime | None = None
     reminder_at: datetime | None = None
     recurrence: Recurrence | None = None
+    # Tag names to attach in the same call; missing tags are created.
+    tags: list[str] = Field(default_factory=list, max_length=20)
 
 
 class TaskUpdate(Input):

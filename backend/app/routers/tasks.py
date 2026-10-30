@@ -18,7 +18,13 @@ def _schedule_reminder(db: Session, task: Task) -> None:
 
 
 router = owned_crud_router(
-    Task, prefix="/tasks", create=TaskCreate, update=TaskUpdate, order_by=Task.created_at.desc(), after_create=_schedule_reminder
+    Task,
+    prefix="/tasks",
+    create=TaskCreate,
+    update=TaskUpdate,
+    order_by=Task.created_at.desc(),
+    after_create=_schedule_reminder,
+    tag_target="task",
 )
 
 TaskRow = row_schema(Task)
