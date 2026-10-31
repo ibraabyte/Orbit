@@ -19,7 +19,7 @@ export default function Goals() {
         return (
           <Section key={goal.id} title={`${progress.percent}%${goal.target_at ? ` · by ${goal.target_at}` : ""}`}>
             <View style={ui.card}>
-              <Text style={[ui.body, { fontWeight: "600" }]}>{goal.title}</Text>
+              <Text style={ui.strong}>{goal.title}</Text>
               {goal.notes ? <Text style={ui.muted}>{goal.notes}</Text> : null}
             </View>
             {milestonesForGoal(goal.id, data.goalMilestones).map((milestone) => (

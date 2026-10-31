@@ -2,8 +2,9 @@ import * as Linking from "expo-linking";
 import { useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Button, StyleSheet, Text, View } from "react-native";
-import { Empty, Row, Screen, Section, Stats, ui } from "@/components/screen";
+import { Alert, StyleSheet, Text, View } from "react-native";
+import { Button, Empty, Loading, Row, Screen, Section, shell, Stats, ui } from "@/components/screen";
+import { colors, fonts } from "@/components/theme";
 import { getApi, hasServer } from "@/lib/backend";
 import {
   connectResultMessage,
@@ -20,7 +21,7 @@ import {
   type WhoopSummary
 } from "@/lib/whoop";
 
-const zoneColors = { green: "#2f855a", yellow: "#b7791f", red: "#c0392b" } as const;
+const zoneColors = { green: colors.success, yellow: colors.warning, red: colors.danger } as const;
 
 export default function Whoop() {
   const onServer = hasServer();
@@ -119,7 +120,7 @@ export default function Whoop() {
     return (
       <Screen refreshing={loading} onRefresh={load}>
         {noticeView}
-        {loading ? <ActivityIndicator /> : <Empty>Couldn't load WHOOP. Pull to try again.</Empty>}
+        {loading ? <Loading /> : <Empty>Couldn't load WHOOP. Pull to try again.</Empty>}
       </Screen>
     );
   }
@@ -137,7 +138,7 @@ export default function Whoop() {
       <Screen refreshing={loading} onRefresh={load}>
         {noticeView}
         <Section title="WHOOP">
-          <Text style={ui.muted}>Connect your WHOOP to see recovery, sleep, strain and heart rate here, with a written summary of how you're doing.</Text>
+          <Text style={shell.muted}>Connect your WHOOP to see recovery, sleep, strain and heart rate here, with a written summary of how you're doing.</Text>
           <Button title={busy === "connect" ? "Opening WHOOP…" : "Connect WHOOP"} disabled={busy !== null} onPress={connect} />
         </Section>
       </Screen>
@@ -186,7 +187,7 @@ export default function Whoop() {
             ))}
           </View>
           {summary ? (
-            <Text style={ui.muted}>
+            <Text style={shell.muted}>
               {summary.days} days: {summary.recovery_zones.green} green, {summary.recovery_zones.yellow} yellow, {summary.recovery_zones.red} red
             </Text>
           ) : null}
@@ -266,23 +267,24 @@ export default function Whoop() {
 
       <Section title="Connection">
         <Row title="WHOOP" detail={status.last_sync_error ?? syncedAgo(status.last_synced_at)} tone={status.last_sync_error ? "danger" : "success"} />
-        {status.last_sync_error?.includes("again") ? <Button title="Connect again" disabled={busy !== null} onPress={connect} /> : null}
-        <Button title={busy === "sync" ? "Syncing…" : "Sync now"} disabled={busy !== null} onPress={sync} />
-        <Button title="Disconnect" color="#c0392b" disabled={busy !== null} onPress={disconnect} />
+        {status.last_sync_error?.includes("again") ? <Button variant="secondary" title="Connect again" disabled={busy !== null} onPress={connect} /> : null}
+        <Button variant="secondary" title={busy === "sync" ? "Syncing…" : "Sync now"} disabled={busy !== null} onPress={sync} />
+        <Button variant="danger" title="Disconnect" disabled={busy !== null} onPress={disconnect} />
       </Section>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  ok: { fontSize: 15, color: "#2f855a" },
+  ok: { fontFamily: fonts.medium, fontSize: 15, color: colors.accent },
   chart: { flexDirection: "row", alignItems: "flex-end", height: 140, gap: 4 },
   barSlot: { flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center", gap: 4 },
   bar: { width: "100%", borderRadius: 4 },
-  barEmpty: { height: 4, backgroundColor: "#e5e5ea" },
-  barLabel: { fontSize: 10, color: "#6b6b70" },
+  barEmpty: { height: 4, backgroundColor: colors.hairline },
+  barLabel: { fontFamily: fonts.medium, fontSize: 10, color: colors.inkMuted },
   // The AI summary is Arabic: right-to-left, whatever the rest of the screen does.
-  arabic: { fontSize: 17, lineHeight: 26, color: "#111", writingDirection: "rtl", textAlign: "right" },
-  muted: { color: "#3a3a3c" },
+  // System font on purpose: Space Grotesk has no Arabic letters.
+  arabic: { fontSize: 17, lineHeight: 26, color: colors.ink, writingDirection: "rtl", textAlign: "right" },
+  muted: { color: colors.inkMuted },
   heading: { fontWeight: "600", marginTop: 6 }
 });

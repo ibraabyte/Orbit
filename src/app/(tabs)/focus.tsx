@@ -51,7 +51,7 @@ export default function Focus() {
         )}
       </Section>
       <Section title="Recent">
-        {recent.length ? recent.map((session) => <Row key={session.id} title={session.title} detail={new Date(session.started_at).toLocaleDateString()} right={`${session.duration_minutes}m`} />) : <Text style={ui.muted}>Nothing logged yet.</Text>}
+        {recent.length ? recent.map((session) => <Row key={session.id} title={session.title} detail={new Date(session.started_at).toLocaleDateString()} right={`${session.duration_minutes}m`} />) : <Empty>Nothing logged yet.</Empty>}
       </Section>
     </Screen>
   );

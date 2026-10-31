@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Button, Switch, Text, View } from "react-native";
+import { Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
-import { Screen, ui } from "@/components/screen";
+import { Button, Screen, ui } from "@/components/screen";
+import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { arePrayerAlertsEnabled, setPrayerAlertsEnabled } from "@/hooks/use-prayer-times";
 import { signOut } from "@/lib/backend";
@@ -25,6 +26,7 @@ export default function Settings() {
       <View style={[ui.card, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}>
         <Text style={ui.body}>Lock with Face ID</Text>
         <Switch
+          trackColor={{ true: colors.accentDeep, false: colors.hairline }}
           value={lock}
           onValueChange={(next) => {
             setLock(next);
@@ -35,6 +37,7 @@ export default function Settings() {
       <View style={[ui.card, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}>
         <Text style={ui.body}>Prayer time alerts</Text>
         <Switch
+          trackColor={{ true: colors.accentDeep, false: colors.hairline }}
           value={prayers}
           onValueChange={(next) => {
             setPrayers(next);
@@ -42,7 +45,7 @@ export default function Settings() {
           }}
         />
       </View>
-      <Button title="Sign out" color="#c0392b" onPress={() => void signOut()} />
+      <Button variant="danger" title="Sign out" onPress={() => void signOut()} />
     </Screen>
   );
 }

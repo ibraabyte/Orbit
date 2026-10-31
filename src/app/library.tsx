@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Linking, TextInput } from "react-native";
+import { Linking } from "react-native";
 import { QuickAddBar } from "@/components/quick-add-bar";
-import { Empty, Row, Screen, Stats } from "@/components/screen";
+import { Empty, Input, Row, Screen, Stats } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { captureNeedsTriage, captureSearchFields, captureSourceLabel, captureStats } from "@/lib/library";
 
@@ -17,7 +17,7 @@ export default function Library() {
     <Screen refreshing={loading} onRefresh={refresh}>
       <QuickAddBar />
       <Stats items={[["Saved", stats.total], ["Links", stats.links], ["To sort", stats.needsTriage]]} />
-      <TextInput style={{ backgroundColor: "#e5e5ea", borderRadius: 10, padding: 10, fontSize: 17 }} placeholder="Search saved items" value={query} onChangeText={setQuery} clearButtonMode="while-editing" />
+      <Input placeholder="Search saved items" value={query} onChangeText={setQuery} clearButtonMode="while-editing" />
       {!captures.length ? <Empty>Nothing saved yet. Paste a link in the bar above.</Empty> : null}
       {captures.map((capture) => (
         <Row

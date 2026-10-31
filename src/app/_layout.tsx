@@ -1,8 +1,16 @@
+import {
+  SpaceGrotesk_400Regular,
+  SpaceGrotesk_500Medium,
+  SpaceGrotesk_600SemiBold,
+  SpaceGrotesk_700Bold
+} from "@expo-google-fonts/space-grotesk";
+import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import { AppLock } from "@/components/app-lock";
+import { colors, fonts } from "@/components/theme";
 import { DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { ServerStatusProvider } from "@/hooks/use-server-status";
@@ -26,33 +34,55 @@ const stackScreens = [
 
 const configured = hasServer();
 
+// Drift chrome for the screens opened from More: dark header, light title, lime back button.
+const headerOptions = {
+  headerShown: true,
+  headerLargeTitle: true,
+  headerBackTitle: "More",
+  headerTintColor: colors.accent,
+  headerStyle: { backgroundColor: colors.shell },
+  headerLargeStyle: { backgroundColor: colors.shell },
+  headerShadowVisible: false,
+  headerLargeTitleShadowVisible: false,
+  headerTitleStyle: { color: colors.onShell, fontFamily: fonts.bold },
+  headerLargeTitleStyle: { color: colors.onShell, fontFamily: fonts.bold },
+  headerBackTitleStyle: { fontFamily: fonts.medium }
+} as const;
+
 export default function RootLayout() {
   const [session, setSession] = useState<AppSession | null | undefined>(undefined);
+  // If a font fails to load, carry on with the system font rather than a blank screen.
+  const [fontsLoaded, fontError] = useFonts({
+    [fonts.regular]: SpaceGrotesk_400Regular,
+    [fonts.medium]: SpaceGrotesk_500Medium,
+    [fonts.semibold]: SpaceGrotesk_600SemiBold,
+    [fonts.bold]: SpaceGrotesk_700Bold
+  });
 
   useEffect(() => (configured ? watchSession(setSession) : undefined), []);
 
   if (!configured) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
-        <Text>Add EXPO_PUBLIC_API_URL (Orbit's server) to .env.local, then restart.</Text>
+      <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: colors.shell }}>
+        <Text style={{ color: colors.onShell }}>Add EXPO_PUBLIC_API_URL (Orbit's server) to .env.local, then restart.</Text>
       </View>
     );
   }
 
-  if (session === undefined) {
+  if (session === undefined || (!fontsLoaded && !fontError)) {
     return (
-      <View style={{ flex: 1, justifyContent: "center" }}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, justifyContent: "center", backgroundColor: colors.shell }}>
+        <ActivityIndicator color={colors.accent} />
       </View>
     );
   }
 
   const stack = (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.shell } }}>
       <Stack.Protected guard={Boolean(session)}>
         <Stack.Screen name="(tabs)" />
         {stackScreens.map(([name, title]) => (
-          <Stack.Screen key={name} name={name} options={{ headerShown: true, title, headerLargeTitle: true, headerBackTitle: "More" }} />
+          <Stack.Screen key={name} name={name} options={{ ...headerOptions, title }} />
         ))}
       </Stack.Protected>
       <Stack.Protected guard={!session}>
@@ -64,7 +94,7 @@ export default function RootLayout() {
 
   return (
     <>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
       {session ? (
         <AppLock>
           <DashboardDataProvider key={session.userId} userId={session.userId}>

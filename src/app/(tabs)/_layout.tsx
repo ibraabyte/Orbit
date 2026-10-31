@@ -1,8 +1,16 @@
 import { NativeTabs } from "expo-router/native-tabs";
+import { colors, fonts } from "@/components/theme";
 
 export default function TabsLayout() {
   return (
-    <NativeTabs>
+    // Drift: lime for the selected tab on the dark bar. On iOS 26 the system draws the bar itself (dark glass, from app.json).
+    <NativeTabs
+      tintColor={colors.accent}
+      backgroundColor={colors.shell}
+      iconColor={{ default: colors.navInactive, selected: colors.accent }}
+      labelStyle={{ default: { color: colors.navInactive, fontFamily: fonts.semibold }, selected: { color: colors.accent, fontFamily: fonts.semibold } }}
+      blurEffect="systemChromeMaterialDark"
+    >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Icon sf="sun.max" md="today" />
         <NativeTabs.Trigger.Label>Today</NativeTabs.Trigger.Label>
