@@ -6,6 +6,7 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiQuickAdd } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
 import { describeDraft, parseNatural } from "@/lib/quick-add-input";
+import { useOnSurface } from "@/components/drift";
 import { ui } from "@/components/screen";
 import { colors, fonts, radius } from "@/components/theme";
 
@@ -14,7 +15,9 @@ const recentKey = "orbit.quick-add.recent";
 const starters = ["spent ", "slept ", "workout ", "weight ", "buy ", "note "];
 
 // One line in, any record out, in plain English or Arabic: "spent 25 lunch", "نمت 7 ساعات", "call mom tomorrow 9am".
-export function QuickAddBar() {
+export function QuickAddBar({ autoFocus, onAdded }: { autoFocus?: boolean; onAdded?: () => void } = {}) {
+  // Inside a card (Today, Capture) the field and chips use the inset cream; on the dark background, cream.
+  const onSurface = useOnSurface();
   const { data, refresh } = useDashboardData();
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,6 +51,7 @@ export function QuickAddBar() {
       setRecent(next);
       void AsyncStorage.setItem(recentKey, JSON.stringify(next)).catch(() => undefined);
       await refresh();
+      onAdded?.();
     } catch (error) {
       Alert.alert("Could not add", error instanceof Error ? error.message : "Try again.");
     } finally {
@@ -64,7 +68,8 @@ export function QuickAddBar() {
     <View style={{ gap: 8 }}>
       <TextInput
         ref={input}
-        style={ui.input}
+        style={[ui.input, onSurface && { backgroundColor: colors.surfaceInset }]}
+        autoFocus={autoFocus}
         placeholderTextColor={colors.inkMuted}
         selectionColor={colors.accentDeep}
         placeholder="Add anything… spent 25 lunch, call mom tomorrow"
@@ -75,17 +80,17 @@ export function QuickAddBar() {
         editable={!busy}
       />
       {parsed ? (
-        <Text style={[styles.preview, !parsed.validation.ok && styles.warn]} numberOfLines={2}>
+        <Text style={[styles.preview, onSurface && { color: colors.accentDeep }, !parsed.validation.ok && (onSurface ? styles.warnOnSurface : styles.warn)]} numberOfLines={2}>
           {parsed.validation.ok ? describeDraft(parsed.draft) : parsed.validation.message}
         </Text>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }} keyboardShouldPersistTaps="handled">
           {/* Recent lines save again in one tap; starters just fill the box. */}
           {recent.map((line) => (
-            <Chip key={`r-${line}`} label={`↻ ${line}`} onPress={() => submit(line)} />
+            <Chip key={`r-${line}`} label={`↻ ${line}`} onPress={() => submit(line)} onSurface={onSurface} />
           ))}
           {starters.map((word) => (
-            <Chip key={word} label={word.trim()} onPress={() => start(word)} />
+            <Chip key={word} label={word.trim()} onPress={() => start(word)} onSurface={onSurface} />
           ))}
         </ScrollView>
       )}
@@ -93,9 +98,9 @@ export function QuickAddBar() {
   );
 }
 
-function Chip({ label, onPress }: { label: string; onPress: () => void }) {
+function Chip({ label, onPress, onSurface }: { label: string; onPress: () => void; onSurface: boolean }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={styles.chip}>
+    <Pressable onPress={onPress} accessibilityRole="button" style={[styles.chip, onSurface && { backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1 }]}>
       <Text style={styles.chipText} numberOfLines={1}>
         {label}
       </Text>
@@ -104,9 +109,10 @@ function Chip({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  // The preview and chips sit on the dark background.
+  // On the dark background by default; inside a card the colors above switch.
   preview: { fontFamily: fonts.medium, fontSize: 15, color: colors.accent, paddingHorizontal: 4 },
   warn: { color: colors.warning },
+  warnOnSurface: { color: colors.urgent, fontFamily: fonts.semibold },
   chip: { backgroundColor: colors.surfaceInset, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 220 },
   chipText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }
 });

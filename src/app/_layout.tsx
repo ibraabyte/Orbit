@@ -4,6 +4,7 @@ import {
   SpaceGrotesk_600SemiBold,
   SpaceGrotesk_700Bold
 } from "@expo-google-fonts/space-grotesk";
+import Feather from "@expo/vector-icons/Feather";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -17,6 +18,7 @@ import { ServerStatusProvider } from "@/hooks/use-server-status";
 import { hasServer, watchSession, type AppSession } from "@/lib/backend";
 
 const stackScreens = [
+  ["tasks", "Tasks"],
   ["health", "Health"],
   ["whoop", "WHOOP"],
   ["food", "Food"],
@@ -38,7 +40,7 @@ const configured = hasServer();
 const headerOptions = {
   headerShown: true,
   headerLargeTitle: true,
-  headerBackTitle: "More",
+  headerBackButtonDisplayMode: "minimal",
   headerTintColor: colors.accent,
   headerStyle: { backgroundColor: colors.shell },
   headerLargeStyle: { backgroundColor: colors.shell },
@@ -56,7 +58,8 @@ export default function RootLayout() {
     [fonts.regular]: SpaceGrotesk_400Regular,
     [fonts.medium]: SpaceGrotesk_500Medium,
     [fonts.semibold]: SpaceGrotesk_600SemiBold,
-    [fonts.bold]: SpaceGrotesk_700Bold
+    [fonts.bold]: SpaceGrotesk_700Bold,
+    ...Feather.font
   });
 
   useEffect(() => (configured ? watchSession(setSession) : undefined), []);
@@ -84,6 +87,7 @@ export default function RootLayout() {
         {stackScreens.map(([name, title]) => (
           <Stack.Screen key={name} name={name} options={{ ...headerOptions, title }} />
         ))}
+        <Stack.Screen name="capture" options={{ presentation: "modal", contentStyle: { backgroundColor: colors.shell } }} />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="sign-in" />

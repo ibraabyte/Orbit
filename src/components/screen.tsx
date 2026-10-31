@@ -1,24 +1,49 @@
-import { Link, type Href } from "expo-router";
+import type { Href } from "expo-router";
 import type { ReactNode } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Badge, Brand, Card, EmptyState, ListRow, PageHeader, StatGrid, StatTile, toneToBadge, useOnSurface, type IconName } from "@/components/drift";
 import { colors, fonts, radius } from "@/components/theme";
 
 const tones = { danger: colors.danger, warning: colors.warning, success: colors.success, neutral: colors.inkMuted, default: colors.inkMuted } as const;
 export type Tone = keyof typeof tones;
 
-// Drift layout: dark forest background, titles and section labels on it, content on cream cards.
-// title: large title for tab screens; omit it on stack screens that show a native header.
-export function Screen({ title, refreshing, onRefresh, children }: { title?: string; refreshing?: boolean; onRefresh?: () => void; children: ReactNode }) {
+// Space the floating tab bar takes at the bottom of a tab screen.
+export const TAB_BAR_SPACE = 120;
+
+// Drift layout: dark forest background; on tab screens the Orbit mark and a page header on top,
+// then cream cards. Stack screens (opened from More) omit title: their native header has it.
+export function Screen({
+  title,
+  subtitle,
+  actions,
+  refreshing,
+  onRefresh,
+  children
+}: {
+  title?: string;
+  subtitle?: string;
+  actions?: ReactNode;
+  refreshing?: boolean;
+  onRefresh?: () => void;
+  children: ReactNode;
+}) {
   const scroll = (
     <ScrollView
       style={styles.safe}
       contentInsetAdjustmentBehavior="automatic"
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingBottom: title ? TAB_BAR_SPACE : 48 }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.onShellMuted} /> : undefined}
     >
-      {title ? <Text style={styles.title}>{title}</Text> : null}
+      {title ? (
+        <>
+          <Brand />
+          <PageHeader title={title} subtitle={subtitle}>
+            {actions}
+          </PageHeader>
+        </>
+      ) : null}
       {children}
     </ScrollView>
   );
@@ -31,62 +56,62 @@ export function Screen({ title, refreshing, onRefresh, children }: { title?: str
   );
 }
 
-export function Section({ title, children }: { title: string; children: ReactNode }) {
+/** A titled cream card (the web's ModuleCard). Rows, stats and text inside it use the card's colors. */
+export function Section({ title, kicker, action, children }: { title: string; kicker?: string; action?: ReactNode; children: ReactNode }) {
   return (
-    <View style={{ gap: 8 }}>
-      <Text style={shell.label}>{title}</Text>
+    <Card title={title} kicker={kicker} action={action}>
       {children}
-    </View>
+    </Card>
   );
 }
 
-export function Stats({ items }: { items: readonly (readonly [string, string | number])[] }) {
+export type StatItem = readonly [label: string, value: string | number, icon?: IconName, hint?: string];
+
+export function Stats({ items }: { items: readonly StatItem[] }) {
   return (
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-      {items.map(([label, value]) => (
-        <View key={label} style={styles.tile}>
-          <Text style={ui.label} numberOfLines={1}>
-            {label}
-          </Text>
-          <Text style={styles.stat} numberOfLines={1} adjustsFontSizeToFit>
-            {value}
-          </Text>
-        </View>
+    <StatGrid>
+      {items.map(([label, value, icon, hint]) => (
+        <StatTile key={label} label={label} value={value} icon={icon} hint={hint} />
       ))}
-    </View>
+    </StatGrid>
   );
 }
 
-export function Row({ title, detail, right, tone, onPress, href }: { title: string; detail?: string | null; right?: string; tone?: Tone; onPress?: () => void; href?: Href }) {
-  const body = (
-    <View style={[ui.card, { flexDirection: "row", alignItems: "center", gap: 12 }]}>
-      {tone ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tones[tone] }} /> : null}
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={ui.body}>{title}</Text>
-        {detail ? <Text style={ui.muted}>{detail}</Text> : null}
-      </View>
-      {right ? <Text style={styles.right}>{right}</Text> : null}
-    </View>
-  );
-  if (href) {
-    return (
-      <Link href={href} asChild>
-        <Pressable accessibilityRole="link">{body}</Pressable>
-      </Link>
-    );
-  }
-  return onPress ? (
-    <Pressable onPress={onPress} accessibilityRole="button" style={pressed}>
-      {body}
-    </Pressable>
-  ) : (
-    body
+// tone shows as a small dot; badge as a labelled pill in that tone (never color alone).
+export function Row({
+  title,
+  detail,
+  right,
+  tone,
+  badge,
+  onPress,
+  href
+}: {
+  title: string;
+  detail?: string | null;
+  right?: string;
+  tone?: Tone;
+  badge?: string;
+  onPress?: () => void;
+  href?: Href;
+}) {
+  return (
+    <ListRow
+      leading={tone && !badge ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: tones[tone] }} /> : undefined}
+      title={title}
+      subtitle={detail}
+      meta={right}
+      trailing={badge ? <Badge tone={toneToBadge(tone)}>{badge}</Badge> : undefined}
+      onPress={onPress}
+      href={href}
+      chevron={Boolean(href)}
+    />
   );
 }
 
-// Plain text on the dark background (not inside a card).
+// Empty-state text: a dashed well inside a card, muted text on the dark background.
 export function Empty({ children }: { children: string }) {
-  return <Text style={shell.muted}>{children}</Text>;
+  return <EmptyState>{children}</EmptyState>;
 }
 
 export function Segments<T extends string>({ options, value, onChange }: { options: readonly T[]; value: T; onChange: (next: T) => void }) {
@@ -128,18 +153,20 @@ export function Button({ title, onPress, disabled, variant = "primary" }: { titl
 }
 
 export function Input({ style, ...props }: TextInputProps) {
-  return <TextInput placeholderTextColor={colors.inkMuted} selectionColor={colors.accentDeep} style={[ui.input, style]} {...props} />;
+  // Inside a card the field is the inset cream, like the web's form controls.
+  const onSurface = useOnSurface();
+  return <TextInput placeholderTextColor={colors.inkMuted} selectionColor={colors.accentDeep} style={[ui.input, onSurface && { backgroundColor: colors.surfaceInset }, style]} {...props} />;
 }
 
 export function Loading() {
   return <ActivityIndicator color={colors.accent} />;
 }
 
-const pressed = ({ pressed: down }: { pressed: boolean }) => (down ? { opacity: 0.85 } : null);
-
 // Text and cards on cream.
 export const ui = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.card, padding: 16, gap: 4 },
+  // A tile inside a card (the web's rounded-tile article).
+  tile: { backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.tile, padding: 12, gap: 4 },
   label: { fontFamily: fonts.semibold, fontSize: 11, letterSpacing: 0.5, color: colors.inkMuted, textTransform: "uppercase" },
   body: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
   strong: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
@@ -164,11 +191,7 @@ const buttonStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.shell },
-  content: { padding: 18, gap: 16, paddingBottom: 48 },
-  title: shell.title,
-  tile: { width: "31.5%", backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: StyleSheet.hairlineWidth, borderRadius: radius.tile, padding: 12, gap: 4 },
-  stat: { fontFamily: fonts.bold, fontSize: 21, color: colors.ink },
-  right: { fontFamily: fonts.semibold, fontSize: 14, color: colors.inkMuted },
+  content: { paddingHorizontal: 16, paddingTop: 12, gap: 16 },
   segments: { flexDirection: "row", backgroundColor: colors.surfaceInset, borderRadius: radius.pill, padding: 4, gap: 4 },
   segment: { flex: 1, paddingVertical: 8, borderRadius: radius.pill, alignItems: "center" },
   segmentSelected: { backgroundColor: colors.surface },
