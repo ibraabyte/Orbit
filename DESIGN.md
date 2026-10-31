@@ -1,7 +1,8 @@
 # Orbit Design System — "Drift"
 
-> This describes the web version (git tag `web-final`), built with Tailwind. The Expo app does not use it yet:
-> its screens use plain iOS styling from `src/components/screen.tsx`. Keep this as the target look when porting it.
+> This describes the web version (git tag `web-final`), built with Tailwind. The Expo app uses the same look:
+> its tokens (converted to hex) live in `src/components/theme.ts`, and the shared pieces (Screen, Section, Stats, Row,
+> Segments, Button, Input) in `src/components/screen.tsx`. Native tabs and headers keep the platform shape, in Drift colors.
 
 ## Overview
 

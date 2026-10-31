@@ -6,6 +6,8 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiQuickAdd } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
 import { describeDraft, parseNatural } from "@/lib/quick-add-input";
+import { ui } from "@/components/screen";
+import { colors, fonts, radius } from "@/components/theme";
 
 const recentKey = "orbit.quick-add.recent";
 // Tap to start a line with the right word; the parser does the rest.
@@ -62,7 +64,9 @@ export function QuickAddBar() {
     <View style={{ gap: 8 }}>
       <TextInput
         ref={input}
-        style={styles.input}
+        style={ui.input}
+        placeholderTextColor={colors.inkMuted}
+        selectionColor={colors.accentDeep}
         placeholder="Add anything… spent 25 lunch, call mom tomorrow"
         value={text}
         onChangeText={setText}
@@ -92,7 +96,7 @@ export function QuickAddBar() {
 function Chip({ label, onPress }: { label: string; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={styles.chip}>
-      <Text style={{ fontSize: 15 }} numberOfLines={1}>
+      <Text style={styles.chipText} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
@@ -100,8 +104,9 @@ function Chip({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 const styles = StyleSheet.create({
-  input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontSize: 17 },
-  preview: { fontSize: 15, color: "#2f855a", paddingHorizontal: 4 },
-  warn: { color: "#b7791f" },
-  chip: { backgroundColor: "#fff", borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 220 }
+  // The preview and chips sit on the dark background.
+  preview: { fontFamily: fonts.medium, fontSize: 15, color: colors.accent, paddingHorizontal: 4 },
+  warn: { color: colors.warning },
+  chip: { backgroundColor: colors.surfaceInset, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 220 },
+  chipText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }
 });

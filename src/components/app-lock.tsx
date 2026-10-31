@@ -1,7 +1,9 @@
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { AppState, Button, StyleSheet, Text, View } from "react-native";
+import { AppState, StyleSheet, Text, View } from "react-native";
+import { Button } from "@/components/screen";
+import { colors, fonts } from "@/components/theme";
 
 const LOCK_KEY = "orbit.app-lock";
 
@@ -73,6 +75,6 @@ export function AppLock({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  cover: { alignItems: "center", justifyContent: "center", gap: 16, backgroundColor: "#f2f2f7" },
-  title: { fontSize: 34, fontWeight: "700", color: "#111" }
+  cover: { alignItems: "center", justifyContent: "center", gap: 16, backgroundColor: colors.shell },
+  title: { fontFamily: fonts.bold, fontSize: 34, color: colors.onShell }
 });

@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Alert, Button, StyleSheet, TextInput, View } from "react-native";
-import { Empty, Row, Screen, Section } from "@/components/screen";
+import { Alert, View } from "react-native";
+import { Button, Empty, Input, Row, Screen, Section } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { oilChangeDueByDistance } from "@/lib/vehicles";
@@ -112,7 +112,7 @@ export default function Vehicles() {
         </Section>
       ))}
       <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-        <TextInput style={styles.input} placeholder={vehicles.length ? "Add another car" : "Your car, e.g. Camry 2022"} value={name} onChangeText={setName} returnKeyType="done" />
+        <Input style={{ flex: 1 }} placeholder={vehicles.length ? "Add another car" : "Your car, e.g. Camry 2022"} value={name} onChangeText={setName} returnKeyType="done" />
         <Button
           title="Add"
           disabled={!name.trim()}
@@ -127,7 +127,3 @@ export default function Vehicles() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  input: { flex: 1, backgroundColor: "#fff", borderRadius: 12, padding: 14, fontSize: 17 }
-});

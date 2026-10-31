@@ -23,7 +23,7 @@ export default function Journal() {
           <Text style={ui.label}>
             {entry.entry_date} · {entry.mood}
           </Text>
-          {entry.title ? <Text style={[ui.body, { fontWeight: "600" }]}>{entry.title}</Text> : null}
+          {entry.title ? <Text style={ui.strong}>{entry.title}</Text> : null}
           <Text style={ui.body}>{entry.body}</Text>
         </View>
       ))}

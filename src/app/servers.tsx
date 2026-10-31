@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Alert, Button, StyleSheet, TextInput } from "react-native";
-import { Empty, Row, Screen, Section } from "@/components/screen";
+import { Alert } from "react-native";
+import { Button, Empty, Input, Row, Screen, Section } from "@/components/screen";
 import { useServerStatus } from "@/hooks/use-server-status";
 
 export default function Servers() {
@@ -35,8 +35,8 @@ export default function Servers() {
         <Empty>Add Seerr, Plex or any server. Orbit checks it while the app is open and alerts you if it goes down.</Empty>
       )}
       <Section title="Add a server">
-        <TextInput style={styles.input} placeholder="Name (e.g. Plex)" value={name} onChangeText={setName} />
-        <TextInput style={styles.input} placeholder="https://plex.example.com" value={url} onChangeText={setUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
+        <Input placeholder="Name (e.g. Plex)" value={name} onChangeText={setName} />
+        <Input placeholder="https://plex.example.com" value={url} onChangeText={setUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
         <Button
           title="Add"
           disabled={!url.trim()}
@@ -50,7 +50,3 @@ export default function Servers() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontSize: 17 }
-});

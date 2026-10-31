@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
-import { Alert, Button, StyleSheet, TextInput, View } from "react-native";
-import { Empty, Row, Screen, Section, ui } from "@/components/screen";
+import { Alert, View } from "react-native";
+import { Button, Empty, Input, Row, Screen, Section } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -23,8 +23,8 @@ function Connect({ connect }: { connect: (url: string, apiKey: string) => Promis
   return (
     <Screen>
       <Empty>Connect your Seerr server once. The key stays on this phone.</Empty>
-      <TextInput style={styles.input} placeholder="https://seerr.example.com" value={url} onChangeText={setUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
-      <TextInput style={styles.input} placeholder="API key (Seerr → Settings → General)" value={key} onChangeText={setKey} autoCapitalize="none" autoCorrect={false} secureTextEntry />
+      <Input placeholder="https://seerr.example.com" value={url} onChangeText={setUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
+      <Input placeholder="API key (Seerr → Settings → General)" value={key} onChangeText={setKey} autoCapitalize="none" autoCorrect={false} secureTextEntry />
       <Button
         title={busy ? "Checking…" : "Connect"}
         disabled={busy || !url.trim() || !key.trim()}
@@ -118,7 +118,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   return (
     <Screen refreshing={loading} onRefresh={() => load()}>
       {seerr.error ? <Empty>{seerr.error}</Empty> : null}
-      <TextInput style={styles.input} placeholder="Search movies & TV" value={query} onChangeText={setQuery} onSubmitEditing={() => load()} returnKeyType="search" clearButtonMode="while-editing" />
+      <Input placeholder="Search movies & TV" value={query} onChangeText={setQuery} onSubmitEditing={() => load()} returnKeyType="search" clearButtonMode="while-editing" />
       {pending.length ? (
         <Section title="Waiting for your approval">
           {pending.map(({ request, title }) => (
@@ -174,13 +174,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
           <Empty>{loading ? "Loading…" : "Nothing found."}</Empty>
         )}
       </Section>
-      <View style={ui.card}>
-        <Button title={`Disconnect ${seerr.serverUrl ?? ""}`} color="#c0392b" onPress={() => seerr.disconnect()} />
-      </View>
+      <Button variant="danger" title={`Disconnect ${seerr.serverUrl ?? ""}`} onPress={() => seerr.disconnect()} />
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  input: { backgroundColor: "#fff", borderRadius: 12, padding: 14, fontSize: 17 }
-});

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
-import { Empty, Row, Screen, Section, Segments, Stats, ui } from "@/components/screen";
+import { Row, Screen, Section, Segments, shell, Stats, ui } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { appHref } from "@/lib/app-href";
 import { formatFocusDuration } from "@/lib/focus";
@@ -55,7 +55,7 @@ export default function Plan() {
         <Section title="Next 7 days">
           {agenda.map((day) => (
             <View key={day.date} style={ui.card}>
-              <Text style={[ui.body, { fontWeight: "600" }]}>
+              <Text style={ui.strong}>
                 {day.label} · <Text style={ui.muted}>{day.summary}</Text>
               </Text>
               {day.events.map((event) => (
@@ -76,7 +76,7 @@ export default function Plan() {
     return (
       <>
         <Stats items={[["Score", review.score], ...review.metrics.slice(0, 5).map((metric) => [metric.label, metric.value] as const)]} />
-        <Text style={ui.muted}>Status: {review.scoreLabel}</Text>
+        <Text style={shell.muted}>Status: {review.scoreLabel}</Text>
         {review.highlights.length ? <Bullets title="Going well" lines={review.highlights} /> : null}
         {review.gaps.length ? <Bullets title="Gaps" lines={review.gaps} /> : null}
         <Section title="Actions">
@@ -114,7 +114,7 @@ export default function Plan() {
 function Bullets({ title, lines }: { title: string; lines: string[] }) {
   return (
     <Section title={title}>
-      <View style={ui.card}>{lines.length ? lines.map((line) => <Text key={line} style={ui.body}>• {line}</Text>) : <Empty>Nothing yet.</Empty>}</View>
+      <View style={ui.card}>{lines.length ? lines.map((line) => <Text key={line} style={ui.body}>• {line}</Text>) : <Text style={ui.muted}>Nothing yet.</Text>}</View>
     </Section>
   );
 }
