@@ -11,16 +11,12 @@
 
 ## النشر على Coolify
 
-1. في Coolify: **New Resource ← Public/Private Repository** واختر `ibraabyte/Orbit`.
-2. **Build Pack**: Docker Compose. **Base Directory**: `/backend`. **Docker Compose Location**: `/docker-compose.yml`.
-3. في **Domains** حط دومين للخدمة `api` مع المنفذ 8000، مثل `https://api.example.com:8000`. Coolify يسوي HTTPS بنفسه.
-4. Deploy.
+الدليل الكامل خطوة بخطوة في ملف `DEPLOY.md`. باختصار:
 
-كلمة سر قاعدة البيانات ومفتاح التوقيع (`SERVICE_PASSWORD_64_POSTGRES` و`SERVICE_BASE64_64_JWT`) يولدها Coolify أول مرة ويحفظها في **Environment Variables**. لا ترسلها في أي محادثة.
-لو ما ولدها لسبب ما، حطها يدوياً في نفس الصفحة: `SERVICE_USER_POSTGRES`، و`SERVICE_PASSWORD_64_POSTGRES` (حروف وأرقام فقط)، و`SERVICE_BASE64_64_JWT` (48 حرف أو أكثر).
-
-بعد النشر افتح `https://api.example.com/health` وتأكد إنه يرجع `{"ok": true}`.
-أول حساب يتسجل مسموح دائماً، وبعده التسجيل يتقفل. لو تبي تفتحه حط `ORBIT_ALLOW_SIGNUPS=true`.
+1. طريقة البناء `Docker Compose`، والمجلد الأساسي `/backend`، والملف `/docker-compose.yml`.
+2. الدومين عند خدمة `api` مع المنفذ 8000، مثل `https://api.example.com:8000`.
+3. كلمة سر القاعدة ومفتاح التوقيع (`SERVICE_PASSWORD_64_POSTGRES` و`SERVICE_BASE64_64_JWT`) يولدها Coolify بنفسه.
+4. بعد النشر: `https://api.example.com/health` لازم يرجع `{"ok":true}`، وسجّل حسابك فوراً (أول حساب فقط مسموح).
 
 كل تشغيل للخدمة يطبق الـ migrations الجديدة تلقائياً قبل ما يبدأ (`docker-entrypoint.sh`).
 قاعدة البيانات داخل الـ compose وما لها منفذ مفتوح للإنترنت.
@@ -111,7 +107,6 @@ reminders_router = owned_crud_router(
 
 ## الخطوات الجاية
 
-1. **التطبيق**: تحويل كل الشاشات لهذي المسارات، وحذف Supabase من المستودع.
-2. **المرفقات**: رفع الملفات يحتاج مكان تخزين على السيرفر (ما فيه شاشة له في التطبيق الحين).
-3. **المهام الخلفية**: مراقبة السيرفرات، تنبيهات Seerr، تذكيرات الاشتراكات والسيارة عبر إشعارات Expo.
-4. **النسخ الاحتياطي**: نسخة ليلية لقاعدة البيانات.
+1. **المرفقات**: رفع الملفات يحتاج مكان تخزين على السيرفر (ما فيه شاشة له في التطبيق الحين).
+2. **المهام الخلفية**: مراقبة السيرفرات، تنبيهات Seerr، تذكيرات الاشتراكات والسيارة عبر إشعارات Expo.
+3. **النسخ الاحتياطي خارج السيرفر**: النسخة الليلية (في `DEPLOY.md`) تنحفظ على نفس السيرفر؛ نقلها لمكان ثاني خطوة جاية.
