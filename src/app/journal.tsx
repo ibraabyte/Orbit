@@ -1,6 +1,7 @@
-import { Text, View } from "react-native";
-import { QuickAddBar } from "@/components/quick-add-bar";
-import { Empty, Screen, Stats, ui } from "@/components/screen";
+import { Text } from "react-native";
+import { Badge, Card, type } from "@/components/drift";
+import { QuickAddCard } from "@/components/quick-add-bar";
+import { Empty, Screen, Stats } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { averageMood, journalEntriesInLastDays, todayEntry } from "@/lib/journal";
 
@@ -9,23 +10,19 @@ export default function Journal() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      <QuickAddBar />
+      <QuickAddCard hint='Try "journal good today was calm".' />
       <Stats
         items={[
-          ["Today", todayEntry(data.journalEntries) ? "Written" : "Not yet"],
-          ["7-day mood", averageMood(journalEntriesInLastDays(data.journalEntries, 7)) || "-"],
-          ["Entries", data.journalEntries.length]
+          ["Today", todayEntry(data.journalEntries) ? "Written" : "Not yet", "edit-3"],
+          ["7-day mood", averageMood(journalEntriesInLastDays(data.journalEntries, 7)) || "-", "smile"],
+          ["Entries", data.journalEntries.length, "book-open"]
         ]}
       />
       {!data.journalEntries.length ? <Empty>Write one: "journal good today was calm".</Empty> : null}
       {data.journalEntries.map((entry) => (
-        <View key={entry.id} style={ui.card}>
-          <Text style={ui.label}>
-            {entry.entry_date} · {entry.mood}
-          </Text>
-          {entry.title ? <Text style={ui.strong}>{entry.title}</Text> : null}
-          <Text style={ui.body}>{entry.body}</Text>
-        </View>
+        <Card key={entry.id} title={entry.title || entry.entry_date} kicker={entry.title ? entry.entry_date : undefined} action={<Badge>{entry.mood}</Badge>}>
+          <Text style={type.body}>{entry.body}</Text>
+        </Card>
       ))}
     </Screen>
   );

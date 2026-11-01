@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
-import { Alert, View } from "react-native";
+import { Alert } from "react-native";
 import { Button, Empty, Input, Row, Screen, Section } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";

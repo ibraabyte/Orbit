@@ -137,13 +137,14 @@ export function Segments<T extends string>({ options, value, onChange }: { optio
 
 // primary: lime with dark text. secondary: cream. danger: red, for sign out and disconnect.
 export function Button({ title, onPress, disabled, variant = "primary" }: { title: string; onPress: () => void; disabled?: boolean; variant?: "primary" | "secondary" | "danger" }) {
+  const onSurface = useOnSurface();
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityState={{ disabled: Boolean(disabled) }}
-      style={({ pressed: down }) => [styles.button, buttonStyles[variant], disabled && { opacity: 0.45 }, down && { opacity: 0.8 }]}
+      style={({ pressed: down }) => [styles.button, buttonStyles[variant], variant === "secondary" && onSurface && { backgroundColor: colors.surfaceInset }, disabled && { opacity: 0.45 }, down && { opacity: 0.8 }]}
     >
       <Text style={[styles.buttonText, { color: variant === "danger" ? "#fff" : colors.accentInk }]} numberOfLines={1}>
         {title}

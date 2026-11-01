@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { Switch, Text, View } from "react-native";
+import { Switch } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
-import { Button, Screen, ui } from "@/components/screen";
+import { Card, IconTile, ListRow } from "@/components/drift";
+import { Button, Screen } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { arePrayerAlertsEnabled, setPrayerAlertsEnabled } from "@/hooks/use-prayer-times";
@@ -19,32 +20,41 @@ export default function Settings() {
 
   return (
     <Screen>
-      <View style={ui.card}>
-        <Text style={ui.label}>Signed in as</Text>
-        <Text style={ui.body}>{data.profile?.display_name ?? "Orbit user"}</Text>
-      </View>
-      <View style={[ui.card, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}>
-        <Text style={ui.body}>Lock with Face ID</Text>
-        <Switch
-          trackColor={{ true: colors.accentDeep, false: colors.hairline }}
-          value={lock}
-          onValueChange={(next) => {
-            setLock(next);
-            void setAppLockEnabled(next);
-          }}
+      <Card title="Account">
+        <ListRow leading={<IconTile name="user" />} title={data.profile?.display_name ?? "Orbit user"} subtitle="Signed in on Orbit's own server" />
+      </Card>
+      <Card title="Privacy and alerts" kicker="Stored on this phone.">
+        <ListRow
+          leading={<IconTile name="lock" />}
+          title="Lock with Face ID"
+          subtitle="On launch and when you come back"
+          trailing={
+            <Switch
+              trackColor={{ true: colors.accentDeep, false: colors.hairline }}
+              value={lock}
+              onValueChange={(next) => {
+                setLock(next);
+                void setAppLockEnabled(next);
+              }}
+            />
+          }
         />
-      </View>
-      <View style={[ui.card, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }]}>
-        <Text style={ui.body}>Prayer time alerts</Text>
-        <Switch
-          trackColor={{ true: colors.accentDeep, false: colors.hairline }}
-          value={prayers}
-          onValueChange={(next) => {
-            setPrayers(next);
-            void setPrayerAlertsEnabled(next);
-          }}
+        <ListRow
+          leading={<IconTile name="bell" />}
+          title="Prayer time alerts"
+          subtitle="A notification at each prayer"
+          trailing={
+            <Switch
+              trackColor={{ true: colors.accentDeep, false: colors.hairline }}
+              value={prayers}
+              onValueChange={(next) => {
+                setPrayers(next);
+                void setPrayerAlertsEnabled(next);
+              }}
+            />
+          }
         />
-      </View>
+      </Card>
       <Button variant="danger" title="Sign out" onPress={() => void signOut()} />
     </Screen>
   );

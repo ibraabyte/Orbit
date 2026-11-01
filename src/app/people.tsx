@@ -1,5 +1,5 @@
 import { Alert } from "react-native";
-import { QuickAddBar } from "@/components/quick-add-bar";
+import { QuickAddCard } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { getApi } from "@/lib/backend";
@@ -22,7 +22,7 @@ export default function People() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      <QuickAddBar />
+      <QuickAddCard hint='Try "person Sara as friend birthday 1990-03-14".' />
       <Section title="Follow-ups">
         {followUps.length ? followUps.map((person) => <Row key={person.id} title={person.name} detail={`Due ${person.next_follow_up_at}`} tone={people.overdueFollowUps.includes(person) ? "warning" : "neutral"} right="Contacted" onPress={() => contacted(person)} />) : <Empty>No follow-ups this week.</Empty>}
       </Section>

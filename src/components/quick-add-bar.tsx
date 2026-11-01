@@ -6,7 +6,7 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiQuickAdd } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
 import { describeDraft, parseNatural } from "@/lib/quick-add-input";
-import { useOnSurface } from "@/components/drift";
+import { Card, useOnSurface } from "@/components/drift";
 import { ui } from "@/components/screen";
 import { colors, fonts, radius } from "@/components/theme";
 
@@ -116,3 +116,12 @@ const styles = StyleSheet.create({
   chip: { backgroundColor: colors.surfaceInset, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 7, maxWidth: 220 },
   chipText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink }
 });
+
+/** The quick add bar in a cream card, at the top of each section's screen. */
+export function QuickAddCard({ hint }: { hint: string }) {
+  return (
+    <Card title="Quick add" kicker={hint}>
+      <QuickAddBar />
+    </Card>
+  );
+}

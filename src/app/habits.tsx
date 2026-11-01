@@ -1,5 +1,6 @@
-import { QuickAddBar } from "@/components/quick-add-bar";
-import { Empty, Row, Screen } from "@/components/screen";
+import { QuickAddCard } from "@/components/quick-add-bar";
+import { Card, CheckItem, EmptyState, ListRow, Stack } from "@/components/drift";
+import { Screen } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { habitMomentum, habitProgress } from "@/lib/habits";
 import { getApi } from "@/lib/backend";
@@ -9,22 +10,24 @@ export default function Habits() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      <QuickAddBar />
-      {!data.habits.length ? <Empty>Add one: "habit read 20 min daily".</Empty> : null}
-      {data.habits.map((habit) => {
-        const progress = habitProgress(habit, data.habitLogs);
-        const momentum = habitMomentum(habit, data.habitLogs);
-        return (
-          <Row
-            key={habit.id}
-            title={habit.name}
-            detail={`${progress.completed}/${progress.target} this ${momentum.unit} · ${momentum.currentStreak} ${momentum.unit} streak`}
-            tone={progress.done ? "success" : "neutral"}
-            right={progress.done ? "Done" : "Check in"}
-            onPress={() => act(() => getApi().post("/habit-logs", { habit_id: habit.id, logged_at: new Date().toISOString() }))}
-          />
-        );
-      })}
+      <QuickAddCard hint='Try "habit read 20 min daily".' />
+      <Card title="Check-ins" kicker="Tap the circle to log a check-in.">
+        {!data.habits.length ? <EmptyState>No habits yet.</EmptyState> : null}
+        <Stack>
+          {data.habits.map((habit) => {
+            const progress = habitProgress(habit, data.habitLogs);
+            const momentum = habitMomentum(habit, data.habitLogs);
+            return (
+              <ListRow
+                key={habit.id}
+                leading={<CheckItem checked={progress.done} label={`Check in ${habit.name}`} onPress={() => act(() => getApi().post("/habit-logs", { habit_id: habit.id, logged_at: new Date().toISOString() }))} />}
+                title={habit.name}
+                subtitle={`${progress.completed}/${progress.target} this ${momentum.unit} · ${momentum.currentStreak} ${momentum.unit} streak`}
+              />
+            );
+          })}
+        </Stack>
+      </Card>
     </Screen>
   );
 }

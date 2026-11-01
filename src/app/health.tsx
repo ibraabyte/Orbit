@@ -1,4 +1,5 @@
-import { QuickAddBar } from "@/components/quick-add-bar";
+import { IconTile, ListRow } from "@/components/drift";
+import { QuickAddCard } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section, Stats } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { buildHealthSnapshot } from "@/lib/health";
@@ -18,18 +19,18 @@ export default function Health() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      <QuickAddBar />
-      <Row title="WHOOP" detail="Recovery, sleep and strain from your band" href="/whoop" />
+      <QuickAddCard hint='Try "meal 650 chicken rice", "workout 40m run" or "sleep 7h".' />
+      <ListRow leading={<IconTile name="watch" />} title="WHOOP" subtitle="Recovery, sleep and strain from your band" href="/whoop" chevron />
       <Stats
         items={[
-          ["Calories", `${health.todayCalories}${target(health.calorieTarget)}`],
-          ["Protein g", `${Math.round(health.todayMacros.protein)}${target(health.macroTargets.protein)}`],
-          ["Carbs g", `${Math.round(health.todayMacros.carbs)}${target(health.macroTargets.carbs)}`],
-          ["Fat g", `${Math.round(health.todayMacros.fat)}${target(health.macroTargets.fat)}`],
-          ["Workout 7d", `${health.workoutMinutes}/${health.workoutTarget}m`],
-          ["Sleep avg", formatSleepDuration(health.sleepAverageMinutes)],
-          ["Weight", health.latestWeight === null ? "-" : `${health.latestWeight} ${health.weightUnit}`],
-          ["Change", health.weightDelta === null ? "-" : `${health.weightDelta > 0 ? "+" : ""}${health.weightDelta}`]
+          ["Calories", `${health.todayCalories}${target(health.calorieTarget)}`, "coffee"],
+          ["Protein g", `${Math.round(health.todayMacros.protein)}${target(health.macroTargets.protein)}`, "pie-chart"],
+          ["Carbs g", `${Math.round(health.todayMacros.carbs)}${target(health.macroTargets.carbs)}`, "pie-chart"],
+          ["Fat g", `${Math.round(health.todayMacros.fat)}${target(health.macroTargets.fat)}`, "pie-chart"],
+          ["Workout 7d", `${health.workoutMinutes}/${health.workoutTarget}m`, "activity"],
+          ["Sleep avg", formatSleepDuration(health.sleepAverageMinutes), "moon"],
+          ["Weight", health.latestWeight === null ? "-" : `${health.latestWeight} ${health.weightUnit}`, "trending-down"],
+          ["Change", health.weightDelta === null ? "-" : `${health.weightDelta > 0 ? "+" : ""}${health.weightDelta}`, "bar-chart"]
         ]}
       />
       <Section title="Meals">

@@ -1,8 +1,9 @@
 import { Link } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Text } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform } from "react-native";
+import { AuthPanel, Field } from "@/components/auth-panel";
 import { authStyles as styles } from "@/components/auth-styles";
-import { Button, Input } from "@/components/screen";
+import { Button } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 
 export default function SignIn() {
@@ -32,13 +33,14 @@ export default function SignIn() {
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <Text style={styles.title}>Orbit</Text>
-      <Input placeholder="Email" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={email} onChangeText={setEmail} />
-      <Input placeholder="Password" secureTextEntry autoComplete="current-password" textContentType="password" value={password} onChangeText={setPassword} onSubmitEditing={signIn} />
-      <Button title={busy ? "Signing in…" : "Sign in"} disabled={busy || !email || !password} onPress={signIn} />
+      <AuthPanel title="Sign in to Orbit" subtitle="Open your daily command center.">
+        <Field label="Email" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={email} onChangeText={setEmail} />
+        <Field label="Password" secureTextEntry autoComplete="current-password" textContentType="password" value={password} onChangeText={setPassword} onSubmitEditing={signIn} />
+        <Button title={busy ? "Signing in…" : "Sign in"} disabled={busy || !email || !password} onPress={signIn} />
+      </AuthPanel>
       {signupsOpen ? (
         <Link href="/sign-up" style={styles.link}>
-          Create an account
+          No account yet? Create one
         </Link>
       ) : null}
     </KeyboardAvoidingView>
