@@ -10,6 +10,9 @@ export const financeCategories: FinanceCategory[] = [
   "shopping",
   "health",
   "travel",
+  "groceries",
+  "bills",
+  "services",
   "other"
 ];
 

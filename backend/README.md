@@ -95,6 +95,7 @@ ORBIT_TEST_DATABASE_URL=postgresql+psycopg://orbit:orbit@localhost:5432/orbit_te
 | `GET /integrations` | حالة كل الروابط للمستخدم: WHOOP و Seerr والذكاء الاصطناعي |
 | `GET`/`PUT`/`DELETE /integrations/seerr` | ربط Seerr لهذا الحساب: الرابط والمفتاح (المفتاح ينحفظ **مشفّر** وما يرجع للتطبيق أبداً) |
 | `/integrations/seerr/api/...` | طلبات Seerr اللي يسويها التطبيق فقط (بحث، رائج، طلبات، موافقة)، تنرسل بمفتاح نفس المستخدم |
+| `POST /bank-sms` و`/bank-sms/...` | رسائل البنك من اختصار iPhone بمفتاح خاص، والمراجعة والتقرير الشهري. الدليل في `BANK_SMS.md` |
 | `GET /auth/me` | الحساب، ومعه `is_admin` |
 | `GET`/`PATCH /admin/settings` | للأدمن فقط: فتح التسجيل أو قفله من التطبيق |
 

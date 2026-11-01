@@ -1,6 +1,7 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Text } from "react-native";
+import { BankSmsCard } from "@/components/bank-sms-card";
 import { Badge, Card, EmptyState, IconTile, ListRow, toneToBadge, type } from "@/components/drift";
 import { Button, Loading, Screen } from "@/components/screen";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
@@ -82,6 +83,8 @@ export default function Integrations() {
           </>
         )}
       </Card>
+
+      <BankSmsCard />
 
       <Card title="AI summaries" action={<Badge tone={toneToBadge(ai.tone)}>{ai.label}</Badge>}>
         <ListRow leading={<IconTile name="feather" />} title="Written summaries" subtitle={ai.detail} />

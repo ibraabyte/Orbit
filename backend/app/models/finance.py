@@ -6,7 +6,20 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, Owned, updated_at
 
-FINANCE_CATEGORIES = ("food", "transport", "fitness", "home", "subscriptions", "shopping", "health", "travel", "other")
+FINANCE_CATEGORIES = (
+    "food",
+    "transport",
+    "fitness",
+    "home",
+    "subscriptions",
+    "shopping",
+    "health",
+    "travel",
+    "groceries",
+    "bills",
+    "services",
+    "other",
+)
 _categories_sql = "category in (" + ", ".join(f"'{c}'" for c in FINANCE_CATEGORIES) + ")"
 
 

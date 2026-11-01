@@ -1,0 +1,38 @@
+[
+  {
+    "bank": "rajhi",
+    "message": "شراء نقاط البيع\nبطاقة: *1234\nمبلغ: 45.50 ر.س\nلدى: مقهى تجريبي\nمرجع: DEMO-RAJHI",
+    "amount_minor": 4550,
+    "amount": 45.5
+  },
+  {
+    "bank": "alinma",
+    "message": "POS Card Purchase\nAmount: SAR 120.00\nCard ending 2345\nMerchant: TEST GROCERY\nReference: DEMO-ALINMA",
+    "amount_minor": 12000,
+    "amount": 120.0
+  },
+  {
+    "bank": "stc",
+    "message": "عملية دفع\nالمبلغ: ١٩٫٩٥ ريال\nبطاقة: *3456\nلدى: متجر تجريبي\nمرجع: DEMO-STC",
+    "amount_minor": 1995,
+    "amount": 19.95
+  },
+  {
+    "bank": "d360",
+    "message": "Online Purchase\nAmount: SAR 75.25\nCard ending 4567\nMerchant: TEST STORE\nReference: DEMO-D360",
+    "amount_minor": 7525,
+    "amount": 75.25
+  },
+  {
+    "bank": "barq",
+    "message": "شراء\nمبلغ: 30.00 ريال\nبطاقة: *5678\nلدى: مطعم تجريبي\nمرجع: DEMO-BARQ",
+    "amount_minor": 3000,
+    "amount": 30.0
+  },
+  {
+    "bank": "snb",
+    "message": "POS Purchase\nAmount: SAR 60.00\nCard ending 6789\nMerchant: TEST PHARMACY\nReference: DEMO-SNB",
+    "amount_minor": 6000,
+    "amount": 60.0
+  }
+]

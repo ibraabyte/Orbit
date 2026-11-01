@@ -22,6 +22,7 @@ export const EXPORT_TABLES = [
   { name: "focus_sessions", ownerColumn: "user_id", orderColumn: "started_at", ascending: true },
   { name: "expenses", ownerColumn: "user_id", orderColumn: "spent_at", ascending: true },
   { name: "bills", ownerColumn: "user_id", orderColumn: "due_at", ascending: true },
+  { name: "bank_transactions", ownerColumn: "user_id", orderColumn: "received_at", ascending: true },
   { name: "push_subscriptions", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "habits", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "habit_logs", ownerColumn: "user_id", orderColumn: "logged_at", ascending: true },

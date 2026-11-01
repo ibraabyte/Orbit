@@ -39,3 +39,5 @@ known-third-party = ["alembic"]
 
 [tool.ruff.lint.per-file-ignores]
 "alembic/versions/*" = ["E501"]
+"app/services/bank_sms.py" = ["E501"]
+"tests/test_bank_sms*.py" = ["E501", "SIM117"]
