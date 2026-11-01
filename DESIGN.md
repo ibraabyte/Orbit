@@ -1,5 +1,7 @@
 # Orbit Design System — "Drift"
 
+> **2026-11-01:** the Expo app follows the "Orbit Screens" redesign from Claude Design. Live tokens are in `src/components/theme.ts`, parts in `src/components/drift.tsx`, `screen.tsx` and `overlays.tsx`. Sections below that mention Tailwind describe the archived web version (tag `web-final`).
+
 > This describes the web version (git tag `web-final`), built with Tailwind. The Expo app uses the same look:
 > its tokens (converted to hex) live in `src/components/theme.ts`, the building blocks (Card, ListRow, Badge, StatTile,
 > RingGauge, ProgressBar, CheckItem, EmptyState, PageHeader, Brand; Feather icons) in `src/components/drift.tsx`, and the

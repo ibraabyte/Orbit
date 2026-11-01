@@ -1,8 +1,8 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Text } from "react-native";
-import { Badge, Card, IconTile, ListRow, type } from "@/components/drift";
-import { Button, Empty, Loading, Screen } from "@/components/screen";
+import { Badge, Card, EmptyState, IconTile, ListRow, toneToBadge, type } from "@/components/drift";
+import { Button, Loading, Screen } from "@/components/screen";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
 import { useSeerr } from "@/hooks/use-seerr";
 import { getApi } from "@/lib/backend";
@@ -37,7 +37,7 @@ export default function Integrations() {
   if (!overview) {
     return (
       <Screen refreshing={loading} onRefresh={load}>
-        {loading ? <Loading /> : <Empty>{error ?? "Couldn't load your connections. Pull to try again."}</Empty>}
+        {loading ? <Loading /> : <EmptyState>{error ?? "Couldn't load your connections. Pull to try again."}</EmptyState>}
       </Screen>
     );
   }
@@ -54,9 +54,9 @@ export default function Integrations() {
 
   return (
     <Screen refreshing={loading} onRefresh={load}>
-      <Text style={[type.meta, { paddingHorizontal: 4 }]}>Each connection is yours only. Keys are kept encrypted on your Orbit server.</Text>
+      <Text style={[type.shellMuted, { paddingHorizontal: 4 }]}>Each connection is yours only. Keys are kept encrypted on your Orbit server.</Text>
 
-      <Card title="WHOOP" kicker="Recovery, sleep and strain" action={<Badge tone={whoop.tone}>{whoop.label}</Badge>}>
+      <Card title="WHOOP" action={<Badge tone={toneToBadge(whoop.tone)}>{whoop.label}</Badge>}>
         <ListRow
           leading={<IconTile name="watch" />}
           title={overview.whoop.connected ? "Open WHOOP" : "Connect WHOOP"}
@@ -66,24 +66,24 @@ export default function Integrations() {
         />
       </Card>
 
-      <Card title="Seerr" kicker="Search and request movies and TV on your media server" action={<Badge tone={seerrNow.tone}>{seerrNow.label}</Badge>}>
-        {seerr.error ? <Text style={type.meta}>{seerr.error}</Text> : null}
+      <Card title="Seerr" action={<Badge tone={toneToBadge(seerrNow.tone)}>{seerrNow.label}</Badge>}>
+        {seerr.error ? <Text style={type.rowSubtitle}>{seerr.error}</Text> : null}
         {!seerr.ready ? (
           <Loading />
         ) : seerr.connected ? (
           <>
             <ListRow leading={<IconTile name="film" />} title="Open Movies & TV" subtitle={seerrNow.detail} href="/media" chevron />
-            <Button variant="secondary" title="Disconnect Seerr" onPress={disconnectSeerr} />
+            <Button variant="outline" title="Disconnect Seerr" onPress={disconnectSeerr} />
           </>
         ) : (
           <>
-            <Text style={type.meta}>{seerrNow.detail}</Text>
+            <Text style={type.rowSubtitle}>{seerrNow.detail}</Text>
             <SeerrConnectForm connect={(url, key) => seerr.connect(url, key).then(load)} />
           </>
         )}
       </Card>
 
-      <Card title="AI summaries" kicker="Provided by the server for everyone on it" action={<Badge tone={ai.tone}>{ai.label}</Badge>}>
+      <Card title="AI summaries" action={<Badge tone={toneToBadge(ai.tone)}>{ai.label}</Badge>}>
         <ListRow leading={<IconTile name="feather" />} title="Written summaries" subtitle={ai.detail} />
       </Card>
     </Screen>

@@ -1,14 +1,24 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Text, View } from "react-native";
+import { Badge, Card, EmptyState, ListRow, RowButton, type } from "@/components/drift";
+import { useOverlays } from "@/components/overlays";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
-import { Button, Empty, Input, Row, Screen, Section } from "@/components/screen";
+import { Button, Screen, SearchBar } from "@/components/screen";
+import { colors, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { MEDIA_STATUS, REQUEST_STATUS, seerrTitle, type SeerrRequest, type SeerrResult } from "@/lib/seerr";
+import { formatDate, t } from "@/lib/i18n";
+import { seerrTitle, type SeerrRequest, type SeerrResult } from "@/lib/seerr";
 import type { WatchItem } from "@/lib/types";
 import { groupWatchItems, progressLabel, watchDraftFromSeerr } from "@/lib/watchlist";
+
+// ponytail: a colored block until real poster images are wired in.
+function Poster({ seed }: { seed: string }) {
+  const tones = [colors.urgent, colors.sage, colors.accentDeep, colors.inkMuted];
+  return <View style={{ width: 36, height: 52, borderRadius: radius.chip, backgroundColor: tones[seed.length % tones.length] }} />;
+}
 
 export default function Media() {
   const seerr = useSeerr();
@@ -19,15 +29,17 @@ export default function Media() {
 function Connect({ connect, error }: { connect: (url: string, apiKey: string) => Promise<void>; error: string | null }) {
   return (
     <Screen>
-      {error ? <Empty>{error}</Empty> : null}
-      <Empty>Connect your Seerr server once. Orbit keeps the key encrypted on its server, for your account only.</Empty>
-      <SeerrConnectForm connect={connect} />
+      <Card title={t.seerrConnect} style={{ gap: 12, paddingVertical: 16 }}>
+        <Text style={type.rowSubtitle}>{error ?? t.seerrHint}</Text>
+        <SeerrConnectForm connect={connect} />
+      </Card>
     </Screen>
   );
 }
 
 function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   const client = seerr.client!;
+  const { sheet } = useOverlays();
   const { userId } = useDashboardData();
   const watchlist = useWatchlist(userId);
   const lists = groupWatchItems(watchlist.items);
@@ -47,7 +59,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
         setPending(await Promise.all(requests.map(async (request) => ({ request, title: await client.details(request.type, request.media.tmdbId).then(seerrTitle).catch(() => null) }))));
       }
     } catch (error) {
-      Alert.alert("Seerr", error instanceof Error ? error.message : "Try again.");
+      Alert.alert("Seerr", error instanceof Error ? error.message : t.tryAgain);
     } finally {
       setLoading(false);
     }
@@ -64,100 +76,100 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       await load();
     } catch (error) {
-      Alert.alert("Seerr", error instanceof Error ? error.message : "Try again.");
+      Alert.alert("Seerr", error instanceof Error ? error.message : t.tryAgain);
     }
   };
 
-  // One tap on a title: request it on the server and/or put it on your watch list.
-  const pick = (item: SeerrResult, requestable: boolean) => {
-    const draft = watchDraftFromSeerr(item);
-    if (!draft) return;
-    const add = (status: WatchItem["status"]) => act(() => watchlist.save(watchDraftFromSeerr(item, status)!));
-    Alert.alert(seerrTitle(item), undefined, [
-      ...(requestable ? [{ text: "Request on server", onPress: () => act(() => client.request(draft.media_type, item.id)) }] : []),
-      ...(watchlist.available
-        ? [
-            { text: "Want to watch", onPress: () => add("want") },
-            { text: "Watching now", onPress: () => add("watching") }
-          ]
-        : []),
-      { text: "Cancel", style: "cancel" as const }
-    ]);
-  };
+  // ⋯ on a title: request it on the server and/or put it on your watch list.
+  const addToList = (item: SeerrResult) =>
+    sheet({
+      title: seerrTitle(item),
+      options: [
+        { label: t.wantToWatch, run: () => void act(() => watchlist.save(watchDraftFromSeerr(item, "want")!)) },
+        { label: t.watching, run: () => void act(() => watchlist.save(watchDraftFromSeerr(item, "watching")!)) }
+      ]
+    });
 
   const watched = (item: WatchItem) =>
-    Alert.alert(item.title, progressLabel(item) ?? undefined, [
-      ...(item.media_type === "tv"
-        ? [
-            { text: "Watched next episode", onPress: () => act(() => watchlist.watchedOne(item)) },
-            { text: "Start next season", onPress: () => act(() => watchlist.watchedOne(item, true)) }
-          ]
-        : []),
-      { text: "Finished", onPress: () => act(() => watchlist.update(item.id, { status: "done" })) },
-      { text: "Remove", style: "destructive" as const, onPress: () => act(() => watchlist.remove(item.id)) },
-      { text: "Cancel", style: "cancel" as const }
-    ]);
+    sheet({
+      title: item.title,
+      detail: progressLabel(item) ?? undefined,
+      options: [
+        ...(item.media_type === "tv"
+          ? [
+              { label: t.nextEp, run: () => void act(() => watchlist.watchedOne(item)) },
+              { label: t.nextSeason, run: () => void act(() => watchlist.watchedOne(item, true)) }
+            ]
+          : []),
+        { label: t.finished, run: () => void act(() => watchlist.update(item.id, { status: "done" })) },
+        { label: t.remove, destructive: true, run: () => void act(() => watchlist.remove(item.id)) }
+      ]
+    });
 
   return (
     <Screen refreshing={loading} onRefresh={() => load()}>
-      {seerr.error ? <Empty>{seerr.error}</Empty> : null}
-      <Input placeholder="Search movies & TV" value={query} onChangeText={setQuery} onSubmitEditing={() => load()} returnKeyType="search" clearButtonMode="while-editing" />
-      {pending.length ? (
-        <Section title="Waiting for your approval">
-          {pending.map(({ request, title }) => (
-            <Row
-              key={request.id}
-              title={title ?? `${request.type === "tv" ? "Series" : "Movie"} request`}
-              detail={`${request.requestedBy?.displayName ?? "Someone"} · ${new Date(request.createdAt).toLocaleDateString()}`}
-              tone="warning"
-              right="Review"
-              onPress={() =>
-                Alert.alert(title ?? "Request", REQUEST_STATUS[request.status], [
-                  { text: "Approve", onPress: () => act(() => client.approve(request.id)) },
-                  { text: "Decline", style: "destructive", onPress: () => act(() => client.decline(request.id)) },
-                  { text: "Cancel", style: "cancel" }
-                ])
-              }
-            />
-          ))}
-        </Section>
-      ) : null}
-      {lists.watching.length ? (
-        <Section title="Watching">
-          {lists.watching.map((item) => (
-            <Row key={item.id} title={item.title} detail={progressLabel(item)} tone="success" right="Update" onPress={() => watched(item)} />
-          ))}
-        </Section>
-      ) : null}
-      {lists.want.length ? (
-        <Section title="Want to watch">
-          {lists.want.map((item) => (
-            <Row key={item.id} title={item.title} detail={item.media_type === "tv" ? "Series" : "Movie"} onPress={() => watched(item)} />
-          ))}
-        </Section>
-      ) : null}
-      {!watchlist.available ? <Empty>Your watch list could not be loaded. Check your connection, then pull to refresh.</Empty> : null}
-      <Section title={searched ? "Results" : "Trending"}>
+      {seerr.error ? <EmptyState>{seerr.error}</EmptyState> : null}
+      <SearchBar placeholder={t.searchMedia} value={query} onChangeText={setQuery} onSubmitEditing={() => load()} />
+      <Card title={searched ? t.results : t.trending}>
         {results.length ? (
           results.map((item) => {
             const status = item.mediaInfo?.status;
             const requestable = !status || status === 1;
+            const draft = watchDraftFromSeerr(item);
             return (
-              <Row
+              <ListRow
                 key={`${item.mediaType}-${item.id}`}
+                leading={<Poster seed={seerrTitle(item)} />}
                 title={seerrTitle(item)}
-                detail={`${item.mediaType === "tv" ? "Series" : "Movie"}${status && status > 1 ? ` · ${MEDIA_STATUS[status]}` : ""}`}
-                tone={status === 5 ? "success" : status && status > 1 ? "warning" : undefined}
-                right={requestable ? "Request" : "Add"}
-                onPress={() => pick(item, requestable)}
+                subtitle={item.mediaType === "tv" ? t.series : t.movie}
+                trailing={
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    {status === 5 ? <Badge tone="success" glyph="✓">{t.available}</Badge> : null}
+                    {status && status > 1 && status !== 5 ? <Badge glyph="◷">{t.requested}</Badge> : null}
+                    {requestable && draft ? <RowButton label={t.request} onPress={() => act(() => client.request(draft.media_type, item.id))} /> : null}
+                    {watchlist.available && draft ? <RowButton outline icon="plus" label={t.wantToWatch} onPress={() => addToList(item)} /> : null}
+                  </View>
+                }
               />
             );
           })
         ) : (
-          <Empty>{loading ? "Loading…" : "Nothing found."}</Empty>
+          <EmptyState>{loading ? `${t.loading}…` : t.emptyEx}</EmptyState>
         )}
-      </Section>
-      <Button variant="danger" title={`Disconnect ${seerr.serverUrl ?? ""}`} onPress={() => seerr.disconnect()} />
+      </Card>
+      {lists.watching.length ? (
+        <Card title={t.watching}>
+          {lists.watching.map((item) => (
+            <ListRow key={item.id} leading={<Poster seed={item.title} />} title={item.title} subtitle={progressLabel(item)} trailing={<Badge tone="accent" glyph="▶">{t.nextEp}</Badge>} onPress={() => watched(item)} />
+          ))}
+        </Card>
+      ) : null}
+      {lists.want.length ? (
+        <Card title={t.wantToWatch}>
+          {lists.want.map((item) => (
+            <ListRow key={item.id} leading={<Poster seed={item.title} />} title={item.title} subtitle={item.media_type === "tv" ? t.series : t.movie} trailing={<RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(item.id))} />} onPress={() => watched(item)} />
+          ))}
+        </Card>
+      ) : null}
+      {!watchlist.available ? <EmptyState>{t.error}</EmptyState> : null}
+      {pending.length ? (
+        <Card title={t.pending} style={{ backgroundColor: colors.accentTint, borderColor: colors.accentTint }}>
+          {pending.map(({ request, title }) => (
+            <ListRow
+              key={request.id}
+              title={title ?? (request.type === "tv" ? t.series : t.movie)}
+              subtitle={`${request.requestedBy?.displayName ?? ""} · ${formatDate(request.createdAt)}`}
+              trailing={
+                <View style={{ flexDirection: "row", gap: 6 }}>
+                  <RowButton label={`✓ ${t.approve}`} onPress={() => act(() => client.approve(request.id))} />
+                  <RowButton outline label={t.decline} onPress={() => act(() => client.decline(request.id))} />
+                </View>
+              }
+            />
+          ))}
+        </Card>
+      ) : null}
+      <Button variant="outline" title={`${t.disconnect} Seerr`} onPress={() => sheet({ title: `${t.disconnect} Seerr`, detail: seerr.serverUrl ?? undefined, options: [{ label: t.disconnect, destructive: true, run: () => void seerr.disconnect() }] })} />
     </Screen>
   );
 }

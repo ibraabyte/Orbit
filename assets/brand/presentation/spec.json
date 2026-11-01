@@ -1,0 +1,35 @@
+{
+  "brand": "Orbit",
+  "tagline": "Your whole day, in one place",
+  "brief": "A private life dashboard for one person: planning, tasks, health, money, relationships and notes. It should feel calm, private and whole, and belong with the app's dark forest and lime Drift look.",
+  "adjectives": ["calm", "private", "whole", "alive"],
+  "criteria": "Success: not another blue productivity mark or ring with a moon, reads at 16 px with a small-size cut, works in one colour, feels native to the Drift design.",
+  "industry": "consumer-app",
+  "nav": ["Today", "Plan", "Settings"],
+  "brand_color": "#101511",
+  "greyscale": false,
+  "designer": "Orbit",
+  "round": 2,
+  "concepts": [
+    {
+      "name": "Trail",
+      "symbol": "../logo/orbit-symbol-ink.svg",
+      "lockup": "../logo/orbit-horizontal-ink.svg",
+      "symbol_on_tile": "../logo/orbit-symbol-on-forest.svg",
+      "lockup_on_dark": "../logo/orbit-horizontal-on-forest.svg",
+      "tile_color": "#101511",
+      "idea": "A single stroke swells from tail to head: your day gathering weight toward now.",
+      "rationale": [
+        "Echoes the progress ring already in the app",
+        "Keeps the idea of an orbit without the usual ring and moon",
+        "The round head repeats as the i-dot in the wordmark"
+      ]
+    }
+  ],
+  "recommendation": "Trail: the most ownable of the three, and the closest to how the app already looks.",
+  "next_steps": [
+    "Replace the old blue app icon",
+    "Add the web icons wherever a web page is served",
+    "Commission a trademark search before any commercial launch"
+  ]
+}

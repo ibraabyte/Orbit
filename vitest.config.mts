@@ -12,6 +12,8 @@ export default defineConfig({
     alias: {
       "@": new URL("./src", import.meta.url).pathname,
       "@react-native-async-storage/async-storage": new URL("./vitest.rn-stub.ts", import.meta.url).pathname,
+      "expo-constants": new URL("./vitest.rn-stub.ts", import.meta.url).pathname,
+      "react-native": new URL("./vitest.rn-stub.ts", import.meta.url).pathname,
       "react-native-url-polyfill/auto": new URL("./vitest.rn-stub.ts", import.meta.url).pathname
     }
   }

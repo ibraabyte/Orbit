@@ -1,20 +1,36 @@
 import { useEffect, useState } from "react";
-import { Alert, Switch } from "react-native";
+import { Alert, Pressable, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
-import { Card, IconTile, ListRow } from "@/components/drift";
+import { Avatar, Card, Chevron, IconTile, ListRow, type } from "@/components/drift";
+import { useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { arePrayerAlertsEnabled, setPrayerAlertsEnabled } from "@/hooks/use-prayer-times";
 import { getApi, signOut } from "@/lib/backend";
+import { t, toggleLanguage } from "@/lib/i18n";
 import { adminApi, type ServerSettings } from "@/lib/integrations";
+
+function Setting({ label, detail, children }: { label: string; detail?: string; children: React.ReactNode }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, borderTopWidth: 1, borderTopColor: colors.surfaceInset }}>
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={type.rowTitle}>{label}</Text>
+        {detail ? <Text style={type.rowSubtitle}>{detail}</Text> : null}
+      </View>
+      {children}
+    </View>
+  );
+}
 
 export default function Settings() {
   const { data } = useDashboardData();
+  const { toast } = useOverlays();
   const [lock, setLock] = useState(true);
   const [prayers, setPrayers] = useState(true);
   // Only the server's admin (the first account) sees the Server card.
   const [server, setServer] = useState<ServerSettings | null>(null);
+  const name = data.profile?.display_name ?? "Orbit";
 
   useEffect(() => {
     void isAppLockEnabled().then(setLock);
@@ -33,59 +49,70 @@ export default function Settings() {
       setServer(await adminApi.setSignupsOpen(getApi(), open));
     } catch (error) {
       setServer(server);
-      Alert.alert("Couldn't change it", error instanceof Error ? error.message : "Try again.");
+      Alert.alert(t.changeFailed, error instanceof Error ? error.message : t.tryAgain);
     }
   };
 
+  const track = { true: colors.accent, false: colors.hairline };
+
   return (
     <Screen>
-      <Card title="Account">
-        <ListRow leading={<IconTile name="user" />} title={data.profile?.display_name ?? "Orbit user"} subtitle="Signed in on Orbit's own server" />
+      <Card style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}>
+        <Avatar name={name} size={48} dark />
+        <Text style={[type.title, { flex: 1, fontSize: 16 }]}>{name}</Text>
       </Card>
-      <Card title="Privacy and alerts" kicker="Stored on this phone.">
-        <ListRow
-          leading={<IconTile name="lock" />}
-          title="Lock with Face ID"
-          subtitle="On launch and when you come back"
-          trailing={
+      <Card style={{ paddingVertical: 0, gap: 0, overflow: "hidden" }}>
+        <View style={{ marginTop: -1 }}>
+          <Setting label={t.faceId}>
             <Switch
-              trackColor={{ true: colors.accentDeep, false: colors.hairline }}
+              accessibilityLabel={t.faceId}
+              trackColor={track}
               value={lock}
               onValueChange={(next) => {
                 setLock(next);
                 void setAppLockEnabled(next);
               }}
             />
-          }
-        />
-        <ListRow
-          leading={<IconTile name="bell" />}
-          title="Prayer time alerts"
-          subtitle="A notification at each prayer"
-          trailing={
-            <Switch
-              trackColor={{ true: colors.accentDeep, false: colors.hairline }}
-              value={prayers}
-              onValueChange={(next) => {
-                setPrayers(next);
-                void setPrayerAlertsEnabled(next);
-              }}
-            />
-          }
-        />
+          </Setting>
+        </View>
+        <Setting label={t.prayerAlerts} detail={t.prayerSource}>
+          <Switch
+            accessibilityLabel={t.prayerAlerts}
+            trackColor={track}
+            value={prayers}
+            onValueChange={(next) => {
+              setPrayers(next);
+              void setPrayerAlertsEnabled(next);
+            }}
+          />
+        </Setting>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => {
+            const message = toggleLanguage();
+            if (message) toast(message);
+          }}
+        >
+          <Setting label={t.language}>
+            <Text style={type.rowSubtitle}>{t.langLabel}</Text>
+            <Chevron />
+          </Setting>
+        </Pressable>
       </Card>
-      <Card title="Integrations">
-        <ListRow leading={<IconTile name="link" />} title="Integrations" subtitle="WHOOP, Seerr and AI, for your account" href="/integrations" chevron />
+      <Card title={t.integrations}>
+        <ListRow leading={<IconTile name="link" />} title={t.integrations} subtitle={t.integrationsDetail} href="/integrations" chevron />
       </Card>
       {server ? (
-        <Card title="Server" kicker="You run this Orbit server. Only you see this.">
+        <Card title={t.serverCard}>
+          <Text style={type.rowSubtitle}>{t.serverOnlyYou}</Text>
           <ListRow
             leading={<IconTile name="user-plus" />}
-            title="Allow new sign-ups"
-            subtitle={server.signups_forced_by_server ? "Kept open by the server's ORBIT_ALLOW_SIGNUPS setting" : server.signups_open ? "Anyone with the app can create an account" : "Only existing accounts can sign in"}
+            title={t.allowSignups}
+            subtitle={server.signups_forced_by_server ? t.signupsForced : server.signups_open ? t.signupsOpen : t.signupsClosed}
             trailing={
               <Switch
-                trackColor={{ true: colors.accentDeep, false: colors.hairline }}
+                accessibilityLabel={t.allowSignups}
+                trackColor={track}
                 value={server.signups_open || server.signups_forced_by_server}
                 disabled={server.signups_forced_by_server}
                 onValueChange={(next) => void setSignups(next)}
@@ -94,7 +121,7 @@ export default function Settings() {
           />
         </Card>
       ) : null}
-      <Button variant="danger" title="Sign out" onPress={() => void signOut()} />
+      <Button title={t.signOut} onPress={() => void signOut()} />
     </Screen>
   );
 }
