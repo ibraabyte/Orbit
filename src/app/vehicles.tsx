@@ -1,26 +1,29 @@
 import { useState } from "react";
-import { Alert, View } from "react-native";
-import { Button, Empty, Input, Row, Screen, Section } from "@/components/screen";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { Badge, Card, EmptyState, Hero, IconTile, ListRow, ProgressBar, RowButton, type } from "@/components/drift";
+import { toDateKey, useOverlays } from "@/components/overlays";
+import { Button, Input, Screen } from "@/components/screen";
+import { colors, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useVehicles } from "@/hooks/use-vehicles";
-import { oilChangeDueByDistance } from "@/lib/vehicles";
+import { formatDate, t } from "@/lib/i18n";
 import type { Vehicle } from "@/lib/types";
 
 type DateField = "registration_expires_at" | "insurance_expires_at" | "inspection_expires_at" | "next_oil_change_at";
 
 // Renewing is one tap: the next date is set from today with the usual Saudi interval.
 const fields: [DateField, string, number][] = [
-  ["registration_expires_at", "Istimara", 12],
-  ["insurance_expires_at", "Insurance", 12],
-  ["inspection_expires_at", "Inspection (فحص)", 12],
-  ["next_oil_change_at", "Oil change", 6]
+  ["registration_expires_at", t.registration, 12],
+  ["insurance_expires_at", t.insurance, 12],
+  ["inspection_expires_at", t.inspection, 12],
+  ["next_oil_change_at", t.oilChange, 6]
 ];
 const oilIntervalKm = 5000;
 
 function monthsFromToday(months: number) {
   const date = new Date();
   date.setMonth(date.getMonth() + months);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  return toDateKey(date);
 }
 
 function daysLeft(date: string) {
@@ -30,14 +33,16 @@ function daysLeft(date: string) {
 export default function Vehicles() {
   const { userId } = useDashboardData();
   const { vehicles, available, refresh, add, update } = useVehicles(userId);
+  const { pickDate, toast } = useOverlays();
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const run = async (work: () => Promise<void>) => {
+  const run = async (work: () => Promise<void>, message = t.saved) => {
     try {
       await work();
+      toast(message);
     } catch (error) {
-      Alert.alert("Could not save", error instanceof Error ? error.message : "Try again.");
+      Alert.alert(t.couldNotAdd, error instanceof Error ? error.message : t.tryAgain);
     }
   };
 
@@ -47,74 +52,103 @@ export default function Vehicles() {
     setLoading(false);
   };
 
-  // ponytail: Alert.prompt is iOS-only; Android users get the one-tap renew only.
-  const editDate = (vehicle: Vehicle, field: DateField, label: string, months: number) =>
-    Alert.alert(label, vehicle[field] ? `Due ${vehicle[field]}` : "Not set yet", [
-      {
-        text: `Renewed today (next in ${months} months)`,
-        onPress: () =>
-          run(() =>
-            update(vehicle.id, {
-              [field]: monthsFromToday(months),
-              ...(field === "next_oil_change_at" && vehicle.odometer_km !== null ? { next_oil_change_km: vehicle.odometer_km + oilIntervalKm } : {})
-            })
-          )
-      },
-      {
-        text: "Type a date",
-        onPress: () =>
-          Alert.prompt(label, "YYYY-MM-DD", (value) => {
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) return Alert.alert("Use YYYY-MM-DD", "For example 2027-03-15.");
-            void run(() => update(vehicle.id, { [field]: value.trim() }));
-          }, "plain-text", vehicle[field] ?? monthsFromToday(months))
-      },
-      { text: "Cancel", style: "cancel" }
-    ]);
+  const renew = (vehicle: Vehicle, field: DateField, months: number) =>
+    run(
+      () =>
+        update(vehicle.id, {
+          [field]: monthsFromToday(months),
+          ...(field === "next_oil_change_at" && vehicle.odometer_km !== null ? { next_oil_change_km: vehicle.odometer_km + oilIntervalKm } : {})
+        }),
+      t.renewedToday
+    );
 
+  const enterDate = async (vehicle: Vehicle, field: DateField, label: string) => {
+    const date = await pickDate(label, vehicle[field]);
+    if (date) void run(() => update(vehicle.id, { [field]: date }));
+  };
+
+  // ponytail: Alert.prompt is iOS-only; Android users set the odometer elsewhere.
   const editOdometer = (vehicle: Vehicle) =>
-    Alert.prompt("Odometer (km)", undefined, (value) => {
-      const km = Number(value.replace(/[^\d]/g, ""));
-      if (km) void run(() => update(vehicle.id, { odometer_km: km }));
-    }, "plain-text", vehicle.odometer_km ? String(vehicle.odometer_km) : "", "number-pad");
+    Alert.prompt(
+      t.odometer,
+      undefined,
+      (value) => {
+        const km = Number(value.replace(/[^\d]/g, ""));
+        if (km) void run(() => update(vehicle.id, { odometer_km: km }));
+      },
+      "plain-text",
+      vehicle.odometer_km ? String(vehicle.odometer_km) : "",
+      "number-pad"
+    );
 
   if (!available) {
     return (
       <Screen refreshing={loading} onRefresh={reload}>
-        <Empty>Your cars could not be loaded. Check your connection, then pull to refresh.</Empty>
+        <EmptyState>{t.error}</EmptyState>
       </Screen>
     );
   }
 
   return (
     <Screen refreshing={loading} onRefresh={reload}>
-      {vehicles.map((vehicle) => (
-        <Section key={vehicle.id} title={vehicle.plate ? `${vehicle.name} · ${vehicle.plate}` : vehicle.name}>
-          {fields.map(([field, label, months]) => {
-            const date = vehicle[field];
-            const left = date ? daysLeft(date) : null;
-            return (
-              <Row
-                key={field}
-                title={label}
-                detail={date ? `${date} · ${left! < 0 ? `${-left!} days overdue` : `${left} days left`}` : "Tap to set"}
-                tone={left === null ? undefined : left < 0 ? "danger" : left <= 30 ? "warning" : "success"}
-                onPress={() => editDate(vehicle, field, label, months)}
-              />
-            );
-          })}
-          <Row
-            title="Odometer"
-            detail={vehicle.next_oil_change_km ? `Oil at ${vehicle.next_oil_change_km.toLocaleString()} km` : null}
-            tone={oilChangeDueByDistance(vehicle) ? "warning" : undefined}
-            right={vehicle.odometer_km ? `${vehicle.odometer_km.toLocaleString()} km` : "Set"}
-            onPress={() => editOdometer(vehicle)}
-          />
-        </Section>
-      ))}
-      <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
-        <Input style={{ flex: 1 }} placeholder={vehicles.length ? "Add another car" : "Your car, e.g. Camry 2022"} value={name} onChangeText={setName} returnKeyType="done" />
+      {vehicles.map((vehicle) => {
+        const { odometer_km: odometer, next_oil_change_km: oilAt } = vehicle;
+        const oilShare = odometer !== null && oilAt ? ((odometer - (oilAt - oilIntervalKm)) / oilIntervalKm) * 100 : null;
+        return (
+          <View key={vehicle.id} style={{ gap: 14 }}>
+            <Pressable onPress={() => editOdometer(vehicle)} accessibilityRole="button" accessibilityLabel={t.odometer}>
+              <Hero style={{ gap: 14 }}>
+                <IconTile name="truck" size={44} tone="urgent" />
+                <View style={{ flex: 1, gap: 4, alignItems: "flex-start" }}>
+                  <Text style={[type.h2, { color: colors.accentInk }]}>{vehicle.name}</Text>
+                  {vehicle.plate ? <Text style={styles.plate}>{vehicle.plate}</Text> : null}
+                </View>
+                <View style={{ alignItems: "flex-end" }}>
+                  <Text style={[type.tileLabel, { color: colors.accentMuted }]}>{t.odometer}</Text>
+                  <Text style={[type.title, { fontSize: 16, color: colors.accentInk }]}>{odometer === null ? "–" : `${odometer.toLocaleString()} ${t.km}`}</Text>
+                </View>
+              </Hero>
+            </Pressable>
+            <Card>
+              {fields.map(([field, label, months]) => {
+                const date = vehicle[field];
+                const left = date ? daysLeft(date) : null;
+                return (
+                  <ListRow
+                    key={field}
+                    title={label}
+                    badges={left === null ? <Badge glyph="○">{t.notSet}</Badge> : left < 0 ? <Badge tone="urgent" glyph="!">{`${-left} ${t.daysOverdue}`}</Badge> : left <= 30 ? <Badge tone="accent" glyph="◷">{`${left} ${t.daysLeft}`}</Badge> : <Badge tone="success" glyph="✓">{`${left} ${t.daysLeft}`}</Badge>}
+                    subtitle={date ? formatDate(`${date}T12:00:00`, { day: "numeric", month: "short", year: "numeric" }) : null}
+                    trailing={
+                      <View style={{ flexDirection: "row", gap: 6 }}>
+                        <RowButton label={t.renewedToday} onPress={() => renew(vehicle, field, months)} />
+                        <RowButton outline icon="calendar" label={t.enterDate} onPress={() => enterDate(vehicle, field, label)} />
+                      </View>
+                    }
+                  />
+                );
+              })}
+            </Card>
+            {oilAt && oilShare !== null ? (
+              <Card>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                  <Text style={type.barLabel}>
+                    {t.oilAt} {oilAt.toLocaleString()} {t.km}
+                  </Text>
+                  <Text style={type.rowSubtitle}>
+                    {Math.max(0, oilAt - odometer!).toLocaleString()} {t.km}
+                  </Text>
+                </View>
+                <ProgressBar value={oilShare} height={8} />
+              </Card>
+            ) : null}
+          </View>
+        );
+      })}
+      <View style={styles.add}>
+        <Input style={{ flex: 1 }} placeholder={t.addCar} value={name} onChangeText={setName} returnKeyType="done" />
         <Button
-          title="Add"
+          title={t.add}
           disabled={!name.trim()}
           onPress={() =>
             run(async () => {
@@ -127,3 +161,8 @@ export default function Vehicles() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  plate: { ...type.barValue, backgroundColor: colors.shell, color: colors.onShell, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 2, letterSpacing: 2, overflow: "hidden" },
+  add: { flexDirection: "row", gap: 8, alignItems: "center", borderRadius: radius.card }
+});

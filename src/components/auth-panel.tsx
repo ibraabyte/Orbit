@@ -1,33 +1,38 @@
 import type { ReactNode } from "react";
-import { Text, View, type TextInputProps } from "react-native";
-import { Badge, Brand, Card, type } from "@/components/drift";
-import { Input } from "@/components/screen";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { type } from "@/components/drift";
+import { colors, fonts, radius } from "@/components/theme";
 
-// The web version's auth panel: Orbit mark and a "Private workspace" badge on top,
-// a heading and one line of copy, then labelled fields on a cream card.
-export function AuthPanel({ title, subtitle, children }: { title: string; subtitle: string; children: ReactNode }) {
+// Auth is a full cream page, not a card on the dark background.
+export function AuthPage({ children }: { children: ReactNode }) {
   return (
-    <>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Brand size={32} />
-        <Badge tone="accent">Private workspace</Badge>
-      </View>
-      <View style={{ gap: 4 }}>
-        <Text style={type.h1}>{title}</Text>
-        <Text style={type.shellMeta}>{subtitle}</Text>
-      </View>
-      <Card>
-        <View style={{ gap: 14 }}>{children}</View>
-      </Card>
-    </>
+    <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        {children}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
-export function Field({ label, ...props }: TextInputProps & { label: string }) {
+export function Field({ label, error, ...props }: TextInputProps & { label: string; error?: string | null }) {
   return (
-    <View style={{ gap: 6 }}>
-      <Text style={type.label}>{label}</Text>
-      <Input accessibilityLabel={label} {...props} />
+    <View style={{ gap: 4 }}>
+      <Text style={type.tileLabel}>{label}</Text>
+      <TextInput accessibilityLabel={label} placeholderTextColor={colors.inkFaint} selectionColor={colors.accentDeep} style={[styles.input, error ? styles.inputError : null]} {...props} />
+      {error ? <Text style={[type.tileLabel, { color: colors.urgent }]}>! {error}</Text> : null}
     </View>
   );
 }
+
+export const authStyles = StyleSheet.create({
+  title: { fontFamily: fonts.bold, fontSize: 30, lineHeight: 36, color: colors.ink },
+  subtitle: { fontFamily: fonts.medium, fontSize: 14, color: colors.inkMuted },
+  link: { fontFamily: fonts.semibold, color: colors.link, fontSize: 14, textAlign: "center", paddingVertical: 12 }
+});
+
+const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: colors.surface },
+  content: { flexGrow: 1, paddingHorizontal: 28, paddingTop: 98, paddingBottom: 40, gap: 16 },
+  input: { minHeight: 48, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, backgroundColor: colors.field, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
+  inputError: { borderWidth: 2, borderColor: colors.urgent }
+});
