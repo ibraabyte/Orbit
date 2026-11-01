@@ -6,12 +6,13 @@ from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException, Response, status
 from pydantic import BaseModel
-from sqlalchemy import exists, func, select, update
+from sqlalchemy import exists, func, select, text, update
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.deps import Db, UserId
 from app.models import Profile, RefreshToken, User
+from app.routers.admin import load as load_server_settings
 from app.schemas.auth import ChangePassword, Me, Refresh, SignIn, SignUp, Tokens
 from app.security import create_access_token, hash_password, hash_refresh_token, new_refresh_token, verify_password
 
@@ -72,8 +73,14 @@ def _find_user(db: Session, email: str) -> User | None:
     return db.scalar(select(User).where(func.lower(User.email) == email.lower()))
 
 
+def _has_users(db: Session) -> bool:
+    return bool(db.scalar(select(exists().where(User.id.isnot(None)))))
+
+
 def _signups_open(db: Session) -> bool:
-    return get_settings().allow_signups or not db.scalar(select(exists().where(User.id.isnot(None))))
+    """The first account is always allowed. After that, the admin's switch in the app decides
+    (ORBIT_ALLOW_SIGNUPS=true on the server also opens them, for whoever runs Orbit without the app)."""
+    return get_settings().allow_signups or load_server_settings(db).signups_open or not _has_users(db)
 
 
 class AuthStatus(BaseModel):
@@ -82,17 +89,20 @@ class AuthStatus(BaseModel):
 
 @router.get("/status", response_model=AuthStatus)
 def auth_status(db: Db):
-    """Lets the app decide whether to show "Create account". The first account is always allowed."""
+    """Lets the app decide whether to show "Create account"."""
     return AuthStatus(signups_open=_signups_open(db))
 
 
 @router.post("/sign-up", response_model=Tokens, status_code=status.HTTP_201_CREATED)
 def sign_up(body: SignUp, db: Db):
+    # One sign-up at a time, so two people racing for the first account can't both become admin.
+    db.execute(text("select pg_advisory_xact_lock(hashtext('orbit:sign-up'))"))
     if not _signups_open(db):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Sign-ups are closed on this server.")
     if _find_user(db, body.email):
         raise HTTPException(status.HTTP_409_CONFLICT, "An account with this email already exists.")
-    user = User(email=body.email, password_hash=hash_password(body.password))
+    # The first account runs the server: it can open sign-ups and reach private network addresses.
+    user = User(email=body.email, password_hash=hash_password(body.password), is_admin=not _has_users(db))
     db.add(user)
     db.flush()
     # Supabase did this with the handle_new_user trigger.
@@ -150,7 +160,7 @@ def sign_out_everywhere(user_id: UserId, db: Db):
 @router.get("/me", response_model=Me)
 def me(user_id: UserId, db: Db):
     user = db.get(User, user_id)
-    return Me(id=user.id, email=user.email)
+    return Me(id=user.id, email=user.email, is_admin=user.is_admin)
 
 
 @router.post("/password", response_model=Tokens)

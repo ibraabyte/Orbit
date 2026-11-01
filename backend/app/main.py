@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.config import get_settings
 from app.db import get_sessionmaker
-from app.routers import auth, dashboard, domains, export, profile, tasks, whoop
+from app.routers import admin, auth, dashboard, domains, export, integrations, profile, tasks, whoop
 from app.services.whoop_sync import scheduler
 
 
@@ -56,6 +56,8 @@ def create_app() -> FastAPI:
         dashboard.router,
         export.router,
         whoop.router,
+        integrations.router,
+        admin.router,
         *domains.ROUTERS,
     ):
         app.include_router(router)

@@ -37,3 +37,4 @@ class Tokens(BaseModel):
 class Me(BaseModel):
     id: uuid.UUID
     email: str
+    is_admin: bool = False

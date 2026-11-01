@@ -23,3 +23,13 @@ def current_user_id(credentials: Annotated[HTTPAuthorizationCredentials | None, 
 
 
 UserId = Annotated[uuid.UUID, Depends(current_user_id)]
+
+
+def current_admin_id(user_id: UserId, db: Db) -> uuid.UUID:
+    user = db.get(User, user_id)
+    if not user.is_admin:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Only the server's admin can do that.")
+    return user_id
+
+
+AdminId = Annotated[uuid.UUID, Depends(current_admin_id)]
