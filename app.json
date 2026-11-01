@@ -12,7 +12,11 @@
       "bundleIdentifier": "com.ibraabyte.orbit"
     },
     "android": {
-      "package": "com.ibraabyte.orbit"
+      "package": "com.ibraabyte.orbit",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/icons/expo-adaptive-foreground-1024.png",
+        "backgroundColor": "#101511"
+      }
     },
     "plugins": [
       "expo-router",

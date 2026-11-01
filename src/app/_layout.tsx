@@ -10,9 +10,10 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { AppLock } from "@/components/app-lock";
 import { OverlayProvider } from "@/components/overlays";
+import { Loading } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
@@ -48,7 +49,7 @@ export default function RootLayout() {
   if (session === undefined || (!fontsLoaded && !fontError)) {
     return (
       <View style={{ flex: 1, justifyContent: "center", backgroundColor: colors.shell }}>
-        <ActivityIndicator color={colors.accent} />
+        <Loading />
       </View>
     );
   }
