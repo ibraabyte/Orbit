@@ -97,6 +97,7 @@ export function connectResultMessage(url: string | null | undefined): { ok: bool
     denied: "WHOOP access wasn't allowed.",
     expired: "That sign-in took too long. Try again.",
     error: "WHOOP sign-in failed. Try again.",
+    bad_setup: "WHOOP refused Orbit's app settings. Check the scopes and keys of the WHOOP app.",
     not_configured: "WHOOP isn't set up on the server yet."
   };
   return { ok: status === "connected", message: messages[status] ?? "WHOOP sign-in didn't finish." };

@@ -3,9 +3,10 @@
 Uses httpx2 (the HTTP library the Anthropic SDK already brings). Tests swap `transport` for a mock.
 """
 
+import logging
 import time
 from collections.abc import Iterator
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlencode
 
@@ -20,6 +21,11 @@ API_URL = "https://api.prod.whoop.com/developer"
 SCOPES = "offline read:profile read:recovery read:cycles read:sleep read:workout"
 PAGE_SIZE = 25  # WHOOP's maximum
 
+# OAuth error codes that mean Orbit's WHOOP app is set up wrong (scopes, keys, redirect URL), not that the user said no.
+SETUP_ERRORS = {"invalid_scope", "invalid_client", "unauthorized_client", "invalid_request"}
+
+log = logging.getLogger("orbit.whoop")
+
 # Replaced in tests with httpx2.MockTransport.
 transport: httpx.BaseTransport | None = None
 
@@ -32,6 +38,20 @@ class WhoopError(Exception):
 
 class WhoopAuthError(WhoopError):
     """WHOOP refused the token or the grant: the user has to connect again."""
+
+    def __init__(self, message: str, status: int | None = None, code: str | None = None) -> None:
+        super().__init__(message, status)
+        # WHOOP's OAuth error code, like invalid_grant or invalid_client. Never holds a secret.
+        self.code = code
+
+
+def _error_code(response: httpx.Response) -> str | None:
+    try:
+        body = response.json()
+    except ValueError:
+        return None
+    code = body.get("error") if isinstance(body, dict) else None
+    return code if isinstance(code, str) and code.replace("_", "").isalnum() else None
 
 
 def configured() -> bool:
@@ -64,8 +84,12 @@ def _token_request(form: dict[str, str]) -> dict[str, Any]:
     except httpx.HTTPError as exc:
         raise WhoopError(f"Can't reach WHOOP: {exc.__class__.__name__}") from exc
     if response.status_code in (400, 401):
-        raise WhoopAuthError("WHOOP refused the sign-in. Connect WHOOP again.", response.status_code)
+        code = _error_code(response)
+        # Only WHOOP's error code goes to the log, so a failed first connect can be explained from Coolify's logs.
+        log.warning("WHOOP token request (%s) refused: %s %s", form["grant_type"], response.status_code, code or "no error code")
+        raise WhoopAuthError("WHOOP refused the sign-in. Connect WHOOP again.", response.status_code, code)
     if response.status_code != 200:
+        log.warning("WHOOP token request (%s) failed: %s", form["grant_type"], response.status_code)
         raise WhoopError(f"WHOOP sign-in failed ({response.status_code}).", response.status_code)
     return response.json()
 
@@ -93,14 +117,22 @@ def get(access_token: str, path: str, params: dict[str, str] | None = None) -> d
             break
     if response.status_code == 401:
         raise WhoopAuthError("WHOOP token expired or was revoked.", 401)
+    if response.status_code == 403:
+        raise WhoopError(f"WHOOP didn't allow {path}. Turn on every scope in the WHOOP app, then connect again.", 403)
     if response.status_code != 200:
         raise WhoopError(f"WHOOP answered {response.status_code} for {path}.", response.status_code)
     return response.json()
 
 
+def whoop_time(moment: datetime) -> str:
+    """The time format WHOOP's docs use for start/end: UTC with milliseconds, like 2026-01-02T03:04:05.000Z."""
+    utc = moment.astimezone(UTC)
+    return utc.strftime("%Y-%m-%dT%H:%M:%S.") + f"{utc.microsecond // 1000:03d}Z"
+
+
 def collection(access_token: str, path: str, start: datetime) -> Iterator[dict[str, Any]]:
     """Every record in a paginated collection that starts at or after `start`."""
-    params = {"limit": str(PAGE_SIZE), "start": start.isoformat()}
+    params = {"limit": str(PAGE_SIZE), "start": whoop_time(start)}
     while True:
         page = get(access_token, path, params)
         yield from page.get("records") or []
