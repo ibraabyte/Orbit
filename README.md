@@ -24,6 +24,8 @@ cp .env.example .env.local   # set EXPO_PUBLIC_API_URL to Orbit's server, e.g. h
 npm start
 ```
 
+To install Orbit on an iPhone through EAS Build and TestFlight, see `docs/ios-build.md`.
+
 Every screen reads and writes through Orbit's own server. The database schema lives in
 `backend/alembic/versions/`; the server applies it on start.
 
