@@ -41,10 +41,16 @@ _SENSITIVE = re.compile(
 )
 _FULL_NUMBER = re.compile(r"\b[A-Z]{2}\d{2}(?:\s*[A-Z0-9]){11,30}\b|(?<!\d)(?:\d[ \t.-]?){12,25}(?!\d)", re.IGNORECASE)
 _ACCOUNT = re.compile(r"(?:\baccount(?:\s*(?:number|no\.?))?|حساب|الحساب)\s*[:：]?\s*(?:\d[\s.-]*){5,}", re.IGNORECASE)
-_FAILED = re.compile(r"\b(?:declined|rejected|failed|unsuccessful|pending|cancelled|canceled|hold|denied|insufficient|not\s*approved|unable)\b|مرفوض|رفض|فشل|تعذر|غير\s*ناجح|غير\s*مقبول|غير\s*كاف|قيد\s*(?:الانتظار|التنفيذ)|ملغ[اي]|الغاء|لم\s*(?:تتم|يتم|تنجح)", re.IGNORECASE)
+_FAILED = re.compile(
+    r"\b(?:declined|rejected|failed|unsuccessful|pending|cancelled|canceled|hold|denied|insufficient|not\s*approved|unable)\b|مرفوض|رفض|فشل|تعذر|غير\s*ناجح|غير\s*مقبول|غير\s*كاف|قيد\s*(?:الانتظار|التنفيذ)|ملغ[اي]|الغاء|لم\s*(?:تتم|يتم|تنجح)",
+    re.IGNORECASE,
+)
 _CURRENCY = r"(?:[A-Z]{3}|[$€£¥]|ريال(?:\s*سعودي)?|ر\.?\s*س\.?)"
 _NUMBER = r"[+-]?\s*\d[\d,.]*(?:[ \t]+\d[\d,.]*)*"
-_MONEY = re.compile(rf"(?<![\w.])(?<!\d[:/-])(?:(?P<before>{_CURRENCY})\s*[:：]?\s*(?P<num1>{_NUMBER})|(?P<num2>{_NUMBER})\s*(?P<after>{_CURRENCY}))(?![\w.])", re.IGNORECASE)
+_MONEY = re.compile(
+    rf"(?<![\w.])(?<!\d[:/-])(?:(?P<before>{_CURRENCY})\s*[:：]?\s*(?P<num1>{_NUMBER})|(?P<num2>{_NUMBER})\s*(?P<after>{_CURRENCY}))(?![\w.])",
+    re.IGNORECASE,
+)
 _NUMBERS_AROUND_CURRENCY = re.compile(rf"\d\s*{_CURRENCY}\s*[+-]?\d", re.IGNORECASE)
 _BALANCE = re.compile(r"\b(?:available\s+balance|balance|available\s+limit)\b|الرصيد|رصيد|المتاح", re.IGNORECASE)
 _DATA_LABEL = r"merchant|at|لدى|لدي|التاجر|reference|ref|مرجع|المرجع|card|بطاقة|البطاقة"
@@ -137,7 +143,9 @@ def _label(clean, labels):
     match = re.search(r"(?:^|[;؛\n\r]|\s)(?:" + labels + r")\s*[:：]\s*([^;؛\n\r]{1,160})", clean, re.IGNORECASE)
     if not match:
         return None
-    value = re.split(r"\s+(?:card|amount|reference|balance|بطاقة|مبلغ|مرجع|الرصيد)\s*[:：]", match[1], maxsplit=1, flags=re.IGNORECASE)[0].strip()
+    value = re.split(r"\s+(?:card|amount|reference|balance|بطاقة|مبلغ|مرجع|الرصيد)\s*[:：]", match[1], maxsplit=1, flags=re.IGNORECASE)[
+        0
+    ].strip()
     return value[:100] or None
 
 
@@ -152,9 +160,17 @@ def parse_sms(bank: str, message: str, *, verified: bool | None = None) -> dict:
         raise SensitiveMessage("sensitive_message")
     operation = _operation_text(clean)
     operation_text = normalize_message(operation)
-    result = {"kind": "unknown", "amount_minor": None, "currency": None,
-              "merchant": None, "card_last4": None, "reference": None,
-              "status": "needs_review", "category": "other", "review_reasons": []}
+    result = {
+        "kind": "unknown",
+        "amount_minor": None,
+        "currency": None,
+        "merchant": None,
+        "card_last4": None,
+        "reference": None,
+        "status": "needs_review",
+        "category": "other",
+        "review_reasons": [],
+    }
     if _FAILED.search(operation_text):
         result.update(status="ignored", review_reasons=["failed_or_pending"])
         return result

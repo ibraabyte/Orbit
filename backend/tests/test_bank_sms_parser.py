@@ -1,4 +1,5 @@
 """All messages here are synthetic; they are not verified bank templates."""
+
 import json
 import unittest
 from pathlib import Path
@@ -41,12 +42,23 @@ class ParserTests(unittest.TestCase):
         self.assertEqual(r["category"], "groceries")
 
     def test_amount_currency_order_and_decimal_forms(self):
-        for text, expected in [("SAR 100",10000), ("100.50 SAR",10050), ("1,234.50 SAR",123450), ("١٢٫٥٠ ريال",1250), ("۱۲٫۵۰ ريال",1250)]:
+        for text, expected in [
+            ("SAR 100", 10000),
+            ("100.50 SAR", 10050),
+            ("1,234.50 SAR", 123450),
+            ("١٢٫٥٠ ريال", 1250),
+            ("۱۲٫۵۰ ريال", 1250),
+        ]:
             with self.subTest(text=text):
                 self.assertEqual(self.verified("alinma", "POS Purchase; Amount: " + text)["amount_minor"], expected)
 
     def test_ambiguous_multiple_transaction_amounts_never_guessed(self):
-        for text in ["Purchase Amount: SAR 10.00; Fee: SAR 1.00", "Purchase Amount: USD 10.00; Amount: SAR 37.50", "Purchase Amount: SAR 10; Amount: SAR 12", "Purchase Amount: SAR 10; Amount: SAR 10"]:
+        for text in [
+            "Purchase Amount: SAR 10.00; Fee: SAR 1.00",
+            "Purchase Amount: USD 10.00; Amount: SAR 37.50",
+            "Purchase Amount: SAR 10; Amount: SAR 12",
+            "Purchase Amount: SAR 10; Amount: SAR 10",
+        ]:
             with self.subTest(text=text):
                 r = self.verified("snb", text)
                 self.assertIsNone(r["amount_minor"])
@@ -54,20 +66,51 @@ class ParserTests(unittest.TestCase):
                 self.assertIn("ambiguous_amount", r["review_reasons"])
 
     def test_no_amount_no_expense(self):
-        for text in ["Purchase completed", "Purchase Amount: 40", "Purchase Amount: 1.999 SAR", "Purchase Amount: 1,23 SAR", "Purchase Amount: -10 SAR", "Purchase Amount: 0 SAR"]:
+        for text in [
+            "Purchase completed",
+            "Purchase Amount: 40",
+            "Purchase Amount: 1.999 SAR",
+            "Purchase Amount: 1,23 SAR",
+            "Purchase Amount: -10 SAR",
+            "Purchase Amount: 0 SAR",
+        ]:
             with self.subTest(text=text):
                 r = self.verified("barq", text)
                 self.assertIsNone(r["amount_minor"])
                 self.assertEqual(r["status"], "needs_review")
 
     def test_sensitive_messages_rejected_before_parsing(self):
-        for text in ["OTP 123456 Purchase SAR 4", "رمز التحقق: ١٢٣٤", "رمز الدخول 1234", "كلمة المرور 123", "PIN 1234", "CVV 123", "Do not share this code", "Purchase Card 4111111111111111 SAR 5", "Purchase card 4111 1111 1111 1111 Amount: SAR 5", "Purchase IBAN SA0380000000608010167519 SAR 5", "Purchase card 4111.1111.1111.1111 Amount: SAR 5", "Purchase Account: 123456789 Amount: SAR 5", "شراء حساب: 123456789 مبلغ: 5 ريال", "رمز التأكيد 123456", "رقم التحقق 123456"]:
+        for text in [
+            "OTP 123456 Purchase SAR 4",
+            "رمز التحقق: ١٢٣٤",
+            "رمز الدخول 1234",
+            "كلمة المرور 123",
+            "PIN 1234",
+            "CVV 123",
+            "Do not share this code",
+            "Purchase Card 4111111111111111 SAR 5",
+            "Purchase card 4111 1111 1111 1111 Amount: SAR 5",
+            "Purchase IBAN SA0380000000608010167519 SAR 5",
+            "Purchase card 4111.1111.1111.1111 Amount: SAR 5",
+            "Purchase Account: 123456789 Amount: SAR 5",
+            "شراء حساب: 123456789 مبلغ: 5 ريال",
+            "رمز التأكيد 123456",
+            "رقم التحقق 123456",
+        ]:
             with self.subTest(text=text):
                 with self.assertRaises(SensitiveMessage):
                     parse_sms("rajhi", text)
 
     def test_declined_pending_not_expenses(self):
-        for text in ["Purchase declined; Amount: SAR 10", "عملية شراء مرفوضة بمبلغ 10 ريال", "Purchase pending; Amount: SAR 10", "Purchase failed; Amount: SAR 10", "Purchase rejected Amount: SAR 10", "تم إلغاء شراء بمبلغ 10 ريال", "Purchase authorization hold Amount: SAR 10"]:
+        for text in [
+            "Purchase declined; Amount: SAR 10",
+            "عملية شراء مرفوضة بمبلغ 10 ريال",
+            "Purchase pending; Amount: SAR 10",
+            "Purchase failed; Amount: SAR 10",
+            "Purchase rejected Amount: SAR 10",
+            "تم إلغاء شراء بمبلغ 10 ريال",
+            "Purchase authorization hold Amount: SAR 10",
+        ]:
             with self.subTest(text=text):
                 r = self.verified("stc", text)
                 self.assertEqual(r["status"], "ignored")
@@ -77,11 +120,19 @@ class ParserTests(unittest.TestCase):
         self.assertEqual((r["kind"], r["amount_minor"], r["status"]), ("refund", 1750, "confirmed"))
 
     def test_transfers_cash_card_payments_require_review(self):
-        for text,kind in [("Outgoing transfer Amount: SAR 10", "transfer_out"), ("Incoming transfer Amount: SAR 10", "transfer_in"), ("حوالة صادرة مبلغ: 10 ريال", "transfer_out"), ("حوالة واردة مبلغ: 10 ريال", "transfer_in"), ("Credit card payment Amount: SAR 10", "card_payment"), ("سداد بطاقة ائتمانية مبلغ: 10 ريال", "card_payment"), ("ATM withdrawal Amount: SAR 10", "cash_withdrawal")]:
+        for text, kind in [
+            ("Outgoing transfer Amount: SAR 10", "transfer_out"),
+            ("Incoming transfer Amount: SAR 10", "transfer_in"),
+            ("حوالة صادرة مبلغ: 10 ريال", "transfer_out"),
+            ("حوالة واردة مبلغ: 10 ريال", "transfer_in"),
+            ("Credit card payment Amount: SAR 10", "card_payment"),
+            ("سداد بطاقة ائتمانية مبلغ: 10 ريال", "card_payment"),
+            ("ATM withdrawal Amount: SAR 10", "cash_withdrawal"),
+        ]:
             with self.subTest(text=text):
-                r = self.verified("alinma",text)
-                self.assertEqual(r["kind"],kind)
-                self.assertEqual(r["status"],"needs_review")
+                r = self.verified("alinma", text)
+                self.assertEqual(r["kind"], kind)
+                self.assertEqual(r["status"], "needs_review")
 
     def test_purchase_with_extra_fee_stays_purchase_and_requires_review(self):
         r = self.verified("rajhi", "شراء مبلغ: 10 ريال; رسوم: 1 ريال")
@@ -90,12 +141,12 @@ class ParserTests(unittest.TestCase):
         self.assertIsNone(r["amount_minor"])
 
     def test_fee_is_expense_kind(self):
-        r=self.verified("barq","Bank fee Amount: SAR 2.50")
-        self.assertEqual((r["kind"],r["amount_minor"],r["status"]),("fee",250,"confirmed"))
+        r = self.verified("barq", "Bank fee Amount: SAR 2.50")
+        self.assertEqual((r["kind"], r["amount_minor"], r["status"]), ("fee", 250, "confirmed"))
 
     def test_unknown_message_requires_review(self):
         r = self.verified("rajhi", "Welcome. Balance: SAR 100.00")
-        self.assertEqual((r["kind"],r["status"],r["amount_minor"]),("unknown","needs_review",None))
+        self.assertEqual((r["kind"], r["status"], r["amount_minor"]), ("unknown", "needs_review", None))
 
     def test_unknown_bank_rejected(self):
         with self.assertRaises(ValueError):

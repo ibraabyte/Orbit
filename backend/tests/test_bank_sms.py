@@ -84,7 +84,10 @@ def test_six_banks(client, key, fixture):
     assert (row["bank"], row["amount"], row["status"]) == (fixture["bank"], fixture["amount"], "needs_review")
 
 
-@pytest.mark.parametrize("message", ["OTP verification code 482913", "رمز التحقق 482913", "الرمز 482913 لعملية شراء 50 ريال", "شراء 50 ريال بطاقة 4111 1111 1111 1111"])
+@pytest.mark.parametrize(
+    "message",
+    ["OTP verification code 482913", "رمز التحقق 482913", "الرمز 482913 لعملية شراء 50 ريال", "شراء 50 ريال بطاقة 4111 1111 1111 1111"],
+)
 def test_sensitive_is_refused_saved_nowhere_and_not_echoed(client, auth, key, db: Session, message):
     response = send(client, key, "snb", message)
     assert response.status_code == 422
@@ -139,7 +142,12 @@ def test_grocery_merchant_gets_the_new_category(client, key):
 
 
 def test_report_counts_spending_only(client, auth, key):
-    for message in ("POS Purchase\nAmount: SAR 120.00", "Refund\nAmount: SAR 20.00", "رسوم بنكية\nمبلغ: 5 ريال", "POS Purchase\nAmount: USD 10.00"):
+    for message in (
+        "POS Purchase\nAmount: SAR 120.00",
+        "Refund\nAmount: SAR 20.00",
+        "رسوم بنكية\nمبلغ: 5 ريال",
+        "POS Purchase\nAmount: USD 10.00",
+    ):
         assert confirm(client, auth, send(client, key, "alinma", message).json()["transaction"]["id"]).status_code == 200
     movements = [
         ("حوالة داخلية صادرة\nمبلغ: 500 ريال", "transfer_out"),

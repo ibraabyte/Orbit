@@ -83,7 +83,9 @@ def upgrade() -> None:
         sa.Column("message_mac", sa.Text(), nullable=False),
         sa.Column("transaction_id", sa.UUID(), nullable=False),
         sa.ForeignKeyConstraint(["user_id"], ["users.id"], name=op.f("bank_sms_events_user_id_fkey"), ondelete="CASCADE"),
-        sa.ForeignKeyConstraint(["transaction_id"], ["bank_transactions.id"], name=op.f("bank_sms_events_transaction_id_fkey"), ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["transaction_id"], ["bank_transactions.id"], name=op.f("bank_sms_events_transaction_id_fkey"), ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("user_id", "event_id", name=op.f("bank_sms_events_pkey")),
     )
 
