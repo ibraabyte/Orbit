@@ -1,8 +1,9 @@
 import { Link } from "expo-router";
 import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, Text } from "react-native";
+import { AuthPanel, Field } from "@/components/auth-panel";
 import { authStyles as styles } from "@/components/auth-styles";
-import { Button, Input } from "@/components/screen";
+import { Button } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { deviceTimeZone, MIN_PASSWORD_LENGTH, signUpProblem } from "@/lib/sign-up";
 
@@ -30,15 +31,16 @@ export default function SignUp() {
 
   return (
     <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <Text style={styles.title}>Create account</Text>
-      <Input placeholder="Name (optional)" autoComplete="name" textContentType="name" value={name} onChangeText={setName} />
-      <Input placeholder="Email" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={email} onChangeText={setEmail} />
-      <Input placeholder="Password" secureTextEntry autoComplete="new-password" textContentType="newPassword" value={password} onChangeText={setPassword} />
-      <Input placeholder="Confirm password" secureTextEntry autoComplete="new-password" textContentType="newPassword" value={confirm} onChangeText={setConfirm} onSubmitEditing={signUp} />
-      <Text style={styles.hint}>At least {MIN_PASSWORD_LENGTH} characters.</Text>
-      <Button title={busy ? "Creating…" : "Create account"} disabled={busy || !email || !password || !confirm} onPress={signUp} />
+      <AuthPanel title="Create your Orbit account" subtitle="Start with tasks, reminders, captures, and health logs in one place.">
+        <Field label="Display name (optional)" autoComplete="name" textContentType="name" value={name} onChangeText={setName} />
+        <Field label="Email" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={email} onChangeText={setEmail} />
+        <Field label="Password" secureTextEntry autoComplete="new-password" textContentType="newPassword" value={password} onChangeText={setPassword} />
+        <Field label="Confirm password" secureTextEntry autoComplete="new-password" textContentType="newPassword" value={confirm} onChangeText={setConfirm} onSubmitEditing={signUp} />
+        <Text style={styles.hint}>At least {MIN_PASSWORD_LENGTH} characters.</Text>
+        <Button title={busy ? "Creating…" : "Create account"} disabled={busy || !email || !password || !confirm} onPress={signUp} />
+      </AuthPanel>
       <Link href="/sign-in" style={styles.link}>
-        I already have an account
+        Already have an account? Sign in
       </Link>
     </KeyboardAvoidingView>
   );

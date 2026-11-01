@@ -3,7 +3,7 @@ import { useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
-import { Button, Empty, Loading, Row, Screen, Section, shell, Stats, ui } from "@/components/screen";
+import { Button, Empty, Loading, Row, Screen, Section, Stats, ui } from "@/components/screen";
 import { colors, fonts } from "@/components/theme";
 import { getApi, hasServer } from "@/lib/backend";
 import {
@@ -138,7 +138,7 @@ export default function Whoop() {
       <Screen refreshing={loading} onRefresh={load}>
         {noticeView}
         <Section title="WHOOP">
-          <Text style={shell.muted}>Connect your WHOOP to see recovery, sleep, strain and heart rate here, with a written summary of how you're doing.</Text>
+          <Text style={ui.muted}>Connect your WHOOP to see recovery, sleep, strain and heart rate here, with a written summary of how you're doing.</Text>
           <Button title={busy === "connect" ? "Opening WHOOP…" : "Connect WHOOP"} disabled={busy !== null} onPress={connect} />
         </Section>
       </Screen>
@@ -160,18 +160,18 @@ export default function Whoop() {
 
       <Stats
         items={[
-          ["Recovery", show("recovery", (v) => `${Math.round(v)}%`)],
-          ["HRV", show("hrv", (v) => `${Math.round(v)} ms`)],
-          ["Resting HR", show("resting_hr", (v) => `${Math.round(v)}`)],
-          ["Strain", show("strain", (v) => v.toFixed(1))],
-          ["Sleep", show("sleep_hours", formatHours)],
-          ["Sleep perf", show("sleep_performance", (v) => `${Math.round(v)}%`)]
+          ["Recovery", show("recovery", (v) => `${Math.round(v)}%`), "battery-charging"],
+          ["HRV", show("hrv", (v) => `${Math.round(v)} ms`), "activity"],
+          ["Resting HR", show("resting_hr", (v) => `${Math.round(v)}`), "heart"],
+          ["Strain", show("strain", (v) => v.toFixed(1)), "zap"],
+          ["Sleep", show("sleep_hours", formatHours), "moon"],
+          ["Sleep perf", show("sleep_performance", (v) => `${Math.round(v)}%`), "star"]
         ]}
       />
 
       {bars.length ? (
         <Section title="Recovery, last 14 days">
-          <View style={[ui.card, styles.chart]} accessibilityLabel="Daily recovery bars">
+          <View style={styles.chart} accessibilityLabel="Daily recovery bars">
             {bars.map((bar) => (
               <View key={bar.date} style={styles.barSlot}>
                 <View
@@ -187,7 +187,7 @@ export default function Whoop() {
             ))}
           </View>
           {summary ? (
-            <Text style={shell.muted}>
+            <Text style={ui.muted}>
               {summary.days} days: {summary.recovery_zones.green} green, {summary.recovery_zones.yellow} yellow, {summary.recovery_zones.red} red
             </Text>
           ) : null}
@@ -236,7 +236,7 @@ export default function Whoop() {
         {!status.ai_configured ? (
           <Empty>The written summary isn't set up on the server yet.</Empty>
         ) : insight ? (
-          <View style={ui.card}>
+          <View style={{ gap: 4 }}>
             <Text style={styles.arabic}>{insight.summary}</Text>
             {insight.highlights.map((line) => (
               <Text key={`h-${line}`} style={[styles.arabic, styles.muted]}>

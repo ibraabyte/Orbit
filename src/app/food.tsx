@@ -1,4 +1,4 @@
-import { QuickAddBar } from "@/components/quick-add-bar";
+import { QuickAddCard } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section, Stats } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { foodSummary, mealTypeLabel } from "@/lib/food";
@@ -12,12 +12,12 @@ export default function Food() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      <QuickAddBar />
+      <QuickAddCard hint='Try "plan dinner salmon @friday" or "grocery milk".' />
       <Stats
         items={[
-          ["Meals today", food.todayPlannedMeals],
-          ["Planned kcal", food.todayPlannedCalories],
-          ["Groceries", food.neededGroceries.length]
+          ["Meals today", food.todayPlannedMeals, "coffee"],
+          ["Planned kcal", food.todayPlannedCalories, "zap"],
+          ["Groceries", food.neededGroceries.length, "shopping-bag"]
         ]}
       />
       <Section title="Meal plans">

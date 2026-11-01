@@ -1,4 +1,4 @@
-import { QuickAddBar } from "@/components/quick-add-bar";
+import { QuickAddCard } from "@/components/quick-add-bar";
 import { Empty, Row, Screen, Section, Stats } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { activeSubscriptions, financeSummary, formatMoney, nextBillDueDate, spendingByCategory, subscriptionMonthlyTotal } from "@/lib/finance";
@@ -22,12 +22,12 @@ export default function Finance() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      <QuickAddBar />
+      <QuickAddCard hint='Try "spent 25 lunch" or "subscription netflix 45".' />
       <Stats
         items={[
-          ["This month", formatMoney(finance.monthSpend, currency)],
-          ["Today", formatMoney(finance.todaySpend, currency)],
-          ["Monthly bills", formatMoney(finance.monthlyCommitments, currency)]
+          ["This month", formatMoney(finance.monthSpend, currency), "calendar"],
+          ["Today", formatMoney(finance.todaySpend, currency), "credit-card"],
+          ["Monthly bills", formatMoney(finance.monthlyCommitments, currency), "repeat"]
         ]}
       />
       <Section title="Bills">

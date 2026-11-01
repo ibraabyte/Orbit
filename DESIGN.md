@@ -1,8 +1,10 @@
 # Orbit Design System — "Drift"
 
 > This describes the web version (git tag `web-final`), built with Tailwind. The Expo app uses the same look:
-> its tokens (converted to hex) live in `src/components/theme.ts`, and the shared pieces (Screen, Section, Stats, Row,
-> Segments, Button, Input) in `src/components/screen.tsx`. Native tabs and headers keep the platform shape, in Drift colors.
+> its tokens (converted to hex) live in `src/components/theme.ts`, the building blocks (Card, ListRow, Badge, StatTile,
+> RingGauge, ProgressBar, CheckItem, EmptyState, PageHeader, Brand; Feather icons) in `src/components/drift.tsx`, and the
+> floating bottom bar with the lime Capture button in `src/components/tab-bar.tsx`. Screens opened from More keep a native
+> header in Drift colors.
 
 ## Overview
 

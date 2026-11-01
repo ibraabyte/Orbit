@@ -1,10 +1,9 @@
 import { StyleSheet } from "react-native";
 import { colors, fonts } from "@/components/theme";
 
-// Shared by the sign-in and sign-up screens: Drift's dark background, cream fields, lime button.
+// Shared by the sign-in and sign-up screens (with AuthPanel in auth-panel.tsx).
 export const authStyles = StyleSheet.create({
-  screen: { flex: 1, justifyContent: "center", padding: 24, gap: 12, backgroundColor: colors.shell },
-  title: { fontFamily: fonts.bold, fontSize: 34, color: colors.onShell, marginBottom: 12 },
-  link: { fontFamily: fonts.semibold, color: colors.accent, fontSize: 16, textAlign: "center", paddingVertical: 8 },
-  hint: { fontFamily: fonts.medium, color: colors.onShellMuted, fontSize: 13 }
+  screen: { flex: 1, justifyContent: "center", padding: 16, gap: 16, backgroundColor: colors.shell },
+  link: { fontFamily: fonts.semibold, color: colors.accent, fontSize: 14, textAlign: "center", paddingVertical: 8 },
+  hint: { fontFamily: fonts.medium, color: colors.inkMuted, fontSize: 12.5 }
 });

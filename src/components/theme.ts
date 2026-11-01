@@ -24,7 +24,15 @@ export const colors = {
   warning: "#bf851e",
   danger: "#cf4238",
   dangerOnShell: "#f0776a", // danger that stays readable on the dark chrome
-  barMuted: "#6b9174"
+  barMuted: "#6b9174",
+  // Badge tints and the ring/progress track.
+  urgentInk: "#eaefdf",
+  successTint: "#c1c6c1", // emerald-1
+  successInk: "#101813", // emerald-5
+  warningTint: "#b8c0ba", // heather-1
+  warningInk: "#243229", // heather-5
+  successDeep: "#2d3530", // emerald-4
+  track: "#cddaba" // cream-5
 } as const;
 
 export const radius = { card: 22, tile: 14, control: 12, pill: 999 } as const;
