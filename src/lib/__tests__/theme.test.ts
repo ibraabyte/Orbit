@@ -15,7 +15,7 @@ function contrast(a: string, b: string) {
 }
 
 describe("Drift theme", () => {
-  it("keeps the web version's fixed dark chrome and cream cards", () => {
+  it("keeps the fixed dark chrome and cream cards", () => {
     expect(contrast(colors.shell, colors.surface)).toBeGreaterThan(10);
     expect(colors.shell).toBe("#101511");
     expect(colors.accent).toBe("#9bdc33");
@@ -31,7 +31,10 @@ describe("Drift theme", () => {
     ["lime text on the dark background", colors.accent, colors.shell],
     ["errors on the dark background", colors.dangerOnShell, colors.shell],
     ["dark text on a lime button", colors.accentInk, colors.accent],
-    ["white text on a red button", "#ffffff", colors.danger]
+    ["cream text on the dark urgent pill", colors.urgentInk, colors.urgent],
+    ["links on cream", colors.link, colors.surface],
+    ["secondary text on lime", colors.accentMuted, colors.accent],
+    ["tinted badge", colors.accentTintInk, colors.accentTint]
   ])("%s is readable (AA, 4.5:1)", (_name, fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });

@@ -1,47 +1,43 @@
-// Drift: the web version's look (DESIGN.md, tag web-final), ported to the app.
-// Dark forest chrome, warm cream cards, one lime accent. Fixed, not a light/dark toggle.
-// Hex values are the web's OKLCH tokens converted to sRGB.
+import { isArabic } from "@/lib/i18n";
+
+// Drift: forest chrome, cream cards, one lime accent. Fixed, not a light/dark toggle.
+// Urgency is a dark forest pill, never red. Status is always glyph + label.
 export const colors = {
-  // Chrome (the dark background, headers and tab bar) and text on it.
-  shell: "#101511", // forest-5
+  // Chrome (the dark background) and text on it.
+  shell: "#101511",
   shellTop: "#18201b",
   onShell: "#edf0e7",
   onShellMuted: "#8a968c",
-  navInactive: "#737d75",
   // Cards and text on them.
-  surface: "#eaefdf", // cream-2
-  surfaceInset: "#d8e3c9", // cream-4
-  hairline: "#cddaba", // cream-5
+  surface: "#eaefdf",
+  surfaceInset: "#d8e3c9", // inner dividers, tracks, wells
+  hairline: "#cddaba",
+  field: "#f7f9f0",
   ink: "#16231a",
   inkMuted: "#4b5d51",
-  // Lime accent: always with dark accent-ink text, never white.
-  accent: "#9bdc33", // sprout-5
+  inkFaint: "#6f7f73",
+  // Lime: hero cards, the Capture button, rings and the active tab. Always with dark ink.
+  accent: "#9bdc33",
   accentInk: "#132419",
-  accentDeep: "#5a9313", // lime that reads on cream (charts, highlights)
+  accentMuted: "#3b4f1e", // secondary text on lime
+  accentDeep: "#5a9313", // large numbers and highlights on cream; 3.1:1, too low for small text
+  link: "#3e6b10", // the design's #5a9313 fails AA for 13px links, so links use its tint ink
+  accentTint: "#dcefb8",
+  accentTintInk: "#3e6b10",
   // Status.
   urgent: "#223227",
-  success: "#2a904b",
-  warning: "#bf851e",
-  danger: "#cf4238",
-  dangerOnShell: "#f0776a", // danger that stays readable on the dark chrome
-  barMuted: "#6b9174",
-  // Badge tints and the ring/progress track.
   urgentInk: "#eaefdf",
-  successTint: "#c1c6c1", // emerald-1
-  successInk: "#101813", // emerald-5
-  warningTint: "#b8c0ba", // heather-1
-  warningInk: "#243229", // heather-5
-  successDeep: "#2d3530", // emerald-4
-  track: "#cddaba" // cream-5
+  success: "#2a904b",
+  successTint: "#c9ddc1",
+  sage: "#6b9174", // second data series
+  // Only for destructive text on the dark chrome.
+  dangerOnShell: "#f0776a"
 } as const;
 
-export const radius = { card: 22, tile: 14, control: 12, pill: 999 } as const;
+export const radius = { card: 22, tile: 14, control: 10, chip: 6, pill: 999 } as const;
 
-// Space Grotesk, one family per weight (custom fonts ignore fontWeight on iOS).
-// The files are loaded in src/app/_layout.tsx; Arabic falls back to the system font.
-export const fonts = {
-  regular: "SpaceGrotesk_400Regular",
-  medium: "SpaceGrotesk_500Medium",
-  semibold: "SpaceGrotesk_600SemiBold",
-  bold: "SpaceGrotesk_700Bold"
-} as const;
+// One family per weight (custom fonts ignore fontWeight on iOS); files load in src/app/_layout.tsx.
+// Space Grotesk for Latin, Almarai for Arabic.
+export const fonts = isArabic
+  ? { regular: "Almarai_400Regular", medium: "Almarai_400Regular", semibold: "Almarai_700Bold", bold: "Almarai_800ExtraBold" }
+  : { regular: "SpaceGrotesk_400Regular", medium: "SpaceGrotesk_500Medium", semibold: "SpaceGrotesk_600SemiBold", bold: "SpaceGrotesk_700Bold" };

@@ -13,6 +13,7 @@
     "verify": "npm run typecheck && npm test"
   },
   "dependencies": {
+    "@expo-google-fonts/almarai": "^0.4.1",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo/vector-icons": "^15.1.1",
     "@react-native-async-storage/async-storage": "2.2.0",

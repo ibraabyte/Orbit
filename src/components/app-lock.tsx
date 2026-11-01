@@ -1,10 +1,11 @@
 import * as LocalAuthentication from "expo-local-authentication";
 import * as SecureStore from "expo-secure-store";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { AppState, StyleSheet, View } from "react-native";
-import { Brand } from "@/components/drift";
+import { AppState, StyleSheet, Text, View } from "react-native";
+import { Icon } from "@/components/drift";
 import { Button } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, fonts } from "@/components/theme";
+import { t } from "@/lib/i18n";
 
 const LOCK_KEY = "orbit.app-lock";
 
@@ -32,7 +33,7 @@ export function AppLock({ children }: { children: ReactNode }) {
         setLocked(false);
         return;
       }
-      const result = await LocalAuthentication.authenticateAsync({ promptMessage: "Unlock Orbit" });
+      const result = await LocalAuthentication.authenticateAsync({ promptMessage: t.unlock });
       if (result.success) setLocked(false);
     } finally {
       authenticating.current = false;
@@ -66,8 +67,11 @@ export function AppLock({ children }: { children: ReactNode }) {
       </View>
       {hidden ? (
         <View style={[StyleSheet.absoluteFill, styles.cover]}>
-          <Brand size={44} />
-          {locked && !covered ? <Button title="Unlock" onPress={unlock} /> : null}
+          <View style={styles.mark}>
+            <Icon name="smile" size={30} color={colors.onShell} />
+          </View>
+          <Text style={styles.title}>{t.locked}</Text>
+          {locked && !covered ? <Button variant="primary" title={t.unlock} onPress={unlock} /> : null}
         </View>
       ) : null}
     </View>
@@ -76,5 +80,7 @@ export function AppLock({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  cover: { alignItems: "center", justifyContent: "center", gap: 24, padding: 32, backgroundColor: colors.shell },
+  cover: { alignItems: "center", justifyContent: "center", gap: 16, padding: 28, backgroundColor: colors.shell },
+  mark: { width: 72, height: 72, borderRadius: 20, borderWidth: 2, borderColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
+  title: { fontFamily: fonts.bold, fontSize: 22, color: colors.onShell }
 });
