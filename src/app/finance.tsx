@@ -1,7 +1,9 @@
 import { Text, View } from "react-native";
+import { BankReviewCard } from "@/components/bank-review-card";
 import { Badge, Card, EmptyState, ListRow, ProgressBar, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Screen } from "@/components/screen";
+import { useBankReview } from "@/hooks/use-bank-review";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
@@ -15,6 +17,7 @@ const day = (date: string) => formatDate(`${date.slice(0, 10)}T12:00:00`);
 export default function Finance() {
   const { data, loading, refresh, act } = useDashboardData();
   const { toast } = useOverlays();
+  const review = useBankReview(act);
   const finance = financeSummary(data);
   // ponytail: totals assume one currency, same as the web app.
   const currency = data.expenses[0]?.currency ?? data.bills[0]?.currency ?? "SAR";
@@ -30,7 +33,7 @@ export default function Finance() {
   };
 
   return (
-    <Screen refreshing={loading} onRefresh={refresh}>
+    <Screen refreshing={loading} onRefresh={() => Promise.all([refresh(), review.load()])}>
       <StatGrid columns={3}>
         {[
           <StatTile key="month" label={t.spentMonth} value={formatMoney(finance.monthSpend, currency)} size={18} />,
@@ -38,6 +41,7 @@ export default function Finance() {
           <StatTile key="bills" label={t.monthlyBills} value={formatMoney(finance.monthlyCommitments, currency)} size={18} />
         ]}
       </StatGrid>
+      <BankReviewCard items={review.items} failed={review.failed} confirm={review.confirm} ignore={review.ignore} />
       <Card title={t.bills}>
         {bills.length ? (
           bills.map((bill) => (
@@ -66,7 +70,7 @@ export default function Finance() {
         {categories.map((row) => (
           <View key={row.category} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Text style={[type.barLabel, { width: 96 }]} numberOfLines={1}>
-              {row.category}
+              {t.financeCategoryNames[row.category]}
             </Text>
             <View style={{ flex: 1 }}>
               <ProgressBar value={row.total} max={topCategory} height={10} />
@@ -80,7 +84,7 @@ export default function Finance() {
       </Card>
       <Card title={t.recentExpenses}>
         {data.expenses.slice(0, 10).map((expense) => (
-          <ListRow key={expense.id} title={expense.merchant} subtitle={`${formatDate(expense.spent_at, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })} · ${expense.category}`} meta={`−${formatMoney(expense.amount, expense.currency)}`} />
+          <ListRow key={expense.id} title={expense.merchant} subtitle={`${formatDate(expense.spent_at, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })} · ${t.financeCategoryNames[expense.category]}`} meta={`−${formatMoney(expense.amount, expense.currency)}`} />
         ))}
         {!data.expenses.length ? <EmptyState example="spent 25 lunch">{t.emptyEx}</EmptyState> : null}
       </Card>

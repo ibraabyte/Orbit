@@ -33,6 +33,7 @@ TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("focus_sessions", m.FocusSession, m.FocusSession.started_at),
     ("expenses", m.Expense, m.Expense.spent_at),
     ("bills", m.Bill, m.Bill.due_at),
+    ("bank_transactions", m.BankTransaction, m.BankTransaction.received_at),
     ("push_subscriptions", m.PushSubscription, m.PushSubscription.created_at),
     ("habits", m.Habit, m.Habit.created_at),
     ("habit_logs", m.HabitLog, m.HabitLog.logged_at),
@@ -43,7 +44,7 @@ TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("watch_items", m.WatchItem, m.WatchItem.created_at),
 ]
 
-REDACTED = {"push_subscriptions": ("endpoint", "p256dh", "auth")}
+REDACTED = {"push_subscriptions": ("endpoint", "p256dh", "auth"), "bank_transactions": ("message_mac", "reference_mac")}
 
 
 def _rows(model: type[m.Base], rows: Any, table: str) -> list[dict[str, Any]]:

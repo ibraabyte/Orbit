@@ -60,6 +60,12 @@ export default function RootLayout() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.shellTop } }} />
       </Stack.Protected>
+      {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
+      <Stack.Protected guard={Boolean(session)}>
+        {["finance", "food", "goals", "habits", "health", "integrations", "journal", "library", "media", "people", "servers", "settings", "tasks", "vehicles", "whoop"].map((name) => (
+          <Stack.Screen key={name} name={name} />
+        ))}
+      </Stack.Protected>
       <Stack.Protected guard={!session}>
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
