@@ -33,7 +33,10 @@ const groups: { label: string; items: [href: Href, title: string, detail: string
   },
   {
     label: "System",
-    items: [["/settings", "Settings", "Face ID and account", "settings"]]
+    items: [
+      ["/integrations", "Integrations", "WHOOP, Seerr and AI, for your account", "link"],
+      ["/settings", "Settings", "Face ID and account", "settings"]
+    ]
   }
 ];
 

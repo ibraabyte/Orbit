@@ -1,6 +1,9 @@
-// Minimal Seerr (Overseerr / Jellyseerr) API client. Same /api/v1 for all three.
-// The server URL and API key are entered in the app and kept in the phone's secure store.
+import type { ApiClient } from "@/lib/api";
 
+// Minimal Seerr (Overseerr / Jellyseerr) API client. Same /api/v1 for all three.
+// The server URL and API key are entered in the app once and kept, encrypted, on Orbit's server for this account.
+
+// What older versions of the app kept in the phone's secure store; moved to the server on first open.
 export type SeerrConfig = { url: string; apiKey: string };
 export type SeerrMediaType = "movie" | "tv";
 
@@ -52,38 +55,33 @@ export function posterUrl(posterPath: string | null | undefined, width: 185 | 34
   return posterPath ? `https://image.tmdb.org/t/p/w${width}${posterPath}` : null;
 }
 
-export function createSeerrClient(config: SeerrConfig, fetcher: typeof fetch = fetch) {
-  const base = `${normalizeSeerrUrl(config.url)}/api/v1`;
+// One Seerr API call: method, path under /api/v1 (no leading slash), optional JSON body.
+export type SeerrCall = <T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown) => Promise<T>;
 
-  async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
-    const response = await fetcher(`${base}${path}`, {
-      ...init,
-      headers: { "X-Api-Key": config.apiKey, "Content-Type": "application/json", Accept: "application/json", ...init.headers }
-    });
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) throw new Error("Seerr rejected the API key.");
-      throw new Error(`Seerr error ${response.status}.`);
-    }
-    return (response.status === 204 ? undefined : await response.json()) as T;
-  }
+// The app never talks to Seerr itself: Orbit's server holds the user's key (encrypted) and passes these calls on
+// for that account only (backend/app/routers/integrations.py).
+export function serverSeerrCall(api: Pick<ApiClient, "request">): SeerrCall {
+  return <T,>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown) => api.request<T>(method, `/integrations/seerr/api/${path}`, body);
+}
 
+export function createSeerrClient(call: SeerrCall) {
   return {
-    status: () => call<{ version: string }>("/status"),
-    me: () => call<SeerrUser>("/auth/me"),
+    status: () => call<{ version: string }>("GET", "status"),
+    me: () => call<SeerrUser>("GET", "auth/me"),
     search: (query: string, page = 1) =>
-      call<{ results: SeerrResult[] }>(`/search?query=${encodeURIComponent(query)}&page=${page}`).then((body) => body.results.filter((item) => item.mediaType !== "person")),
-    trending: () => call<{ results: SeerrResult[] }>("/discover/trending").then((body) => body.results.filter((item) => item.mediaType !== "person")),
+      call<{ results: SeerrResult[] }>("GET", `search?query=${encodeURIComponent(query)}&page=${page}`).then((body) => body.results.filter((item) => item.mediaType !== "person")),
+    trending: () => call<{ results: SeerrResult[] }>("GET", "discover/trending").then((body) => body.results.filter((item) => item.mediaType !== "person")),
     requests: (take = 20, filter: "all" | "pending" | "approved" | "available" = "all") =>
-      call<{ results: SeerrRequest[] }>(`/request?take=${take}&filter=${filter}&sort=added`).then((body) => body.results),
-    pendingCount: () => call<{ pending: number }>("/request/count").then((body) => body.pending),
+      call<{ results: SeerrRequest[] }>("GET", `request?take=${take}&filter=${filter}&sort=added`).then((body) => body.results),
+    pendingCount: () => call<{ pending: number }>("GET", "request/count").then((body) => body.pending),
     // Asks for every season of a series; Seerr skips ones already on the server.
     request: (mediaType: SeerrMediaType, tmdbId: number) =>
-      call<SeerrRequest>("/request", { method: "POST", body: JSON.stringify(mediaType === "tv" ? { mediaType, mediaId: tmdbId, seasons: "all" } : { mediaType, mediaId: tmdbId }) }),
+      call<SeerrRequest>("POST", "request", mediaType === "tv" ? { mediaType, mediaId: tmdbId, seasons: "all" } : { mediaType, mediaId: tmdbId }),
     // Requests carry only a TMDB id; this fetches the name and poster to show with them.
-    details: (mediaType: SeerrMediaType, tmdbId: number) => call<SeerrResult>(`/${mediaType}/${tmdbId}`),
-    approve: (requestId: number) => call<SeerrRequest>(`/request/${requestId}/approve`, { method: "POST" }),
-    decline: (requestId: number) => call<SeerrRequest>(`/request/${requestId}/decline`, { method: "POST" }),
-    cancel: (requestId: number) => call<void>(`/request/${requestId}`, { method: "DELETE" })
+    details: (mediaType: SeerrMediaType, tmdbId: number) => call<SeerrResult>("GET", `${mediaType}/${tmdbId}`),
+    approve: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/approve`),
+    decline: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/decline`),
+    cancel: (requestId: number) => call<void>("DELETE", `request/${requestId}`)
   };
 }
 

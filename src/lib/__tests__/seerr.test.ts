@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { canManageRequests, createSeerrClient, normalizeSeerrUrl, posterUrl, seerrTitle } from "@/lib/seerr";
+import { canManageRequests, createSeerrClient, normalizeSeerrUrl, posterUrl, seerrTitle, serverSeerrCall } from "@/lib/seerr";
 
-function fakeFetch(responses: Record<string, { status?: number; body?: unknown }>) {
-  const calls: { url: string; init: RequestInit }[] = [];
-  const fetcher = (async (url: string, init: RequestInit) => {
-    calls.push({ url, init });
-    const match = responses[`${init.method ?? "GET"} ${url}`] ?? { status: 404 };
-    const status = match.status ?? 200;
-    return { ok: status < 400, status, json: async () => match.body } as Response;
-  }) as unknown as typeof fetch;
-  return { fetcher, calls };
+// A stand-in for Orbit's API client: records the calls the app would send to the server.
+function fakeServer(responses: Record<string, unknown>) {
+  const calls: { method: string; path: string; body: unknown }[] = [];
+  const api = {
+    request: async <T,>(method: string, path: string, body?: unknown) => {
+      calls.push({ method, path, body });
+      const key = `${method} ${path}`;
+      if (!(key in responses)) throw new Error(`Unexpected ${key}`);
+      return responses[key] as T;
+    }
+  };
+  return { seerr: createSeerrClient(serverSeerrCall(api)), calls };
 }
 
 describe("seerr", () => {
@@ -18,30 +21,32 @@ describe("seerr", () => {
     expect(normalizeSeerrUrl(" http://10.0.0.5:5055/api/v1 ")).toBe("http://10.0.0.5:5055");
   });
 
-  it("sends the key, drops people from search, and asks for all seasons of a series", async () => {
-    const base = "https://seerr.example.com/api/v1";
-    const { fetcher, calls } = fakeFetch({
-      [`GET ${base}/search?query=dune%202&page=1`]: { body: { results: [{ id: 1, mediaType: "movie", title: "Dune: Part Two" }, { id: 2, mediaType: "person", name: "Zendaya" }] } },
-      [`POST ${base}/request`]: { status: 201, body: { id: 9, status: 1 } }
+  it("goes through Orbit's server, drops people from search, and asks for all seasons of a series", async () => {
+    const base = "/integrations/seerr/api";
+    const { seerr, calls } = fakeServer({
+      [`GET ${base}/search?query=dune%202&page=1`]: { results: [{ id: 1, mediaType: "movie", title: "Dune: Part Two" }, { id: 2, mediaType: "person", name: "Someone" }] },
+      [`POST ${base}/request`]: { id: 9, status: 1 }
     });
-    const seerr = createSeerrClient({ url: "seerr.example.com", apiKey: "k" }, fetcher);
 
     expect((await seerr.search("dune 2")).map((item) => item.id)).toEqual([1]);
     await seerr.request("tv", 1399);
-    expect(calls[0].init.headers).toMatchObject({ "X-Api-Key": "k" });
-    expect(JSON.parse(String(calls[1].init.body))).toEqual({ mediaType: "tv", mediaId: 1399, seasons: "all" });
+    expect(calls[1].body).toEqual({ mediaType: "tv", mediaId: 1399, seasons: "all" });
   });
 
-  it("looks up a request's title by TMDB id", async () => {
-    const { fetcher, calls } = fakeFetch({ "GET https://s.example/api/v1/tv/1399": { body: { id: 1399, name: "Game of Thrones", firstAirDate: "2011-04-17" } } });
-    const item = await createSeerrClient({ url: "https://s.example", apiKey: "k" }, fetcher).details("tv", 1399);
-    expect(calls[0].url).toBe("https://s.example/api/v1/tv/1399");
-    expect(seerrTitle(item)).toBe("Game of Thrones (2011)");
-  });
-
-  it("explains a rejected key", async () => {
-    const { fetcher } = fakeFetch({ "GET https://s.example/api/v1/auth/me": { status: 401 } });
-    await expect(createSeerrClient({ url: "https://s.example", apiKey: "bad" }, fetcher).me()).rejects.toThrow("rejected the API key");
+  it("looks up a request's title by TMDB id and acts on requests", async () => {
+    const { seerr, calls } = fakeServer({
+      "GET /integrations/seerr/api/tv/1399": { id: 1399, name: "Game of Thrones", firstAirDate: "2011-04-17" },
+      "POST /integrations/seerr/api/request/4/approve": { id: 4, status: 2 },
+      "DELETE /integrations/seerr/api/request/4": null
+    });
+    expect(seerrTitle(await seerr.details("tv", 1399))).toBe("Game of Thrones (2011)");
+    await seerr.approve(4);
+    await seerr.cancel(4);
+    expect(calls.map((call) => `${call.method} ${call.path}`)).toEqual([
+      "GET /integrations/seerr/api/tv/1399",
+      "POST /integrations/seerr/api/request/4/approve",
+      "DELETE /integrations/seerr/api/request/4"
+    ]);
   });
 
   it("reads admin rights from the permission bits", () => {

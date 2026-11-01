@@ -1,6 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
 import { Alert } from "react-native";
+import { SeerrConnectForm } from "@/components/seerr-connect-form";
 import { Button, Empty, Input, Row, Screen, Section } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
@@ -12,33 +13,15 @@ import { groupWatchItems, progressLabel, watchDraftFromSeerr } from "@/lib/watch
 export default function Media() {
   const seerr = useSeerr();
   if (!seerr.ready) return <Screen>{null}</Screen>;
-  return seerr.connected ? <Browse seerr={seerr} /> : <Connect connect={seerr.connect} />;
+  return seerr.connected ? <Browse seerr={seerr} /> : <Connect connect={seerr.connect} error={seerr.error} />;
 }
 
-function Connect({ connect }: { connect: (url: string, apiKey: string) => Promise<void> }) {
-  const [url, setUrl] = useState("");
-  const [key, setKey] = useState("");
-  const [busy, setBusy] = useState(false);
-
+function Connect({ connect, error }: { connect: (url: string, apiKey: string) => Promise<void>; error: string | null }) {
   return (
     <Screen>
-      <Empty>Connect your Seerr server once. The key stays on this phone.</Empty>
-      <Input placeholder="https://seerr.example.com" value={url} onChangeText={setUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
-      <Input placeholder="API key (Seerr → Settings → General)" value={key} onChangeText={setKey} autoCapitalize="none" autoCorrect={false} secureTextEntry />
-      <Button
-        title={busy ? "Checking…" : "Connect"}
-        disabled={busy || !url.trim() || !key.trim()}
-        onPress={async () => {
-          setBusy(true);
-          try {
-            await connect(url, key);
-          } catch (error) {
-            Alert.alert("Could not connect", error instanceof Error ? error.message : "Check the URL and key.");
-          } finally {
-            setBusy(false);
-          }
-        }}
-      />
+      {error ? <Empty>{error}</Empty> : null}
+      <Empty>Connect your Seerr server once. Orbit keeps the key encrypted on its server, for your account only.</Empty>
+      <SeerrConnectForm connect={connect} />
     </Screen>
   );
 }
