@@ -1,6 +1,6 @@
 import { router, usePathname, type Href } from "expo-router";
 import { useEffect, useRef, type ReactNode } from "react";
-import { ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, flip, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
 import { colors, fonts, radius } from "@/components/theme";
@@ -252,8 +252,16 @@ export function SearchBar(props: TextInputProps) {
   );
 }
 
+/** The Trail logo, turning head-first. */
 export function Loading() {
-  return <ActivityIndicator color={colors.accent} />;
+  const turn = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.timing(turn, { toValue: 1, duration: 1100, easing: Easing.linear, useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, [turn]);
+  const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
+  return <Animated.View accessibilityRole="progressbar" accessibilityLabel={t.loading} style={{ alignSelf: "center", transform: [{ rotate }] }}><Image source={require("../../assets/brand/icons/expo-splash-icon-1024.png")} style={{ width: 32, height: 32 }} /></Animated.View>;
 }
 
 export const ui = StyleSheet.create({
