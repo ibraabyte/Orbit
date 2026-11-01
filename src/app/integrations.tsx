@@ -56,34 +56,35 @@ export default function Integrations() {
     <Screen refreshing={loading} onRefresh={load}>
       <Text style={[type.meta, { paddingHorizontal: 4 }]}>Each connection is yours only. Keys are kept encrypted on your Orbit server.</Text>
 
-      <Card title="WHOOP" kicker="Recovery, sleep and strain">
+      <Card title="WHOOP" kicker="Recovery, sleep and strain" action={<Badge tone={whoop.tone}>{whoop.label}</Badge>}>
         <ListRow
           leading={<IconTile name="watch" />}
           title={overview.whoop.connected ? "Open WHOOP" : "Connect WHOOP"}
           subtitle={whoop.detail}
-          trailing={<Badge tone={whoop.tone}>{whoop.label}</Badge>}
           href={overview.whoop.configured ? "/whoop" : undefined}
           chevron={overview.whoop.configured}
         />
       </Card>
 
-      <Card title="Seerr" kicker="Search and request movies and TV on your media server">
-        <ListRow leading={<IconTile name="film" />} title={seerr.connected ? "Your Seerr server" : "Not connected"} subtitle={seerrNow.detail} trailing={<Badge tone={seerrNow.tone}>{seerrNow.label}</Badge>} />
+      <Card title="Seerr" kicker="Search and request movies and TV on your media server" action={<Badge tone={seerrNow.tone}>{seerrNow.label}</Badge>}>
         {seerr.error ? <Text style={type.meta}>{seerr.error}</Text> : null}
         {!seerr.ready ? (
           <Loading />
         ) : seerr.connected ? (
           <>
-            <ListRow leading={<IconTile name="search" />} title="Open Movies & TV" href="/media" chevron />
+            <ListRow leading={<IconTile name="film" />} title="Open Movies & TV" subtitle={seerrNow.detail} href="/media" chevron />
             <Button variant="secondary" title="Disconnect Seerr" onPress={disconnectSeerr} />
           </>
         ) : (
-          <SeerrConnectForm connect={(url, key) => seerr.connect(url, key).then(load)} />
+          <>
+            <Text style={type.meta}>{seerrNow.detail}</Text>
+            <SeerrConnectForm connect={(url, key) => seerr.connect(url, key).then(load)} />
+          </>
         )}
       </Card>
 
-      <Card title="AI summaries" kicker="Provided by the server for everyone on it">
-        <ListRow leading={<IconTile name="feather" />} title="Written summaries" subtitle={ai.detail} trailing={<Badge tone={ai.tone}>{ai.label}</Badge>} />
+      <Card title="AI summaries" kicker="Provided by the server for everyone on it" action={<Badge tone={ai.tone}>{ai.label}</Badge>}>
+        <ListRow leading={<IconTile name="feather" />} title="Written summaries" subtitle={ai.detail} />
       </Card>
     </Screen>
   );
