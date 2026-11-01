@@ -20,7 +20,7 @@ const section = (key: string, label: string, icon: IconName): Section => ({ key,
 const manage = [section("tasks", t.tasks, "check-square")];
 const logs = [section("health", t.health, "activity"), section("whoop", t.whoop, "watch"), section("food", t.food, "coffee"), section("finance", t.finance, "credit-card"), section("people", t.people, "users"), section("habits", t.habits, "repeat"), section("goals", t.goals, "flag"), section("journal", t.journal, "book-open"), section("library", t.library, "bookmark")];
 const home = [section("vehicles", t.car, "truck"), section("media", t.movies, "film"), section("servers", t.servers, "server")];
-const system = [section("settings", t.settings, "settings")];
+const system = [section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
 const groups: [string, Section[]][] = [[t.manageDay, manage], [t.lifeLogs, logs], [t.homeServices, home], [t.system, system]];
 const pinnable = [...manage, ...logs, ...home];
 

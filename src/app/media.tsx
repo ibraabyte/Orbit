@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { Badge, Card, EmptyState, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
-import { Button, Input, Screen, SearchBar } from "@/components/screen";
+import { SeerrConnectForm } from "@/components/seerr-connect-form";
+import { Button, Screen, SearchBar } from "@/components/screen";
 import { colors, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
@@ -22,34 +23,15 @@ function Poster({ seed }: { seed: string }) {
 export default function Media() {
   const seerr = useSeerr();
   if (!seerr.ready) return <Screen>{null}</Screen>;
-  return seerr.connected ? <Browse seerr={seerr} /> : <Connect connect={seerr.connect} />;
+  return seerr.connected ? <Browse seerr={seerr} /> : <Connect connect={seerr.connect} error={seerr.error} />;
 }
 
-function Connect({ connect }: { connect: (url: string, apiKey: string) => Promise<void> }) {
-  const [url, setUrl] = useState("");
-  const [key, setKey] = useState("");
-  const [busy, setBusy] = useState(false);
-
+function Connect({ connect, error }: { connect: (url: string, apiKey: string) => Promise<void>; error: string | null }) {
   return (
     <Screen>
       <Card title={t.seerrConnect} style={{ gap: 12, paddingVertical: 16 }}>
-        <Text style={type.rowSubtitle}>{t.seerrHint}</Text>
-        <Input accessibilityLabel={t.serverUrl} placeholder="https://seerr.example.com" value={url} onChangeText={setUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" style={{ writingDirection: "ltr" }} />
-        <Input accessibilityLabel={t.apiKey} placeholder={t.apiKey} value={key} onChangeText={setKey} autoCapitalize="none" autoCorrect={false} secureTextEntry style={{ writingDirection: "ltr" }} />
-        <Button
-          title={busy ? `${t.connecting}` : t.connect}
-          disabled={busy || !url.trim() || !key.trim()}
-          onPress={async () => {
-            setBusy(true);
-            try {
-              await connect(url, key);
-            } catch (error) {
-              Alert.alert(t.seerrConnect, error instanceof Error ? error.message : t.tryAgain);
-            } finally {
-              setBusy(false);
-            }
-          }}
-        />
+        <Text style={type.rowSubtitle}>{error ?? t.seerrHint}</Text>
+        <SeerrConnectForm connect={connect} />
       </Card>
     </Screen>
   );
