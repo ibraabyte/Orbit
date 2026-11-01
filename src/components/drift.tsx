@@ -265,7 +265,7 @@ export function PillLink({ href, icon, label, primary, onPress }: { href?: Href;
       <Text style={[type.pill, { color: fg }]}>{label}</Text>
     </>
   );
-  const style = [styles.pill, { backgroundColor: primary ? colors.accent : colors.surface }];
+  const style = StyleSheet.flatten([styles.pill, { backgroundColor: primary ? colors.accent : colors.surface }]);
   if (href) {
     return (
       <Link href={href} asChild>

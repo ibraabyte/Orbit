@@ -72,7 +72,7 @@ export function QuickAddBar({ autoFocus, onAdded }: { autoFocus?: boolean; onAdd
         autoFocus={autoFocus}
         placeholderTextColor={colors.inkMuted}
         selectionColor={colors.accentDeep}
-        placeholder="Add anything… spent 25 lunch, call mom tomorrow"
+        placeholder="Add anything…"
         value={text}
         onChangeText={setText}
         onSubmitEditing={() => submit()}
