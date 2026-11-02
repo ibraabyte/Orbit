@@ -78,7 +78,7 @@ def test_admin_opens_and_closes_sign_ups_from_the_app(client: TestClient):
 
     assert client.patch("/admin/settings", json={"signups_open": True}, headers=admin).json()["signups_open"] is True
     assert client.get("/auth/status").json()["signups_open"] is True
-    other =client.post("/auth/sign-up", json={"email": "friend@example.com", "password": PASSWORD})
+    other = client.post("/auth/sign-up", json={"email": "friend@example.com", "password": PASSWORD})
     assert other.status_code == 201
 
     # Someone who isn't the admin can't flip it.

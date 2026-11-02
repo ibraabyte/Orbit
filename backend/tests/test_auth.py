@@ -8,11 +8,11 @@ PASSWORD = "correct horse battery"
 
 def test_first_account_is_allowed_then_sign_ups_close(client: TestClient):
     assert client.get("/auth/status").json() == {"signups_open": True, "google": False}
-    first =client.post("/auth/sign-up", json={"email": "me@example.com", "password": PASSWORD, "display_name": "Ibrahim"})
+    first = client.post("/auth/sign-up", json={"email": "me@example.com", "password": PASSWORD, "display_name": "Ibrahim"})
     assert first.status_code == 201
 
     assert client.get("/auth/status").json() == {"signups_open": False, "google": False}
-    second =client.post("/auth/sign-up", json={"email": "other@example.com", "password": PASSWORD})
+    second = client.post("/auth/sign-up", json={"email": "other@example.com", "password": PASSWORD})
     assert second.status_code == 403
 
 
