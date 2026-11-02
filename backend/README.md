@@ -29,8 +29,9 @@
 
 1. ادخل `developer-dashboard.whoop.com` بحساب WHOOP حقك، وسوّ **Team** لو طلب، ثم **Create App**.
 2. **Redirect URL**: `https://<دومين الـ API>/whoop/callback` (نفس دومين Coolify، مثل `https://api.example.com/whoop/callback`).
-3. **Scopes**: `read:recovery`، `read:cycles`، `read:sleep`، `read:workout`، `read:profile`. والخادم يطلب `offline` بنفسه عشان يقدر يزامن وأنت مو فاتح التطبيق.
-4. احفظ، وانسخ **Client ID** و**Client Secret**.
+3. **Scopes**: فعّل كلها: `read:recovery`، `read:cycles`، `read:sleep`، `read:workout`، `read:profile`، و`offline` لو ظهر لك. الخادم يطلبها كلها، ولو وحدة ناقصة يرجع لك التطبيق رسالة إن إعدادات تطبيق WHOOP فيها مشكلة.
+4. **Privacy Policy**: `https://<دومين الـ API>/privacy` (صفحة يقدمها الخادم نفسه).
+5. احفظ، وانسخ **Client ID** و**Client Secret**.
 
 ### 2. القيم في Coolify (Environment Variables)
 
@@ -50,6 +51,7 @@
 - **النبض**: WHOOP ما يعطي نبض لحظي في الـ API. اللي متوفر: النبض وقت الراحة ومتوسط وأعلى نبض لكل يوم ولكل تمرين، والـ HRV.
 - **الملخص**: يرسل لـ Claude (`claude-opus-5-5`) الأرقام المحسوبة فقط (بدون اسمك أو إيميلك)، ويرجع ملخص وتوصيات بالعربي. ينحفظ آخر ملخص، وما ينكتب جديد إلا لما تضغط الزر.
 - **فصل الربط**: يلغي صلاحية Orbit عند WHOOP ويمسح التوكنات. تقدر تحتفظ بالبيانات أو تمسحها.
+- **لو فشل الربط**: سجلات خدمة `api` في Coolify (Logs) فيها سطر `WHOOP ...` برمز الخطأ من WHOOP (مثل `invalid_scope` أو `invalid_client`)، بدون أي توكن أو سر.
 
 ## التشغيل محلياً
 

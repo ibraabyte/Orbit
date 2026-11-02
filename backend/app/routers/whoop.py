@@ -4,6 +4,7 @@ Connecting: the app asks POST /whoop/connect for WHOOP's sign-in URL and opens i
 browser back to GET /whoop/callback, which stores the tokens and redirects to the app (orbit://whoop?status=...).
 """
 
+import logging
 import secrets
 import uuid
 from datetime import UTC, date, datetime, timedelta
@@ -24,6 +25,7 @@ from app.security import decrypt_secret
 from app.services import whoop_ai, whoop_analytics, whoop_api, whoop_sync
 
 router = APIRouter(prefix="/whoop", tags=["whoop"])
+log = logging.getLogger("orbit.whoop")
 
 STATE_MINUTES = 10
 # Claude costs money per call; one summary every couple of minutes is plenty.
@@ -164,11 +166,16 @@ def callback(
         return _back_to_app("expired")
     user_id, return_to = found
     if error or not code:
-        return _back_to_app("denied", return_to)
+        # access_denied is the user pressing "Deny"; anything else (invalid_scope...) is the WHOOP app's settings.
+        log.warning("WHOOP sign-in came back with an error: %s", error if error and error.replace("_", "").isalnum() else "no code")
+        return _back_to_app("bad_setup" if error in whoop_api.SETUP_ERRORS else "denied", return_to)
     try:
         tokens = whoop_api.exchange_code(code)
         whoop_user_id = whoop_api.get(tokens["access_token"], "/v2/user/profile/basic").get("user_id")
-    except whoop_api.WhoopError:
+    except whoop_api.WhoopAuthError as exc:
+        return _back_to_app("bad_setup" if exc.code in whoop_api.SETUP_ERRORS else "error", return_to)
+    except whoop_api.WhoopError as exc:
+        log.warning("WHOOP connect failed: %s", exc)
         return _back_to_app("error", return_to)
 
     connection = db.get(WhoopConnection, user_id)

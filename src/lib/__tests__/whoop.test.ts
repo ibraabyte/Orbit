@@ -53,6 +53,7 @@ describe("whoop", () => {
   it("reads the server's redirect back into the app", () => {
     expect(connectResultMessage("orbit://whoop?status=connected")).toEqual({ ok: true, message: "WHOOP connected. Your data is syncing." });
     expect(connectResultMessage("exp://192.168.1.5:8081/--/whoop?status=denied")?.ok).toBe(false);
+    expect(connectResultMessage("orbit://whoop?status=bad_setup")).toEqual({ ok: false, message: "WHOOP refused Orbit's app settings. Check the scopes and keys of the WHOOP app." });
     expect(connectResultMessage("orbit://whoop?status=surprise")?.message).toBe("WHOOP sign-in didn't finish.");
     expect(connectResultMessage("orbit://whoop")).toBeNull();
     expect(connectResultMessage(null)).toBeNull();
