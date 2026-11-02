@@ -198,7 +198,8 @@ def test_every_table_belongs_to_a_user():
     """Guards the multi-user audit: any new table must carry the owner (or be one of the known server-wide ones)."""
     from app.models import Base
 
-    server_wide = {"users", "server_settings"}
+    # exercises: the shared exercise catalogue (public dataset, read-only to users, no personal data).
+    server_wide = {"users", "server_settings", "exercises"}
     for table in Base.metadata.sorted_tables:
         if table.name in server_wide:
             continue
