@@ -24,6 +24,7 @@ TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("tags", m.Tag, m.Tag.created_at),
     ("taggings", m.Tagging, m.Tagging.created_at),
     ("meals", m.Meal, m.Meal.logged_at),
+    ("foods", m.Food, m.Food.created_at),
     ("meal_plans", m.MealPlan, m.MealPlan.plan_date),
     ("grocery_items", m.GroceryItem, m.GroceryItem.created_at),
     ("people", m.Person, m.Person.name),

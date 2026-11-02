@@ -75,6 +75,8 @@ class CaptureUpdate(Input):
 
 # Food
 
+MealType = Literal["breakfast", "lunch", "dinner", "snack", "other"]
+
 
 class MealCreate(Tagged):
     name: str = name_field()
@@ -83,6 +85,10 @@ class MealCreate(Tagged):
     carbs_g: float | None = Field(default=None, ge=0)
     fat_g: float | None = Field(default=None, ge=0)
     logged_at: datetime
+    meal_type: MealType | None = None
+    # When the meal came from a saved food. The database refuses another user's food.
+    food_id: uuid.UUID | None = None
+    servings: float | None = Field(default=None, gt=0, le=50)
 
 
 class MealUpdate(Input):
@@ -92,9 +98,9 @@ class MealUpdate(Input):
     carbs_g: float | None = Field(default=None, ge=0)
     fat_g: float | None = Field(default=None, ge=0)
     logged_at: datetime | None = None
+    meal_type: MealType | None = None
 
 
-MealType = Literal["breakfast", "lunch", "dinner", "snack", "other"]
 MealPlanStatus = Literal["planned", "prepped", "eaten", "skipped"]
 
 
