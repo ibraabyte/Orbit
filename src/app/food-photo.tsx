@@ -153,7 +153,7 @@ export default function FoodPhoto() {
           ))}
           {drafts.length ? (
             <>
-              <Segments small options={pickerTypes} value={mealType} onChange={setMealType} labels={t.mealTypeNames} />
+              <Segments options={pickerTypes} value={mealType} onChange={setMealType} labels={t.mealTypeNames} />
               <Button title={`${t.logItems} (${chosen.length})`} variant="primary" disabled={Boolean(busy) || !chosen.length} onPress={() => void logAll()} />
             </>
           ) : null}

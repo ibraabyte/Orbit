@@ -47,7 +47,7 @@ export function FoodLogPanel({ food, busy, onLog, onClose }: { food: FoodCandida
         </Pressable>
       </View>
 
-      <Segments small options={pickerTypes} value={mealType} onChange={setMealType} labels={t.mealTypeNames} />
+      <Segments options={pickerTypes} value={mealType} onChange={setMealType} labels={t.mealTypeNames} />
 
       <View style={styles.total}>
         <Text style={type.stat}>
