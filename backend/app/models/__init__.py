@@ -5,7 +5,7 @@ from app.models.bank_sms import BankSmsEvent, BankSmsToken, BankTransaction
 from app.models.base import Base
 from app.models.finance import Bill, Expense
 from app.models.health import GroceryItem, Meal, MealPlan, SleepLog, WeightLog, Workout
-from app.models.integrations import ServiceConnection
+from app.models.integrations import AiConnection, ServiceConnection
 from app.models.library import Attachment, Capture, PushSubscription, Tag, Tagging
 from app.models.life import Goal, GoalMilestone, Habit, HabitLog, JournalEntry, Person
 from app.models.profile import Profile
@@ -14,6 +14,7 @@ from app.models.things import Vehicle, WatchItem
 from app.models.whoop import WhoopConnection, WhoopCycle, WhoopInsight, WhoopRecovery, WhoopSleep, WhoopWorkout
 
 __all__ = [
+    "AiConnection",
     "Attachment",
     "BankSmsEvent",
     "BankSmsToken",

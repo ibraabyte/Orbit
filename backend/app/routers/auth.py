@@ -1,10 +1,15 @@
+import secrets
 import threading
 import time
 import uuid
 from collections import defaultdict, deque
 from datetime import UTC, datetime, timedelta
+from typing import Any
+from urllib.parse import urlencode, urlparse
 
+import jwt
 from fastapi import APIRouter, HTTPException, Response, status
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy import exists, func, select, text, update
 from sqlalchemy.orm import Session
@@ -13,10 +18,15 @@ from app.config import get_settings
 from app.deps import Db, UserId
 from app.models import Profile, RefreshToken, User
 from app.routers.admin import load as load_server_settings
-from app.schemas.auth import ChangePassword, Me, Refresh, SignIn, SignUp, Tokens
+from app.routers.whoop import APP_SCHEMES
+from app.schemas.auth import ChangePassword, GoogleFinish, GoogleStart, GoogleStarted, Me, Refresh, SignIn, SignUp, Tokens
 from app.security import create_access_token, hash_password, hash_refresh_token, new_refresh_token, verify_password
+from app.services import google_api
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+GOOGLE_STATE_MINUTES = 10
+GOOGLE_CODE_MINUTES = 2
 
 
 class _Throttle:
@@ -85,12 +95,13 @@ def _signups_open(db: Session) -> bool:
 
 class AuthStatus(BaseModel):
     signups_open: bool
+    google: bool
 
 
 @router.get("/status", response_model=AuthStatus)
 def auth_status(db: Db):
-    """Lets the app decide whether to show "Create account"."""
-    return AuthStatus(signups_open=_signups_open(db))
+    """Lets the app decide whether to show "Create account" and "Continue with Google"."""
+    return AuthStatus(signups_open=_signups_open(db), google=google_api.configured())
 
 
 @router.post("/sign-up", response_model=Tokens, status_code=status.HTTP_201_CREATED)
@@ -121,6 +132,97 @@ def sign_in(body: SignIn, db: Db):
         throttle.fail(key)
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Wrong email or password.")
     throttle.clear(key)
+    return _issue(db, user.id, body.device)
+
+
+def _sign(kind: str, minutes: int, **claims: Any) -> str:
+    now = datetime.now(UTC)
+    payload = {"typ": kind, "iat": now, "exp": now + timedelta(minutes=minutes), **claims}
+    return jwt.encode(payload, get_settings().jwt_secret, algorithm="HS256")
+
+
+def _unsign(token: str, kind: str) -> dict[str, Any] | None:
+    try:
+        payload = jwt.decode(token, get_settings().jwt_secret, algorithms=["HS256"], options={"require": ["exp"]})
+    except jwt.PyJWTError:
+        return None
+    return payload if payload.get("typ") == kind else None
+
+
+def _back_to_app(result: str, return_to: str | None = None, **extra: str) -> RedirectResponse:
+    target = return_to or get_settings().google_app_redirect
+    separator = "&" if urlparse(target).query else "?"
+    return RedirectResponse(f"{target}{separator}{urlencode({'status': result, **extra})}", status.HTTP_302_FOUND)
+
+
+@router.post("/google/start", response_model=GoogleStarted)
+def google_start(body: GoogleStart):
+    """Google's sign-in page, plus a secret the app keeps. The browser never sees the secret, so a sign-in code
+    that leaks from the deep link, or one an attacker plants on someone's phone, is useless on its own."""
+    if not google_api.configured():
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Google sign-in isn't set up on this server yet.")
+    return_to = body.return_to or get_settings().google_app_redirect
+    # Only app links, so this can't be turned into a redirect to some website.
+    if urlparse(return_to).scheme not in {urlparse(get_settings().google_app_redirect).scheme, *APP_SCHEMES}:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "return_to must be a link into the Orbit app.")
+    secret = secrets.token_urlsafe(32)
+    state = _sign("google_state", GOOGLE_STATE_MINUTES, r=return_to, tz=body.timezone, h=hash_refresh_token(secret))
+    return GoogleStarted(url=google_api.authorize_url(state), secret=secret)
+
+
+@router.get("/google/callback", include_in_schema=False)
+def google_callback(db: Db, code: str | None = None, state: str | None = None, error: str | None = None):
+    """Google redirects the browser here. The signed state says this sign-in began at /google/start."""
+    started = _unsign(state, "google_state") if state else None
+    if started is None:
+        return _back_to_app("expired")
+    return_to = started["r"]
+    if error or not code:
+        return _back_to_app("denied", return_to)
+    try:
+        identity = google_api.fetch_identity(code)
+    except google_api.GoogleError:
+        return _back_to_app("error", return_to)
+    # An existing account is matched by email below, so the email must really be this person's.
+    if identity.get("email_verified") is not True:
+        return _back_to_app("unverified", return_to)
+
+    # One at a time, same as sign-up: two people racing for the first account can't both become admin.
+    db.execute(text("select pg_advisory_xact_lock(hashtext('orbit:sign-up'))"))
+    user = db.scalar(select(User).where(User.google_sub == identity["sub"])) or _find_user(db, identity["email"])
+    if user is None:
+        if not _signups_open(db):
+            return _back_to_app("closed", return_to)
+        # A random password nobody knows: this account signs in with Google only.
+        user = User(
+            email=identity["email"],
+            password_hash=hash_password(secrets.token_urlsafe(32)),
+            google_sub=identity["sub"],
+            is_admin=not _has_users(db),
+        )
+        db.add(user)
+        db.flush()
+        name = identity.get("name") or identity["email"].split("@")[0]
+        db.add(Profile(id=user.id, display_name=name[:120], timezone=started["tz"]))
+    elif user.google_sub is None:
+        user.google_sub = identity["sub"]
+    elif user.google_sub != identity["sub"]:
+        # Same email, different Google account (a reassigned work address, say). Not the same person.
+        return _back_to_app("error", return_to)
+    db.commit()
+    login_code = _sign("google_login", GOOGLE_CODE_MINUTES, sub=str(user.id), h=started["h"])
+    return _back_to_app("ok", return_to, code=login_code)
+
+
+@router.post("/google/finish", response_model=Tokens)
+def google_finish(body: GoogleFinish, db: Db):
+    """The app trades the code from the deep link, and the secret from /google/start, for a session."""
+    login = _unsign(body.code, "google_login")
+    if login is None or not secrets.compare_digest(login["h"], hash_refresh_token(body.secret)):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google sign-in expired. Try again.")
+    user = db.get(User, uuid.UUID(login["sub"]))
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Google sign-in expired. Try again.")
     return _issue(db, user.id, body.device)
 
 

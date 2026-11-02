@@ -73,12 +73,12 @@ def test_first_account_is_admin_and_others_are_not(client: TestClient, auth: dic
 def test_admin_opens_and_closes_sign_ups_from_the_app(client: TestClient):
     first = client.post("/auth/sign-up", json={"email": "me@example.com", "password": PASSWORD})
     admin = bearer(first.json())
-    assert client.get("/auth/status").json() == {"signups_open": False}
+    assert client.get("/auth/status").json()["signups_open"] is False
     assert client.get("/admin/settings", headers=admin).json() == {"signups_open": False, "signups_forced_by_server": False}
 
     assert client.patch("/admin/settings", json={"signups_open": True}, headers=admin).json()["signups_open"] is True
-    assert client.get("/auth/status").json() == {"signups_open": True}
-    other = client.post("/auth/sign-up", json={"email": "friend@example.com", "password": PASSWORD})
+    assert client.get("/auth/status").json()["signups_open"] is True
+    other =client.post("/auth/sign-up", json={"email": "friend@example.com", "password": PASSWORD})
     assert other.status_code == 201
 
     # Someone who isn't the admin can't flip it.
@@ -93,7 +93,7 @@ def test_admin_opens_and_closes_sign_ups_from_the_app(client: TestClient):
 def test_env_switch_still_forces_sign_ups_open(client: TestClient, auth: dict):
     get_settings().allow_signups = True
     assert client.get("/admin/settings", headers=auth).json() == {"signups_open": False, "signups_forced_by_server": True}
-    assert client.get("/auth/status").json() == {"signups_open": True}
+    assert client.get("/auth/status").json()["signups_open"] is True
 
 
 def test_overview_starts_empty(client: TestClient, auth: dict):

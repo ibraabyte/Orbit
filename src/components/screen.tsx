@@ -2,8 +2,8 @@ import { router, usePathname, type Href } from "expo-router";
 import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Card, flip, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
-import { colors, fonts, radius } from "@/components/theme";
+import { Card, flip, Glass, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
+import { backdrop, colors, fonts, radius } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
 // Space the tab bar takes at the bottom of a tab screen.
@@ -31,7 +31,7 @@ export function openCapture(text?: string) {
   router.push({ pathname: "/capture", params: text ? { text } : {} });
 }
 
-// Forest gradient behind everything. Tab screens pass header; stack screens get theirs from the route.
+// Soft forest light behind everything. Tab screens pass header; stack screens get theirs from the route.
 export function Screen({
   header,
   stackAction,
@@ -71,9 +71,11 @@ function StackHeader({ action }: { action?: { label: string; onPress: () => void
   return (
     <View style={{ gap: 10 }}>
       <View style={styles.stackBar}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t.back} style={[styles.backButton, flip]}>
-          <Icon name="chevron-left" size={22} color={colors.ink} />
-        </Pressable>
+        <Glass interactive style={styles.backButton}>
+          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t.back} style={[styles.glassPress, flip]}>
+            <Icon name="chevron-left" size={22} color={colors.ink} />
+          </Pressable>
+        </Glass>
         <Text style={styles.stackTitle} accessibilityRole="header">
           {meta?.title}
         </Text>
@@ -100,7 +102,7 @@ function StackHeader({ action }: { action?: { label: string; onPress: () => void
   );
 }
 
-/** Dashed bar with an example line for this section; opens Capture. */
+/** Quiet bar with an example line for this section; opens Capture. */
 function CaptureHint({ hint }: { hint: string }) {
   return (
     <Pressable onPress={() => openCapture()} accessibilityRole="button" accessibilityLabel={t.capture} style={styles.hint}>
@@ -127,17 +129,18 @@ export function TabHeader({ title, kicker, action }: { title: string; kicker?: s
   );
 }
 
-/** Small cream control beside a tab title (Customize, language). */
+/** Small glass control beside a tab title (Customize, language). With an icon it shows only the icon. */
 export function HeaderButton({ label, icon, onPress }: { label: string; icon?: "sliders"; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" style={styles.headerButton}>
-      {icon ? <Icon name={icon} size={15} color={colors.ink} /> : null}
-      <Text style={[type.pill, { fontSize: 13, color: colors.ink }]}>{label}</Text>
-    </Pressable>
+    <Glass interactive style={icon ? styles.backButton : styles.headerButton}>
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={styles.glassPress}>
+        {icon ? <Icon name={icon} size={17} color={colors.ink} /> : <Text style={[type.pill, { fontSize: 13, color: colors.ink }]}>{label}</Text>}
+      </Pressable>
+    </Glass>
   );
 }
 
-/** A titled cream card. */
+/** A titled card. */
 export function Section({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <Card title={title} action={action}>
@@ -151,7 +154,7 @@ export function ShellLabel({ children }: { children: string }) {
   return <Text style={type.shellLabel}>{children}</Text>;
 }
 
-/** Dark strip on top: offline, showing the saved copy. */
+/** Strip on top: offline, showing the saved copy. */
 export function OfflineBanner({ message }: { message: string }) {
   return (
     <View style={styles.offline} accessibilityRole="alert">
@@ -226,7 +229,7 @@ export function Segments<T extends string>({ options, value, onChange, labels, s
   );
 }
 
-// primary: lime with dark ink. dark: forest. outline: cream with a forest edge.
+// primary: lime with dark ink. dark: pale with dark ink. outline: clear with a pale edge.
 export function Button({ title, onPress, disabled, variant = "dark" }: { title: string; onPress: () => void; disabled?: boolean; variant?: "primary" | "dark" | "outline" }) {
   return (
     <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled: Boolean(disabled) }} style={({ pressed }) => [styles.button, buttonStyles[variant], disabled && { opacity: 0.45 }, pressed && { opacity: 0.8 }]}>
@@ -242,7 +245,7 @@ export function Input({ style, ...props }: TextInputProps) {
   return <TextInput placeholderTextColor={colors.inkFaint} selectionColor={colors.accentDeep} style={[ui.input, onSurface && { backgroundColor: colors.field }, style]} {...props} />;
 }
 
-/** The ⌕ field on a cream bar (Library, Movies). */
+/** The ⌕ field on a glass bar (Library, Movies). */
 export function SearchBar(props: TextInputProps) {
   return (
     <View style={styles.search}>
@@ -272,38 +275,39 @@ export const ui = StyleSheet.create({
 const buttonStyles = StyleSheet.create({
   primary: { backgroundColor: colors.accent },
   dark: { backgroundColor: colors.urgent },
-  outline: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.urgent }
+  outline: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.urgent }
 });
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  shell: { flex: 1, backgroundColor: colors.shell, experimental_backgroundImage: `linear-gradient(180deg, ${colors.shellTop} 0px, ${colors.shell} 360px)` },
+  shell: { flex: 1, backgroundColor: colors.shell, experimental_backgroundImage: backdrop },
   content: { paddingHorizontal: 20, gap: 14 },
   tabHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, paddingBottom: 2 },
-  headerButton: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile },
+  headerButton: { height: 44, minWidth: 44, borderRadius: 22 },
+  glassPress: { flexGrow: 1, minHeight: 44, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" },
   stackBar: { flexDirection: "row", alignItems: "center", gap: 8 },
-  backButton: { width: 44, height: 44, borderRadius: radius.tile, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  backButton: { width: 44, height: 44, borderRadius: 22 },
   stackTitle: { flex: 1, fontFamily: fonts.bold, fontSize: 26, lineHeight: 32, letterSpacing: -0.4, color: colors.onShell },
-  stackAction: { minHeight: 40, paddingHorizontal: 12, borderRadius: radius.tile, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  stackAction: { minHeight: 40, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   bleed: { marginHorizontal: -20, flexGrow: 0 },
   bleedContent: { paddingHorizontal: 20, gap: 6 },
-  sibling: { minHeight: 32, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-  hint: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, borderWidth: 1, borderStyle: "dashed", borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile },
-  hintMark: { width: 22, height: 22, borderRadius: radius.chip, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  sibling: { minHeight: 34, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: "transparent", backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  hint: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
+  hintMark: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   hintText: { flex: 1, fontFamily: "Menlo", fontSize: 12, color: colors.inkFaint },
-  offline: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.urgent, paddingHorizontal: 20, paddingVertical: 6 },
+  offline: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.surfaceInset, paddingHorizontal: 20, paddingVertical: 6 },
   offlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
-  offlineText: { flex: 1, fontFamily: fonts.semibold, fontSize: 12, color: colors.urgentInk },
+  offlineText: { flex: 1, fontFamily: fonts.semibold, fontSize: 12, color: colors.ink },
   error: { alignItems: "center", gap: 14, paddingHorizontal: 12, paddingVertical: 60 },
   errorMark: { width: 56, height: 56, borderRadius: 20, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
   errorGlyph: { fontFamily: fonts.bold, fontSize: 28, color: colors.urgentInk },
   segments: { flexDirection: "row", backgroundColor: colors.surfaceInset, borderRadius: radius.tile, padding: 3, gap: 3 },
-  segment: { flex: 1, minHeight: 38, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
+  segment: { flex: 1, minHeight: 38, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   segmentSmall: { flex: 0, minHeight: 32, paddingHorizontal: 12, borderRadius: 7 },
   segmentSelected: { backgroundColor: colors.urgent },
   segmentText: { fontFamily: fonts.bold, fontSize: 14 },
-  button: { minHeight: 48, borderRadius: radius.tile, paddingHorizontal: 20, alignItems: "center", justifyContent: "center" },
+  button: { minHeight: 48, borderRadius: radius.pill, paddingHorizontal: 20, alignItems: "center", justifyContent: "center" },
   buttonText: { fontFamily: fonts.bold, fontSize: 15 },
-  search: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile },
+  search: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, backgroundColor: colors.surface, borderRadius: radius.pill },
   searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.ink, minHeight: 44 }
 });

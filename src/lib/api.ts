@@ -168,9 +168,21 @@ export function createApiClient({
       return session;
     },
 
-    async signupsOpen() {
+    async authStatus() {
       const { response, parsed } = await send("GET", "/auth/status", undefined, null);
-      return response.ok && Boolean((parsed as { signups_open?: boolean })?.signups_open);
+      const status = (response.ok ? parsed : null) as { signups_open?: boolean; google?: boolean } | null;
+      return { signupsOpen: Boolean(status?.signups_open), google: Boolean(status?.google) };
+    },
+
+    // Google's sign-in page, and the secret that finishGoogle needs afterwards.
+    async startGoogle(returnTo: string, timezone: string) {
+      const { response, parsed } = await send("POST", "/auth/google/start", { return_to: returnTo, timezone }, null);
+      if (!response.ok) throw new ApiError(response.status, errorMessage(response.status, parsed));
+      return parsed as { url: string; secret: string };
+    },
+
+    finishGoogle(code: string, secret: string) {
+      return authenticate("/auth/google/finish", { code, secret });
     },
 
     signIn(email: string, password: string) {

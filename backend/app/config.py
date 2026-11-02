@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     login_attempts: int = 10
     login_window_minutes: int = 15
 
+    # Sign in with Google (console.cloud.google.com). Empty client id means the button is hidden.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    # Must match the redirect URI registered with Google, e.g. https://api.example.com/auth/google/callback
+    google_redirect_uri: str = ""
+    # Where the browser goes after Google sign-in; the app's scheme from app.json.
+    google_app_redirect: str = "orbit://sign-in"
+
     # WHOOP (developer.whoop.com). Empty client id means the integration is off.
     whoop_client_id: str = ""
     whoop_client_secret: str = ""

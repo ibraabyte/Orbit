@@ -358,7 +358,7 @@ def test_local_day_uses_whoop_offset():
 def fake_insight(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
     seen: list[dict] = []
 
-    def write(summary: dict):
+    def write(summary: dict, access: whoop_ai.AiAccess):
         seen.append(summary)
         return whoop_ai.Insight(summary="أسبوعك كان جيد.", highlights=["التعافي ارتفع"], recommendations=["نم بدري"]), "claude-opus-5-5"
 
@@ -392,9 +392,9 @@ def test_write_insight_asks_claude_for_structured_arabic(monkeypatch):
             insight = whoop_ai.Insight(summary="ملخص", highlights=["أ"], recommendations=["ب"])
             return SimpleNamespace(stop_reason="end_turn", parsed_output=insight, model="claude-opus-5-5")
 
-    monkeypatch.setattr(get_settings(), "anthropic_api_key", "test-key")
-    monkeypatch.setattr(whoop_ai, "_client", lambda: SimpleNamespace(beta=SimpleNamespace(messages=Messages())))
-    insight, model = whoop_ai.write_insight({"start": "2026-10-01", "end": "2026-10-30", "daily": []})
+    access = whoop_ai.AiAccess("anthropic", get_settings().insights_model, "test-key")
+    monkeypatch.setattr(whoop_ai, "_anthropic", lambda api_key: SimpleNamespace(beta=SimpleNamespace(messages=Messages())))
+    insight, model = whoop_ai.write_insight({"start": "2026-10-01", "end": "2026-10-30", "daily": []}, access)
     assert insight.summary == "ملخص" and model == "claude-opus-5-5"
     call = calls[0]
     assert call["model"] == "claude-opus-5-5"
@@ -406,9 +406,9 @@ def test_write_insight_asks_claude_for_structured_arabic(monkeypatch):
         def parse(self, **kwargs):
             return SimpleNamespace(stop_reason="refusal", parsed_output=None, model="claude-opus-5-5")
 
-    monkeypatch.setattr(whoop_ai, "_client", lambda: SimpleNamespace(beta=SimpleNamespace(messages=Refuses())))
+    monkeypatch.setattr(whoop_ai, "_anthropic", lambda api_key: SimpleNamespace(beta=SimpleNamespace(messages=Refuses())))
     with pytest.raises(whoop_ai.InsightUnavailable):
-        whoop_ai.write_insight({"start": "2026-10-01", "end": "2026-10-30"})
+        whoop_ai.write_insight({"start": "2026-10-01", "end": "2026-10-30"}, access)
 
 
 def test_deleting_the_account_deletes_whoop(client: TestClient, auth: dict, whoop: FakeWhoop, db: Session):

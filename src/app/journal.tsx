@@ -30,7 +30,7 @@ export default function Journal() {
               <Text style={type.rowSubtitle}>{formatDate(`${entry.entry_date}T12:00:00`)}</Text>
               <Badge tone={score >= 4 ? "accent" : score <= 2 ? "urgent" : "neutral"} glyph={score >= 4 ? "☺" : score <= 2 ? "☹" : "–"}>{`${score}/5`}</Badge>
             </View>
-            <Text style={[type.body, { writingDirection: "auto", color: "#2f3f34" }]}>{entry.body}</Text>
+            <Text style={[type.body, { writingDirection: "auto" }]}>{entry.body}</Text>
           </Card>
         );
       })}

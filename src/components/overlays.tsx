@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { flip, Icon, type } from "@/components/drift";
+import { flip, Glass, Icon, type } from "@/components/drift";
 import { colors, fonts, radius } from "@/components/theme";
 import { formatDate, t } from "@/lib/i18n";
 
@@ -58,7 +58,7 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
         <Pressable style={styles.backdrop} onPress={() => setSheet(null)} accessibilityLabel={t.cancel} />
         {sheet ? (
           <View style={styles.sheetWrap}>
-            <View style={styles.sheet}>
+            <Glass style={styles.sheet}>
               <View style={styles.sheetHeader}>
                 <Text style={[type.title, { textAlign: "center" }]}>{sheet.title}</Text>
                 {sheet.detail ? <Text style={[type.rowSubtitle, { textAlign: "center" }]}>{sheet.detail}</Text> : null}
@@ -73,13 +73,15 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
                     option.run();
                   }}
                 >
-                  <Text style={[styles.optionText, option.destructive && { fontFamily: fonts.bold, color: colors.urgent }]}>{option.label}</Text>
+                  <Text style={[styles.optionText, option.destructive && { fontFamily: fonts.bold, color: colors.dangerOnShell }]}>{option.label}</Text>
                 </Pressable>
               ))}
-            </View>
-            <Pressable accessibilityRole="button" style={[styles.sheet, styles.cancel]} onPress={() => setSheet(null)}>
-              <Text style={[styles.optionText, { fontFamily: fonts.bold }]}>{t.cancel}</Text>
-            </Pressable>
+            </Glass>
+            <Glass interactive style={styles.sheet}>
+              <Pressable accessibilityRole="button" style={styles.cancel} onPress={() => setSheet(null)}>
+                <Text style={[styles.optionText, { fontFamily: fonts.bold }]}>{t.cancel}</Text>
+              </Pressable>
+            </Glass>
           </View>
         ) : null}
       </Modal>
@@ -88,11 +90,13 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
         {picker ? <DatePicker key={picker.title} title={picker.title} initial={picker.initial} onPick={closePicker} /> : null}
       </Modal>
       {message ? (
-        <View pointerEvents="none" style={styles.toast} accessibilityLiveRegion="polite">
-          <View style={styles.toastMark}>
-            <Icon name="check" size={14} color={colors.accentInk} />
-          </View>
-          <Text style={styles.toastText}>{message}</Text>
+        <View pointerEvents="none" style={styles.toastWrap} accessibilityLiveRegion="polite">
+          <Glass style={styles.toast}>
+            <View style={styles.toastMark}>
+              <Icon name="check" size={14} color={colors.accentInk} />
+            </View>
+            <Text style={styles.toastText}>{message}</Text>
+          </Glass>
         </View>
       ) : null}
     </OverlayContext.Provider>
@@ -115,7 +119,7 @@ function DatePicker({ title, initial, onPick }: { title: string; initial: Date; 
   const step = (by: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + by, 1));
 
   return (
-    <View style={[styles.sheetWrap, styles.picker]}>
+    <Glass style={[styles.sheetWrap, styles.picker]}>
       <Text style={[type.rowSubtitle, { textAlign: "center" }]}>{title}</Text>
       <View style={styles.pickerHead}>
         <Pressable onPress={() => step(-1)} accessibilityRole="button" accessibilityLabel="Previous month" style={[styles.pickerStep, flip]}>
@@ -143,22 +147,23 @@ function DatePicker({ title, initial, onPick }: { title: string; initial: Date; 
           );
         })}
       </View>
-    </View>
+    </Glass>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.6)" },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.45)" },
   sheetWrap: { position: "absolute", left: 12, right: 12, bottom: 28, gap: 8 },
-  sheet: { backgroundColor: colors.surface, borderRadius: 20, overflow: "hidden" },
+  sheet: { borderRadius: 26 },
   sheetHeader: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 2 },
   option: { minHeight: 52, alignItems: "center", justifyContent: "center", borderTopWidth: 1, borderTopColor: colors.surfaceInset, paddingHorizontal: 16 },
   optionText: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, textAlign: "center" },
   cancel: { minHeight: 52, alignItems: "center", justifyContent: "center" },
-  toast: { position: "absolute", left: 16, right: 16, bottom: 108, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: colors.urgent, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 15, shadowOffset: { width: 0, height: 10 } },
+  toastWrap: { position: "absolute", left: 16, right: 16, bottom: 108 },
+  toast: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12 },
   toastMark: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
-  toastText: { flex: 1, fontFamily: fonts.semibold, fontSize: 14, color: colors.urgentInk },
-  picker: { backgroundColor: colors.surface, borderRadius: 20, padding: 16, gap: 10 },
+  toastText: { flex: 1, fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
+  picker: { borderRadius: 26, padding: 16, gap: 10 },
   pickerHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   pickerStep: { width: 36, height: 36, borderRadius: radius.control, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
   pickerGrid: { flexDirection: "row", flexWrap: "wrap" },

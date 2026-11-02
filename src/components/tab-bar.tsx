@@ -1,12 +1,12 @@
 import * as Haptics from "expo-haptics";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Icon, type IconName } from "@/components/drift";
+import { Glass, Icon, type IconName } from "@/components/drift";
 import { openCapture } from "@/components/screen";
 import { colors, fonts } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
-// A docked cream bar: four tabs and the lime Capture button raised in the middle.
+// A floating glass capsule with four tabs, and the lime glass Capture button beside it.
 const tabs: Record<string, { label: string; icon: IconName }> = {
   index: { label: t.today, icon: "home" },
   plan: { label: t.plan, icon: "clipboard" },
@@ -20,16 +20,14 @@ export function DriftTabBar({ state, emitter, navigateToTab, insets }: BottomTab
     .map((route) => {
       const focused = state.routes[state.index]?.key === route.key;
       const { label, icon } = tabs[route.name];
-      const color = focused ? colors.ink : colors.inkFaint;
+      const color = focused ? colors.accent : colors.inkMuted;
       const onPress = () => {
         const event = emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
         if (!focused && !event.defaultPrevented) navigateToTab(route.key);
       };
       return (
-        <Pressable key={route.key} onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={label} style={styles.tab}>
-          <View style={[styles.iconWell, focused && styles.iconWellOn]}>
-            <Icon name={icon} size={18} color={color} />
-          </View>
+        <Pressable key={route.key} onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={label} style={[styles.tab, focused && styles.tabOn]}>
+          <Icon name={icon} size={19} color={color} />
           <Text style={[styles.label, { color }]} numberOfLines={1}>
             {label}
           </Text>
@@ -37,35 +35,37 @@ export function DriftTabBar({ state, emitter, navigateToTab, insets }: BottomTab
       );
     });
 
-  const capture = (
-    <View key="capture" style={styles.fabSlot}>
-      <Pressable
-        onPress={() => {
-          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          openCapture();
-        }}
-        accessibilityRole="button"
-        accessibilityLabel={t.capture}
-        style={styles.fab}
-      >
-        <Icon name="plus" size={28} color={colors.accentInk} />
-      </Pressable>
-    </View>
-  );
-
   return (
-    <View style={[styles.bar, { paddingBottom: Math.max(8, insets.bottom) }]} accessibilityRole="tablist">
-      {[...buttons.slice(0, 2), capture, ...buttons.slice(2)]}
+    <View style={[styles.bar, { bottom: Math.max(14, insets.bottom - 6) }]}>
+      <Glass tint="rgba(12,18,14,0.55)" style={styles.capsule}>
+        <View style={styles.tabs} accessibilityRole="tablist">
+          {buttons}
+        </View>
+      </Glass>
+      <Glass tint={colors.accent} interactive style={styles.capture}>
+        <Pressable
+          onPress={() => {
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            openCapture();
+          }}
+          accessibilityRole="button"
+          accessibilityLabel={t.capture}
+          style={styles.capturePress}
+        >
+          <Icon name="plus" size={26} color={colors.accentInk} />
+        </Pressable>
+      </Glass>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: { position: "absolute", left: 0, right: 0, bottom: 0, flexDirection: "row", alignItems: "flex-end", backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.hairline, paddingHorizontal: 8, paddingTop: 6 },
-  tab: { flex: 1, minHeight: 48, alignItems: "center", gap: 3, paddingVertical: 4 },
-  iconWell: { width: 40, height: 24, borderRadius: 7, alignItems: "center", justifyContent: "center" },
-  iconWellOn: { backgroundColor: colors.accent },
+  bar: { position: "absolute", left: 16, right: 16, flexDirection: "row", alignItems: "center", gap: 10 },
+  capsule: { flex: 1, height: 64, borderRadius: 32 },
+  tabs: { flex: 1, flexDirection: "row", padding: 5 },
+  tab: { flex: 1, borderRadius: 27, alignItems: "center", justifyContent: "center", gap: 3 },
+  tabOn: { backgroundColor: "rgba(255,255,255,0.12)" },
   label: { fontFamily: fonts.bold, fontSize: 10 },
-  fabSlot: { width: 72, alignItems: "center" },
-  fab: { width: 56, height: 56, marginTop: -26, marginBottom: 6, borderRadius: 28, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", shadowColor: colors.accent, shadowOpacity: 0.45, shadowRadius: 10, shadowOffset: { width: 0, height: 8 }, elevation: 8 }
+  capture: { width: 64, height: 64, borderRadius: 32 },
+  capturePress: { flex: 1, alignItems: "center", justifyContent: "center" }
 });

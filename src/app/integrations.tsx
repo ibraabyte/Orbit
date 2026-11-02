@@ -1,6 +1,7 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Text } from "react-native";
+import { AiConnectForm } from "@/components/ai-connect-form";
 import { BankSmsCard } from "@/components/bank-sms-card";
 import { Badge, Card, EmptyState, IconTile, ListRow, toneToBadge, type } from "@/components/drift";
 import { Button, Loading, Screen } from "@/components/screen";
@@ -53,6 +54,12 @@ export default function Integrations() {
       { text: "Cancel", style: "cancel" }
     ]);
 
+  const disconnectAi = () =>
+    Alert.alert("Disconnect AI?", "Orbit forgets your API key. Summaries already written stay.", [
+      { text: "Disconnect", style: "destructive", onPress: () => void integrationsApi.disconnectAi(getApi()).then(load) },
+      { text: "Cancel", style: "cancel" }
+    ]);
+
   return (
     <Screen refreshing={loading} onRefresh={load}>
       <Text style={[type.shellMuted, { paddingHorizontal: 4 }]}>Each connection is yours only. Keys are kept encrypted on your Orbit server.</Text>
@@ -88,6 +95,14 @@ export default function Integrations() {
 
       <Card title="AI summaries" action={<Badge tone={toneToBadge(ai.tone)}>{ai.label}</Badge>}>
         <ListRow leading={<IconTile name="feather" />} title="Written summaries" subtitle={ai.detail} />
+        <AiConnectForm
+          status={overview.ai}
+          connect={async (input) => {
+            await integrationsApi.connectAi(getApi(), input);
+            await load();
+          }}
+        />
+        {overview.ai.connected ? <Button variant="outline" title="Disconnect AI" onPress={disconnectAi} /> : null}
       </Card>
     </Screen>
   );

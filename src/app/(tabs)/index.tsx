@@ -91,15 +91,15 @@ export default function Today() {
       {prayer ? (
         <Hero style={{ gap: 14, paddingVertical: 14 }}>
           <View style={styles.prayerMark}>
-            <Icon name="moon" size={20} color={colors.accentInk} />
+            <Icon name="moon" size={20} color={colors.heroInk} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={[type.tileLabel, { fontSize: 12, color: colors.accentMuted }]}>{t.nextPrayer}</Text>
-            <Text style={[type.h2, { color: colors.accentInk }]}>
+            <Text style={[type.h2, { color: colors.heroInk }]}>
               {isArabic ? prayer.label : (prayerNames[prayer.label] ?? prayer.label)} · {formatClock(prayer.at)}
             </Text>
           </View>
-          <Text style={[type.barValue, { color: colors.accentInk }]}>{formatIn(Math.max(0, Math.round((prayer.at.getTime() - Date.now()) / 60_000)))}</Text>
+          <Text style={[type.barValue, { color: colors.heroInk }]}>{formatIn(Math.max(0, Math.round((prayer.at.getTime() - Date.now()) / 60_000)))}</Text>
         </Hero>
       ) : null}
 
@@ -205,12 +205,12 @@ function digestIcon(tone?: string | null) {
 }
 
 const styles = StyleSheet.create({
-  prayerMark: { width: 40, height: 40, borderRadius: radius.tile, backgroundColor: "rgba(0,0,0,0.08)", alignItems: "center", justifyContent: "center" },
-  captureBar: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.shell, borderRadius: radius.tile },
-  captureMark: { width: 24, height: 24, borderRadius: radius.chip, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  prayerMark: { width: 40, height: 40, borderRadius: radius.tile, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" },
+  captureBar: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, backgroundColor: colors.field, borderRadius: radius.pill },
+  captureMark: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   capturePlaceholder: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.inkFaint },
   starters: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  starter: { minHeight: 32, paddingHorizontal: 10, justifyContent: "center", borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.surface },
+  starter: { minHeight: 32, paddingHorizontal: 12, justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
   nextTime: { width: 64, fontFamily: fonts.bold, fontSize: 12, color: colors.inkMuted }
 });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminApi, aiState, integrationsApi, seerrState, whoopState } from "@/lib/integrations";
+import { adminApi, aiFormReady, aiState, integrationsApi, seerrState, whoopState } from "@/lib/integrations";
 
 function fakeApi() {
   const calls: { method: string; path: string; body?: unknown }[] = [];
@@ -40,8 +40,33 @@ describe("integrations", () => {
     expect(seerrState({ connected: true, url: "http://10.0.0.5:5055", account_name: null, connected_at: null }).detail).toBe("10.0.0.5:5055");
   });
 
-  it("says whether the server provides AI summaries", () => {
-    expect(aiState({ configured: true }).label).toBe("On");
-    expect(aiState({ configured: false }).tone).toBe("neutral");
+  it("says whose AI writes the summaries", () => {
+    const none = { connected: false, provider: null, model: null, instructions: null, connected_at: null };
+    expect(aiState({ ...none, configured: false })).toMatchObject({ label: "Not connected", tone: "neutral" });
+    expect(aiState({ ...none, configured: true }).label).toBe("Server key");
+    expect(aiState({ ...none, configured: true, connected: true, provider: "gemini", model: "made-up-model" })).toMatchObject({ label: "Connected", tone: "success", detail: "Gemini · made-up-model" });
+  });
+
+  it("sends the saved key only when a new one was typed", async () => {
+    const { api, calls } = fakeApi();
+    await integrationsApi.connectAi(api, { provider: "openai", model: " m ", apiKey: " key-123 ", instructions: " focus on sleep " });
+    await integrationsApi.connectAi(api, { provider: "openai", model: "m", apiKey: "  ", instructions: "" });
+    await integrationsApi.disconnectAi(api);
+    expect(calls).toEqual([
+      { method: "PUT", path: "/integrations/ai", body: { provider: "openai", model: "m", api_key: "key-123", instructions: "focus on sleep" } },
+      { method: "PUT", path: "/integrations/ai", body: { provider: "openai", model: "m", instructions: "" } },
+      { method: "DELETE", path: "/integrations/ai", body: undefined }
+    ]);
+  });
+
+  it("asks for what each provider needs before saving", () => {
+    const form = { provider: "openai" as const, model: "m", apiKey: "key-123" };
+    expect(aiFormReady(form, null)).toBe(true);
+    expect(aiFormReady({ ...form, model: " " }, null)).toBe(false);
+    expect(aiFormReady({ ...form, provider: "anthropic", model: "" }, null)).toBe(true);
+    expect(aiFormReady({ ...form, apiKey: "" }, null)).toBe(false);
+    // The saved key only stands in for its own provider.
+    expect(aiFormReady({ ...form, apiKey: "" }, "openai")).toBe(true);
+    expect(aiFormReady({ ...form, apiKey: "" }, "gemini")).toBe(false);
   });
 });
