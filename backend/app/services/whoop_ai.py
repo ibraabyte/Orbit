@@ -199,9 +199,7 @@ def _write_with_chatgpt(access: ChatgptAccess, prompt: str) -> tuple[Insight, st
     schema = json.dumps(Insight.model_json_schema())
     system = f"{_system(access)}\n\nAnswer with one JSON object matching this schema, and nothing else:\n{schema}"
     try:
-        answer = chatgpt_ai.respond(
-            access.db, access.user_id, [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
-        )
+        answer = chatgpt_ai.respond(access.db, access.user_id, [{"role": "system", "content": system}, {"role": "user", "content": prompt}])
     except chatgpt_auth.ChatgptError as exc:
         raise InsightUnavailable(str(exc)) from exc
     try:

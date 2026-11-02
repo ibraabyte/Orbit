@@ -280,10 +280,19 @@ def test_refresh_failure_after_401_requests_reconnection(api, monkeypatch):
     assert expired == [USER]
 
 
-@pytest.mark.parametrize("data", [{"models": []}, {"models": {}}, {"models": [
-    {"slug": "bad", "visibility": "list", "priority": "first"},
-    {"slug": "hidden", "visibility": "hide", "priority": 0},
-]}])
+@pytest.mark.parametrize(
+    "data",
+    [
+        {"models": []},
+        {"models": {}},
+        {
+            "models": [
+                {"slug": "bad", "visibility": "list", "priority": "first"},
+                {"slug": "hidden", "visibility": "hide", "priority": 0},
+            ]
+        },
+    ],
+)
 def test_model_discovery_requires_a_supported_visible_model(api, monkeypatch, data):
     module, _, expired = api
     install(module, monkeypatch, lambda request: httpx.Response(200, json=data))

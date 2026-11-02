@@ -45,9 +45,15 @@ def provider(monkeypatch):
         assert request.headers["content-type"] == "application/x-www-form-urlencoded"
         assert form["client_id"] == ["app_EMoamEEZ73f0CkXaXp7hrann"]
         token = jwt.encode({"https://api.openai.com/auth": {"chatgpt_account_id": "account-123"}}, JWT_TEST_KEY, algorithm="HS256")
-        return httpx.Response(200, json={
-            "access_token": token, "refresh_token": "refresh-private", "id_token": "id-private", "expires_in": 3600,
-        })
+        return httpx.Response(
+            200,
+            json={
+                "access_token": token,
+                "refresh_token": "refresh-private",
+                "id_token": "id-private",
+                "expires_in": 3600,
+            },
+        )
 
     monkeypatch.setattr(chatgpt_auth, "transport", httpx.MockTransport(respond))
     return calls
@@ -85,15 +91,18 @@ def test_start_creates_exact_pkce_and_encrypted_pending_state(client, auth, me, 
     assert client.get("/integrations/chatgpt", headers=auth).json() == {"status": "pending"}
 
 
-@pytest.mark.parametrize("bad", [
-    "http://localhost:1455/auth/callback?code=good-code&state=wrong",
-    "https://evil.example/auth/callback?code=good-code&state={state}",
-    "http://localhost:1455/wrong?code=good-code&state={state}",
-    "http://localhost:1455/auth/callback?code=a&code=b&state={state}",
-    "http://localhost:1455/auth/callback?code=a&state={state}&state={state}",
-    "http://localhost:1455/auth/callback?code=a&state={state}#fragment",
-    "http://localhost:1455/auth/callback?error=denied&state={state}",
-])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        "http://localhost:1455/auth/callback?code=good-code&state=wrong",
+        "https://evil.example/auth/callback?code=good-code&state={state}",
+        "http://localhost:1455/wrong?code=good-code&state={state}",
+        "http://localhost:1455/auth/callback?code=a&code=b&state={state}",
+        "http://localhost:1455/auth/callback?code=a&state={state}&state={state}",
+        "http://localhost:1455/auth/callback?code=a&state={state}#fragment",
+        "http://localhost:1455/auth/callback?error=denied&state={state}",
+    ],
+)
 def test_callback_rejects_wrong_state_and_bad_urls_without_token_exchange(client, auth, provider, bad):
     state = start(client, auth)["state"][0]
     response = client.post("/integrations/chatgpt/finish", headers=auth, json={"callback_url": bad.format(state=state)})
@@ -183,7 +192,9 @@ def test_refresh_before_expiry_keeps_omitted_refresh_token(client, auth, me, db,
     assert refreshed.refresh_token == "refresh-private" and refreshed.id_token == "id-private"
     assert refreshed.expires_at > datetime.now(UTC) + timedelta(hours=1)
     assert parse_qs(requests[0].content.decode()) == {
-        "grant_type": ["refresh_token"], "refresh_token": ["refresh-private"], "client_id": ["app_EMoamEEZ73f0CkXaXp7hrann"],
+        "grant_type": ["refresh_token"],
+        "refresh_token": ["refresh-private"],
+        "client_id": ["app_EMoamEEZ73f0CkXaXp7hrann"],
     }
     chatgpt_auth.get_credentials(db, user_id)
     assert len(requests) == 1
@@ -204,9 +215,21 @@ def test_account_claim_falls_back_to_user_id(monkeypatch):
     from app.services import chatgpt_auth
 
     token = jwt.encode({"https://api.openai.com/auth": {"user_id": "fallback-user"}}, JWT_TEST_KEY, algorithm="HS256")
-    monkeypatch.setattr(chatgpt_auth, "transport", httpx.MockTransport(lambda r: httpx.Response(200, json={
-        "access_token": token, "refresh_token": "r", "id_token": "i", "expires_in": 3600,
-    })))
+    monkeypatch.setattr(
+        chatgpt_auth,
+        "transport",
+        httpx.MockTransport(
+            lambda r: httpx.Response(
+                200,
+                json={
+                    "access_token": token,
+                    "refresh_token": "r",
+                    "id_token": "i",
+                    "expires_in": 3600,
+                },
+            )
+        ),
+    )
     assert chatgpt_auth.exchange_code("code", "verifier").account_id == "fallback-user"
 
 

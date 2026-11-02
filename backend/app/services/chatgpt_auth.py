@@ -58,8 +58,8 @@ def _clear_pending(row: ChatgptConnection) -> None:
 
 def mark_expired(db: Session, user_id: uuid.UUID, *, expire_pending: bool = False) -> None:
     row = _locked_row(db, user_id)
-    pending_due = row is not None and row.status == "pending" and (
-        row.pending_expires_at is None or row.pending_expires_at <= datetime.now(UTC)
+    pending_due = (
+        row is not None and row.status == "pending" and (row.pending_expires_at is None or row.pending_expires_at <= datetime.now(UTC))
     )
     # A rejected AI request may predate a fresh sign-in: it must not erase that pending flow.
     if row is not None and (row.status == "connected" or (expire_pending and pending_due)):
@@ -164,13 +164,17 @@ def exchange_code(code: str, verifier: str) -> Credentials:
 
 
 def _save(row: ChatgptConnection, credentials: Credentials) -> None:
-    row.credentials = encrypt_secret(json.dumps({
-        "access_token": credentials.access_token,
-        "refresh_token": credentials.refresh_token,
-        "id_token": credentials.id_token,
-        "account_id": credentials.account_id,
-        "expires_at": credentials.expires_at.isoformat(),
-    }))
+    row.credentials = encrypt_secret(
+        json.dumps(
+            {
+                "access_token": credentials.access_token,
+                "refresh_token": credentials.refresh_token,
+                "id_token": credentials.id_token,
+                "account_id": credentials.account_id,
+                "expires_at": credentials.expires_at.isoformat(),
+            }
+        )
+    )
     row.status = "connected"
 
 
@@ -210,7 +214,10 @@ def get_credentials(db: Session, user_id: uuid.UUID, force_refresh: bool = False
             raise ValueError
         bundle = json.loads(decrypt_secret(row.credentials) or "")
         credentials = Credentials(
-            bundle["access_token"], bundle["refresh_token"], bundle["id_token"], bundle["account_id"],
+            bundle["access_token"],
+            bundle["refresh_token"],
+            bundle["id_token"],
+            bundle["account_id"],
             datetime.fromisoformat(bundle["expires_at"]),
         )
         if force_refresh or credentials.expires_at <= datetime.now(UTC) + timedelta(seconds=60):

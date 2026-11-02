@@ -28,9 +28,9 @@ def test_connected_chatgpt_powers_whoop_without_leaking_or_crossing_users(client
 
     mine = db.scalar(select(User.id))
     db.add(ChatgptConnection(user_id=mine, status="connected", credentials=encrypt_secret("{}")))
-    db.add(AiConnection(
-        user_id=mine, provider="openai", model="key-model", api_key=encrypt_secret("unused-key"), instructions="ركز على النوم"
-    ))
+    db.add(
+        AiConnection(user_id=mine, provider="openai", model="key-model", api_key=encrypt_secret("unused-key"), instructions="ركز على النوم")
+    )
     db.commit()
     other = bearer(sign_up(client, email="other-chatgpt@example.com"))
     seen = []
@@ -40,9 +40,15 @@ def test_connected_chatgpt_powers_whoop_without_leaking_or_crossing_users(client
         return SimpleNamespace(text=json.dumps({"summary": "ملخص", "highlights": ["أ"], "recommendations": ["ب"]}), model="codex-test")
 
     monkeypatch.setattr(chatgpt_ai, "respond", respond)
-    monkeypatch.setattr("app.services.whoop_analytics.load_summary", lambda *args, **kwargs: {
-        "has_data": True, "start": "2026-10-01", "end": "2026-10-30", "daily": [],
-    })
+    monkeypatch.setattr(
+        "app.services.whoop_analytics.load_summary",
+        lambda *args, **kwargs: {
+            "has_data": True,
+            "start": "2026-10-01",
+            "end": "2026-10-30",
+            "daily": [],
+        },
+    )
     overview = client.get("/integrations", headers=auth).json()
     assert overview["chatgpt"] == {"status": "connected"}
     assert overview["ai"]["configured"] is True
@@ -73,11 +79,23 @@ def test_chatgpt_login_401_refresh_and_whoop_summary_end_to_end(client, auth, db
     from app.services import chatgpt_ai, chatgpt_auth
 
     monkeypatch.setattr(get_settings(), "chatgpt_model", "codex-test")
-    monkeypatch.setattr("app.services.whoop_analytics.load_summary", lambda *args, **kwargs: {
-        "has_data": True, "start": "2026-10-01", "end": "2026-10-30", "daily": [],
-    })
-    tokens = [jwt.encode({"https://api.openai.com/auth": {"chatgpt_account_id": "test-account"}, "version": version},
-                         "synthetic-key-long-enough-for-hs256-signing", algorithm="HS256") for version in (1, 2)]
+    monkeypatch.setattr(
+        "app.services.whoop_analytics.load_summary",
+        lambda *args, **kwargs: {
+            "has_data": True,
+            "start": "2026-10-01",
+            "end": "2026-10-30",
+            "daily": [],
+        },
+    )
+    tokens = [
+        jwt.encode(
+            {"https://api.openai.com/auth": {"chatgpt_account_id": "test-account"}, "version": version},
+            "synthetic-key-long-enough-for-hs256-signing",
+            algorithm="HS256",
+        )
+        for version in (1, 2)
+    ]
     grants = []
     bearer_tokens = []
 
@@ -87,9 +105,15 @@ def test_chatgpt_login_401_refresh_and_whoop_summary_end_to_end(client, auth, db
         if grants[-1] == "refresh_token":
             assert form["refresh_token"] == ["synthetic-refresh"]
             return httpx.Response(200, json={"access_token": tokens[1], "expires_in": 3600})
-        return httpx.Response(200, json={
-            "access_token": tokens[0], "refresh_token": "synthetic-refresh", "id_token": "synthetic-id", "expires_in": 3600,
-        })
+        return httpx.Response(
+            200,
+            json={
+                "access_token": tokens[0],
+                "refresh_token": "synthetic-refresh",
+                "id_token": "synthetic-id",
+                "expires_in": 3600,
+            },
+        )
 
     insight = {"summary": "ملخص كامل", "highlights": ["أ"], "recommendations": ["ب"]}
 
@@ -99,8 +123,8 @@ def test_chatgpt_login_401_refresh_and_whoop_summary_end_to_end(client, auth, db
         if len(bearer_tokens) == 1:
             return httpx.Response(401)
         text = json.dumps(insight, ensure_ascii=False)
-        wire = 'data: ' + json.dumps({"type": "response.output_text.delta", "delta": text}) + '\n\n'
-        wire += 'data: ' + json.dumps({"type": "response.completed", "response": {"status": "completed", "output": []}}) + '\n\n'
+        wire = "data: " + json.dumps({"type": "response.output_text.delta", "delta": text}) + "\n\n"
+        wire += "data: " + json.dumps({"type": "response.completed", "response": {"status": "completed", "output": []}}) + "\n\n"
         return httpx.Response(200, headers={"content-type": "text/event-stream"}, text=wire)
 
     monkeypatch.setattr(chatgpt_auth, "transport", httpx.MockTransport(oauth))
