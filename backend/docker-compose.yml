@@ -17,6 +17,7 @@ services:
       ORBIT_WHOOP_CLIENT_SECRET: ${WHOOP_CLIENT_SECRET:-}
       ORBIT_WHOOP_REDIRECT_URI: ${WHOOP_REDIRECT_URI:-}
       ORBIT_ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ORBIT_CHATGPT_MODEL: ${CHATGPT_MODEL:-}
     depends_on:
       db:
         condition: service_healthy

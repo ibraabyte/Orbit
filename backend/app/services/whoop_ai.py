@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import AiConnection, User
+from app.models import AiConnection, ChatgptConnection, User
 from app.security import decrypt_secret
 
 # ponytail: a fixed list, so no user-supplied address reaches the server's own network. Other hosts go through OpenRouter.
@@ -53,6 +53,13 @@ class AiAccess:
     instructions: str | None = None
 
 
+@dataclass(frozen=True)
+class ChatgptAccess:
+    db: Session = field(repr=False)
+    user_id: uuid.UUID
+    instructions: str | None = None
+
+
 SYSTEM = """You are the health coach inside Orbit, a personal life dashboard. The user wears a WHOOP band.
 You get a JSON summary of their WHOOP data: one row per day (recovery %, HRV in ms, resting heart rate, \
 day strain on WHOOP's 0-21 scale, sleep hours, sleep performance/efficiency/consistency %, respiratory rate, \
@@ -67,7 +74,7 @@ This is wellness guidance, not medical advice: don't diagnose. If a number looks
 rising for many days with falling HRV), suggest rest and, if it continues, talking to a doctor."""
 
 
-def _system(access: AiAccess) -> str:
+def _system(access: AiAccess | ChatgptAccess) -> str:
     if not access.instructions:
         return SYSTEM
     return (
@@ -76,9 +83,12 @@ def _system(access: AiAccess) -> str:
     )
 
 
-def access_for(db: Session, user_id: uuid.UUID) -> AiAccess | None:
+def access_for(db: Session, user_id: uuid.UUID) -> AiAccess | ChatgptAccess | None:
     """This user's own connection, or the server's key if they're the admin, or nothing."""
     row = db.get(AiConnection, user_id)
+    chatgpt = db.get(ChatgptConnection, user_id)
+    if chatgpt is not None and chatgpt.status == "connected":
+        return ChatgptAccess(db, user_id, row.instructions if row else None)
     if row is not None:
         api_key = decrypt_secret(row.api_key)
         return AiAccess(row.provider, row.model, api_key, row.instructions) if api_key else None
@@ -183,10 +193,30 @@ def _write_with_chat(access: AiAccess, prompt: str) -> tuple[Insight, str]:
     return insight, answer.get("model") or access.model
 
 
-def write_insight(summary: dict[str, Any], access: AiAccess) -> tuple[Insight, str]:
+def _write_with_chatgpt(access: ChatgptAccess, prompt: str) -> tuple[Insight, str]:
+    from app.services import chatgpt_ai, chatgpt_auth
+
+    schema = json.dumps(Insight.model_json_schema())
+    system = f"{_system(access)}\n\nAnswer with one JSON object matching this schema, and nothing else:\n{schema}"
+    try:
+        answer = chatgpt_ai.respond(
+            access.db, access.user_id, [{"role": "system", "content": system}, {"role": "user", "content": prompt}]
+        )
+    except chatgpt_auth.ChatgptError as exc:
+        raise InsightUnavailable(str(exc)) from exc
+    try:
+        insight = Insight.model_validate_json(answer.text[answer.text.index("{") : answer.text.rindex("}") + 1])
+    except (TypeError, ValueError, ValidationError) as exc:
+        raise InsightUnavailable("ChatGPT's answer wasn't a usable summary. Try again.") from exc
+    return insight, answer.model
+
+
+def write_insight(summary: dict[str, Any], access: AiAccess | ChatgptAccess) -> tuple[Insight, str]:
     """Returns the insight and the model that wrote it."""
     data = json.dumps(summary, ensure_ascii=False, separators=(",", ":"))
     prompt = f"My WHOOP data for {summary['start']} to {summary['end']}:\n{data}"
+    if isinstance(access, ChatgptAccess):
+        return _write_with_chatgpt(access, prompt)
     if access.provider == "anthropic":
         return _write_with_claude(access, prompt)
     return _write_with_chat(access, prompt)

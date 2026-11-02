@@ -3,6 +3,7 @@
 from app.models.auth import RefreshToken, ServerSettings, User
 from app.models.bank_sms import BankSmsEvent, BankSmsToken, BankTransaction
 from app.models.base import Base
+from app.models.chatgpt import ChatgptConnection
 from app.models.finance import Bill, Expense
 from app.models.health import GroceryItem, Meal, MealPlan, SleepLog, WeightLog, Workout
 from app.models.integrations import AiConnection, ServiceConnection
@@ -22,6 +23,7 @@ __all__ = [
     "Base",
     "Bill",
     "Capture",
+    "ChatgptConnection",
     "Expense",
     "FocusSession",
     "Goal",

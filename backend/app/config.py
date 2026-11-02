@@ -43,6 +43,8 @@ class Settings(BaseSettings):
     # Claude writes the Arabic WHOOP summary. Empty key means the AI summary is off.
     anthropic_api_key: str = ""
     insights_model: str = "claude-opus-5-5"
+    # Optional ChatGPT model override; empty selects from this user's available Codex models.
+    chatgpt_model: str = ""
 
 
 @lru_cache

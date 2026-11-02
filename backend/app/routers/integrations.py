@@ -17,8 +17,9 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.deps import Db, UserId
 from app.models import AiConnection, ServiceConnection, User, WhoopConnection
+from app.routers.chatgpt import ChatgptStatus
 from app.security import decrypt_secret, encrypt_secret
-from app.services import seerr, whoop_ai, whoop_api
+from app.services import chatgpt_auth, seerr, whoop_ai, whoop_api
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -51,6 +52,7 @@ class Overview(BaseModel):
     whoop: WhoopOverview
     seerr: SeerrStatus
     ai: AiStatus
+    chatgpt: ChatgptStatus
 
 
 class SeerrConnect(BaseModel):
@@ -117,6 +119,7 @@ def overview(user_id: UserId, db: Db):
         ),
         seerr=_seerr_status(_seerr_row(db, user_id)),
         ai=_ai_status(db, user_id),
+        chatgpt=ChatgptStatus(status=chatgpt_auth.connection_status(db, user_id)),
     )
 
 
