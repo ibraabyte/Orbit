@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { CarPicker } from "@/components/car-picker";
 import { Badge, Card, EmptyState, Hero, IconTile, ListRow, ProgressBar, RowButton, type } from "@/components/drift";
 import { toDateKey, useOverlays } from "@/components/overlays";
-import { Button, Input, Screen } from "@/components/screen";
-import { colors, radius } from "@/components/theme";
+import { Button, Screen } from "@/components/screen";
+import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useVehicles } from "@/hooks/use-vehicles";
+import { parseKm } from "@/lib/car-catalog";
 import { formatDate, t } from "@/lib/i18n";
 import type { Vehicle } from "@/lib/types";
 
@@ -34,7 +36,7 @@ export default function Vehicles() {
   const { userId } = useDashboardData();
   const { vehicles, available, refresh, add, update } = useVehicles(userId);
   const { pickDate, toast } = useOverlays();
-  const [name, setName] = useState("");
+  const [picking, setPicking] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const run = async (work: () => Promise<void>, message = t.saved) => {
@@ -73,7 +75,7 @@ export default function Vehicles() {
       t.odometer,
       undefined,
       (value) => {
-        const km = Number(value.replace(/[^\d]/g, ""));
+        const km = parseKm(value);
         if (km) void run(() => update(vehicle.id, { odometer_km: km }));
       },
       "plain-text",
@@ -146,24 +148,22 @@ export default function Vehicles() {
           </View>
         );
       })}
-      <View style={styles.add}>
-        <Input style={{ flex: 1 }} placeholder={t.addCar} value={name} onChangeText={setName} returnKeyType="done" />
-        <Button
-          title={t.add}
-          disabled={!name.trim()}
-          onPress={() =>
+      <Button title={t.addCar} onPress={() => setPicking(true)} />
+      {picking ? (
+        <CarPicker
+          onClose={() => setPicking(false)}
+          onAdd={(car) =>
             run(async () => {
-              await add({ name: name.trim(), plate: null, odometer_km: null, registration_expires_at: null, insurance_expires_at: null, inspection_expires_at: null, next_oil_change_at: null, next_oil_change_km: null, notes: null });
-              setName("");
+              await add({ ...car, registration_expires_at: null, insurance_expires_at: null, inspection_expires_at: null, next_oil_change_at: null, next_oil_change_km: null, notes: null });
+              setPicking(false);
             })
           }
         />
-      </View>
+      ) : null}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  plate: { ...type.barValue, backgroundColor: colors.shell, color: colors.onShell, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 2, letterSpacing: 2, overflow: "hidden" },
-  add: { flexDirection: "row", gap: 8, alignItems: "center", borderRadius: radius.card }
+  plate: { ...type.barValue, backgroundColor: colors.shell, color: colors.onShell, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 2, letterSpacing: 2, overflow: "hidden" }
 });
