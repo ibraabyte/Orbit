@@ -18,6 +18,7 @@ services:
       ORBIT_WHOOP_REDIRECT_URI: ${WHOOP_REDIRECT_URI:-}
       ORBIT_ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ORBIT_CHATGPT_MODEL: ${CHATGPT_MODEL:-}
+      ORBIT_USDA_API_KEY: ${USDA_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
