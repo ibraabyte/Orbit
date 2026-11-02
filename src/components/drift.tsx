@@ -1,7 +1,8 @@
 import Feather from "@expo/vector-icons/Feather";
 import { Link, type Href } from "expo-router";
-import { createContext, useContext, type ComponentProps, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View, type ViewStyle } from "react-native";
+import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
+import { createContext, useContext, useEffect, useState, type ComponentProps, type ReactNode } from "react";
+import { AccessibilityInfo, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { colors, fonts, radius } from "@/components/theme";
 import { isArabic } from "@/lib/i18n";
 import { barHeights, ringRotations } from "@/lib/ring";
@@ -25,11 +26,31 @@ export function Chevron({ color = colors.inkFaint, size = 18 }: { color?: string
   );
 }
 
-// True inside a cream card, so shared pieces (empty states, text) pick the right colors.
+const canGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
+
+/** Real Liquid Glass, for what floats: the tab bar, back and header buttons, sheets, the toast. Never on content cards, and never inside overflow: hidden. */
+export function Glass({ tint, interactive, style, children }: { tint?: string; interactive?: boolean; style?: StyleProp<ViewStyle>; children?: ReactNode }) {
+  const [solid, setSolid] = useState(false);
+  useEffect(() => {
+    void AccessibilityInfo.isReduceTransparencyEnabled().then(setSolid);
+    const subscription = AccessibilityInfo.addEventListener("reduceTransparencyChanged", setSolid);
+    return () => subscription.remove();
+  }, []);
+  if (canGlass && !solid) {
+    return (
+      <GlassView colorScheme="dark" tintColor={tint} isInteractive={interactive} style={[{ borderCurve: "continuous" }, style]}>
+        {children}
+      </GlassView>
+    );
+  }
+  return <View style={[{ borderCurve: "continuous", backgroundColor: tint ?? colors.glassSolid }, style]}>{children}</View>;
+}
+
+// True inside a card, so shared pieces (empty states, text) pick the right colors.
 const OnSurface = createContext(false);
 export const useOnSurface = () => useContext(OnSurface);
 
-/** Cream card: 22px radius, hairline border, optional title and an action at its end. */
+/** Glass card: translucent, lit top edge, optional title and an action at its end. */
 export function Card({ title, action, children, style }: { title?: string; action?: ReactNode; children?: ReactNode; style?: ViewStyle }) {
   return (
     <OnSurface.Provider value>
@@ -46,7 +67,7 @@ export function Card({ title, action, children, style }: { title?: string; actio
   );
 }
 
-/** Lime hero card (prayer, readiness, completion, recovery, car). */
+/** Lime-tinted hero card (prayer, readiness, completion, recovery, car). */
 export function Hero({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   return <View style={[styles.hero, style]}>{children}</View>;
 }
@@ -74,8 +95,10 @@ export function ListRow({
   trailing,
   href,
   onPress,
-  chevron
+  chevron,
+  first
 }: {
+  first?: boolean; // top row of a card with no title, so it needs no divider
   leading?: ReactNode;
   title: string;
   titleExtra?: string;
@@ -88,7 +111,7 @@ export function ListRow({
   chevron?: boolean;
 }) {
   const body = (
-    <View style={styles.row}>
+    <View style={[styles.row, first && { borderTopWidth: 0 }]}>
       {leading}
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={type.rowTitle}>
@@ -224,12 +247,15 @@ export function StatGrid({ children, columns = 4 }: { children: ReactNode[]; col
   );
 }
 
+/** Ring colors for a gauge sitting on a Hero. */
+export const heroRing = { color: colors.accent, track: "rgba(255,255,255,0.12)", hole: colors.heroHole, labelColor: colors.heroInk };
+
 /** Label over number, plain (inside heroes and summary cards). */
 export function Metric({ label, value, unit, onLime }: { label: string; value: string | number; unit?: string; onLime?: boolean }) {
   return (
     <View style={{ gap: 1 }}>
       <Text style={[type.tileLabel, onLime && { color: colors.accentMuted }]}>{label}</Text>
-      <Text style={[type.metric, onLime && { color: colors.accentInk }]}>
+      <Text style={[type.metric, onLime && { color: colors.heroInk }]}>
         {value}
         {unit ? <Text style={[type.hint, onLime && { color: colors.accentMuted }]}> {unit}</Text> : null}
       </Text>
@@ -246,7 +272,7 @@ export function RingGauge({
   sublabel,
   color = colors.accent,
   track = colors.surfaceInset,
-  hole = colors.surface,
+  hole = colors.ringHole,
   labelColor = colors.ink
 }: {
   value: number;
@@ -325,8 +351,8 @@ export function TrendBars({ values, labels, height = 80, label, color = colors.a
 /** Round check with a 2px ink ring. The mark (a shape) shows the state, not only the color. */
 export function CheckItem({ checked, onPress, label, size = 28, ring = colors.ink }: { checked: boolean; onPress: () => void; label: string; size?: number; ring?: string }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={label} hitSlop={8} style={[styles.check, { width: size, height: size, borderRadius: size / 2, borderColor: ring }, checked && { backgroundColor: colors.ink }]}>
-      {checked ? <Icon name="check" size={size / 2} color={colors.surface} /> : null}
+    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={label} hitSlop={8} style={[styles.check, { width: size, height: size, borderRadius: size / 2, borderColor: ring }, checked && { backgroundColor: colors.accent, borderColor: colors.accent }]}>
+      {checked ? <Icon name="check" size={size / 2} color={colors.accentInk} /> : null}
     </Pressable>
   );
 }
@@ -342,11 +368,10 @@ export function MoreButton({ onPress, label }: { onPress: () => void; label: str
 
 /** A row's direct action: Paid, Bought, Contacted. outline is the quieter version. */
 export function RowButton({ label, onPress, outline, icon }: { label?: string; onPress: () => void; outline?: boolean; icon?: IconName }) {
-  const fg = outline ? colors.ink : colors.urgentInk;
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.rowButton, outline ? styles.rowButtonOutline : { backgroundColor: colors.urgent }, !label && { width: 36, paddingHorizontal: 0 }, pressed && { opacity: 0.7 }]}>
-      {icon ? <Icon name={icon} size={15} color={fg} /> : null}
-      {label && !(icon && outline) ? <Text style={[type.pill, { color: fg }]}>{label}</Text> : null}
+    return (
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.rowButton, outline ? styles.rowButtonOutline : { backgroundColor: colors.surfaceInset }, !label && { width: 36, paddingHorizontal: 0 }, pressed && { opacity: 0.7 }]}>
+      {icon ? <Icon name={icon} size={15} color={colors.ink} /> : null}
+      {label && !(icon && outline) ? <Text style={type.pill}>{label}</Text> : null}
     </Pressable>
   );
 }
@@ -375,7 +400,7 @@ export function PageTitle({ children }: { children: string }) {
 /** Round Orbit mark on an ink tile (sign in). */
 export function Brand({ size = 56 }: { size?: number }) {
   return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.29, backgroundColor: colors.ink, alignItems: "center", justifyContent: "center" }} accessibilityRole="image" accessibilityLabel="Orbit">
+    <View style={{ width: size, height: size, borderRadius: size * 0.29, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" }} accessibilityRole="image" accessibilityLabel="Orbit">
       <View style={{ width: size * 0.4, height: size * 0.4, borderRadius: size * 0.2, borderWidth: 3, borderColor: colors.accent }} />
     </View>
   );
@@ -398,7 +423,7 @@ export const type = StyleSheet.create({
   barValue: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
   axis: { fontFamily: fonts.semibold, fontSize: 10, color: colors.inkMuted },
   badge: { fontFamily: fonts.bold, fontSize: 11 },
-  pill: { fontFamily: fonts.bold, fontSize: 12 },
+  pill: { fontFamily: fonts.bold, fontSize: 12, color: colors.ink },
   code: { fontFamily: "Menlo", fontSize: 12, color: colors.ink, backgroundColor: colors.surfaceInset, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, overflow: "hidden" },
   shellMeta: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onShellMuted },
   shellMuted: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.onShellMuted },
@@ -406,21 +431,21 @@ export const type = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.card, paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  card: { backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.card, borderCurve: "continuous", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)", paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 24 },
   cardLink: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 32 },
-  hero: { flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: colors.accent, borderRadius: radius.card, padding: 16 },
+  hero: { flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: colors.hero, borderColor: colors.heroEdge, borderWidth: 1, borderRadius: radius.card, borderCurve: "continuous", boxShadow: "inset 0 1px 0 rgba(233,247,207,0.12)", padding: 16 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   rowMeta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
   iconTile: { borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   badge: { borderRadius: radius.chip, paddingHorizontal: 7, paddingVertical: 1 },
-  tile: { flex: 1, backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.tile, paddingHorizontal: 10, paddingVertical: 10, gap: 2, minHeight: 64 },
-  tileDot: { position: "absolute", top: 8, end: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.urgent },
+  tile: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 10, paddingVertical: 10, gap: 2, minHeight: 64 },
+  tileDot: { position: "absolute", top: 8, end: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
   ringHole: { position: "absolute", alignItems: "center", justifyContent: "center" },
   track: { width: "100%", borderRadius: radius.pill, backgroundColor: colors.surfaceInset, overflow: "hidden" },
   check: { borderWidth: 2, alignItems: "center", justifyContent: "center" },
   moreButton: { width: 36, height: 36, borderRadius: radius.control, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
   rowButton: { minHeight: 36, paddingHorizontal: 12, borderRadius: radius.control, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
-  rowButtonOutline: { borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
+  rowButtonOutline: { borderWidth: 1, borderColor: colors.hairline },
   empty: { alignItems: "center", gap: 8, paddingVertical: 16 }
 });

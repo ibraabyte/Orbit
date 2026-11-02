@@ -70,7 +70,7 @@ export default function Capture() {
   }
 
   return (
-    <ScrollView style={{ backgroundColor: colors.shellTop }} contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
+    <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
         <Text style={styles.title}>{t.captureTitle}</Text>
         <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={10}>
@@ -146,9 +146,9 @@ const styles = StyleSheet.create({
   screen: { padding: 20, gap: 12 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontFamily: fonts.bold, fontSize: 20, color: colors.onShell },
-  input: { minHeight: 52, paddingHorizontal: 14, borderWidth: 2, borderColor: colors.hairline, borderRadius: radius.card, backgroundColor: colors.surface, fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
+  input: { minHeight: 52, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, backgroundColor: colors.field, fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { minHeight: 34, paddingHorizontal: 12, justifyContent: "center", borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.surface },
+  chip: { minHeight: 34, paddingHorizontal: 12, justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
   preview: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
   previewHead: { flexDirection: "row", alignItems: "center", gap: 8 },
   previewMark: { width: 28, height: 28, borderRadius: radius.control, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },

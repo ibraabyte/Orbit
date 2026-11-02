@@ -15,6 +15,8 @@ from app.models.base import Base, created_at, updated_at
 
 SERVICE_PROVIDERS = ("seerr",)
 _providers_sql = ", ".join(f"'{p}'" for p in SERVICE_PROVIDERS)
+AI_PROVIDERS = ("anthropic", "openai", "gemini", "openrouter")
+_ai_providers_sql = ", ".join(f"'{p}'" for p in AI_PROVIDERS)
 
 
 class ServiceConnection(Base):
@@ -27,5 +29,21 @@ class ServiceConnection(Base):
     api_key: Mapped[str] = mapped_column(Text, nullable=False)
     # The name the service knows this user by, to show in the app.
     account_name: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = created_at()
+    updated_at: Mapped[datetime] = updated_at()
+
+
+class AiConnection(Base):
+    """One per user: the AI they pay for. The key is encrypted and never sent back to the app."""
+
+    __tablename__ = "ai_connections"
+    __table_args__ = (CheckConstraint(f"provider in ({_ai_providers_sql})", name="provider"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    provider: Mapped[str] = mapped_column(Text, nullable=False)
+    model: Mapped[str] = mapped_column(Text, nullable=False)
+    api_key: Mapped[str] = mapped_column(Text, nullable=False)
+    # Added to the system prompt: what to focus on, the tone, the language.
+    instructions: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = updated_at()

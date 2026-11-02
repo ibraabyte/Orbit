@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Card, CardLink, EmptyState, GoalBar, Hero, IconTile, ListRow, Metric, ProgressBar, RingGauge, TrendBars, type } from "@/components/drift";
+import { Card, CardLink, EmptyState, GoalBar, Hero, heroRing, IconTile, ListRow, Metric, ProgressBar, RingGauge, TrendBars, type } from "@/components/drift";
 import { BleedRow, Screen, Segments, TabHeader } from "@/components/screen";
 import { colors, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -186,12 +186,12 @@ function Review() {
       </View>
 
       <Hero>
-        <RingGauge value={review.score / 100} size={88} thickness={10} label={`${review.score}%`} color={colors.accentInk} track="rgba(0,0,0,0.14)" hole={colors.accent} labelColor={colors.accentInk} />
+        <RingGauge value={review.score / 100} size={88} thickness={10} label={`${review.score}%`} {...heroRing} />
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={[type.tileLabel, { fontSize: 12, color: colors.accentMuted }]}>
             {t.readiness} · {t[mode]}
           </Text>
-          <Text style={[type.h2, { color: colors.accentInk }]}>{review.scoreLabel}</Text>
+          <Text style={[type.h2, { color: colors.heroInk }]}>{review.scoreLabel}</Text>
         </View>
       </Hero>
 
@@ -209,7 +209,7 @@ function Review() {
           ))}
         </Card>
         <Card style={{ flex: 1 }}>
-          <Text style={[type.barValue, { color: colors.urgent }]}>! {t.gaps}</Text>
+          <Text style={[type.barValue, { color: colors.ink }]}>! {t.gaps}</Text>
           {review.gaps.map((line) => (
             <Text key={line} style={styles.line}>
               {line}
@@ -296,5 +296,5 @@ const styles = StyleSheet.create({
   handoffCount: { ...type.stat, fontSize: 34 },
   line: { ...type.rowSubtitle, fontSize: 13, lineHeight: 18, color: colors.ink },
   reflect: { backgroundColor: colors.accentTint, borderRadius: radius.card, paddingHorizontal: 16, paddingVertical: 14, gap: 8 },
-  prompt: { ...type.body, fontSize: 15, borderTopWidth: 1, borderTopColor: "rgba(0,0,0,0.15)", paddingTop: 8, writingDirection: "auto" }
+  prompt: { ...type.body, fontSize: 15, borderTopWidth: 1, borderTopColor: colors.hairline, paddingTop: 8, writingDirection: "auto" }
 });

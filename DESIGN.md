@@ -1,3 +1,15 @@
+# Orbit Design System — Dark Glass
+
+> **2026-11-02:** the Expo app uses this. Live tokens are in `src/components/theme.ts`, parts in `src/components/drift.tsx`, `screen.tsx`, `overlays.tsx` and `tab-bar.tsx`. Everything from "Drift" down is the older look, kept for history.
+
+- **Backdrop:** dark forest (`colors.shell`) with soft lime and sage light (`backdrop` in `theme.ts`). Fixed; there is no light mode.
+- **Real Liquid Glass only on what floats:** tab capsule, Capture button, back and header buttons, action sheet, date picker, toast. Use `Glass` from `drift.tsx`. It falls back to a solid surface on older iOS, on Android and with Reduce Transparency. Never put it inside `overflow: hidden`, and never on content cards.
+- **Cards:** translucent white with a hairline and a lit top edge, no blur. Hero cards are the same in a lime tint with pale lime text (`heroInk`).
+- **Lime:** solid lime always takes dark ink (`accentInk`). It is for the main action and what is selected.
+- **Pale pill (`urgent`):** the selected segment and urgent badges, always with a glyph or label. Destructive text uses `dangerOnShell`.
+- **Ring gauges** need a solid middle (`ringHole`, `heroHole`), since the arc is drawn behind it.
+- **Contrast:** `src/lib/__tests__/theme.test.ts` flattens the translucent colors onto the brightest part of the backdrop and checks AA. Add new text pairs there.
+
 # Orbit Design System — "Drift"
 
 > **2026-11-01:** the Expo app follows the "Orbit Screens" redesign from Claude Design. Live tokens are in `src/components/theme.ts`, parts in `src/components/drift.tsx`, `screen.tsx` and `overlays.tsx`. Sections below that mention Tailwind describe the archived web version (tag `web-final`).

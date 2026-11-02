@@ -3,7 +3,7 @@ import { useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Badge, Card, EmptyState, GoalBar, Hero, ListRow, Metric, RingGauge, toneGlyph, toneToBadge, type } from "@/components/drift";
+import { Badge, Card, EmptyState, GoalBar, Hero, heroRing, ListRow, Metric, RingGauge, toneGlyph, toneToBadge, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Loading, Screen, ui } from "@/components/screen";
 import { colors, fonts } from "@/components/theme";
@@ -145,7 +145,7 @@ export default function Whoop() {
       {summary && !summary.has_data ? <EmptyState>{t.connecting}</EmptyState> : null}
 
       <Hero>
-        <RingGauge value={(recovery ?? 0) / 100} size={96} thickness={11} label={recovery === null ? "–" : `${Math.round(recovery)}%`} sublabel={t.recovery} color={colors.accentInk} track="rgba(0,0,0,0.14)" hole={colors.accent} labelColor={colors.accentInk} />
+        <RingGauge value={(recovery ?? 0) / 100} size={96} thickness={11} label={recovery === null ? "–" : `${Math.round(recovery)}%`} sublabel={t.recovery} {...heroRing} />
         <View style={{ flex: 1, gap: 10 }}>
           <View style={styles.heroRow}>
             <View style={{ flex: 1 }}>
@@ -218,7 +218,7 @@ export default function Whoop() {
 
       <Card title={t.aiSummary}>
         {!status.ai_configured ? (
-          <EmptyState>{t.notYet}</EmptyState>
+          <EmptyState>{t.aiConnectFirst}</EmptyState>
         ) : insight ? (
           <View style={{ gap: 4 }}>
             <Text style={styles.arabic}>{insight.summary}</Text>

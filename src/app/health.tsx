@@ -46,7 +46,7 @@ export default function Health() {
             <Text style={styles.whoopGlyph}>W</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[type.title, { fontSize: 14, color: colors.urgentInk }]}>WHOOP</Text>
+            <Text style={[type.title, { fontSize: 14 }]}>WHOOP</Text>
             <Text style={[type.rowSubtitle, { color: colors.onShellMuted }]}>
               {t.recovery} · {t.sleep} · {t.strain}
             </Text>
@@ -102,8 +102,8 @@ export default function Health() {
 }
 
 const styles = StyleSheet.create({
-  whoop: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 60, backgroundColor: colors.urgent, borderRadius: radius.card, paddingHorizontal: 16, paddingVertical: 12 },
-  whoopMark: { width: 36, height: 36, borderRadius: radius.tile, backgroundColor: "rgba(0,0,0,0.1)", alignItems: "center", justifyContent: "center" },
-  whoopGlyph: { fontFamily: fonts.bold, fontSize: 12, color: colors.urgentInk },
+  whoop: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 60, backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: 16, paddingVertical: 12 },
+  whoopMark: { width: 36, height: 36, borderRadius: radius.tile, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
+  whoopGlyph: { fontFamily: fonts.bold, fontSize: 12, color: colors.ink },
   minutes: { width: 36, height: 36, borderRadius: radius.control, backgroundColor: colors.accentTint, alignItems: "center", justifyContent: "center" }
 });

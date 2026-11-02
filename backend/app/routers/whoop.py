@@ -28,7 +28,7 @@ router = APIRouter(prefix="/whoop", tags=["whoop"])
 log = logging.getLogger("orbit.whoop")
 
 STATE_MINUTES = 10
-# Claude costs money per call; one summary every couple of minutes is plenty.
+# The AI costs money per call; one summary every couple of minutes is plenty.
 INSIGHT_COOLDOWN = timedelta(minutes=2)
 # Deep link schemes the callback may send the browser back to, besides the configured app link.
 APP_SCHEMES = {"exp", "exps"}
@@ -135,7 +135,7 @@ def whoop_status(user_id: UserId, db: Db):
     connection = db.get(WhoopConnection, user_id)
     return WhoopStatus(
         configured=whoop_api.configured(),
-        ai_configured=whoop_ai.ai_configured(),
+        ai_configured=whoop_ai.access_for(db, user_id) is not None,
         connected=connection is not None,
         last_synced_at=connection.last_synced_at if connection else None,
         last_sync_error=connection.last_sync_error if connection else None,
@@ -240,9 +240,10 @@ def latest_insight(user_id: UserId, db: Db):
 
 @router.post("/insights", response_model=InsightRow, status_code=status.HTTP_201_CREATED)
 def create_insight(user_id: UserId, db: Db, days: int = Query(30, ge=7, le=90)):
-    """Asks Claude for a fresh Arabic summary of the last `days` days and keeps it."""
-    if not whoop_ai.ai_configured():
-        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "The AI summary isn't set up on this server yet.")
+    """Asks this user's AI for a fresh summary of the last `days` days and keeps it."""
+    access = whoop_ai.access_for(db, user_id)
+    if access is None:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Connect your AI in Integrations first.")
     last = latest_insight(user_id, db)
     if last is not None and last.created_at > datetime.now(UTC) - INSIGHT_COOLDOWN:
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "A summary was just written. Try again in a couple of minutes.")
@@ -250,7 +251,7 @@ def create_insight(user_id: UserId, db: Db, days: int = Query(30, ge=7, le=90)):
     if not data["has_data"]:
         raise HTTPException(status.HTTP_409_CONFLICT, "No WHOOP data yet. Connect WHOOP and sync first.")
     try:
-        insight, model = whoop_ai.write_insight(data)
+        insight, model = whoop_ai.write_insight(data, access)
     except whoop_ai.InsightUnavailable as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
     row = WhoopInsight(

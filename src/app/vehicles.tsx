@@ -100,22 +100,23 @@ export default function Vehicles() {
               <Hero style={{ gap: 14 }}>
                 <IconTile name="truck" size={44} tone="urgent" />
                 <View style={{ flex: 1, gap: 4, alignItems: "flex-start" }}>
-                  <Text style={[type.h2, { color: colors.accentInk }]}>{vehicle.name}</Text>
+                  <Text style={[type.h2, { color: colors.heroInk }]}>{vehicle.name}</Text>
                   {vehicle.plate ? <Text style={styles.plate}>{vehicle.plate}</Text> : null}
                 </View>
                 <View style={{ alignItems: "flex-end" }}>
                   <Text style={[type.tileLabel, { color: colors.accentMuted }]}>{t.odometer}</Text>
-                  <Text style={[type.title, { fontSize: 16, color: colors.accentInk }]}>{odometer === null ? "–" : `${odometer.toLocaleString()} ${t.km}`}</Text>
+                  <Text style={[type.title, { fontSize: 16, color: colors.heroInk }]}>{odometer === null ? "–" : `${odometer.toLocaleString()} ${t.km}`}</Text>
                 </View>
               </Hero>
             </Pressable>
             <Card>
-              {fields.map(([field, label, months]) => {
+              {fields.map(([field, label, months], index) => {
                 const date = vehicle[field];
                 const left = date ? daysLeft(date) : null;
                 return (
                   <ListRow
                     key={field}
+                    first={index === 0}
                     title={label}
                     badges={left === null ? <Badge glyph="○">{t.notSet}</Badge> : left < 0 ? <Badge tone="urgent" glyph="!">{`${-left} ${t.daysOverdue}`}</Badge> : left <= 30 ? <Badge tone="accent" glyph="◷">{`${left} ${t.daysLeft}`}</Badge> : <Badge tone="success" glyph="✓">{`${left} ${t.daysLeft}`}</Badge>}
                     subtitle={date ? formatDate(`${date}T12:00:00`, { day: "numeric", month: "short", year: "numeric" }) : null}

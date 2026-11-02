@@ -12,11 +12,16 @@ class User(Base):
     """Replaces Supabase's auth.users."""
 
     __tablename__ = "users"
-    __table_args__ = (Index("users_lower_email_idx", text("lower(email)"), unique=True),)
+    __table_args__ = (
+        Index("users_lower_email_idx", text("lower(email)"), unique=True),
+        Index("users_google_sub_idx", "google_sub", unique=True),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
     email: Mapped[str] = mapped_column(Text, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    # Google's permanent id for this person, set on their first Google sign-in. Their email can change; this can't.
+    google_sub: Mapped[str | None] = mapped_column(Text)
     # Admins run the server from the app (sign-ups, private network addresses). The first account is one.
     is_admin: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     created_at: Mapped[datetime] = created_at()

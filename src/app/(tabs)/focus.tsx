@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Text, View } from "react-native";
-import { Badge, Card, CheckItem, EmptyState, Hero, IconTile, ListRow, Metric, RingGauge, StatGrid, StatTile, TrendBars, type } from "@/components/drift";
+import { Badge, Card, CheckItem, EmptyState, Hero, heroRing, IconTile, ListRow, Metric, RingGauge, StatGrid, StatTile, TrendBars, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Screen, Segments, TabHeader } from "@/components/screen";
 import { colors } from "@/components/theme";
@@ -50,7 +50,7 @@ export default function Momentum() {
       onRefresh={refresh}
     >
       <Hero>
-        <RingGauge value={stats.completionRate} size={92} thickness={10} label={`${percent}%`} sublabel={t.completion} color={colors.accentInk} track="rgba(0,0,0,0.14)" hole={colors.accent} labelColor={colors.accentInk} />
+        <RingGauge value={stats.completionRate} size={92} thickness={10} label={`${percent}%`} sublabel={t.completion} {...heroRing} />
         <View style={{ flex: 1, gap: 8 }}>
           <Metric onLime label={t.totalFocus} value={formatFocusDuration(stats.minutes)} />
           <Metric onLime label={t.bestDay} value={stats.bestDay && stats.bestDay.value > 0 ? `${stats.bestDay.label} · ${formatFocusDuration(stats.bestDay.value)}` : "–"} />

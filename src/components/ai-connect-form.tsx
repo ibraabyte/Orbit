@@ -1,0 +1,42 @@
+import { useState } from "react";
+import { Alert, Text } from "react-native";
+import { type } from "@/components/drift";
+import { Button, Input, Segments } from "@/components/screen";
+import { t } from "@/lib/i18n";
+import { AI_PROVIDER_NAMES, AI_PROVIDERS, aiFormReady, type AiConnectInput, type AiProvider, type AiStatus } from "@/lib/integrations";
+
+// The user's own AI: provider, key, model and instructions. Starts from what's saved, so they can change one thing.
+export function AiConnectForm({ status, connect }: { status: AiStatus; connect: (input: AiConnectInput) => Promise<void> }) {
+  const [provider, setProvider] = useState<AiProvider>(status.provider ?? "anthropic");
+  const [model, setModel] = useState(status.model ?? "");
+  const [apiKey, setApiKey] = useState("");
+  const [instructions, setInstructions] = useState(status.instructions ?? "");
+  const [busy, setBusy] = useState(false);
+  const keySaved = provider === status.provider;
+
+  return (
+    <>
+      <Segments small options={AI_PROVIDERS} labels={AI_PROVIDER_NAMES} value={provider} onChange={setProvider} />
+      <Input accessibilityLabel={t.apiKey} placeholder={keySaved ? t.aiKeySaved : t.apiKey} value={apiKey} onChangeText={setApiKey} autoCapitalize="none" autoCorrect={false} secureTextEntry style={{ writingDirection: "ltr" }} />
+      <Input accessibilityLabel={t.aiModel} placeholder={provider === "anthropic" ? t.aiModelDefault : t.aiModel} value={model} onChangeText={setModel} autoCapitalize="none" autoCorrect={false} style={{ writingDirection: "ltr" }} />
+      <Input accessibilityLabel={t.aiInstructions} placeholder={t.aiInstructions} value={instructions} onChangeText={setInstructions} maxLength={1000} multiline style={{ height: 112 }} />
+      <Text style={type.rowSubtitle}>{t.aiPrivacy}</Text>
+      <Button
+        title={busy ? t.connecting : status.connected ? t.save : t.connect}
+        disabled={busy || !aiFormReady({ provider, model, apiKey }, status.provider)}
+        onPress={async () => {
+          setBusy(true);
+          try {
+            await connect({ provider, model, apiKey, instructions });
+            setApiKey("");
+            Alert.alert(t.aiSummary, t.saved);
+          } catch (error) {
+            Alert.alert(t.aiSummary, error instanceof Error ? error.message : t.tryAgain);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+    </>
+  );
+}

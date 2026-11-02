@@ -55,6 +55,18 @@ function fakeServer() {
 }
 
 describe("api client", () => {
+  it("finishes a Google sign-in like any other sign-in", async () => {
+    const started = { url: "https://accounts.google.com/x", secret: "s" };
+    const fetch = vi.fn(async (url: string | URL | Request, _init?: RequestInit) => (String(url).endsWith("/start") ? json(200, started) : json(200, tokens(1))));
+    const storage = memoryStorage();
+    const api = createApiClient({ baseUrl: "https://api.test", storage, fetch, device: "ios" });
+
+    await expect(api.startGoogle("orbit://sign-in", "Asia/Riyadh")).resolves.toEqual(started);
+    await expect(api.finishGoogle("code", "s")).resolves.toEqual({ userId: "user-1" });
+    expect(JSON.parse(String(fetch.mock.calls[1][1]?.body))).toEqual({ code: "code", secret: "s", device: "ios" });
+    expect(storage.value).toBe(saved(1));
+  });
+
   it("signs in, saves the refresh token, and sends the access token", async () => {
     const server = fakeServer();
     const storage = memoryStorage();

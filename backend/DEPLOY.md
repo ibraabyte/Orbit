@@ -53,10 +53,14 @@
 | كلمة سر قاعدة البيانات (حروف وأرقام) | `SERVICE_PASSWORD_64_POSTGRES` | يتولد تلقائي |
 | مفتاح توقيع الدخول (يثبت إن التوكن منك) | `SERVICE_BASE64_64_JWT` | يتولد تلقائي |
 | فتح التسجيل غصب لحسابات جديدة (`true` أو `false`) | `ORBIT_ALLOW_SIGNUPS` | اختياري، الافتراضي `false`. الأفضل تتركه وتفتح التسجيل من التطبيق |
+| رقم عميل Google للدخول | `GOOGLE_CLIENT_ID` | أنت، اختياري |
+| سر عميل Google | `GOOGLE_CLIENT_SECRET` | أنت، اختياري وسري |
+| رابط رجوع Google: `https://<دومينك>/auth/google/callback` | `GOOGLE_REDIRECT_URI` | أنت، اختياري |
 | رقم تطبيق WHOOP | `WHOOP_CLIENT_ID` | أنت، اختياري |
 | سر تطبيق WHOOP | `WHOOP_CLIENT_SECRET` | أنت، اختياري وسري |
 | رابط رجوع WHOOP: `https://<دومينك>/whoop/callback` | `WHOOP_REDIRECT_URI` | أنت، اختياري |
-| مفتاح Claude للملخص العربي | `ANTHROPIC_API_KEY` | أنت، اختياري وسري |
+| مفتاح Claude لملخص الأدمن فقط | `ANTHROPIC_API_KEY` | أنت، اختياري وسري |
+| نموذج ChatGPT بدل الاختيار التلقائي | `CHATGPT_MODEL` | اختياري؛ اتركه فارغًا لاختيار نموذج متاح للحساب |
 
 مهم:
 

@@ -1,11 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { colors, fonts } from "@/components/theme";
 
-// WCAG contrast ratio between two #rrggbb colors.
-function contrast(a: string, b: string) {
-  const luminance = (hex: string) => {
-    const [r, g, bl] = [1, 3, 5].map((i) => {
-      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+type Rgb = [number, number, number];
+
+const toRgb = (hex: string): Rgb => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as Rgb;
+
+// Flatten a color onto what is behind it. Accepts #rrggbb or rgba(r,g,b,a).
+function over(top: string, base: Rgb): Rgb {
+  const match = top.match(/rgba\((\d+),(\d+),(\d+),([\d.]+)\)/);
+  if (!match) return toRgb(top);
+  const alpha = Number(match[4]);
+  return base.map((channel, i) => Number(match[i + 1]) * alpha + channel * (1 - alpha)) as Rgb;
+}
+
+// WCAG contrast ratio between two opaque colors.
+function contrast(a: Rgb, b: Rgb) {
+  const luminance = (rgb: Rgb) => {
+    const [r, g, bl] = rgb.map((value) => {
+      const c = value / 255;
       return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
     });
     return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
@@ -14,27 +26,36 @@ function contrast(a: string, b: string) {
   return (high + 0.05) / (low + 0.05);
 }
 
-describe("Drift theme", () => {
-  it("keeps the fixed dark chrome and cream cards", () => {
-    expect(contrast(colors.shell, colors.surface)).toBeGreaterThan(10);
-    expect(colors.shell).toBe("#101511");
+// The worst case for pale text: the top of the screen, where the lime glow of the backdrop is strongest.
+const glow = over("rgba(155,220,51,0.13)", toRgb(colors.shellTop));
+const card = over(colors.surface, glow);
+const inset = over(colors.surfaceInset, card);
+const hero = over(colors.hero, glow);
+
+describe("Dark glass theme", () => {
+  it("keeps the dark chrome and the lime accent", () => {
+    expect(colors.shell).toBe("#0c120e");
     expect(colors.accent).toBe("#9bdc33");
   });
 
-  it.each([
-    ["ink on cream", colors.ink, colors.surface],
-    ["muted ink on cream", colors.inkMuted, colors.surface],
-    ["ink on inset cream", colors.ink, colors.surfaceInset],
-    ["muted ink on inset cream (placeholders, segments)", colors.inkMuted, colors.surfaceInset],
-    ["text on the dark background", colors.onShell, colors.shell],
-    ["muted text on the dark background", colors.onShellMuted, colors.shell],
-    ["lime text on the dark background", colors.accent, colors.shell],
-    ["errors on the dark background", colors.dangerOnShell, colors.shell],
-    ["dark text on a lime button", colors.accentInk, colors.accent],
-    ["cream text on the dark urgent pill", colors.urgentInk, colors.urgent],
-    ["links on cream", colors.link, colors.surface],
-    ["secondary text on lime", colors.accentMuted, colors.accent],
-    ["tinted badge", colors.accentTintInk, colors.accentTint]
+  it.each<[string, Rgb, Rgb]>([
+    ["ink on a card", toRgb(colors.ink), card],
+    ["muted ink on a card", toRgb(colors.inkMuted), card],
+    ["faint ink on a card (placeholders)", toRgb(colors.inkFaint), card],
+    ["ink on an inset well", toRgb(colors.ink), inset],
+    ["muted ink on an inset well", toRgb(colors.inkMuted), inset],
+    ["links on a card", toRgb(colors.link), card],
+    ["lime numbers on a card", toRgb(colors.accentDeep), card],
+    ["text on the backdrop", toRgb(colors.onShell), glow],
+    ["muted text on the backdrop", toRgb(colors.onShellMuted), glow],
+    ["errors on a card", toRgb(colors.dangerOnShell), card],
+    ["dark text on a lime button", toRgb(colors.accentInk), toRgb(colors.accent)],
+    ["dark text on the pale urgent pill", toRgb(colors.urgentInk), toRgb(colors.urgent)],
+    ["hero text", toRgb(colors.heroInk), hero],
+    ["secondary hero text", toRgb(colors.accentMuted), hero],
+    ["tinted badge", toRgb(colors.accentTintInk), over(colors.accentTint, card)],
+    ["success badge", toRgb(colors.success), over(colors.successTint, card)],
+    ["text on the solid glass stand-in", toRgb(colors.ink), toRgb(colors.glassSolid)]
   ])("%s is readable (AA, 4.5:1)", (_name, fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
