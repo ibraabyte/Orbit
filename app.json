@@ -13,8 +13,8 @@
       "runtimeVersion": {
         "policy": "appVersion"
       },
-      "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+      "config": {
+        "usesNonExemptEncryption": false
       }
     },
     "android": {

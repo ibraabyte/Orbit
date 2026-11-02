@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm test"
+    "verify": "npm run typecheck && npm test",
+    "eas-build-pre-install": "node scripts/check-build-env.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/almarai": "^0.4.1",

@@ -2,7 +2,7 @@
 
 import uuid
 from collections.abc import Iterator
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from types import SimpleNamespace
 from urllib.parse import parse_qs, urlparse
 
@@ -105,6 +105,7 @@ class FakeWhoop:
         self.revoked: list[str] = []
         self.requests: list[httpx.Request] = []
         self.fail_paths: set[str] = set()
+        self.forbidden_paths: set[str] = set()
 
     def _issue(self) -> httpx.Response:
         self.generation += 1
@@ -123,7 +124,9 @@ class FakeWhoop:
         url = str(request.url)
         if url == whoop_api.TOKEN_URL:
             form = parse_qs(request.content.decode())
-            assert form["client_id"] == ["test-client"] and form["client_secret"] == ["test-secret"]
+            assert form["client_id"] == ["test-client"]
+            if form["client_secret"] != ["test-secret"]:
+                return httpx.Response(401, json={"error": "invalid_client"})
             if form["grant_type"] == ["authorization_code"]:
                 return self._issue() if form["code"] == ["good-code"] else httpx.Response(400, json={"error": "invalid_grant"})
             if form["grant_type"] == ["refresh_token"] and form["refresh_token"] == [self.refresh]:
@@ -137,6 +140,8 @@ class FakeWhoop:
             return httpx.Response(204)
         if path == "/v2/user/profile/basic":
             return httpx.Response(200, json={"user_id": 10101, "email": "rider@example.com", "first_name": "Test", "last_name": "Rider"})
+        if path in self.forbidden_paths:
+            return httpx.Response(403)
         if path in self.fail_paths:
             return httpx.Response(500)
         if path in self.records:
@@ -428,3 +433,45 @@ def test_deleting_the_account_deletes_whoop(client: TestClient, auth: dict, whoo
     assert client.post("/auth/delete-account", headers=auth, json={"password": "correct horse battery"}).status_code == 204
     for model in (WhoopConnection, WhoopCycle, WhoopRecovery, WhoopSleep, WhoopWorkout, WhoopInsight):
         assert db.scalars(select(model)).all() == []
+
+
+def test_callback_tells_a_setup_problem_from_a_no(client: TestClient, auth: dict, whoop: FakeWhoop):
+    url = client.post("/whoop/connect", headers=auth).json()["url"]
+    state = parse_qs(urlparse(url).query)["state"][0]
+    # A scope missing from the WHOOP app is a setup problem, not the user pressing Deny.
+    scope = client.get("/whoop/callback", params={"state": state, "error": "invalid_scope"}, follow_redirects=False)
+    assert scope.headers["location"] == "orbit://whoop?status=bad_setup"
+    # A wrong client secret on the server: WHOOP refuses the code exchange with invalid_client.
+    whoop_settings = get_settings()
+    whoop_settings.whoop_client_secret = "wrong-secret"
+    try:
+        wrong_secret = client.get("/whoop/callback", params={"code": "good-code", "state": state}, follow_redirects=False)
+    finally:
+        whoop_settings.whoop_client_secret = "test-secret"
+    assert wrong_secret.headers["location"] == "orbit://whoop?status=bad_setup"
+
+
+def test_whoop_time_matches_the_docs_format():
+    moment = datetime(2026, 1, 2, 6, 4, 5, 678_901, tzinfo=timezone(timedelta(hours=3)))
+    assert whoop_api.whoop_time(moment) == "2026-01-02T03:04:05.678Z"
+
+
+def test_collections_ask_with_utc_milliseconds(client: TestClient, auth: dict, whoop: FakeWhoop):
+    connect(client, auth)
+    starts = {request.url.params["start"] for request in whoop.requests if "start" in request.url.params}
+    assert starts and all(value.endswith("Z") and len(value) == 24 for value in starts)
+
+
+def test_a_missing_scope_says_what_to_do(client: TestClient, auth: dict, me: dict, whoop: FakeWhoop):
+    connect(client, auth)
+    whoop.forbidden_paths.add("/v2/activity/workout")
+    response = client.post("/whoop/sync", headers=auth)
+    assert response.status_code == 502
+    assert "scope" in response.json()["detail"]
+
+
+def test_privacy_page_is_public(client: TestClient):
+    response = client.get("/privacy")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "WHOOP" in response.text and "Anthropic" in response.text

@@ -15,6 +15,7 @@
       "environment": "preview"
     },
     "production": {
+      "environment": "production",
       "autoIncrement": true,
       "channel": "production"
     }
