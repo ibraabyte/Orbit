@@ -18,6 +18,11 @@ services:
       ORBIT_WHOOP_REDIRECT_URI: ${WHOOP_REDIRECT_URI:-}
       ORBIT_ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       ORBIT_CHATGPT_MODEL: ${CHATGPT_MODEL:-}
+    # Seerr shares this server's public IP, and calls to that IP from here are refused. This sends them to Coolify's
+    # proxy on this app's network instead, which an extra proxy rule lets through (orbit-seerr.yaml on the server).
+    # ponytail: fixed proxy IP; if Seerr stops connecting after Coolify recreates the network, check this address.
+    extra_hosts:
+      - "requests.ibrabyte.app:10.0.3.2"
     depends_on:
       db:
         condition: service_healthy
