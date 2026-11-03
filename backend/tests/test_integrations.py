@@ -127,10 +127,11 @@ def test_connect_seerr_checks_the_key_and_stores_it_encrypted(client: TestClient
 def test_proxy_uses_only_this_users_key(client: TestClient, auth: dict, fake_seerr):
     client.put("/integrations/seerr", json={"url": "https://seerr.example.com", "api_key": KEY}, headers=auth)
 
-    found = client.get("/integrations/seerr/api/search", params={"query": "made up", "page": 1}, headers=auth)
+    found = client.get("/integrations/seerr/api/search", params={"query": "made up's", "page": 1}, headers=auth)
     assert found.status_code == 200
     assert found.json()["results"][0]["title"] == "Made Up Movie"
-    assert fake_seerr[-1].url.params["query"] == "made up"
+    # Seerr refuses reserved characters (+, ', ...) in the raw query, so spaces must go out as %20, not +.
+    assert fake_seerr[-1].url.query == b"query=made%20up%27s&page=1"
     assert fake_seerr[-1].headers["X-Api-Key"] == KEY
 
     made = client.post("/integrations/seerr/api/request", json={"mediaType": "tv", "mediaId": 5, "seasons": "all"}, headers=auth)

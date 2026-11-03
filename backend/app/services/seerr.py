@@ -9,7 +9,7 @@ import ipaddress
 import re
 import socket
 from typing import Any
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 import httpx2 as httpx
 
@@ -104,13 +104,14 @@ def call(
 ) -> tuple[int, Any]:
     """One Seerr API call. Returns (status, parsed JSON or None). Raises SeerrKeyRejected on 401/403."""
     check_address(url, allow_private=allow_private)
+    # Built by hand: httpx writes spaces as "+", and Seerr rejects reserved characters in the raw query.
+    query = "&".join(f"{quote(key, safe='')}={quote(value, safe='')}" for key, value in params or [])
     try:
         # No redirects: a redirect could send the call (and the key) somewhere that wasn't checked.
         with httpx.Client(transport=transport, timeout=TIMEOUT, follow_redirects=False) as client:
             response = client.request(
                 method,
-                f"{url}/api/v1/{path}",
-                params=params,
+                f"{url}/api/v1/{path}" + (f"?{query}" if query else ""),
                 json=json,
                 headers={"X-Api-Key": api_key, "Accept": "application/json"},
             )
