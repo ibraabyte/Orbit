@@ -161,6 +161,7 @@ const data: DashboardData = {
     }
   ],
   goalMilestones: [],
+  budgets: [],
   journalEntries: [
     {
       id: "journal-1",

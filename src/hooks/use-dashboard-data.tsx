@@ -1,6 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Haptics from "expo-haptics";
-import * as Notifications from "expo-notifications";
 import { Alert } from "react-native";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { getApi } from "@/lib/backend";
@@ -28,7 +27,8 @@ export const emptyData: DashboardData = {
   goalMilestones: [],
   journalEntries: [],
   expenses: [],
-  bills: []
+  bills: [],
+  budgets: []
 };
 
 // Orbit's own server returns the whole bundle in one call, same shape (backend/app/routers/dashboard.py).
@@ -69,7 +69,7 @@ function useDashboardDataSource(userId: string) {
     } catch (loadError) {
       const cached = await readCache(userId);
       if (cached) {
-        setData(cached.data);
+        setData({ ...emptyData, ...cached.data });
         setError(`Offline. Showing what was saved ${new Date(cached.savedAt).toLocaleString()}.`);
       } else {
         setError(loadError instanceof Error ? loadError.message : "Data could not be loaded.");
@@ -81,21 +81,9 @@ function useDashboardDataSource(userId: string) {
 
   useEffect(() => {
     // Show the saved copy at once, then replace it with fresh data.
-    void readCache(userId).then((cached) => cached && setData((current) => (current === emptyData ? cached.data : current)));
+    void readCache(userId).then((cached) => cached && setData((current) => (current === emptyData ? { ...emptyData, ...cached.data } : current)));
     void refresh();
   }, [refresh, userId]);
-
-  // Personal data shouldn't outlive the session on a shared phone.
-  useEffect(() => {
-    const forgetSession = () => {
-      void clearDashboardCache();
-      // Scheduled alarms carry task and reminder titles; drop them with the session.
-      void Notifications.cancelAllScheduledNotificationsAsync();
-    };
-    return getApi().onSessionChange((session) => {
-      if (!session) forgetSession();
-    });
-  }, []);
 
   // Run a write, then reload. Shows an alert instead of throwing so screens stay one-liners.
   const act = useCallback(

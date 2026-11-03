@@ -7,6 +7,7 @@ import {
 } from "@expo-google-fonts/space-grotesk";
 import Feather from "@expo/vector-icons/Feather";
 import { useFonts } from "expo-font";
+import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
@@ -15,12 +16,16 @@ import { AppLock } from "@/components/app-lock";
 import { OverlayProvider } from "@/components/overlays";
 import { Loading } from "@/components/screen";
 import { colors } from "@/components/theme";
-import { DashboardDataProvider } from "@/hooks/use-dashboard-data";
+import { clearDashboardCache, DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { ServerStatusProvider } from "@/hooks/use-server-status";
+import { clearWidget } from "@/hooks/use-widget-sync";
 import { hasServer, watchSession, type AppSession } from "@/lib/backend";
 
 const configured = hasServer();
+
+// A widget tap can open Capture from closed; Today must be underneath for it to close back to.
+export const unstable_settings = { anchor: "(tabs)" };
 
 export default function RootLayout() {
   const [session, setSession] = useState<AppSession | null | undefined>(undefined);
@@ -37,6 +42,15 @@ export default function RootLayout() {
   });
 
   useEffect(() => (configured ? watchSession(setSession) : undefined), []);
+
+  // Personal data shouldn't outlive the session on a shared phone, however it ended (sign-out, expiry, or a session
+  // that failed to restore at launch): the widget, the saved "orbit.cache." copies, and scheduled alarms, which carry titles.
+  useEffect(() => {
+    if (session !== null) return;
+    clearWidget();
+    void clearDashboardCache().catch(() => undefined);
+    void Notifications.cancelAllScheduledNotificationsAsync().catch(() => undefined);
+  }, [session]);
 
   if (!configured) {
     return (
@@ -63,7 +77,7 @@ export default function RootLayout() {
       </Stack.Protected>
       {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
       <Stack.Protected guard={Boolean(session)}>
-        {["finance", "food", "goals", "habits", "health", "integrations", "journal", "library", "media", "people", "servers", "settings", "tasks", "vehicles", "whoop"].map((name) => (
+        {["ask", "finance", "food", "goals", "habits", "health", "integrations", "journal", "library", "media", "people", "servers", "settings", "tasks", "vehicles", "whoop"].map((name) => (
           <Stack.Screen key={name} name={name} />
         ))}
       </Stack.Protected>

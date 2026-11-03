@@ -1,9 +1,12 @@
 import * as Notifications from "expo-notifications";
 import { router } from "expo-router";
 import { useEffect } from "react";
+import { useBudgetAlerts } from "@/hooks/use-budget-alerts";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useMorningNotifications } from "@/hooks/use-morning-brief";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useVehicles } from "@/hooks/use-vehicles";
+import { useWidgetSync } from "@/hooks/use-widget-sync";
 import { billRenewalAlerts } from "@/lib/finance";
 import { buildLocalReminderSchedule } from "@/lib/reminder-notifications";
 import { vehicleAlerts } from "@/lib/vehicles";
@@ -28,9 +31,9 @@ export function useReminderNotifications() {
       await Promise.all(
         scheduled.filter((item) => /^(reminder|task|bill|vehicle)-/.test(item.identifier)).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
       );
-      // iOS keeps 64 pending alarms: 40 reminders + 8 bill + 4 car heads-ups + 10 prayers = 62.
+      // iOS keeps 64 pending alarms: 36 reminders + 8 bill + 4 car heads-ups + 10 prayers + 4 mornings = 62.
       const items = [
-        ...buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 40 }),
+        ...buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 36 }),
         ...billRenewalAlerts(data.bills).slice(0, 8),
         ...vehicleAlerts(vehicles).slice(0, 4)
       ];
@@ -54,7 +57,9 @@ export function useReminderNotifications() {
       const url = response?.notification.request.content.data?.url;
       if (typeof url !== "string") return;
       Notifications.clearLastNotificationResponse();
-      router.push(url as never);
+      // Today is the root: go back down to it rather than stack a second copy on top.
+      if (url === "/") router.dismissTo("/");
+      else router.push(url as never);
     }
     // A tap that launched the app from closed arrives before any listener exists.
     open(Notifications.getLastNotificationResponse());
@@ -66,6 +71,9 @@ export function useReminderNotifications() {
 // Mounted once in the root layout: keeps reminder and prayer alarms scheduled.
 export function ReminderNotifications() {
   useReminderNotifications();
-  usePrayerTimes();
+  const { all: prayers } = usePrayerTimes();
+  useWidgetSync(prayers);
+  useBudgetAlerts();
+  useMorningNotifications();
   return null;
 }
