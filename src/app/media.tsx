@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useState } from "react";
-import { Alert, Text, View } from "react-native";
+import { Alert, Image, Text, View } from "react-native";
 import { Badge, Card, EmptyState, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
@@ -10,14 +10,16 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatDate, t } from "@/lib/i18n";
-import { seerrTitle, type SeerrRequest, type SeerrResult } from "@/lib/seerr";
+import { posterUrl, seerrTitle, type SeerrRequest, type SeerrResult } from "@/lib/seerr";
 import type { WatchItem } from "@/lib/types";
 import { groupWatchItems, progressLabel, watchDraftFromSeerr } from "@/lib/watchlist";
 
-// ponytail: a colored block until real poster images are wired in.
-function Poster({ seed }: { seed: string }) {
+// The TMDB poster; a colored block when there is none.
+function Poster({ seed, path }: { seed: string; path?: string | null }) {
   const tones = [colors.urgent, colors.sage, colors.accentDeep, colors.inkMuted];
-  return <View style={{ width: 36, height: 52, borderRadius: radius.chip, backgroundColor: tones[seed.length % tones.length] }} />;
+  const uri = posterUrl(path, 185);
+  const style = { width: 36, height: 52, borderRadius: radius.chip, backgroundColor: tones[seed.length % tones.length] };
+  return uri ? <Image source={{ uri }} style={style} accessibilityIgnoresInvertColors /> : <View style={style} />;
 }
 
 export default function Media() {
@@ -119,7 +121,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
             return (
               <ListRow
                 key={`${item.mediaType}-${item.id}`}
-                leading={<Poster seed={seerrTitle(item)} />}
+                leading={<Poster seed={seerrTitle(item)} path={item.posterPath} />}
                 title={seerrTitle(item)}
                 subtitle={item.mediaType === "tv" ? t.series : t.movie}
                 trailing={
@@ -140,14 +142,14 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
       {lists.watching.length ? (
         <Card title={t.watching}>
           {lists.watching.map((item) => (
-            <ListRow key={item.id} leading={<Poster seed={item.title} />} title={item.title} subtitle={progressLabel(item)} trailing={<Badge tone="accent" glyph="▶">{t.nextEp}</Badge>} onPress={() => watched(item)} />
+            <ListRow key={item.id} leading={<Poster seed={item.title} path={item.poster_path} />} title={item.title} subtitle={progressLabel(item)} trailing={<Badge tone="accent" glyph="▶">{t.nextEp}</Badge>} onPress={() => watched(item)} />
           ))}
         </Card>
       ) : null}
       {lists.want.length ? (
         <Card title={t.wantToWatch}>
           {lists.want.map((item) => (
-            <ListRow key={item.id} leading={<Poster seed={item.title} />} title={item.title} subtitle={item.media_type === "tv" ? t.series : t.movie} trailing={<RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(item.id))} />} onPress={() => watched(item)} />
+            <ListRow key={item.id} leading={<Poster seed={item.title} path={item.poster_path} />} title={item.title} subtitle={item.media_type === "tv" ? t.series : t.movie} trailing={<RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(item.id))} />} onPress={() => watched(item)} />
           ))}
         </Card>
       ) : null}
