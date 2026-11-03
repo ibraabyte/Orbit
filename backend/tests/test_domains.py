@@ -27,6 +27,7 @@ CASES = [
     ("/people", {"name": "Test Person"}, {"favorite": True}, "favorite"),
     ("/expenses", {"merchant": "Cafe", "amount": 18.5, "currency": "SAR", "spent_at": NOW}, {"category": "food"}, "category"),
     ("/bills", {"name": "Internet", "amount": 299, "currency": "SAR", "due_at": "2026-11-05"}, {"status": "paid"}, "status"),
+    ("/budgets", {"month": "2026-11-01", "category": "food", "amount": 800, "currency": "SAR"}, {"amount": 900}, "amount"),
     ("/vehicles", {"name": "Car", "plate": "ABC 123"}, {"odometer_km": 42000}, "odometer_km"),
     ("/watch-items", {"tmdb_id": 603, "media_type": "movie", "title": "The Matrix"}, {"status": "done"}, "status"),
 ]

@@ -305,6 +305,18 @@ export type Bill = {
   updated_at: string;
 };
 
+export type Budget = {
+  id: string;
+  user_id: string;
+  // First day of the month, YYYY-MM-01.
+  month: string;
+  category: FinanceCategory;
+  amount: number;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type Vehicle = {
   id: string;
   user_id: string;
@@ -361,4 +373,5 @@ export type DashboardData = {
   journalEntries: JournalEntry[];
   expenses: Expense[];
   bills: Bill[];
+  budgets: Budget[];
 };

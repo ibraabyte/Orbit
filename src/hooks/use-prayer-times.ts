@@ -62,5 +62,5 @@ export function usePrayerTimes() {
     return () => clearInterval(timer);
   }, [place]);
 
-  return { next: prayers[0], upcoming: prayers.slice(0, 5) };
+  return { next: prayers[0], upcoming: prayers.slice(0, 5), all: prayers };
 }

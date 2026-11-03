@@ -3,7 +3,7 @@
     "name": "Orbit",
     "slug": "orbit",
     "scheme": "orbit",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -45,6 +45,24 @@
         "expo-location",
         {
           "locationWhenInUsePermission": "Orbit uses your location to calculate prayer times."
+        }
+      ],
+      [
+        "expo-widgets",
+        {
+          "groupIdentifier": "group.com.ibraabyte.orbit",
+          "widgets": [
+            {
+              "name": "TodayWidget",
+              "displayName": "Orbit Today",
+              "description": "Today's tasks and the next prayer · مهام اليوم والصلاة القادمة",
+              "ios": {
+                "supportedFamilies": ["systemSmall", "systemMedium"],
+                "initialLayout": "src/widgets/today-widget.tsx"
+              },
+              "android": null
+            }
+          ]
         }
       ]
     ],

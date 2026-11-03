@@ -24,6 +24,7 @@ const stackScreens: Record<string, { title: string; siblings?: string[]; hint?: 
   "/vehicles": { title: t.car, siblings: ["/vehicles", "/media", "/servers"] },
   "/media": { title: t.movies, siblings: ["/vehicles", "/media", "/servers"] },
   "/servers": { title: t.servers, siblings: ["/vehicles", "/media", "/servers"] },
+  "/ask": { title: t.askOrbit },
   "/settings": { title: t.settings }
 };
 

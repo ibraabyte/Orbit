@@ -128,6 +128,7 @@ describe("full data export", () => {
     expect(summary.focus_sessions).toBe(0);
     expect(summary.expenses).toBe(0);
     expect(summary.bills).toBe(0);
+    expect(summary.budgets).toBe(0);
     expect(summary.journal_entries).toBe(0);
   });
 

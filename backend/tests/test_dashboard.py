@@ -4,7 +4,7 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import Goal, Habit, Meal
+from app.models import Expense, Goal, Habit, Meal
 from app.routers.dashboard import LISTS
 from tests.conftest import bearer, sign_up
 
@@ -32,6 +32,22 @@ def test_dashboard_rows_match_the_app_types(client: TestClient, auth: dict, me: 
         "id", "user_id", "title", "notes", "status", "priority", "due_at", "reminder_at",
         "reminder_sent_at", "recurrence", "created_at", "updated_at",
     }  # fmt: skip
+
+
+def test_dashboard_carries_a_heavy_months_expenses(client: TestClient, auth: dict, me: dict, db: Session):
+    # Budgets add up expenses on the phone, so a busy month must arrive whole (more than the old 120).
+    db.add_all(
+        Expense(
+            user_id=me["user_id"],
+            merchant=f"Shop {i}",
+            amount=Decimal("1.00"),
+            currency="SAR",
+            spent_at=datetime(2026, 11, 1, 8, i % 60, tzinfo=UTC),
+        )
+        for i in range(300)
+    )
+    db.commit()
+    assert len(client.get("/dashboard", headers=auth).json()["expenses"]) == 300
 
 
 def test_dashboard_skips_archived_habits_and_goals(client: TestClient, auth: dict, me: dict, db: Session):

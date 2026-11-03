@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Index, Numeric, Text, text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Index, Numeric, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, Owned, updated_at
@@ -63,4 +63,23 @@ class Bill(Owned, Base):
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="active")
     autopay: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     note: Mapped[str | None] = mapped_column(Text)
+    updated_at: Mapped[datetime] = updated_at()
+
+
+class Budget(Owned, Base):
+    """A spending limit for one category in one month (month is that month's first day). Each month has its own."""
+
+    __tablename__ = "budgets"
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="amount"),
+        CheckConstraint("char_length(currency) = 3", name="currency"),
+        CheckConstraint(_categories_sql, name="category"),
+        CheckConstraint("month = date_trunc('month', month)::date", name="month_first_day"),
+        UniqueConstraint("user_id", "month", "category"),
+    )
+
+    month: Mapped[date] = mapped_column(Date, nullable=False)
+    category: Mapped[str] = mapped_column(Text, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(Text, nullable=False, server_default="USD")
     updated_at: Mapped[datetime] = updated_at()

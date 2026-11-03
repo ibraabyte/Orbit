@@ -130,6 +130,7 @@ expenses = owned_crud_router(
 bills = owned_crud_router(
     m.Bill, prefix="/bills", create=s.BillCreate, update=s.BillUpdate, order_by=m.Bill.due_at.asc(), tag_target="bill"
 )
+budgets = owned_crud_router(m.Budget, prefix="/budgets", create=s.BudgetCreate, update=s.BudgetUpdate, order_by=m.Budget.month.desc())
 vehicles = owned_crud_router(
     m.Vehicle, prefix="/vehicles", create=s.VehicleCreate, update=s.VehicleUpdate, order_by=m.Vehicle.created_at.asc()
 )
@@ -178,6 +179,7 @@ ROUTERS: list[APIRouter] = [
     people,
     expenses,
     bills,
+    budgets,
     vehicles,
     watch_items,
 ]
