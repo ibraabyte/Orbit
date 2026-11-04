@@ -540,4 +540,17 @@ describe("dashboard summaries", () => {
 
     expect(buildDailyBrief(data, now, 3).map((item) => item.id)).toEqual(["journal"]);
   });
+
+  it("puts overdue installments near the top", () => {
+    const stamp = now.toISOString();
+    const data = dashboardData({
+      obligations: [{ id: "o1", user_id: "user-1", name: "Phone", kind: "bnpl", provider: null, total_amount: 200, currency: "SAR", note: null, created_at: stamp, updated_at: stamp }],
+      obligationInstallments: [
+        { id: "n1", user_id: "user-1", obligation_id: "o1", due_on: "2026-06-20", amount: 100, paid_at: null, created_at: stamp },
+        { id: "n2", user_id: "user-1", obligation_id: "o1", due_on: "2026-07-20", amount: 100, paid_at: null, created_at: stamp }
+      ]
+    });
+    const item = buildDailyBrief(data, now).find((row) => row.id === "overdue-installments");
+    expect(item).toMatchObject({ detail: "1 installment past due.", href: "/obligations", tone: "danger" });
+  });
 });

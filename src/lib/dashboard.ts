@@ -8,6 +8,7 @@ import { focusSessionsInLastDays, completedFocusMinutes, todaysFocusMinutes } fr
 import { financeSummary } from "@/lib/finance";
 import { foodSummary } from "@/lib/food";
 import { peopleSummary } from "@/lib/people";
+import { obligationsProgress } from "@/lib/wealth";
 
 export type DailyBriefTone = "default" | "danger" | "warning" | "success";
 
@@ -153,6 +154,19 @@ export function buildDailyBrief(data: DashboardData, now = new Date(), limit = 5
       label: "money",
       tone: "danger",
       priority: 94
+    });
+  }
+
+  const lateInstallments = obligationsProgress(data, now).reduce((sum, plan) => sum + plan.overdue.length, 0);
+  if (lateInstallments) {
+    items.push({
+      id: "overdue-installments",
+      title: "Pay overdue installments",
+      detail: `${lateInstallments} installment${lateInstallments === 1 ? "" : "s"} past due.`,
+      href: "/obligations",
+      label: "money",
+      tone: "danger",
+      priority: 93
     });
   }
 

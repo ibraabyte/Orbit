@@ -1,4 +1,4 @@
-import { router, usePathname, type Href } from "expo-router";
+import { router, usePathname } from "expo-router";
 import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,21 +9,26 @@ import { t } from "@/lib/i18n";
 // Space the tab bar takes at the bottom of a tab screen.
 export const TAB_BAR_SPACE = 120;
 
-// Stack screens: their title, the sections beside them, and the example line on the capture bar.
-const stackScreens: Record<string, { title: string; siblings?: string[]; hint?: string }> = {
+// Stack screens: their title and the example line on the capture bar. Each opens on its own, with no row of
+// other sections across the top, so a section only shows its own things.
+const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/tasks": { title: t.tasks, hint: "pay rent fri 5pm !high" },
-  "/health": { title: t.health, siblings: ["/health", "/whoop", "/food"], hint: "slept 7h q4 · workout 40m run" },
-  "/whoop": { title: t.whoop, siblings: ["/health", "/whoop", "/food"] },
-  "/food": { title: t.food, siblings: ["/health", "/whoop", "/food"], hint: "buy milk · plan dinner salmon @friday" },
-  "/finance": { title: t.finance, siblings: ["/finance", "/people", "/library"], hint: "spent 25 lunch · subscription netflix 45" },
-  "/people": { title: t.people, siblings: ["/finance", "/people", "/library"], hint: "person Faisal friend" },
-  "/library": { title: t.library, siblings: ["/finance", "/people", "/library"], hint: "note idea for the weekend" },
-  "/habits": { title: t.habits, siblings: ["/habits", "/goals", "/journal"], hint: "habit read 20 min daily" },
-  "/goals": { title: t.goals, siblings: ["/habits", "/goals", "/journal"], hint: "goal run a 10k @2026-12-31" },
-  "/journal": { title: t.journal, siblings: ["/habits", "/goals", "/journal"], hint: "journal good today was calm" },
-  "/vehicles": { title: t.car, siblings: ["/vehicles", "/media", "/servers"] },
-  "/media": { title: t.movies, siblings: ["/vehicles", "/media", "/servers"] },
-  "/servers": { title: t.servers, siblings: ["/vehicles", "/media", "/servers"] },
+  "/health": { title: t.health, hint: "slept 7h q4 · workout 40m run" },
+  "/whoop": { title: t.whoop },
+  "/food": { title: t.food, hint: "buy milk · plan dinner salmon @friday" },
+  "/finance": { title: t.finance, hint: "غداء 45 · subscription netflix 45" },
+  "/accounts": { title: t.moneyPlaces },
+  "/investments": { title: t.investments },
+  "/cards": { title: t.cards },
+  "/obligations": { title: t.obligations },
+  "/people": { title: t.people, hint: "person Faisal friend" },
+  "/library": { title: t.library, hint: "note idea for the weekend" },
+  "/habits": { title: t.habits, hint: "habit read 20 min daily" },
+  "/goals": { title: t.goals, hint: "goal run a 10k @2026-12-31" },
+  "/journal": { title: t.journal, hint: "journal good today was calm" },
+  "/vehicles": { title: t.car },
+  "/media": { title: t.movies },
+  "/servers": { title: t.servers },
   "/ask": { title: t.askOrbit },
   "/settings": { title: t.settings }
 };
@@ -86,18 +91,6 @@ function StackHeader({ action }: { action?: { label: string; onPress: () => void
           </Pressable>
         ) : null}
       </View>
-      {meta?.siblings ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.bleed} contentContainerStyle={styles.bleedContent}>
-          {meta.siblings.map((sibling) => {
-            const on = sibling === path;
-            return (
-              <Pressable key={sibling} onPress={() => (on ? undefined : router.replace(sibling as Href))} accessibilityRole="button" accessibilityState={{ selected: on }} style={[styles.sibling, on && { backgroundColor: colors.urgent, borderColor: colors.urgent }]}>
-                <Text style={[type.pill, { color: on ? colors.urgentInk : colors.ink }]}>{stackScreens[sibling].title}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      ) : null}
       {meta?.hint ? <CaptureHint hint={meta.hint} /> : null}
     </View>
   );
@@ -292,7 +285,6 @@ const styles = StyleSheet.create({
   stackAction: { minHeight: 40, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   bleed: { marginHorizontal: -20, flexGrow: 0 },
   bleedContent: { paddingHorizontal: 20, gap: 6 },
-  sibling: { minHeight: 34, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: "transparent", backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
   hint: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
   hintMark: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   hintText: { flex: 1, fontFamily: "Menlo", fontSize: 12, color: colors.inkFaint },
