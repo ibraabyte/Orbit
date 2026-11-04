@@ -126,7 +126,7 @@ export default function Investments() {
         {adding ? (
           <View style={{ gap: 8 }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />
-            <ChoiceButton title={t.investments} value={kind} options={kinds} labels={t.investmentKinds} onChange={setKind} />
+            <ChoiceButton title={t.kindLabel} value={kind} options={kinds} labels={t.investmentKinds} onChange={setKind} />
             <FieldLabel>{t.invested}</FieldLabel>
             <AmountField label={t.invested} value={invested} onChange={setInvested} currency={currency} />
             <FieldLabel>{`${t.currentValue} (${t.optional})`}</FieldLabel>

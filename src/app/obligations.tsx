@@ -3,7 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import { Badge, Card, CheckItem, EmptyState, Hero, ListRow, MoreButton, ProgressBar, RowButton, type } from "@/components/drift";
 import { AmountField, ChoiceButton, FieldLabel, FormButtons } from "@/components/money-form";
 import { toDateKey, useOverlays } from "@/components/overlays";
-import { Input, Screen, Segments } from "@/components/screen";
+import { Input, Screen } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
@@ -108,12 +108,12 @@ export default function Obligations() {
           <View style={{ gap: 8 }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />
             <Input placeholder={`${t.provider} (${t.optional})`} value={provider} onChangeText={setProvider} />
-            <ChoiceButton title={t.obligations} value={kind} options={kinds} labels={t.obligationKinds} onChange={setKind} />
+            <ChoiceButton title={t.kindLabel} value={kind} options={kinds} labels={t.obligationKinds} onChange={setKind} />
             <FieldLabel>{t.totalAmount}</FieldLabel>
             <AmountField label={t.totalAmount} value={total} onChange={setTotal} currency={currency} />
             <FieldLabel>{t.paymentsCount}</FieldLabel>
             <Input placeholder={t.paymentsCount} accessibilityLabel={t.paymentsCount} value={count} onChangeText={setCount} keyboardType="number-pad" maxLength={3} />
-            <Segments small options={everyOptions} value={every} onChange={setEvery} labels={t.installmentEvery} />
+            <ChoiceButton title={t.every} value={every} options={everyOptions} labels={t.installmentEvery} onChange={setEvery} />
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <Text style={[type.rowSubtitle, { flex: 1 }]}>{t.firstPayment}</Text>
               <RowButton outline label={day(firstDue)} onPress={() => void pickDate(t.firstPayment, firstDue).then((date) => date && setFirstDue(date))} />

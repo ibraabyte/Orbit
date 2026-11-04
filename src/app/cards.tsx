@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { Badge, Card, EmptyState, IconTile, ListRow, RowButton, type } from "@/components/drift";
-import { FormButtons } from "@/components/money-form";
+import { ChoiceButton, FormButtons } from "@/components/money-form";
 import { useOverlays } from "@/components/overlays";
-import { Input, Screen, Segments } from "@/components/screen";
+import { Input, Screen } from "@/components/screen";
 import { useCardPicker } from "@/hooks/use-card-picker";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
@@ -90,13 +90,11 @@ export default function Cards() {
         {adding ? (
           <View style={{ gap: 8 }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />
-            <Segments small options={networks} value={network} onChange={setNetwork} labels={t.cardNetworks} />
-            <Segments small options={cardKinds} value={kind} onChange={setKind} labels={t.cardKinds} />
-            <View style={{ flexDirection: "row", gap: 8 }}>
-              {/* Four characters at most, so a full card number can't be typed in. */}
-              <Input style={{ flex: 1 }} placeholder={t.last4} accessibilityLabel={t.last4} value={last4} onChangeText={setLast4} keyboardType="number-pad" maxLength={4} autoComplete="off" textContentType="none" />
-              <Input style={{ flex: 1 }} placeholder={t.expiry} accessibilityLabel={t.expiry} value={expiry} onChangeText={setExpiry} keyboardType="numbers-and-punctuation" maxLength={7} autoComplete="off" textContentType="none" />
-            </View>
+            <ChoiceButton title={t.cardNetwork} value={network} options={networks} labels={t.cardNetworks} onChange={setNetwork} />
+            <ChoiceButton title={t.cardKind} value={kind} options={cardKinds} labels={t.cardKinds} onChange={setKind} />
+            {/* Four characters at most, so a full card number can't be typed in. */}
+            <Input placeholder={t.last4} accessibilityLabel={t.last4} value={last4} onChangeText={setLast4} keyboardType="number-pad" maxLength={4} autoComplete="off" textContentType="none" />
+            <Input placeholder={`${t.expiry} · ${t.optional}`} accessibilityLabel={t.expiry} value={expiry} onChangeText={setExpiry} keyboardType="numbers-and-punctuation" maxLength={7} autoComplete="off" textContentType="none" />
             <Text style={type.rowSubtitle}>{t.cardPrivacy}</Text>
             <FormButtons onCancel={() => setAdding(false)} onSave={add} disabled={!ready} />
           </View>

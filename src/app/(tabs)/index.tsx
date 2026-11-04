@@ -136,7 +136,6 @@ export default function Today() {
             <ListRow
               key={item.id}
               first={index === 0}
-              href={item.kind === "installment" ? "/obligations" : undefined}
               title={item.title}
               badges={item.state === "overdue" ? <Badge tone="urgent" glyph="!">{t.overdue}</Badge> : item.state === "today" ? <Badge tone="accent" glyph="◷">{t.dueToday}</Badge> : <Badge glyph="○">{t.dueTomorrow}</Badge>}
               subtitle={item.kind === "installment" ? t.installment : item.card ? `${t.chargedTo} ${cardLabel(item.card)}` : null}

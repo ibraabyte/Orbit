@@ -16,7 +16,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/health": { title: t.health, hint: "slept 7h q4 · workout 40m run" },
   "/whoop": { title: t.whoop },
   "/food": { title: t.food, hint: "buy milk · plan dinner salmon @friday" },
-  "/finance": { title: t.finance, hint: "غداء 45 · subscription netflix 45" },
+  "/finance": { title: t.finance, hint: "lunch 45 · subscription netflix 45" },
   "/accounts": { title: t.moneyPlaces },
   "/investments": { title: t.investments },
   "/cards": { title: t.cards },

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { Badge, Card, EmptyState, Hero, ListRow, RowButton, type } from "@/components/drift";
-import { AmountEditor, AmountField, FieldLabel, FormButtons } from "@/components/money-form";
+import { AmountEditor, AmountField, ChoiceButton, FieldLabel, FormButtons } from "@/components/money-form";
 import { useOverlays } from "@/components/overlays";
-import { Input, Screen, Segments } from "@/components/screen";
+import { Input, Screen } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
@@ -81,7 +81,7 @@ export default function Accounts() {
         {adding ? (
           <View style={{ gap: 8 }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />
-            <Segments small options={kinds} value={kind} onChange={setKind} labels={t.accountKinds} />
+            <ChoiceButton title={t.kindLabel} value={kind} options={kinds} labels={t.accountKinds} onChange={setKind} />
             <FieldLabel>{t.balance}</FieldLabel>
             <AmountField label={t.balance} value={balance} onChange={setBalance} currency={currency} onSubmit={add} />
             <FormButtons onCancel={() => setAdding(false)} onSave={add} disabled={!name.trim() || amount === null} />
