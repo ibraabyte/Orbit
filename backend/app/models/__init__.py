@@ -4,7 +4,7 @@ from app.models.auth import RefreshToken, ServerSettings, User
 from app.models.bank_sms import BankSmsEvent, BankSmsToken, BankTransaction
 from app.models.base import Base
 from app.models.chatgpt import ChatgptConnection
-from app.models.finance import Bill, Budget, Expense
+from app.models.finance import Bill, Budget, Card, Expense, Investment, MoneyAccount, Obligation, ObligationInstallment
 from app.models.health import GroceryItem, Meal, MealPlan, SleepLog, WeightLog, Workout
 from app.models.integrations import AiConnection, ServiceConnection
 from app.models.library import Attachment, Capture, PushSubscription, Tag, Tagging
@@ -24,6 +24,7 @@ __all__ = [
     "Bill",
     "Budget",
     "Capture",
+    "Card",
     "ChatgptConnection",
     "Expense",
     "FocusSession",
@@ -32,9 +33,13 @@ __all__ = [
     "GroceryItem",
     "Habit",
     "HabitLog",
+    "Investment",
     "JournalEntry",
     "Meal",
     "MealPlan",
+    "MoneyAccount",
+    "Obligation",
+    "ObligationInstallment",
     "Person",
     "Profile",
     "PushSubscription",

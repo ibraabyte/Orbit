@@ -11,7 +11,7 @@ from typing import Literal
 
 from pydantic import Field, field_validator
 
-from app.models.finance import FINANCE_CATEGORIES
+from app.models.finance import CARD_KINDS, CARD_NETWORKS, FINANCE_CATEGORIES, INVESTMENT_KINDS, MONEY_ACCOUNT_KINDS, OBLIGATION_KINDS
 from app.models.library import TAGGING_TARGETS
 from app.schemas.tasks import Input
 
@@ -355,6 +355,7 @@ class BillCreate(Tagged):
     status: BillStatus = "active"
     autopay: bool = False
     note: str | None = None
+    card_id: uuid.UUID | None = None
 
 
 class BillUpdate(Input):
@@ -367,6 +368,7 @@ class BillUpdate(Input):
     status: BillStatus | None = None
     autopay: bool | None = None
     note: str | None = None
+    card_id: uuid.UUID | None = None
 
 
 def first_of_month(value: date | None) -> date | None:
@@ -391,6 +393,114 @@ class BudgetUpdate(Input):
     currency: str | None = Field(default=None, min_length=3, max_length=3)
 
     _month = field_validator("month")(first_of_month)
+
+
+# Cards, where money is, investments, obligations
+
+CardNetwork = Literal[CARD_NETWORKS]  # type: ignore[valid-type]
+CardKind = Literal[CARD_KINDS]  # type: ignore[valid-type]
+MoneyAccountKind = Literal[MONEY_ACCOUNT_KINDS]  # type: ignore[valid-type]
+InvestmentKind = Literal[INVESTMENT_KINDS]  # type: ignore[valid-type]
+ObligationKind = Literal[OBLIGATION_KINDS]  # type: ignore[valid-type]
+Money = Field(gt=-(10**12), lt=10**12)
+# Exactly four digits: a full card number never fits.
+Last4 = Field(pattern=r"^[0-9]{4}$")
+Currency = Field(default="SAR", min_length=3, max_length=3)
+
+
+class CardCreate(Input):
+    name: str = Field(min_length=1, max_length=80)
+    network: CardNetwork = "other"
+    kind: CardKind = "credit"
+    last4: str = Last4
+    expires_on: date | None = None
+
+    _expires = field_validator("expires_on")(first_of_month)
+
+
+class CardUpdate(Input):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    network: CardNetwork | None = None
+    kind: CardKind | None = None
+    last4: str | None = Field(default=None, pattern=r"^[0-9]{4}$")
+    expires_on: date | None = None
+
+    _expires = field_validator("expires_on")(first_of_month)
+
+
+class MoneyAccountCreate(Input):
+    name: str = Field(min_length=1, max_length=120)
+    kind: MoneyAccountKind = "bank"
+    balance: float = Money
+    currency: str = Currency
+    note: str | None = None
+
+
+class MoneyAccountUpdate(Input):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    kind: MoneyAccountKind | None = None
+    balance: float | None = Field(default=None, gt=-(10**12), lt=10**12)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    note: str | None = None
+
+
+class InvestmentCreate(Input):
+    name: str = Field(min_length=1, max_length=120)
+    kind: InvestmentKind = "other"
+    invested: float = Field(ge=0, lt=10**12)
+    current_value: float = Field(ge=0, lt=10**12)
+    currency: str = Currency
+    started_on: date | None = None
+    note: str | None = None
+
+
+class InvestmentUpdate(Input):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    kind: InvestmentKind | None = None
+    invested: float | None = Field(default=None, ge=0, lt=10**12)
+    current_value: float | None = Field(default=None, ge=0, lt=10**12)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    started_on: date | None = None
+    note: str | None = None
+
+
+class ObligationCreate(Input):
+    name: str = Field(min_length=1, max_length=120)
+    kind: ObligationKind = "bnpl"
+    provider: str | None = Field(default=None, max_length=80)
+    total_amount: float = Field(gt=0, lt=10**12)
+    currency: str = Currency
+    note: str | None = None
+
+
+class ObligationUpdate(Input):
+    name: str | None = Field(default=None, min_length=1, max_length=120)
+    kind: ObligationKind | None = None
+    provider: str | None = Field(default=None, max_length=80)
+    total_amount: float | None = Field(default=None, gt=0, lt=10**12)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+    note: str | None = None
+
+
+class InstallmentIn(Input):
+    due_on: date
+    amount: float = Field(gt=0, lt=10**12)
+    paid_at: datetime | None = None
+
+
+class ObligationPlanCreate(ObligationCreate):
+    # The whole schedule in one call, so a plan is never saved half way.
+    installments: list[InstallmentIn] = Field(min_length=1, max_length=360)
+
+
+class ObligationInstallmentCreate(InstallmentIn):
+    obligation_id: uuid.UUID
+
+
+class ObligationInstallmentUpdate(Input):
+    due_on: date | None = None
+    amount: float | None = Field(default=None, gt=0, lt=10**12)
+    paid_at: datetime | None = None
 
 
 # Car and watch list
