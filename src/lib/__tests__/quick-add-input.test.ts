@@ -50,3 +50,30 @@ describe("natural quick add", () => {
     expect(parseNatural("صرفت 30 غداء", opts).draft.at).toBeNull();
   });
 });
+
+describe("quick expenses", () => {
+  const opts = { defaultCurrency: "SAR", now: new Date("2026-11-04T12:00:00+03:00") };
+
+  it("saves a spending word and an amount as an expense with a guessed category", () => {
+    expect(parseNatural("غداء 45", opts).draft).toMatchObject({ kind: "expense", amount: 45, currency: "SAR", title: "غداء", financeCategory: "food" });
+    expect(parseNatural("بنزين ١٢٠", opts).draft).toMatchObject({ kind: "expense", amount: 120, financeCategory: "transport" });
+    expect(parseNatural("50 البنزين", opts).draft).toMatchObject({ kind: "expense", amount: 50, financeCategory: "transport" });
+    expect(parseNatural("قهوة 18 ريال", opts).draft).toMatchObject({ kind: "expense", amount: 18, currency: "SAR", financeCategory: "food" });
+    expect(parseNatural("coffee 4.5 USD", opts).draft).toMatchObject({ kind: "expense", amount: 4.5, currency: "USD", financeCategory: "food" });
+    expect(parseNatural("صيدلية 32", opts).draft).toMatchObject({ kind: "expense", financeCategory: "health" });
+  });
+
+  it("guesses the category when the expense word is said too", () => {
+    expect(parseNatural("صرفت 40 بنزين", opts).draft).toMatchObject({ kind: "expense", financeCategory: "transport" });
+    expect(parseNatural("spent 25 lunch", opts).draft).toMatchObject({ kind: "expense", financeCategory: "food" });
+    // A category tag still wins.
+    expect(parseNatural("spent 25 lunch #travel", opts).draft).toMatchObject({ financeCategory: "travel" });
+  });
+
+  it("leaves other lines alone", () => {
+    expect(parseNatural("غداء مع خالد بكرة الساعة 1", opts).draft.kind).not.toBe("expense");
+    expect(parseNatural("call mom 3", opts).draft.kind).toBe("task");
+    expect(parseNatural("غداء", opts).draft.kind).toBe("task");
+    expect(parseNatural("اشتراك نتفلكس 45", opts).draft).toMatchObject({ kind: "bill", financeCategory: "subscriptions" });
+  });
+});

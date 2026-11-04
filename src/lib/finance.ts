@@ -152,7 +152,7 @@ function addRecurrence(date: Date, recurrence: BillRecurrence) {
   return addMonths(date, 1);
 }
 
-function addMonths(date: Date, months: number) {
+export function addMonths(date: Date, months: number) {
   const day = date.getDate();
   const next = new Date(date);
   next.setDate(1);
@@ -165,6 +165,9 @@ function addMonths(date: Date, months: number) {
 function billDate(value: string) {
   return new Date(`${value.slice(0, 10)}T12:00:00`);
 }
+
+/** A stored date ("2026-07-20") as local noon that day, so time zones never move it. */
+export const billDay = billDate;
 
 function startOfDay(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -183,8 +186,8 @@ export function subscriptionMonthlyTotal(bills: Bill[]) {
 
 export type BillAlert = { id: string; title: string; body: string; at: Date; url: string };
 
-// A heads-up `daysBefore` a bill is due, at 9:00 local, so a renewal can still be cancelled.
-export function billRenewalAlerts(bills: Bill[], now = new Date(), daysBefore = 3): BillAlert[] {
+// A heads-up `daysBefore` a bill is due (the day before by default), at 9:00 local, so a renewal can still be cancelled.
+export function billRenewalAlerts(bills: Bill[], now = new Date(), daysBefore = 1): BillAlert[] {
   return bills
     .filter((bill) => bill.status === "active")
     .map((bill) => {
@@ -192,9 +195,10 @@ export function billRenewalAlerts(bills: Bill[], now = new Date(), daysBefore = 
       at.setDate(at.getDate() - daysBefore);
       at.setHours(9, 0, 0, 0);
       const renews = bill.category === "subscriptions" || bill.autopay;
+      const when = daysBefore === 1 ? "tomorrow" : `in ${daysBefore} days`;
       return {
         id: `bill-${bill.id}-${bill.due_at}`,
-        title: renews ? `${bill.name} renews in ${daysBefore} days` : `${bill.name} is due in ${daysBefore} days`,
+        title: renews ? `${bill.name} renews ${when}` : `${bill.name} is due ${when}`,
         body: `${formatMoney(bill.amount, bill.currency)} on ${bill.due_at}${renews ? ". Cancel before then if you don't need it." : "."}`,
         at,
         url: "/finance"
