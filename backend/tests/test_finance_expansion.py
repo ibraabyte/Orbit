@@ -135,7 +135,8 @@ def test_new_data_reaches_the_dashboard_and_the_export(client: TestClient, auth:
     assert len(dashboard["obligationInstallments"]) == 4
 
     exported = client.get("/export", headers=auth).json()
-    assert [len(exported[key]) for key in ("cards", "money_accounts", "investments", "obligations", "obligation_installments")] == [1, 1, 1, 1, 4]
+    keys = ("cards", "money_accounts", "investments", "obligations", "obligation_installments")
+    assert [len(exported[key]) for key in keys] == [1, 1, 1, 1, 4]
 
 
 def test_delete_account_removes_everything_new(client: TestClient, me: dict, db: Session):
