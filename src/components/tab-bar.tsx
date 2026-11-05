@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Glass, Icon, type IconName } from "@/components/drift";
 import { openCapture } from "@/components/screen";
 import { colors, fonts } from "@/components/theme";
@@ -15,6 +15,8 @@ const tabs: Record<string, { label: string; icon: IconName }> = {
 };
 
 export function DriftTabBar({ state, emitter, navigateToTab, insets }: BottomTabBarProps) {
+  // On iPad the bar keeps a phone width, centered, instead of spreading across the screen.
+  const side = Math.max(16, (useWindowDimensions().width - 560) / 2);
   const buttons = state.routes
     .filter((route) => tabs[route.name])
     .map((route) => {
@@ -36,7 +38,7 @@ export function DriftTabBar({ state, emitter, navigateToTab, insets }: BottomTab
     });
 
   return (
-    <View style={[styles.bar, { bottom: Math.max(14, insets.bottom - 6) }]}>
+    <View style={[styles.bar, { left: side, right: side, bottom: Math.max(14, insets.bottom - 6) }]}>
       <Glass tint="rgba(12,18,14,0.55)" style={styles.capsule}>
         <View style={styles.tabs} accessibilityRole="tablist">
           {buttons}

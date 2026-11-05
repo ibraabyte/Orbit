@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Badge, Card, CardLink, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { MorningBriefCard } from "@/components/morning-brief-card";
 import { useOverlays } from "@/components/overlays";
-import { ErrorState, HeaderButton, OfflineBanner, openCapture, Screen, Skeleton, TabHeader } from "@/components/screen";
+import { Columns, ErrorState, HeaderButton, OfflineBanner, openCapture, Screen, Skeleton, TabHeader } from "@/components/screen";
 import { TaskRow } from "@/components/task-row";
 import { colors, fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -112,7 +112,7 @@ export default function Today() {
   }
 
   return (
-    <Screen header={header} banner={error ? <OfflineBanner message={t.offline} /> : undefined} refreshing={loading} onRefresh={reload}>
+    <Screen wide header={header} banner={error ? <OfflineBanner message={t.offline} /> : undefined} refreshing={loading} onRefresh={reload}>
       {prayer ? (
         <Hero style={{ gap: 14, paddingVertical: 14 }}>
           <View style={styles.prayerMark}>
@@ -130,113 +130,123 @@ export default function Today() {
 
       {show("brief") ? <MorningBriefCard state={brief.state} data={data} retry={() => void brief.refresh()} /> : null}
 
-      {show("money") && moneyDue.length ? (
-        <Card title={t.moneyDue} action={<CardLink href="/finance" label={t.finance} />}>
-          {moneyDue.map((item, index) => (
-            <ListRow
-              key={item.id}
-              first={index === 0}
-              title={item.title}
-              badges={item.state === "overdue" ? <Badge tone="urgent" glyph="!">{t.overdue}</Badge> : item.state === "today" ? <Badge tone="accent" glyph="◷">{t.dueToday}</Badge> : <Badge glyph="○">{t.dueTomorrow}</Badge>}
-              subtitle={item.kind === "installment" ? t.installment : item.card ? `${t.chargedTo} ${cardLabel(item.card)}` : null}
-              meta={formatMoney(item.amount, item.currency)}
-              trailing={<RowButton label={t.markPaid} onPress={() => void pay(item)} />}
-            />
-          ))}
-        </Card>
-      ) : null}
+      <Columns
+        left={
+          <>
+            {show("money") && moneyDue.length ? (
+              <Card title={t.moneyDue} action={<CardLink href="/finance" label={t.finance} />}>
+                {moneyDue.map((item, index) => (
+                  <ListRow
+                    key={item.id}
+                    first={index === 0}
+                    title={item.title}
+                    badges={item.state === "overdue" ? <Badge tone="urgent" glyph="!">{t.overdue}</Badge> : item.state === "today" ? <Badge tone="accent" glyph="◷">{t.dueToday}</Badge> : <Badge glyph="○">{t.dueTomorrow}</Badge>}
+                    subtitle={item.kind === "installment" ? t.installment : item.card ? `${t.chargedTo} ${cardLabel(item.card)}` : null}
+                    meta={formatMoney(item.amount, item.currency)}
+                    trailing={<RowButton label={t.markPaid} onPress={() => void pay(item)} />}
+                  />
+                ))}
+              </Card>
+            ) : null}
 
-      {show("digest") ? (
-        <Card title={t.digest} action={<Badge>{digest.length}</Badge>}>
-          {digest.length ? (
-            digest.map((item) => (
-              <ListRow
-                key={item.id}
-                href={appHref(item.href)}
-                leading={<IconTile name={digestIcon(item.tone)} size={28} tone={item.tone === "danger" ? "urgent" : item.tone === "warning" ? "accent" : "neutral"} />}
-                title={item.title}
-                subtitle={item.detail}
-              />
-            ))
-          ) : (
-            <EmptyState example="call mom tomorrow 9am">{t.emptyEx}</EmptyState>
-          )}
-        </Card>
-      ) : null}
+            {show("digest") ? (
+              <Card title={t.digest} action={<Badge>{digest.length}</Badge>}>
+                {digest.length ? (
+                  digest.map((item) => (
+                    <ListRow
+                      key={item.id}
+                      href={appHref(item.href)}
+                      leading={<IconTile name={digestIcon(item.tone)} size={28} tone={item.tone === "danger" ? "urgent" : item.tone === "warning" ? "accent" : "neutral"} />}
+                      title={item.title}
+                      subtitle={item.detail}
+                    />
+                  ))
+                ) : (
+                  <EmptyState example="call mom tomorrow 9am">{t.emptyEx}</EmptyState>
+                )}
+              </Card>
+            ) : null}
 
-      {show("quick") ? (
-        <StatGrid>
-          {[
-            <StatTile key="tasks" href="/tasks" label={t.openTasks} value={summary.openTaskCount} alert={summary.overdueTaskCount > 0} />,
-            <StatTile key="reminders" href="/tasks" label={t.dueReminders} value={summary.dueReminderCount} alert={summary.dueReminderCount > 0} />,
-            <StatTile key="focus" href="/focus" label={t.focus} value={formatFocusDuration(summary.todayFocusMinutes)} />,
-            <StatTile key="meals" href="/food" label={t.mealsPlanned} value={food.todayPlannedMeals} />,
-            <StatTile key="follow" href="/people" label={t.followUps} value={people.dueFollowUps.length} alert={people.overdueFollowUps.length > 0} />,
-            <StatTile key="spent" href="/finance" label={t.spentToday} value={formatMoney(summary.todaySpending, currency)} />,
-            <StatTile key="goals" href="/goals" label={t.activeGoals} value={summary.activeGoalCount} />,
-            <StatTile key="habits" href="/habits" label={t.habitsDone} value={`${summary.completedHabitCount}/${summary.activeHabitCount}`} />
-          ]}
-        </StatGrid>
-      ) : null}
+            {show("quick") ? (
+              <StatGrid>
+                {[
+                  <StatTile key="tasks" href="/tasks" label={t.openTasks} value={summary.openTaskCount} alert={summary.overdueTaskCount > 0} />,
+                  <StatTile key="reminders" href="/tasks" label={t.dueReminders} value={summary.dueReminderCount} alert={summary.dueReminderCount > 0} />,
+                  <StatTile key="focus" href="/focus" label={t.focus} value={formatFocusDuration(summary.todayFocusMinutes)} />,
+                  <StatTile key="meals" href="/food" label={t.mealsPlanned} value={food.todayPlannedMeals} />,
+                  <StatTile key="follow" href="/people" label={t.followUps} value={people.dueFollowUps.length} alert={people.overdueFollowUps.length > 0} />,
+                  <StatTile key="spent" href="/finance" label={t.spentToday} value={formatMoney(summary.todaySpending, currency)} />,
+                  <StatTile key="goals" href="/goals" label={t.activeGoals} value={summary.activeGoalCount} />,
+                  <StatTile key="habits" href="/habits" label={t.habitsDone} value={`${summary.completedHabitCount}/${summary.activeHabitCount}`} />
+                ]}
+              </StatGrid>
+            ) : null}
 
-      <Card title={t.attention} action={<CardLink href="/tasks" label={t.tasks} />}>
-        {attention.length ? attention.map((task) => <TaskRow key={task.id} task={task} />) : <EmptyState example="call mom tomorrow 9am">{t.emptyEx}</EmptyState>}
-      </Card>
+            <Card title={t.attention} action={<CardLink href="/tasks" label={t.tasks} />}>
+              {attention.length ? attention.map((task) => <TaskRow key={task.id} task={task} />) : <EmptyState example="call mom tomorrow 9am">{t.emptyEx}</EmptyState>}
+            </Card>
 
-      <Card title={t.captureTitle}>
-        <Pressable onPress={() => openCapture()} accessibilityRole="button" accessibilityLabel={t.capture} style={styles.captureBar}>
-          <View style={styles.captureMark}>
-            <Icon name="plus" size={16} color={colors.accentInk} />
-          </View>
-          <Text style={styles.capturePlaceholder} numberOfLines={1}>
-            {t.capturePh}
-          </Text>
-        </Pressable>
-        <View style={styles.starters}>
-          {captureStarters.map((word) => (
-            <Pressable key={word} onPress={() => openCapture(word)} accessibilityRole="button" style={styles.starter}>
-              <Text style={[type.pill, { color: colors.ink }]}>{word.trim()}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </Card>
-
-      {show("next") ? (
-        <Card title={t.nextUp} action={<CardLink href="/plan" label={t.plan} />}>
-          {upcoming.length ? (
-            upcoming.map((event) => (
-              <ListRow
-                key={event.id}
-                href={appHref(event.href)}
-                leading={<Text style={styles.nextTime}>{isToday(event.at) ? formatClock(event.at) : formatDate(event.at, { weekday: "short", hour: "numeric" })}</Text>}
-                title={event.title}
-                subtitle={event.detail}
-              />
-            ))
-          ) : (
-            <EmptyState example="focus 50m AWS @4pm">{t.emptyEx}</EmptyState>
-          )}
-        </Card>
-      ) : null}
-
-      {show("health") ? (
-        <Card title={t.healthToday} action={<CardLink href="/health" label={t.health} />}>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-            <RingGauge value={calorieShare} label={calorieTarget ? `${Math.round(calorieShare * 100)}%` : "–"} />
-            <View style={{ flex: 1, flexDirection: "row", gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <Metric label={t.calories} value={summary.todayCalories} unit={calorieTarget ? `/ ${calorieTarget}` : undefined} />
+          </>
+        }
+        right={
+          <>
+            <Card title={t.captureTitle}>
+              <Pressable onPress={() => openCapture()} accessibilityRole="button" accessibilityLabel={t.capture} style={styles.captureBar}>
+                <View style={styles.captureMark}>
+                  <Icon name="plus" size={16} color={colors.accentInk} />
+                </View>
+                <Text style={styles.capturePlaceholder} numberOfLines={1}>
+                  {t.capturePh}
+                </Text>
+              </Pressable>
+              <View style={styles.starters}>
+                {captureStarters.map((word) => (
+                  <Pressable key={word} onPress={() => openCapture(word)} accessibilityRole="button" style={styles.starter}>
+                    <Text style={[type.pill, { color: colors.ink }]}>{word.trim()}</Text>
+                  </Pressable>
+                ))}
               </View>
-              <View style={{ flex: 1 }}>
-                <Metric label={t.workouts} value={summary.todayWorkoutMinutes} unit={t.min} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Metric label={t.sleep} value={formatSleepDuration(summary.todaySleepMinutes)} />
-              </View>
-            </View>
-          </View>
-        </Card>
-      ) : null}
+            </Card>
+
+            {show("next") ? (
+              <Card title={t.nextUp} action={<CardLink href="/plan" label={t.plan} />}>
+                {upcoming.length ? (
+                  upcoming.map((event) => (
+                    <ListRow
+                      key={event.id}
+                      href={appHref(event.href)}
+                      leading={<Text style={styles.nextTime}>{isToday(event.at) ? formatClock(event.at) : formatDate(event.at, { weekday: "short", hour: "numeric" })}</Text>}
+                      title={event.title}
+                      subtitle={event.detail}
+                    />
+                  ))
+                ) : (
+                  <EmptyState example="focus 50m AWS @4pm">{t.emptyEx}</EmptyState>
+                )}
+              </Card>
+            ) : null}
+
+            {show("health") ? (
+              <Card title={t.healthToday} action={<CardLink href="/health" label={t.health} />}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+                  <RingGauge value={calorieShare} label={calorieTarget ? `${Math.round(calorieShare * 100)}%` : "–"} />
+                  <View style={{ flex: 1, flexDirection: "row", gap: 8 }}>
+                    <View style={{ flex: 1 }}>
+                      <Metric label={t.calories} value={summary.todayCalories} unit={calorieTarget ? `/ ${calorieTarget}` : undefined} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Metric label={t.workouts} value={summary.todayWorkoutMinutes} unit={t.min} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Metric label={t.sleep} value={formatSleepDuration(summary.todaySleepMinutes)} />
+                    </View>
+                  </View>
+                </View>
+              </Card>
+            ) : null}
+          </>
+        }
+      />
     </Screen>
   );
 }

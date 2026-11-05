@@ -1,6 +1,6 @@
 import { router, usePathname } from "expo-router";
 import { useEffect, useRef, type ReactNode } from "react";
-import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View, type TextInputProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, flip, Glass, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
 import { backdrop, colors, fonts, radius } from "@/components/theme";
@@ -9,6 +9,34 @@ import { t } from "@/lib/i18n";
 
 // Space the tab bar takes at the bottom of a tab screen.
 export const TAB_BAR_SPACE = 120;
+
+// Widest the content column grows on iPad, so cards and rows keep a readable width.
+export const CONTENT_MAX_WIDTH = 760;
+// A screen laid out in two columns (Today) may grow wider.
+const WIDE_MAX_WIDTH = 1180;
+
+/** True on an iPad-sized window, where a screen can show two columns side by side. */
+export function useWide() {
+  return useWindowDimensions().width >= 900;
+}
+
+/** Two columns side by side on iPad; on a phone, left then right in one column, so the order stays the same. */
+export function Columns({ left, right }: { left: ReactNode; right: ReactNode }) {
+  if (!useWide()) {
+    return (
+      <>
+        {left}
+        {right}
+      </>
+    );
+  }
+  return (
+    <View style={styles.columns}>
+      <View style={styles.columnHalf}>{left}</View>
+      <View style={styles.columnHalf}>{right}</View>
+    </View>
+  );
+}
 
 // Stack screens: their title and the example line on the capture bar. Each opens on its own, with no row of
 // other sections across the top, so a section only shows its own things.
@@ -45,8 +73,10 @@ export function openCapture(text?: string) {
 }
 
 // Soft forest light behind everything. Tab screens pass header; stack screens get theirs from the route.
+// On a wide screen (iPad) the content sits in a centered column, so cards and rows keep a readable width.
 export function Screen({
   header,
+  wide,
   stackAction,
   banner,
   refreshing,
@@ -54,6 +84,7 @@ export function Screen({
   children
 }: {
   header?: ReactNode;
+  wide?: boolean; // the screen uses Columns, so it may grow past the usual column width
   stackAction?: { label: string; onPress: () => void };
   banner?: ReactNode;
   refreshing?: boolean;
@@ -67,7 +98,7 @@ export function Screen({
       <ScrollView
         style={styles.fill}
         contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={[styles.content, { paddingTop: banner ? 8 : insets.top + 8, paddingBottom: header ? TAB_BAR_SPACE : 48 }]}
+        contentContainerStyle={[styles.content, styles.column, wide && { maxWidth: WIDE_MAX_WIDTH }, { paddingTop: banner ? 8 : insets.top + 8, paddingBottom: header ? TAB_BAR_SPACE : 48 }]}
         keyboardShouldPersistTaps="handled"
         refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.onShellMuted} /> : undefined}
       >
@@ -284,6 +315,9 @@ const styles = StyleSheet.create({
   fill: { flex: 1 },
   shell: { flex: 1, backgroundColor: colors.shell, experimental_backgroundImage: backdrop },
   content: { paddingHorizontal: 20, gap: 14 },
+  column: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
+  columns: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
+  columnHalf: { flex: 1, minWidth: 0, gap: 14 },
   tabHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, paddingBottom: 2 },
   headerButton: { height: 44, minWidth: 44, borderRadius: 22 },
   glassPress: { flexGrow: 1, minHeight: 44, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" },
