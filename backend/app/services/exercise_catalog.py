@@ -4,7 +4,7 @@ Data: free-exercise-db (https://github.com/yuhonas/free-exercise-db), released i
 Unlicense. A copy lives in app/data/free_exercise_db.json so the server never needs GitHub to start; only the
 exercise photos are loaded from the dataset's repository, by the phone.
 
-Loading: migration 0008 inserts the catalogue when it creates the table. To pick up a newer copy of the file
+Loading: migration 0009 inserts the catalogue when it creates the table. To pick up a newer copy of the file
 later, replace the JSON and run `python -m app.services.exercise_catalog` (an upsert; safe to repeat).
 
 Rules for a user:

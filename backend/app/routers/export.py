@@ -33,6 +33,7 @@ TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("focus_sessions", m.FocusSession, m.FocusSession.started_at),
     ("expenses", m.Expense, m.Expense.spent_at),
     ("bills", m.Bill, m.Bill.due_at),
+    ("budgets", m.Budget, m.Budget.month),
     ("bank_transactions", m.BankTransaction, m.BankTransaction.received_at),
     ("push_subscriptions", m.PushSubscription, m.PushSubscription.created_at),
     ("habits", m.Habit, m.Habit.created_at),

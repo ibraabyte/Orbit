@@ -2,11 +2,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Badge, Card, CardLink, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, StatGrid, StatTile, type } from "@/components/drift";
+import { MorningBriefCard } from "@/components/morning-brief-card";
 import { useOverlays } from "@/components/overlays";
 import { ErrorState, HeaderButton, OfflineBanner, openCapture, Screen, Skeleton, TabHeader } from "@/components/screen";
 import { TaskRow } from "@/components/task-row";
 import { colors, fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useMorningBrief } from "@/hooks/use-morning-brief";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { appHref } from "@/lib/app-href";
 import { buildCalendarDays } from "@/lib/calendar";
@@ -17,12 +19,12 @@ import { formatFocusDuration } from "@/lib/focus";
 import { foodSummary } from "@/lib/food";
 import { captureStarters, formatClock, formatDate, formatIn, isArabic, t } from "@/lib/i18n";
 import { peopleSummary } from "@/lib/people";
+import { prayerNamesEn } from "@/lib/prayer-times";
 import { formatSleepDuration } from "@/lib/sleep";
-
-const prayerNames: Record<string, string> = { الفجر: "Fajr", الظهر: "Dhuhr", العصر: "Asr", المغرب: "Maghrib", العشاء: "Isha" };
 
 const hiddenKey = "orbit.today.hidden";
 const optional = [
+  ["brief", t.morningBrief],
   ["digest", t.digest],
   ["quick", t.quick],
   ["next", t.nextUp],
@@ -37,15 +39,20 @@ export default function Today() {
   const { next: prayer } = usePrayerTimes();
   const { sheet } = useOverlays();
   const [hidden, setHidden] = useState<OptionalSection[]>([]);
+  const show = (section: OptionalSection) => !hidden.includes(section);
+  // Not asked until the saved choice of hidden sections is read, so a hidden brief is never fetched.
+  const [choicesRead, setChoicesRead] = useState(false);
+  const brief = useMorningBrief(choicesRead && show("brief"));
 
   useEffect(() => {
     AsyncStorage.getItem(hiddenKey)
       .then((saved) => saved && setHidden(JSON.parse(saved)))
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => setChoicesRead(true));
   }, []);
 
   const summary = useMemo(() => summarizeDashboard(data), [data]);
-  const brief = useMemo(() => buildDailyBrief(data).slice(0, 5), [data]);
+  const digest = useMemo(() => buildDailyBrief(data).slice(0, 5), [data]);
   const food = useMemo(() => foodSummary(data), [data]);
   const people = useMemo(() => peopleSummary(data), [data]);
   const upcoming = useMemo(() => {
@@ -61,7 +68,6 @@ export default function Today() {
   const calorieTarget = data.profile?.daily_calorie_target ?? null;
   const calorieShare = calorieTarget ? Math.min(1, summary.todayCalories / calorieTarget) : 0;
   const hasData = data.profile !== null || data.tasks.length > 0;
-  const show = (section: OptionalSection) => !hidden.includes(section);
 
   const customize = () =>
     sheet({
@@ -76,18 +82,24 @@ export default function Today() {
       }))
     });
 
+  // Pull-to-refresh also asks for a fresh brief; a failed brief never stops the rest from reloading.
+  const reload = () => {
+    void brief.refresh();
+    return refresh();
+  };
+
   const header = <TabHeader kicker={formatDate(new Date(), { weekday: "long", day: "numeric", month: "short" })} title={t.today} action={<HeaderButton icon="sliders" label={t.customize} onPress={customize} />} />;
 
   if (!hasData) {
     return (
-      <Screen header={header} refreshing={loading} onRefresh={refresh}>
+      <Screen header={header} refreshing={loading} onRefresh={reload}>
         {loading ? <Skeleton /> : <ErrorState detail={error} onRetry={refresh} />}
       </Screen>
     );
   }
 
   return (
-    <Screen header={header} banner={error ? <OfflineBanner message={t.offline} /> : undefined} refreshing={loading} onRefresh={refresh}>
+    <Screen header={header} banner={error ? <OfflineBanner message={t.offline} /> : undefined} refreshing={loading} onRefresh={reload}>
       {prayer ? (
         <Hero style={{ gap: 14, paddingVertical: 14 }}>
           <View style={styles.prayerMark}>
@@ -96,17 +108,19 @@ export default function Today() {
           <View style={{ flex: 1 }}>
             <Text style={[type.tileLabel, { fontSize: 12, color: colors.accentMuted }]}>{t.nextPrayer}</Text>
             <Text style={[type.h2, { color: colors.heroInk }]}>
-              {isArabic ? prayer.label : (prayerNames[prayer.label] ?? prayer.label)} · {formatClock(prayer.at)}
+              {isArabic ? prayer.label : prayerNamesEn[prayer.name]} · {formatClock(prayer.at)}
             </Text>
           </View>
           <Text style={[type.barValue, { color: colors.heroInk }]}>{formatIn(Math.max(0, Math.round((prayer.at.getTime() - Date.now()) / 60_000)))}</Text>
         </Hero>
       ) : null}
 
+      {show("brief") ? <MorningBriefCard state={brief.state} data={data} retry={() => void brief.refresh()} /> : null}
+
       {show("digest") ? (
-        <Card title={t.digest} action={<Badge>{brief.length}</Badge>}>
-          {brief.length ? (
-            brief.map((item) => (
+        <Card title={t.digest} action={<Badge>{digest.length}</Badge>}>
+          {digest.length ? (
+            digest.map((item) => (
               <ListRow
                 key={item.id}
                 href={appHref(item.href)}

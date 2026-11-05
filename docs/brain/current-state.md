@@ -106,3 +106,7 @@ src/lib/app-href.ts          (غير متتبع)
 ## دمج Liquid Glass وربط الذكاء الاصطناعي — 2026-11-02
 
 بطلب المستخدم دُمج `design/liquid-glass` في `main` عبر [PR #17](https://github.com/ibraabyte/Orbit/pull/17) بالتزام `ab2c050`، بعد إصلاح تنسيق `ruff` الذي أفشل CI. نجح CI على الـPR، ومحليًا 239 اختبار خادم و214 اختبار تطبيق وTypeScript. لم يُنشر الخادم ولا التطبيق بعد الدمج. لم تُجرَّب الميزات بحساب ChatGPT أو Google حقيقي، والخطوة التالية النشر ثم التجربة. فرع `design/liquid-glass` ما زال موجودًا.
+
+## الميزانية وملخص الصباح واسأل Orbit والويدجت — 2026-11-03
+
+بنيت أربع ميزات بايجنتات مع مراجعات، ودُمجت عبر [PR #23](https://github.com/ibraabyte/Orbit/pull/23). لم تُنشر على الخادم ولم تُجرَّب على الهاتف، والخطوة التالية `alembic upgrade head` ثم بناء EAS 0.4.0. التفاصيل في [التسليم](handoffs/2026-11-03-four-features.md) و[القرار](decisions/2026-11-03-ai-consent-and-widget-privacy.md).

@@ -243,6 +243,7 @@ function dashboardData(overrides: Partial<DashboardData> = {}): DashboardData {
     habitLogs: [],
     goals: [],
     goalMilestones: [],
+    budgets: [],
     journalEntries: [],
     expenses: [],
     bills: [],
@@ -426,6 +427,7 @@ describe("dashboard summaries", () => {
         }
       ],
       goalMilestones: [],
+      budgets: [],
       journalEntries: [
         {
           id: "journal-1",

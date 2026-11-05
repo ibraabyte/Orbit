@@ -23,6 +23,15 @@ export type SeerrResult = {
   mediaInfo?: { status: keyof typeof MEDIA_STATUS };
 };
 
+// What GET movie/:id and tv/:id add on top of a search result.
+export type SeerrDetails = SeerrResult & {
+  tagline?: string;
+  runtime?: number;
+  numberOfSeasons?: number;
+  voteAverage?: number;
+  genres?: { id: number; name: string }[];
+};
+
 export type SeerrRequest = {
   id: number;
   status: keyof typeof REQUEST_STATUS;
@@ -78,7 +87,7 @@ export function createSeerrClient(call: SeerrCall) {
     request: (mediaType: SeerrMediaType, tmdbId: number) =>
       call<SeerrRequest>("POST", "request", mediaType === "tv" ? { mediaType, mediaId: tmdbId, seasons: "all" } : { mediaType, mediaId: tmdbId }),
     // Requests carry only a TMDB id; this fetches the name and poster to show with them.
-    details: (mediaType: SeerrMediaType, tmdbId: number) => call<SeerrResult>("GET", `${mediaType}/${tmdbId}`),
+    details: (mediaType: SeerrMediaType, tmdbId: number) => call<SeerrDetails>("GET", `${mediaType}/${tmdbId}`).then((item) => ({ ...item, mediaType })),
     approve: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/approve`),
     decline: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/decline`),
     cancel: (requestId: number) => call<void>("DELETE", `request/${requestId}`)

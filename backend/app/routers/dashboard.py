@@ -38,8 +38,11 @@ LISTS: list[tuple[str, type[m.Base], Any, int]] = [
     ("goals", m.Goal, m.Goal.updated_at.desc(), 60),
     ("goalMilestones", m.GoalMilestone, m.GoalMilestone.created_at.desc(), 240),
     ("journalEntries", m.JournalEntry, m.JournalEntry.entry_date.desc(), 90),
-    ("expenses", m.Expense, m.Expense.spent_at.desc(), 120),
+    # ponytail: budgets add up these rows on the phone, so a very heavy spender (over 1000 expenses) is undercounted;
+    # the upgrade is a server-side month total per category.
+    ("expenses", m.Expense, m.Expense.spent_at.desc(), 1000),
     ("bills", m.Bill, m.Bill.due_at.asc(), 80),
+    ("budgets", m.Budget, m.Budget.month.desc(), 240),
 ]
 
 # Narrower than "everything the user owns", same as before.
