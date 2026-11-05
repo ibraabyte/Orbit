@@ -286,5 +286,5 @@ const styles = StyleSheet.create({
   gateMark: { width: 64, height: 64, borderRadius: 16, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
   gateGlyph: { fontFamily: fonts.bold, fontSize: 22, color: colors.urgentInk },
   // The AI summary is Arabic: right-to-left, whatever the rest of the screen does.
-  arabic: { fontFamily: "Almarai_400Regular", fontSize: 14, lineHeight: 25, color: colors.ink, writingDirection: "rtl", textAlign: "right" }
+  arabic: { fontFamily: "IBMPlexSansArabic_400Regular", fontSize: 14, lineHeight: 25, color: colors.ink, writingDirection: "rtl", textAlign: "right" }
 });

@@ -1,10 +1,10 @@
-import { Almarai_400Regular, Almarai_700Bold, Almarai_800ExtraBold } from "@expo-google-fonts/almarai";
 import {
-  SpaceGrotesk_400Regular,
-  SpaceGrotesk_500Medium,
-  SpaceGrotesk_600SemiBold,
-  SpaceGrotesk_700Bold
-} from "@expo-google-fonts/space-grotesk";
+  IBMPlexSansArabic_400Regular,
+  IBMPlexSansArabic_500Medium,
+  IBMPlexSansArabic_600SemiBold,
+  IBMPlexSansArabic_700Bold
+} from "@expo-google-fonts/ibm-plex-sans-arabic";
+import { JetBrainsMono_400Regular, JetBrainsMono_500Medium, JetBrainsMono_600SemiBold, JetBrainsMono_700Bold } from "@expo-google-fonts/jetbrains-mono";
 import Feather from "@expo/vector-icons/Feather";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
@@ -31,13 +31,14 @@ export default function RootLayout() {
   const [session, setSession] = useState<AppSession | null | undefined>(undefined);
   // If a font fails to load, carry on with the system font rather than a blank screen.
   const [fontsLoaded, fontError] = useFonts({
-    SpaceGrotesk_400Regular,
-    SpaceGrotesk_500Medium,
-    SpaceGrotesk_600SemiBold,
-    SpaceGrotesk_700Bold,
-    Almarai_400Regular,
-    Almarai_700Bold,
-    Almarai_800ExtraBold,
+    JetBrainsMono_400Regular,
+    JetBrainsMono_500Medium,
+    JetBrainsMono_600SemiBold,
+    JetBrainsMono_700Bold,
+    IBMPlexSansArabic_400Regular,
+    IBMPlexSansArabic_500Medium,
+    IBMPlexSansArabic_600SemiBold,
+    IBMPlexSansArabic_700Bold,
     ...Feather.font
   });
 
