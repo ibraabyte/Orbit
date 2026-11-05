@@ -1,6 +1,6 @@
 import { financeCategories } from "@/lib/finance";
 import { groceryCategories } from "@/lib/food";
-import type { BillRecurrence, CaptureType, FinanceCategory, GroceryCategory, HabitFrequency, JournalMood, MealPlanType, RecurrenceRule, TaskPriority, WeightUnit } from "@/lib/types";
+import type { BillRecurrence, CaptureType, FinanceCategory, GroceryCategory, HabitFrequency, MealPlanType, RecurrenceRule, TaskPriority, WeightUnit } from "@/lib/types";
 
 export type QuickAddKind =
   | "task"
@@ -9,16 +9,12 @@ export type QuickAddKind =
   | "meal"
   | "mealPlan"
   | "grocery"
-  | "person"
   | "workout"
   | "weight"
   | "sleep"
-  | "focus"
   | "expense"
   | "bill"
-  | "habit"
-  | "goal"
-  | "journal";
+  | "habit";
 
 export type QuickAddDraft = {
   kind: QuickAddKind;
@@ -38,23 +34,17 @@ export type QuickAddDraft = {
   mealType: MealPlanType;
   groceryQuantity: string | null;
   groceryCategory: GroceryCategory;
-  personRelationship: string | null;
-  contactMethod: string | null;
-  birthday: string | null;
-  favorite: boolean;
   durationMinutes: number | null;
   weight: number | null;
   unit: WeightUnit;
   sleepMinutes: number | null;
   sleepQuality: number | null;
-  focusEnergy: number | null;
   amount: number | null;
   currency: string;
   financeCategory: FinanceCategory;
   billRecurrence: BillRecurrence;
   billAutopay: boolean;
   frequency: HabitFrequency;
-  mood: JournalMood;
 };
 
 export type QuickAddValidation = {
@@ -87,17 +77,11 @@ const kindAliases: Record<string, QuickAddKind> = {
   grocery: "grocery",
   groceries: "grocery",
   shopping: "grocery",
-  person: "person",
-  people: "person",
-  contact: "person",
   workout: "workout",
   train: "workout",
   weight: "weight",
   sleep: "sleep",
   recovery: "sleep",
-  focus: "focus",
-  session: "focus",
-  deepwork: "focus",
   expense: "expense",
   spend: "expense",
   purchase: "expense",
@@ -105,10 +89,7 @@ const kindAliases: Record<string, QuickAddKind> = {
   subscription: "bill",
   sub: "bill",
   habit: "habit",
-  routine: "habit",
-  goal: "goal",
-  journal: "journal",
-  mood: "journal"
+  routine: "habit"
 };
 
 export function parseQuickAdd(input: string, options: { defaultWeightUnit?: WeightUnit; now?: Date } = {}): QuickAddDraft {
@@ -127,7 +108,6 @@ export function parseQuickAdd(input: string, options: { defaultWeightUnit?: Weig
   const durationMinutes = extractNumberToken(body, /\b(\d+(?:\.\d+)?)\s*(?:m|min|mins|minutes)\b/i);
   const sleepMinutes = extractSleepMinutes(kind, body);
   const sleepQuality = extractSleepQuality(kind, body);
-  const focusEnergy = extractFocusEnergy(kind, body);
   const money = extractMoneyToken(kind, bodyWithoutDateTokens);
   const weightMatch =
     kind === "weight" ? bodyWithoutDateTokens.match(/\b(\d+(?:\.\d+)?)\s*(kg|lb)?\b/i) : body.match(/\b(\d+(?:\.\d+)?)\s*(kg|lb)\b/i);
@@ -136,19 +116,14 @@ export function parseQuickAdd(input: string, options: { defaultWeightUnit?: Weig
   const mealType = extractMealType(body);
   const groceryQuantity = extractGroceryQuantity(kind, body);
   const groceryCategory = extractGroceryCategory(body, tags);
-  const personRelationship = extractPersonRelationship(kind, body, tags);
-  const contactMethod = extractPersonContactMethod(kind, body);
-  const birthday = extractPersonBirthday(kind, body);
-  const favorite = /\b(favorite|fav)\b/i.test(body);
   const billRecurrence = extractBillRecurrence(body);
   const billAutopay = extractBillAutopay(kind, body);
-  const mood = extractMood(body);
   const cleaned = cleanBody(kind, groceryQuantity.body);
 
   return {
     kind,
     title: cleaned || fallbackTitle(kind),
-    note: kind === "journal" || kind === "capture" ? cleaned || null : null,
+    note: kind === "capture" ? cleaned || null : null,
     tags,
     priority,
     recurrence,
@@ -163,23 +138,17 @@ export function parseQuickAdd(input: string, options: { defaultWeightUnit?: Weig
     mealType,
     groceryQuantity: groceryQuantity.quantity,
     groceryCategory,
-    personRelationship,
-    contactMethod,
-    birthday,
-    favorite,
     durationMinutes,
     weight: weightMatch ? Number(weightMatch[1]) : null,
     unit: (weightMatch?.[2]?.toLowerCase() as WeightUnit | undefined) ?? options.defaultWeightUnit ?? "kg",
     sleepMinutes,
     sleepQuality,
-    focusEnergy,
     amount: money.amount,
     currency: money.currency,
     financeCategory,
     billRecurrence,
     billAutopay,
-    frequency,
-    mood
+    frequency
   };
 }
 
@@ -193,10 +162,6 @@ export function validateQuickAddDraft(draft: QuickAddDraft, input = ""): QuickAd
 
   if (draft.kind === "sleep" && !draft.sleepMinutes) {
     return { ok: false, message: "Sleep commands need a duration like 7.5h or 450min." };
-  }
-
-  if (draft.kind === "focus" && !draft.durationMinutes) {
-    return { ok: false, message: "Focus commands need a duration like 50min." };
   }
 
   if (draft.kind === "expense" && !draft.amount) {
@@ -233,12 +198,6 @@ function extractTaskRecurrence(kind: QuickAddKind, value: string): RecurrenceRul
   if (recurrence === "weekly" || recurrence === "week") return "weekly";
   if (recurrence === "monthly" || recurrence === "month") return "monthly";
   return null;
-}
-
-function extractMood(value: string): JournalMood {
-  const mood = value.match(/\b(great|good|neutral|low|bad)\b/i)?.[1]?.toLowerCase();
-  if (mood === "great" || mood === "good" || mood === "neutral" || mood === "low" || mood === "bad") return mood;
-  return "neutral";
 }
 
 function extractDateToken(value: string, marker: "@" | "~", now = new Date()) {
@@ -461,12 +420,6 @@ function extractSleepQuality(kind: QuickAddKind, value: string) {
   return match ? Number(match[1]) : null;
 }
 
-function extractFocusEnergy(kind: QuickAddKind, value: string) {
-  if (kind !== "focus") return null;
-  const match = value.match(/\b(?:energy|e)\s*([1-5])\b/i);
-  return match ? Number(match[1]) : null;
-}
-
 function extractFinanceCategory(value: string, tags: string[]): FinanceCategory {
   const tagCategory = tags.find((tag) => financeCategories.includes(tag.toLowerCase() as FinanceCategory));
   if (tagCategory) return tagCategory.toLowerCase() as FinanceCategory;
@@ -485,24 +438,6 @@ function extractGroceryCategory(value: string, tags: string[]): GroceryCategory 
   if (tagCategory) return tagCategory.toLowerCase() as GroceryCategory;
   const textCategory = groceryCategories.find((category) => new RegExp(`\\b${category}\\b`, "i").test(value));
   return textCategory ?? "other";
-}
-
-function extractPersonRelationship(kind: QuickAddKind, value: string, tags: string[]) {
-  if (kind !== "person") return null;
-  const explicit = value.match(/\b(?:relationship|rel|as)\s+(.+?)(?=\s+(?:via|contact|phone|email|birthday|bday|favorite|fav)\b|\s[#@~]|$)/i)?.[1];
-  const relationship = explicit ?? tags[0] ?? null;
-  return relationship ? relationship.trim() : null;
-}
-
-function extractPersonContactMethod(kind: QuickAddKind, value: string) {
-  if (kind !== "person") return null;
-  const contact = value.match(/\b(?:via|contact|phone|email)\s+(.+?)(?=\s+(?:relationship|rel|as|birthday|bday|favorite|fav)\b|\s[#@~]|$)/i)?.[1];
-  return contact ? contact.trim() : null;
-}
-
-function extractPersonBirthday(kind: QuickAddKind, value: string) {
-  if (kind !== "person") return null;
-  return value.match(/\b(?:birthday|bday)\s+(\d{4}-\d{2}-\d{2})\b/i)?.[1] ?? null;
 }
 
 const groceryQuantityUnits =
@@ -585,13 +520,6 @@ function cleanBody(kind: QuickAddKind, value: string) {
       .replace(/\b(breakfast|lunch|dinner|snack|other)\b/gi, "");
   }
   if (kind === "grocery") cleaned = cleaned.replace(/\b(produce|protein|dairy|pantry|frozen|household|other)\b/gi, "");
-  if (kind === "person") {
-    cleaned = cleaned
-      .replace(/\b(?:relationship|rel|as)\s+.+?(?=\s+(?:via|contact|phone|email|birthday|bday|favorite|fav)\b|\s[#@~]|$)/gi, "")
-      .replace(/\b(?:via|contact|phone|email)\s+.+?(?=\s+(?:relationship|rel|as|birthday|bday|favorite|fav)\b|\s[#@~]|$)/gi, "")
-      .replace(/\b(?:birthday|bday)\s+\d{4}-\d{2}-\d{2}\b/gi, "")
-      .replace(/\b(favorite|fav)\b/gi, "");
-  }
   if (kind === "workout") cleaned = cleaned.replace(/\b\d+(?:\.\d+)?\s*(?:cal|kcal|m|min|mins|minutes)\b/gi, "");
   if (kind === "weight") cleaned = cleaned.replace(/\b\d+(?:\.\d+)?\s*(?:kg|lb)?\b/gi, "");
   if (kind === "sleep") {
@@ -599,7 +527,6 @@ function cleanBody(kind: QuickAddKind, value: string) {
       .replace(/\b\d+(?:\.\d+)?\s*(?:h|hr|hrs|hour|hours|m|min|mins|minutes)\b/gi, "")
       .replace(/\b(?:quality|q)\s*[1-5]\b/gi, "");
   }
-  if (kind === "focus") cleaned = cleaned.replace(/\b\d+(?:\.\d+)?\s*(?:m|min|mins|minutes)\b/gi, "").replace(/\b(?:energy|e)\s*[1-5]\b/gi, "");
   if (kind === "task") cleaned = cleaned.replace(/\b(?:repeat|repeats|every)\s+(?:daily|weekly|monthly|day|week|month)\b/gi, "");
   if (kind === "expense" || kind === "bill") cleaned = cleaned.replace(/\$?\s*\b\d+(?:\.\d+)?\s*(?:[A-Za-z]{3})?\b/gi, "");
   if (kind === "bill") {
@@ -608,7 +535,6 @@ function cleanBody(kind: QuickAddKind, value: string) {
       .replace(/\b(?:manual|no[-\s]?autopay|not[-\s]?autopay|autopay|auto[-\s]?pay|paid automatically)\b/gi, "");
   }
   if (kind === "habit") cleaned = cleaned.replace(/\b(daily|weekly)\b/gi, "");
-  if (kind === "journal") cleaned = cleaned.replace(/\b(great|good|neutral|low|bad)\b/gi, "");
 
   return cleaned.replace(/\s+/g, " ").trim();
 }
@@ -621,16 +547,12 @@ function fallbackTitle(kind: QuickAddKind) {
     meal: "Untitled meal",
     mealPlan: "Untitled meal plan",
     grocery: "Untitled grocery item",
-    person: "Untitled person",
     workout: "Untitled workout",
     weight: "Weight log",
     sleep: "Sleep log",
-    focus: "Focus session",
     expense: "Untitled expense",
     bill: "Untitled bill",
-    habit: "Untitled habit",
-    goal: "Untitled goal",
-    journal: "Journal entry"
+    habit: "Untitled habit"
   };
   return labels[kind];
 }

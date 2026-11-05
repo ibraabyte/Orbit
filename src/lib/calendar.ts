@@ -1,8 +1,7 @@
 import { localDateKey } from "@/lib/insights";
-import { upcomingBirthdays } from "@/lib/people";
 import type { DashboardData } from "@/lib/types";
 
-export type CalendarEventKind = "task" | "reminder" | "meal" | "mealPlan" | "grocery" | "person" | "workout" | "weight" | "sleep" | "focus" | "expense" | "bill" | "journal" | "goal";
+export type CalendarEventKind = "task" | "reminder" | "meal" | "mealPlan" | "grocery" | "workout" | "weight" | "sleep" | "expense" | "bill";
 
 export type CalendarEvent = {
   id: string;
@@ -111,24 +110,6 @@ export function buildCalendarEvents(data: DashboardData, now = new Date()): Cale
         at: `${item.due_at}T10:00:00`,
         href: "/food"
       })),
-    ...data.people
-      .filter((person) => person.next_follow_up_at)
-      .map((person) => ({
-        id: `person-follow-up-${person.id}`,
-        kind: "person" as const,
-        title: person.name,
-        detail: "Follow-up",
-        at: `${person.next_follow_up_at}T10:00:00`,
-        href: "/people"
-      })),
-    ...upcomingBirthdays(data.people, 370, now).map((event) => ({
-      id: `person-birthday-${event.person.id}`,
-      kind: "person" as const,
-      title: event.person.name,
-      detail: event.age === null ? "Birthday" : `Birthday · ${event.age}`,
-      at: `${event.date}T09:00:00`,
-      href: "/people"
-    })),
     ...data.workouts.map((workout) => ({
       id: `workout-${workout.id}`,
       kind: "workout" as const,
@@ -153,16 +134,6 @@ export function buildCalendarEvents(data: DashboardData, now = new Date()): Cale
       at: `${log.sleep_date}T09:00:00`,
       href: "/health"
     })),
-    ...data.focusSessions
-      .filter((session) => session.status !== "cancelled")
-      .map((session) => ({
-        id: `focus-${session.id}`,
-        kind: "focus" as const,
-        title: session.title,
-        detail: `${session.duration_minutes} minutes · ${session.status}`,
-        at: session.started_at,
-        href: "/focus"
-      })),
     ...data.expenses.map((expense) => ({
       id: `expense-${expense.id}`,
       kind: "expense" as const,
@@ -180,24 +151,6 @@ export function buildCalendarEvents(data: DashboardData, now = new Date()): Cale
         detail: `${bill.amount} ${bill.currency} · ${bill.recurrence}${bill.autopay ? " · autopay" : ""}`,
         at: `${bill.due_at}T12:00:00`,
         href: "/finance"
-      })),
-    ...data.journalEntries.map((entry) => ({
-      id: `journal-${entry.id}`,
-      kind: "journal" as const,
-      title: entry.title || "Journal entry",
-      detail: `Mood: ${entry.mood}`,
-      at: `${entry.entry_date}T12:00:00`,
-      href: "/journal"
-    })),
-    ...data.goals
-      .filter((goal) => goal.target_at)
-      .map((goal) => ({
-        id: `goal-${goal.id}`,
-        kind: "goal" as const,
-        title: goal.title,
-        detail: "Goal target",
-        at: `${goal.target_at}T12:00:00`,
-        href: "/goals"
       }))
   ];
 }
@@ -216,15 +169,11 @@ export function calendarEventCounts(days: CalendarDay[]) {
       meal: 0,
       mealPlan: 0,
       grocery: 0,
-      person: 0,
       workout: 0,
       weight: 0,
       sleep: 0,
-      focus: 0,
       expense: 0,
-      bill: 0,
-      journal: 0,
-      goal: 0
+      bill: 0
     }
   );
 }

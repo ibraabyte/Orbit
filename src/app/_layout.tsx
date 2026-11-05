@@ -18,7 +18,6 @@ import { Loading } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { clearDashboardCache, DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
-import { ServerStatusProvider } from "@/hooks/use-server-status";
 import { clearWidget } from "@/hooks/use-widget-sync";
 import { hasServer, watchSession, type AppSession } from "@/lib/backend";
 
@@ -78,7 +77,7 @@ export default function RootLayout() {
       </Stack.Protected>
       {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
       <Stack.Protected guard={Boolean(session)}>
-        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "goals", "habits", "health", "integrations", "journal", "library", "media", "people", "servers", "settings", "tasks", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries"].map((name) => (
+        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "integrations", "library", "media", "settings", "tasks", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries"].map((name) => (
           <Stack.Screen key={name} name={name} />
         ))}
       </Stack.Protected>
@@ -95,9 +94,7 @@ export default function RootLayout() {
       {session ? (
         <AppLock>
           <DashboardDataProvider key={session.userId} userId={session.userId}>
-            <ServerStatusProvider>
-              <OverlayProvider>{stack}</OverlayProvider>
-            </ServerStatusProvider>
+            <OverlayProvider>{stack}</OverlayProvider>
             {/* After the stack, so a notification tap that opened the app navigates once it's mounted. */}
             <ReminderNotifications />
           </DashboardDataProvider>
