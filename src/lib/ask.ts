@@ -1,4 +1,4 @@
-import { AI_PROVIDER_NAMES, type IntegrationsOverview } from "@/lib/integrations";
+import { aiChoicesOf, aiName, type AiChoiceName, type IntegrationsOverview } from "@/lib/integrations";
 import { briefCacheKey } from "@/lib/morning-brief";
 
 // Ask Orbit: questions answered by the user's own AI from their data. The server builds the data and sends it;
@@ -14,26 +14,40 @@ export type AskTurn = { role: "user" | "assistant"; content: string };
 // failed: the text shown for the error that stopped a question from being answered.
 export type ChatItem = AskTurn & { id: number; failed?: string };
 
-// The AI the server will use, in the order backend/app/services/whoop_ai.py `access_for` picks one.
-// A server key is Claude's. null when there is none.
-export function activeProvider(overview: IntegrationsOverview): string | null {
-  if (overview.chatgpt.status === "connected") return "ChatGPT";
-  if (overview.ai.connected && overview.ai.provider) return AI_PROVIDER_NAMES[overview.ai.provider];
-  return overview.ai.configured ? "Claude" : null;
+// The AI the server will use: the picked one if still connected, else the default (backend/app/services/whoop_ai.py
+// `access_for`). A server key is Claude's. null when there is none.
+export function activeProvider(overview: IntegrationsOverview, picked: AiChoiceName | null = null): string | null {
+  return aiName(aiChoicesOf(overview), picked);
 }
 
 // Not under "orbit.cache.", so signing out keeps it, and per person, so another account on this phone is asked again.
 export const consentKey = (userId: string) => `orbit.ask.consent.${userId}`;
 
-// The AI the person agreed to share with, or null for anything that is not a clear acceptance.
+// The AIs the person agreed to share with, as one text ("Claude, OpenAI"), or null for anything that is not a clear
+// acceptance. Agreeing for one more AI adds it to the list (consentWith).
+const CONSENT_SEPARATOR = ", ";
+
 export function parseConsent(raw: string | null): string | null {
   try {
     const value: unknown = JSON.parse(raw ?? "null");
-    const provider = value && typeof value === "object" ? (value as { provider?: unknown }).provider : null;
+    if (!value || typeof value !== "object") return null;
+    const { provider, providers } = value as { provider?: unknown; providers?: unknown };
+    if (Array.isArray(providers)) {
+      const names = providers.filter((name): name is string => typeof name === "string" && name.length > 0);
+      return names.length ? names.join(CONSENT_SEPARATOR) : null;
+    }
     return typeof provider === "string" && provider ? provider : null;
   } catch {
     return null;
   }
+}
+
+export const consentNames = (accepted: string | null) => (accepted ? accepted.split(CONSENT_SEPARATOR) : []);
+
+// What to save when the person agrees for `provider` too. `provider` stays for older app versions, which read only that.
+export function consentWith(accepted: string | null, provider: string) {
+  const providers = [...consentNames(accepted).filter((name) => name !== provider), provider];
+  return JSON.stringify({ provider, providers });
 }
 
 export type AskGate = "loading" | "no-ai" | "consent" | "ready";
@@ -42,7 +56,7 @@ export type AskGate = "loading" | "no-ai" | "consent" | "ready";
 export function askGate(provider: string | null | undefined, accepted: string | null | undefined): AskGate {
   if (provider === undefined || accepted === undefined) return "loading";
   if (provider === null) return "no-ai";
-  return accepted === provider ? "ready" : "consent";
+  return consentNames(accepted).includes(provider) ? "ready" : "consent";
 }
 
 export function cleanQuestion(raw: string): string | null {

@@ -12,11 +12,13 @@ from typing import Annotated, Any, Literal
 from fastapi import APIRouter, Body, HTTPException, Request, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.deps import Db, UserId
-from app.models import AiConnection, ServiceConnection, User, WhoopConnection
+from app.models import AiConnection, Profile, ServiceConnection, User, WhoopConnection
+from app.models.integrations import AI_CHOICES, AI_PROVIDERS
 from app.routers.chatgpt import ChatgptStatus
 from app.security import decrypt_secret, encrypt_secret
 from app.services import chatgpt_auth, seerr, whoop_ai, whoop_api
@@ -48,11 +50,35 @@ class AiStatus(BaseModel):
     connected_at: datetime | None = None
 
 
+class AiChoice(BaseModel):
+    """One AI this user connected: a provider with their own key, or "chatgpt" (their ChatGPT account)."""
+
+    provider: str
+    model: str | None = None
+    instructions: str | None = None
+    connected_at: datetime | None = None
+    is_default: bool
+
+
+class AiChoices(BaseModel):
+    # In the order Orbit falls back through. default: the one used when the app doesn't pick (null: none connected).
+    choices: list[AiChoice]
+    default: str | None
+    # No AI of their own, but the admin's server key still writes summaries for them.
+    server_key: bool
+
+
 class Overview(BaseModel):
     whoop: WhoopOverview
     seerr: SeerrStatus
+    # ai: the default API-key connection, kept for app versions from before more than one AI could be connected.
     ai: AiStatus
+    ais: AiChoices
     chatgpt: ChatgptStatus
+
+
+class AiDefault(BaseModel):
+    provider: Literal[AI_CHOICES]  # type: ignore[valid-type]
 
 
 class SeerrConnect(BaseModel):
@@ -61,7 +87,7 @@ class SeerrConnect(BaseModel):
 
 
 class AiConnect(BaseModel):
-    provider: Literal["anthropic", "openai", "gemini", "openrouter"]
+    provider: Literal[AI_PROVIDERS]  # type: ignore[valid-type]
     # Empty is fine for Claude only; the other providers' model names change too often for Orbit to pick one.
     model: str | None = Field(default=None, max_length=200)
     # Left out to keep the saved key, when changing only the model or instructions.
@@ -69,9 +95,19 @@ class AiConnect(BaseModel):
     instructions: str | None = Field(default=None, max_length=1000)
 
 
-def _ai_status(db: Session, user_id) -> AiStatus:
+def _ai_row(db: Session, user_id, provider: str | None = None) -> AiConnection | None:
+    """This provider's row, or with none named the default key (or the oldest one when the default is ChatGPT)."""
+    if provider is None:
+        default = whoop_ai.default_choice(db, user_id)
+        provider = default if default != "chatgpt" else None
+    if provider is not None:
+        return db.get(AiConnection, (user_id, provider))
+    return db.scalar(select(AiConnection).where(AiConnection.user_id == user_id).order_by(AiConnection.created_at).limit(1))
+
+
+def _ai_status(db: Session, user_id, provider: str | None = None) -> AiStatus:
     configured = whoop_ai.access_for(db, user_id) is not None
-    row = db.get(AiConnection, user_id)
+    row = _ai_row(db, user_id, provider)
     if row is None:
         return AiStatus(configured=configured, connected=False)
     return AiStatus(
@@ -82,6 +118,25 @@ def _ai_status(db: Session, user_id) -> AiStatus:
         instructions=row.instructions,
         connected_at=row.created_at,
     )
+
+
+def _ai_choices(db: Session, user_id) -> AiChoices:
+    default = whoop_ai.default_choice(db, user_id)
+    rows = {row.provider: row for row in db.scalars(select(AiConnection).where(AiConnection.user_id == user_id))}
+    choices = []
+    for provider in whoop_ai.connected(db, user_id):
+        row = rows.get(provider)
+        choices.append(
+            AiChoice(
+                provider=provider,
+                model=row.model if row else None,
+                instructions=row.instructions if row else None,
+                connected_at=row.created_at if row else None,
+                is_default=provider == default,
+            )
+        )
+    server_key = default is None and whoop_ai.access_for(db, user_id) is not None
+    return AiChoices(choices=choices, default=default, server_key=server_key)
 
 
 def _seerr_row(db: Session, user_id) -> ServiceConnection | None:
@@ -119,6 +174,7 @@ def overview(user_id: UserId, db: Db):
         ),
         seerr=_seerr_status(_seerr_row(db, user_id)),
         ai=_ai_status(db, user_id),
+        ais=_ai_choices(db, user_id),
         chatgpt=ChatgptStatus(status=chatgpt_auth.connection_status(db, user_id)),
     )
 
@@ -128,16 +184,36 @@ def ai_status(user_id: UserId, db: Db):
     return _ai_status(db, user_id)
 
 
+@router.get("/ais", response_model=AiChoices)
+def ai_choices(user_id: UserId, db: Db):
+    return _ai_choices(db, user_id)
+
+
+@router.put("/ai/default", response_model=AiChoices)
+def set_ai_default(body: AiDefault, user_id: UserId, db: Db):
+    """Which connected AI Orbit uses when the app doesn't pick one."""
+    if body.provider not in whoop_ai.connected(db, user_id):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Connect that AI first.")
+    profile = db.get(Profile, user_id)
+    if profile is None:
+        profile = Profile(id=user_id)
+        db.add(profile)
+    profile.ai_default = body.provider
+    db.commit()
+    return _ai_choices(db, user_id)
+
+
 @router.put("/ai", response_model=AiStatus)
 def connect_ai(body: AiConnect, user_id: UserId, db: Db):
-    """Checks the key and model with the provider, then saves them for this user only."""
-    row = db.get(AiConnection, user_id)
+    """Checks the key and model with the provider, then saves them for this user only. Each provider has its own
+    row, so connecting a second provider keeps the first."""
+    row = db.get(AiConnection, (user_id, body.provider))
     model = (body.model or "").strip() or (get_settings().insights_model if body.provider == "anthropic" else "")
     if not model:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Enter the model name from your AI provider.")
     new_key = (body.api_key or "").strip()
-    # A saved key stays with its provider: never send one company's key to another.
-    api_key = new_key or (decrypt_secret(row.api_key) if row and row.provider == body.provider else None)
+    # A saved key stays with its provider (its own row): never send one company's key to another.
+    api_key = new_key or (decrypt_secret(row.api_key) if row else None)
     if not api_key:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Enter your API key.")
     if new_key or row is None or row.model != model:
@@ -156,15 +232,22 @@ def connect_ai(body: AiConnect, user_id: UserId, db: Db):
     row.instructions = (body.instructions or "").strip() or None
     db.commit()
     db.refresh(row)
-    return _ai_status(db, user_id)
+    return _ai_status(db, user_id, body.provider)
 
 
 @router.delete("/ai", status_code=status.HTTP_204_NO_CONTENT)
 def disconnect_ai(user_id: UserId, db: Db):
-    row = db.get(AiConnection, user_id)
-    if row is not None:
-        db.delete(row)
-        db.commit()
+    """Forgets every saved AI key (what "Disconnect AI" meant when there could be only one)."""
+    db.execute(delete(AiConnection).where(AiConnection.user_id == user_id))
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.delete("/ai/{provider}", status_code=status.HTTP_204_NO_CONTENT)
+def disconnect_one_ai(provider: Literal[AI_PROVIDERS], user_id: UserId, db: Db):  # type: ignore[valid-type]
+    """Forgets one provider's key. If it was the default, the next connected AI takes over."""
+    db.execute(delete(AiConnection).where(AiConnection.user_id == user_id, AiConnection.provider == provider))
+    db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

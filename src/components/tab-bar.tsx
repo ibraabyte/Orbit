@@ -49,10 +49,10 @@ export function DriftTabBar({ state, emitter, navigateToTab, insets }: BottomTab
             openCapture();
           }}
           accessibilityRole="button"
-          accessibilityLabel={t.capture}
+          accessibilityLabel={t.assistantTitle}
           style={styles.capturePress}
         >
-          <Icon name="plus" size={26} color={colors.accentInk} />
+          <Icon name="mic" size={24} color={colors.accentInk} />
         </Pressable>
       </Glass>
     </View>

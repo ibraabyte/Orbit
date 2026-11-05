@@ -174,7 +174,7 @@ def test_history_goes_to_the_ai_as_data_so_it_cannot_forge_a_turn(client: TestCl
 
 def test_ask_maps_provider_trouble_like_the_brief(client: TestClient, auth: dict, db: Session, provider, monkeypatch):
     connect(client, auth, provider)
-    row = db.get(AiConnection, user_id(db))
+    row = db.get(AiConnection, (user_id(db), "openai"))
     row.api_key = encrypt_secret("revoked-key-123")
     db.commit()
     response = client.post("/assistant/ask", json=ASK, headers=auth)

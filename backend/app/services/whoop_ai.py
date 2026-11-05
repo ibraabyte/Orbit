@@ -12,10 +12,11 @@ from typing import Any
 import anthropic
 import httpx2 as httpx
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import AiConnection, ChatgptConnection, User
+from app.models import AiConnection, ChatgptConnection, Profile, User
 from app.security import decrypt_secret
 
 # ponytail: a fixed list, so no user-supplied address reaches the server's own network. Other hosts go through OpenRouter.
@@ -84,15 +85,41 @@ def system_for(access: AiAccess | ChatgptAccess, base: str = SYSTEM) -> str:
     )
 
 
-def access_for(db: Session, user_id: uuid.UUID) -> AiAccess | ChatgptAccess | None:
-    """This user's own connection, or the server's key if they're the admin, or nothing."""
-    row = db.get(AiConnection, user_id)
+def connected(db: Session, user_id: uuid.UUID) -> list[str]:
+    """The AIs this user connected themselves, in the order Orbit falls back through: ChatGPT, then keys oldest first."""
     chatgpt = db.get(ChatgptConnection, user_id)
-    if chatgpt is not None and chatgpt.status == "connected":
-        return ChatgptAccess(db, user_id, row.instructions if row else None)
-    if row is not None:
-        api_key = decrypt_secret(row.api_key)
-        return AiAccess(row.provider, row.model, api_key, row.instructions) if api_key else None
+    rows = db.scalars(select(AiConnection.provider).where(AiConnection.user_id == user_id).order_by(AiConnection.created_at))
+    return (["chatgpt"] if chatgpt is not None and chatgpt.status == "connected" else []) + list(rows)
+
+
+def default_choice(db: Session, user_id: uuid.UUID) -> str | None:
+    """The AI used when the app doesn't pick: their saved default while it is still connected, else the first one."""
+    choices = connected(db, user_id)
+    profile = db.get(Profile, user_id)
+    saved = profile.ai_default if profile else None
+    return saved if saved in choices else (choices[0] if choices else None)
+
+
+def access_for(db: Session, user_id: uuid.UUID, choice: str | None = None) -> AiAccess | ChatgptAccess | None:
+    """The AI to use: the one picked (only if this user connected it), else their default, else the server's key if
+    they're the admin, else nothing."""
+    if choice is not None:
+        if choice not in connected(db, user_id):
+            return None
+    else:
+        choice = default_choice(db, user_id)
+    if choice == "chatgpt":
+        # The ChatGPT account has no settings of its own; it shares the instructions saved with the first key.
+        first = db.scalar(
+            select(AiConnection)
+            .where(AiConnection.user_id == user_id, AiConnection.instructions.is_not(None))
+            .order_by(AiConnection.created_at)
+        )
+        return ChatgptAccess(db, user_id, first.instructions if first else None)
+    if choice is not None:
+        row = db.get(AiConnection, (user_id, choice))
+        api_key = decrypt_secret(row.api_key) if row else None
+        return AiAccess(row.provider, row.model, api_key, row.instructions) if row and api_key else None
     settings = get_settings()
     if settings.anthropic_api_key and db.get(User, user_id).is_admin:
         return AiAccess("anthropic", settings.insights_model, settings.anthropic_api_key)

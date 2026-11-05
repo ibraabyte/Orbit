@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy import delete, select
 
 from app.config import get_settings
-from app.deps import Db, UserId
+from app.deps import AiPick, Db, UserId
 from app.models import Profile, User, WhoopConnection, WhoopCycle, WhoopInsight, WhoopRecovery, WhoopSleep, WhoopWorkout
 from app.security import decrypt_secret
 from app.services import whoop_ai, whoop_analytics, whoop_api, whoop_sync
@@ -239,9 +239,9 @@ def latest_insight(user_id: UserId, db: Db):
 
 
 @router.post("/insights", response_model=InsightRow, status_code=status.HTTP_201_CREATED)
-def create_insight(user_id: UserId, db: Db, days: int = Query(30, ge=7, le=90)):
-    """Asks this user's AI for a fresh summary of the last `days` days and keeps it."""
-    access = whoop_ai.access_for(db, user_id)
+def create_insight(user_id: UserId, db: Db, ai: AiPick = None, days: int = Query(30, ge=7, le=90)):
+    """Asks this user's AI (the one picked, else their default) for a fresh summary of the last `days` days and keeps it."""
+    access = whoop_ai.access_for(db, user_id, ai)
     if access is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Connect your AI in Integrations first.")
     last = latest_insight(user_id, db)

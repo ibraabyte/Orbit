@@ -17,12 +17,47 @@ export type AiConnectInput = { provider: AiProvider; model: string; apiKey: stri
 export type ChatgptStatus = { status: "not_connected" | "pending" | "connected" | "expired" };
 export type ChatgptStart = ChatgptStatus & { authorization_url: string };
 
+// Every AI the user can pick: their ChatGPT account or a provider with their own key.
+export type AiChoiceName = "chatgpt" | AiProvider;
+export const AI_CHOICE_NAMES: Record<AiChoiceName, string> = { chatgpt: "ChatGPT", ...AI_PROVIDER_NAMES };
+export type AiChoice = { provider: AiChoiceName; model: string | null; instructions: string | null; connected_at: string | null; is_default: boolean };
+// choices: in the order the server falls back through. default: used when the app doesn't pick. server_key: the admin's own key stands in.
+export type AiChoices = { choices: AiChoice[]; default: AiChoiceName | null; server_key: boolean };
+
 export type IntegrationsOverview = {
   whoop: { configured: boolean; connected: boolean; last_synced_at: string | null; last_sync_error: string | null };
   seerr: SeerrStatus;
   ai: AiStatus;
+  // Missing from servers older than "more than one AI".
+  ais?: AiChoices;
   chatgpt: ChatgptStatus;
 };
+
+// The AIs as the overview lists them; an older server's single AI is turned into the same shape.
+export function aiChoicesOf(overview: IntegrationsOverview): AiChoices {
+  if (overview.ais) return overview.ais;
+  if (overview.chatgpt.status === "connected") return { choices: [{ provider: "chatgpt", model: null, instructions: null, connected_at: null, is_default: true }], default: "chatgpt", server_key: false };
+  if (overview.ai.connected && overview.ai.provider) {
+    const { provider, model, instructions, connected_at } = overview.ai;
+    return { choices: [{ provider, model, instructions, connected_at, is_default: true }], default: provider, server_key: false };
+  }
+  return { choices: [], default: null, server_key: overview.ai.configured };
+}
+
+// "?ai=gemini" for a request that should use a picked AI; nothing for the default.
+export const aiQuery = (choice: AiChoiceName | null | undefined) => (choice ? `?ai=${choice}` : "");
+
+// The picked AI if it is still connected, else the default.
+export function pickedAi(choices: AiChoices, picked: AiChoiceName | null): AiChoiceName | null {
+  return picked && choices.choices.some((choice) => choice.provider === picked) ? picked : choices.default;
+}
+
+// The display name of the AI a request would go to, or null when none would answer. A server key is Claude's.
+export function aiName(choices: AiChoices, picked: AiChoiceName | null = null): string | null {
+  const chosen = pickedAi(choices, picked);
+  if (chosen) return AI_CHOICE_NAMES[chosen];
+  return choices.server_key ? "Claude" : null;
+}
 
 export type Me = { id: string; email: string; is_admin: boolean };
 export type ServerSettings = { signups_open: boolean; signups_forced_by_server: boolean };
@@ -39,6 +74,8 @@ export const integrationsApi = {
     // No api_key means "keep the saved one".
     api.put<AiStatus>("/integrations/ai", { provider, model: model.trim(), ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}), instructions: instructions.trim() }),
   disconnectAi: (api: Api) => api.delete("/integrations/ai"),
+  disconnectOneAi: (api: Api, provider: AiProvider) => api.delete(`/integrations/ai/${provider}`),
+  setAiDefault: (api: Api, provider: AiChoiceName) => api.put<AiChoices>("/integrations/ai/default", { provider }),
   chatgpt: (api: ChatgptApi) => api.get<ChatgptStatus>("/integrations/chatgpt"),
   startChatgpt: (api: ChatgptApi) => api.post<ChatgptStart>("/integrations/chatgpt/start"),
   finishChatgpt: (api: ChatgptApi, callbackUrl: string) => api.post<ChatgptStatus>("/integrations/chatgpt/finish", { callback_url: callbackUrl.trim() }),

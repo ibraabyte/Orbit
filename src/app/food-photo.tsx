@@ -3,10 +3,12 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useState } from "react";
 import { Image, StyleSheet, Text, View } from "react-native";
+import { AiPicker } from "@/components/ai-picker";
 import { Badge, Card, CheckItem, EmptyState, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Input, Loading, Screen, Segments, ui } from "@/components/screen";
 import { colors, radius } from "@/components/theme";
+import { useAiChoices } from "@/hooks/use-ai-choices";
 import { getApi } from "@/lib/backend";
 import { foodApi, macroText, mealTypeAt, parseAmount, plateItemNutrition, plateTotal, type MealType, type PlateEstimate, type PlateItem } from "@/lib/food-log";
 import { t } from "@/lib/i18n";
@@ -30,6 +32,7 @@ async function shrink(asset: ImagePicker.ImagePickerAsset) {
 
 export default function FoodPhoto() {
   const { toast } = useOverlays();
+  const ai = useAiChoices("food-photo");
   const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
   const [note, setNote] = useState("");
   const [estimate, setEstimate] = useState<PlateEstimate | null>(null);
@@ -70,7 +73,7 @@ export default function FoodPhoto() {
     setBusy("estimate");
     setError(null);
     try {
-      const found = await foodApi.photo(getApi(), photo.base64, "image/jpeg", note);
+      const found = await foodApi.photo(getApi(), photo.base64, "image/jpeg", note, ai.current);
       setEstimate(found);
       setDrafts(found.items.map((item) => ({ ...item, include: true, caloriesText: String(plateItemNutrition(item).calories) })));
     } catch (reason) {
@@ -123,6 +126,7 @@ export default function FoodPhoto() {
         {photo ? (
           <>
             <Input value={note} onChangeText={setNote} placeholder={t.photoNote} maxLength={300} accessibilityLabel={t.photoNote} />
+            <AiPicker choices={ai.choices} value={ai.current} onChange={ai.setPicked} />
             <Button title={busy === "estimate" ? t.estimating : t.estimate} variant="primary" disabled={Boolean(busy)} onPress={() => void runEstimate()} />
           </>
         ) : null}

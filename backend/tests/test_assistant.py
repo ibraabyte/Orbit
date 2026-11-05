@@ -345,7 +345,7 @@ def test_brief_asks_for_the_requested_language_and_caps_the_words(client: TestCl
 def test_brief_maps_provider_trouble_like_the_whoop_insight(client: TestClient, auth: dict, db: Session, provider, monkeypatch):
     connect(client, auth, provider)
     # The saved key stops working at the provider.
-    row = db.get(AiConnection, user_id(db))
+    row = db.get(AiConnection, (user_id(db), "openai"))
     row.api_key = encrypt_secret("revoked-key-123")
     db.commit()
     response = client.post("/assistant/brief", json=BODY, headers=auth)

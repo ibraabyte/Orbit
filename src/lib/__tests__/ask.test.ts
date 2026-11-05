@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { askBody, askGate, briefStep, exchanges, ASK_HISTORY_TURNS, ASK_QUESTION_MAX, ASK_TURN_MAX, activeProvider, cleanQuestion, consentKey, historyFor, parseConsent, serverDetail, withdrawKeys, type ChatItem } from "@/lib/ask";
+import { askBody, askGate, briefStep, exchanges, ASK_HISTORY_TURNS, ASK_QUESTION_MAX, ASK_TURN_MAX, activeProvider, cleanQuestion, consentKey, consentNames, consentWith, historyFor, parseConsent, serverDetail, withdrawKeys, type ChatItem } from "@/lib/ask";
 import { briefCacheKey } from "@/lib/morning-brief";
 import type { IntegrationsOverview } from "@/lib/integrations";
 
@@ -155,5 +155,36 @@ describe("serverDetail", () => {
     expect(serverDetail(new Error("Claude is busy right now."), false)).toBe("Claude is busy right now.");
     expect(serverDetail(new Error("Claude is busy right now."), true)).toBe("");
     expect(serverDetail("odd", false)).toBe("");
+  });
+});
+
+describe("more than one AI", () => {
+  const ais = {
+    choices: [
+      { provider: "openai" as const, model: "m", instructions: null, connected_at: null, is_default: false },
+      { provider: "gemini" as const, model: "m", instructions: null, connected_at: null, is_default: true }
+    ],
+    default: "gemini" as const,
+    server_key: false
+  };
+
+  it("names the default, or the one picked for this request while it is still connected", () => {
+    expect(activeProvider(overview({ ais }))).toBe("Gemini");
+    expect(activeProvider(overview({ ais }), "openai")).toBe("OpenAI");
+    expect(activeProvider(overview({ ais }), "chatgpt")).toBe("Gemini");
+  });
+
+  it("keeps an agreement per AI, and agreeing to one more keeps the others", () => {
+    const first = consentWith(null, "OpenAI");
+    expect(JSON.parse(first)).toEqual({ provider: "OpenAI", providers: ["OpenAI"] });
+    const both = parseConsent(consentWith(parseConsent(first), "Gemini"));
+    expect(consentNames(both)).toEqual(["OpenAI", "Gemini"]);
+    expect(askGate("Gemini", both)).toBe("ready");
+    expect(askGate("OpenAI", both)).toBe("ready");
+    expect(askGate("ChatGPT", both)).toBe("consent");
+    // Agreeing again doesn't repeat a name.
+    expect(consentNames(parseConsent(consentWith(both, "OpenAI")))).toEqual(["Gemini", "OpenAI"]);
+    // The old one-AI form is still read.
+    expect(consentNames(parseConsent(JSON.stringify({ provider: "Claude" })))).toEqual(["Claude"]);
   });
 });

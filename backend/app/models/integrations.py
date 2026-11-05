@@ -17,6 +17,8 @@ SERVICE_PROVIDERS = ("seerr",)
 _providers_sql = ", ".join(f"'{p}'" for p in SERVICE_PROVIDERS)
 AI_PROVIDERS = ("anthropic", "openai", "gemini", "openrouter")
 _ai_providers_sql = ", ".join(f"'{p}'" for p in AI_PROVIDERS)
+# Everything a user can pick: the API-key providers and the ChatGPT account (app/models/chatgpt.py).
+AI_CHOICES = ("chatgpt", *AI_PROVIDERS)
 
 
 class ServiceConnection(Base):
@@ -34,13 +36,14 @@ class ServiceConnection(Base):
 
 
 class AiConnection(Base):
-    """One per user: the AI they pay for. The key is encrypted and never sent back to the app."""
+    """One per user and provider: the AIs they pay for. The key is encrypted and never sent back to the app.
+    Which one is used by default is profiles.ai_default (it can also be the ChatGPT account)."""
 
     __tablename__ = "ai_connections"
     __table_args__ = (CheckConstraint(f"provider in ({_ai_providers_sql})", name="provider"),)
 
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    provider: Mapped[str] = mapped_column(Text, nullable=False)
+    provider: Mapped[str] = mapped_column(Text, primary_key=True)
     model: Mapped[str] = mapped_column(Text, nullable=False)
     api_key: Mapped[str] = mapped_column(Text, nullable=False)
     # Added to the system prompt: what to focus on, the tone, the language.

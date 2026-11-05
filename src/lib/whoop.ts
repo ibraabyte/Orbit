@@ -1,4 +1,5 @@
 import type { ApiClient } from "@/lib/api";
+import type { AiChoiceName } from "@/lib/integrations";
 
 // Same names as the tones in components/screen.tsx.
 type Tone = "danger" | "warning" | "success" | "neutral";
@@ -80,7 +81,8 @@ export const whoopApi = {
   status: (api: Api) => api.get<WhoopStatus>("/whoop/status"),
   summary: (api: Api, days = 30) => api.get<WhoopSummary>(`/whoop/summary?days=${days}`),
   latestInsight: (api: Api) => api.get<WhoopInsight | null>("/whoop/insights/latest"),
-  writeInsight: (api: Api) => api.post<WhoopInsight>("/whoop/insights"),
+  // ai: which connected AI writes it this time; left out, the default does.
+  writeInsight: (api: Api, ai?: AiChoiceName | null) => api.post<WhoopInsight>(ai ? `/whoop/insights?ai=${ai}` : "/whoop/insights"),
   sync: (api: Api) => api.post<{ counts: Record<string, number>; last_synced_at: string | null }>("/whoop/sync"),
   connectUrl: (api: Api, returnTo: string) => api.post<{ url: string }>("/whoop/connect", { return_to: returnTo }),
   disconnect: (api: Api, deleteData: boolean) => api.delete(`/whoop/connection?delete_data=${deleteData}`)

@@ -1,16 +1,17 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
-import { Alert, Text } from "react-native";
+import { Alert, Pressable, Text, View } from "react-native";
 import { AiConnectForm } from "@/components/ai-connect-form";
 import { BankSmsCard } from "@/components/bank-sms-card";
 import { ChatgptConnectForm } from "@/components/chatgpt-connect-form";
-import { Badge, Card, EmptyState, IconTile, ListRow, toneToBadge, type } from "@/components/drift";
+import { Badge, Card, EmptyState, Icon, IconTile, ListRow, toneToBadge, type } from "@/components/drift";
 import { Button, Loading, Screen, Segments } from "@/components/screen";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
+import { colors } from "@/components/theme";
 import { useSeerr } from "@/hooks/use-seerr";
 import { getApi } from "@/lib/backend";
 import { t } from "@/lib/i18n";
-import { aiState, integrationsApi, seerrState, whoopState, type IntegrationsOverview } from "@/lib/integrations";
+import { AI_CHOICE_NAMES, aiChoicesOf, aiState, integrationsApi, seerrState, whoopState, type AiChoice, type IntegrationsOverview } from "@/lib/integrations";
 
 // Every connection, set up here by you for your account only. No server settings to touch.
 export default function Integrations() {
@@ -58,10 +59,18 @@ export default function Integrations() {
       { text: "Cancel", style: "cancel" }
     ]);
 
-  const disconnectAi = () =>
-    Alert.alert("Disconnect AI?", "Orbit forgets your API key. Summaries already written stay.", [
-      { text: "Disconnect", style: "destructive", onPress: () => void integrationsApi.disconnectAi(getApi()).then(load) },
-      { text: "Cancel", style: "cancel" }
+  const ais = aiChoicesOf(overview);
+  const failed = (action: Promise<unknown>) =>
+    action.then(load).catch((actionError: unknown) => Alert.alert(t.aiSummary, actionError instanceof Error ? actionError.message : t.tryAgain));
+  const removeAi = (choice: AiChoice) =>
+    Alert.alert(t.aiRemoveTitle, t.aiRemoveBody, [
+      {
+        text: t.aiRemove,
+        style: "destructive",
+        onPress: () =>
+          void failed(choice.provider === "chatgpt" ? integrationsApi.disconnectChatgpt(getApi()) : integrationsApi.disconnectOneAi(getApi(), choice.provider))
+      },
+      { text: t.cancel, style: "cancel" }
     ]);
 
   return (
@@ -99,6 +108,34 @@ export default function Integrations() {
 
       <Card title={t.aiSummary} action={<Badge tone={toneToBadge(ai.tone)}>{ai.label}</Badge>}>
         <ListRow leading={<IconTile name="feather" />} title="Written summaries" subtitle={ai.detail} />
+        {ais.choices.length ? (
+          <>
+            <Text style={type.rowTitle}>{t.aiConnectedList}</Text>
+            {ais.choices.map((choice) => (
+              <ListRow
+                key={choice.provider}
+                leading={<IconTile name={choice.provider === "chatgpt" ? "message-circle" : "cpu"} />}
+                title={AI_CHOICE_NAMES[choice.provider]}
+                subtitle={choice.model ?? undefined}
+                trailing={
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                    {choice.is_default ? (
+                      <Badge tone="success">{t.aiDefault}</Badge>
+                    ) : (
+                      <Pressable onPress={() => void failed(integrationsApi.setAiDefault(getApi(), choice.provider))} accessibilityRole="button" hitSlop={6}>
+                        <Text style={[type.pill, { color: colors.accentDeep }]}>{t.aiMakeDefault}</Text>
+                      </Pressable>
+                    )}
+                    <Pressable onPress={() => removeAi(choice)} accessibilityRole="button" accessibilityLabel={`${t.aiRemove} ${AI_CHOICE_NAMES[choice.provider]}`} hitSlop={6}>
+                      <Icon name="x" size={16} color={colors.inkMuted} />
+                    </Pressable>
+                  </View>
+                }
+              />
+            ))}
+            <Text style={type.rowTitle}>{t.aiAddAnother}</Text>
+          </>
+        ) : null}
         <Text style={type.rowTitle}>{t.aiConnectionMethod}</Text>
         <Segments
           options={["chatgpt", "api"] as const}
@@ -131,12 +168,12 @@ export default function Integrations() {
             {overview.chatgpt.status === "connected" ? <Text style={type.rowSubtitle}>{t.aiChatgptActiveHint}</Text> : null}
             <AiConnectForm
               status={overview.ai}
+              saved={ais.choices}
               connect={async (input) => {
                 await integrationsApi.connectAi(getApi(), input);
                 await load();
               }}
             />
-            {overview.ai.connected ? <Button variant="outline" title="Disconnect AI" onPress={disconnectAi} /> : null}
           </>
         )}
       </Card>

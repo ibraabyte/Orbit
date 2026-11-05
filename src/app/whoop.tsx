@@ -3,10 +3,12 @@ import { useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { AiPicker } from "@/components/ai-picker";
 import { Badge, Card, EmptyState, GoalBar, Hero, heroRing, ListRow, Metric, RingGauge, toneGlyph, toneToBadge, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Loading, Screen, ui } from "@/components/screen";
 import { colors, fonts } from "@/components/theme";
+import { useAiChoices } from "@/hooks/use-ai-choices";
 import { getApi, hasServer } from "@/lib/backend";
 import { t } from "@/lib/i18n";
 import {
@@ -25,6 +27,7 @@ import {
 export default function Whoop() {
   const onServer = hasServer();
   const { sheet } = useOverlays();
+  const ai = useAiChoices("whoop");
   const params = useLocalSearchParams<{ status?: string }>();
   const [status, setStatus] = useState<WhoopStatus | null>(null);
   const [summary, setSummary] = useState<WhoopSummary | null>(null);
@@ -89,7 +92,7 @@ export default function Whoop() {
 
   const writeInsight = () =>
     run("insight", async () => {
-      setInsight(await whoopApi.writeInsight(getApi()));
+      setInsight(await whoopApi.writeInsight(getApi(), ai.current));
     });
 
   const disconnectWith = (deleteData: boolean) =>
@@ -234,6 +237,7 @@ export default function Whoop() {
         ) : (
           <EmptyState>{t.notYet}</EmptyState>
         )}
+        {status.ai_configured ? <AiPicker choices={ai.choices} value={ai.current} onChange={ai.setPicked} /> : null}
         {status.ai_configured ? <Button variant="outline" title={busy === "insight" ? t.generating : t.regenerate} disabled={busy !== null || !summary?.has_data} onPress={writeInsight} /> : null}
       </Card>
 
