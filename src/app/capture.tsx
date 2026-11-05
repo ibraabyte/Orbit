@@ -26,8 +26,8 @@ const recentKey = "orbit.quick-add.recent";
 
 const kinds: Record<QuickAddDraft["kind"], [en: string, ar: string]> = {
   task: ["Task", "مهمة"], reminder: ["Reminder", "تذكير"], capture: ["Note", "ملاحظة"], meal: ["Meal", "وجبة"], mealPlan: ["Meal plan", "خطة وجبة"], grocery: ["Grocery", "مشتريات"],
-  person: ["Person", "شخص"], workout: ["Workout", "تمرين"], weight: ["Weight", "وزن"], sleep: ["Sleep", "نوم"], focus: ["Focus", "تركيز"], expense: ["Expense", "مصروف"],
-  bill: ["Bill", "فاتورة"], habit: ["Habit", "عادة"], goal: ["Goal", "هدف"], journal: ["Journal", "يوميات"]
+  workout: ["Workout", "تمرين"], weight: ["Weight", "وزن"], sleep: ["Sleep", "نوم"], expense: ["Expense", "مصروف"],
+  bill: ["Bill", "فاتورة"], habit: ["Habit", "عادة"]
 };
 
 function draftFields(draft: QuickAddDraft) {

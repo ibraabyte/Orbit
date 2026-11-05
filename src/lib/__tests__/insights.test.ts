@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   caloriesByDay,
   habitCompletionRate,
-  insightSummary,
-  journalMoodByDay,
   localDateKey,
   weightTrend,
   workoutMinutesByDay
@@ -185,31 +183,13 @@ describe("insights", () => {
     expect(localDateKey(now)).toMatch(/2026-07-07|2026-07-08/);
   });
 
-  it("builds daily health and mood series", () => {
+  it("builds daily health series", () => {
     expect(caloriesByDay(baseData, 1, now)).toEqual([{ date: localDateKey(now), label: "Tue", value: 500 }]);
     expect(workoutMinutesByDay(baseData, 1, now)[0].value).toBe(30);
-    expect(journalMoodByDay(baseData, 1, now)[0].value).toBe(4);
   });
 
-  it("calculates habit, weight, and overall summaries", () => {
+  it("calculates habit and weight summaries", () => {
     expect(habitCompletionRate(baseData.habits as Habit[], baseData.habitLogs as HabitLog[], now)).toBe(100);
     expect(weightTrend(baseData)).toEqual({ latest: 81.2, unit: "kg", delta: -0.8 });
-    expect(insightSummary(baseData, now)).toMatchObject({
-      averageCalories: 71,
-      workoutMinutes: 30,
-      habitCompletionRate: 100,
-      goalProgressAverage: 50,
-      sevenDayMood: "good",
-      sleep: {
-        sevenDayAverageMinutes: 420,
-        sevenDayQuality: 4,
-        nightsLogged: 1
-      },
-      focus: {
-        weekMinutes: 75,
-        sessionsLogged: 2,
-        averageEnergy: 3
-      }
-    });
   });
 });

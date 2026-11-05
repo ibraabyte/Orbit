@@ -1,13 +1,9 @@
 import type { DashboardData, Expense, Meal, Reminder, SleepLog, Task, Workout } from "@/lib/types";
 import { isPastDue, isToday } from "@/lib/dates";
 import { completedHabitsToday } from "@/lib/habits";
-import { activeGoals, completedGoals } from "@/lib/goals";
-import { averageMood, journalEntriesInLastDays, todayEntry } from "@/lib/journal";
 import { averageSleepMinutes, sleepLogsInLastDays } from "@/lib/sleep";
-import { focusSessionsInLastDays, completedFocusMinutes, todaysFocusMinutes } from "@/lib/focus";
 import { financeSummary } from "@/lib/finance";
 import { foodSummary } from "@/lib/food";
-import { peopleSummary } from "@/lib/people";
 import { obligationsProgress } from "@/lib/wealth";
 
 export type DailyBriefTone = "default" | "danger" | "warning" | "success";
@@ -93,15 +89,10 @@ export function summarizeDashboard(data: DashboardData, now = new Date()) {
     todayWorkoutMinutes: todaysWorkoutMinutes(data.workouts, now),
     todaySpending: todaysSpending(data.expenses, now),
     todaySleepMinutes: todaysSleepMinutes(data.sleepLogs, now),
-    todayFocusMinutes: todaysFocusMinutes(data.focusSessions, now),
     latestWeight: data.weightLogs[0]?.weight ?? null,
     recentCaptureCount: data.captures.length,
     completedHabitCount: completedHabitsToday(data.habits, data.habitLogs, now),
-    activeHabitCount: data.habits.length,
-    activeGoalCount: activeGoals(data.goals).length,
-    completedGoalCount: completedGoals(data.goals).length,
-    journaledToday: Boolean(todayEntry(data.journalEntries, now)),
-    sevenDayMood: averageMood(journalEntriesInLastDays(data.journalEntries, 7, now))
+    activeHabitCount: data.habits.length
   };
 }
 
@@ -110,13 +101,10 @@ export function buildDailyBrief(data: DashboardData, now = new Date(), limit = 5
   const week = weeklySummary(data, now);
   const finance = financeSummary(data, now);
   const food = foodSummary(data, now);
-  const people = peopleSummary(data, now);
-  const activeGoalRows = activeGoals(data.goals);
   const dueReminderCount = summary.dueReminderCount;
   const habitRemaining = Math.max(0, summary.activeHabitCount - summary.completedHabitCount);
   const workoutTarget = data.profile?.weekly_workout_minutes_target ?? 150;
   const workoutRemaining = Math.max(0, workoutTarget - week.workoutMinutes);
-  const dueGoals = activeGoalRows.filter((goal) => goal.target_at && isDateWithinDays(goal.target_at, 7, now));
   const recentCaptures = data.captures.filter((capture) => isDateWithinDays(capture.created_at, 1, now)).length;
 
   const items: DailyBriefItem[] = [];
@@ -167,18 +155,6 @@ export function buildDailyBrief(data: DashboardData, now = new Date(), limit = 5
       label: "money",
       tone: "danger",
       priority: 93
-    });
-  }
-
-  if (people.overdueFollowUps.length) {
-    items.push({
-      id: "overdue-followups",
-      title: "Catch up with people",
-      detail: `${people.overdueFollowUps.length} follow-up${people.overdueFollowUps.length === 1 ? "" : "s"} overdue.`,
-      href: "/people",
-      label: "people",
-      tone: "warning",
-      priority: 90
     });
   }
 
@@ -266,30 +242,6 @@ export function buildDailyBrief(data: DashboardData, now = new Date(), limit = 5
     });
   }
 
-  if (!summary.journaledToday) {
-    items.push({
-      id: "journal",
-      title: "Close the day with a note",
-      detail: "Today does not have a journal entry yet.",
-      href: "/journal",
-      label: "review",
-      tone: "default",
-      priority: 48
-    });
-  }
-
-  if (dueGoals.length) {
-    items.push({
-      id: "goal-deadlines",
-      title: "Check goal deadlines",
-      detail: `${dueGoals.length} active goal${dueGoals.length === 1 ? "" : "s"} due within 7 days.`,
-      href: "/goals",
-      label: "goals",
-      tone: "warning",
-      priority: 44
-    });
-  }
-
   if (!recentCaptures) {
     items.push({
       id: "capture",
@@ -322,7 +274,6 @@ export function weeklySummary(data: DashboardData, now = new Date()) {
   const calories = meals.reduce((sum, meal) => sum + meal.calories, 0);
   const expenses = data.expenses.filter((expense) => inWindow(expense.spent_at));
   const sleepLogs = sleepLogsInLastDays(data.sleepLogs, 7, now);
-  const focusSessions = focusSessionsInLastDays(data.focusSessions, 7, now);
 
   return {
     completedTasks: data.tasks.filter((task) => task.status === "done" && inWindow(task.updated_at)).length,
@@ -333,10 +284,7 @@ export function weeklySummary(data: DashboardData, now = new Date()) {
     expensesLogged: expenses.length,
     sleepAverageMinutes: averageSleepMinutes(sleepLogs),
     sleepNights: sleepLogs.length,
-    focusMinutes: completedFocusMinutes(focusSessions),
-    focusSessions: focusSessions.filter((session) => session.status === "completed").length,
-    habitCheckIns: data.habitLogs.filter((log) => inWindow(log.logged_at)).length,
-    journalEntries: data.journalEntries.filter((entry) => inWindow(`${entry.entry_date}T12:00:00`)).length
+    habitCheckIns: data.habitLogs.filter((log) => inWindow(log.logged_at)).length
   };
 }
 
