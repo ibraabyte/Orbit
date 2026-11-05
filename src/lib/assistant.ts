@@ -30,8 +30,6 @@ export const KIND_PATHS: Record<string, string> = {
   weight: "/weight-logs",
   habit: "/habits",
   habit_log: "/habit-logs",
-  goal: "/goals",
-  person: "/people",
   note: "/captures",
   money_account: "/money-accounts",
   investment: "/investments",
@@ -101,7 +99,7 @@ const KIND_NAMES: Record<string, [string, string]> = {
   task: ["Task", "مهمة"], reminder: ["Reminder", "تذكير"], expense: ["Expense", "مصروف"], bill: ["Bill", "فاتورة"],
   budget: ["Budget", "ميزانية"], meal: ["Meal", "وجبة"], grocery: ["Grocery", "مشتريات"], workout: ["Workout", "تمرين"],
   sleep: ["Sleep", "نوم"], weight: ["Weight", "وزن"], habit: ["Habit", "عادة"], habit_log: ["Habit done", "إنجاز عادة"],
-  goal: ["Goal", "هدف"], person: ["Person", "شخص"], note: ["Note", "ملاحظة"], money_account: ["Money place", "مكان فلوس"],
+  note: ["Note", "ملاحظة"], money_account: ["Money place", "مكان فلوس"],
   investment: ["Investment", "استثمار"], card: ["Card", "بطاقة"]
 };
 const OP_NAMES: Record<ActionOp, [string, string]> = { create: ["Add", "إضافة"], update: ["Change", "تعديل"], delete: ["Delete", "حذف"], complete: ["Done", "إنجاز"] };

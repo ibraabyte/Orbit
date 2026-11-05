@@ -283,20 +283,22 @@ def test_nothing_sensitive_or_foreign_reaches_the_provider(client: TestClient, a
     sent = json.dumps(provider[0], ensure_ascii=False)
 
     # This user's rows are there (so the check above is not vacuous): titles, names, amounts, moods, minutes.
-    for shown in ("Mine goal", "Mine habit", "Mine Cafe", "Mine Rent", "Mine task", "Mine Friend", "Mine-run"):
+    for shown in ("Mine habit", "Mine Cafe", "Mine Rent", "Mine task", "Mine-run"):
         assert shown in sent, shown
+    # People, goals and the journal were taken out of the app, so none of them is sent.
+    for gone in ("Mine goal", "Mine Friend"):
+        assert gone not in sent, gone
     prompt = provider[0]["messages"][1]["content"]
     data = json.loads(prompt.splitlines()[2])
     assert data["expense_totals"] == [{"month": "2026-11", "category": "food", "currency": "SAR", "total": 12.0}]
     assert [(e["merchant"], e["amount"]) for e in data["expenses"]] == [("Mine Cafe", 12.0)]
     assert data["budgets"] == [{"month": "2026-11", "category": "food", "limit": 300.0, "currency": "SAR"}]
     assert [(b["name"], b["amount"]) for b in data["bills"]] == [("Mine Rent", 900.0)]
-    assert data["journal_moods"] == [{"date": "2026-11-03", "mood": "good"}]
     assert data["sleep"] == [{"date": "2026-11-03", "hours": 7.0, "quality": None}]
     assert [(w["type"], w["minutes"]) for w in data["workouts"]] == [("Mine-run", 30)]
     assert [(h["name"], h["done_last_30_days"]) for h in data["habits"]] == [("Mine habit", 1)]
-    assert [(g["title"], g["milestones_done"], g["milestones_total"]) for g in data["goals"]] == [("Mine goal", 0, 1)]
-    assert [t["title"] for t in data["tasks"]] == ["Mine task"] and [p["name"] for p in data["people"]] == ["Mine Friend"]
+    assert [t["title"] for t in data["tasks"]] == ["Mine task"]
+    assert not {"people", "goals", "journal_moods"} & set(data)
     for number in ("777", "999", "111", '"bad"'):
         assert number not in json.dumps(data), number
     # Nobody else's, and no free text, contact detail, card, token or secret of anyone's.
@@ -340,14 +342,13 @@ def test_context_has_the_documented_sections_and_only_the_users_rows(client: Tes
     data = context(db)
     assert data["today"] == "2026-11-03"
     assert {t["title"] for t in data["tasks"]} == {"Open one", "No date", "Done lately"}
-    assert [(p["name"], p["birthday"], p["next_follow_up"]) for p in data["people"]] == [("Sam", "1990-05-01", "2026-11-09")]
     assert [h["name"] for h in data["habits"]] == ["Read"]
-    assert [g["title"] for g in data["goals"]] == ["Run 10k"]
+    assert not {"people", "goals"} & set(data)
     # The windows are stated so the AI can say what it cannot see.
     assert data["covers"]["expenses_and_totals_from"] == "2026-09-01"
-    assert data["covers"]["journal_sleep_workouts_from"] == "2026-10-04"
+    assert data["covers"]["sleep_workouts_from"] == "2026-10-04"
     # Lists with no date window say so, instead of implying a period.
-    assert set(data["covers"]["no_date_window"]) == {"bills", "tasks", "people", "habits", "goals"}
+    assert set(data["covers"]["no_date_window"]) == {"bills", "tasks", "habits"}
 
 
 def test_context_expenses_are_the_last_three_months_with_totals(client: TestClient, auth: dict, db: Session):
@@ -388,7 +389,7 @@ def test_context_budgets_are_this_month_and_last(client: TestClient, auth: dict,
     assert sorted((b["month"], b["limit"]) for b in context(db)["budgets"]) == [("2026-10", 250.0), ("2026-11", 300.0)]
 
 
-def test_context_health_and_mood_are_recent_and_carry_no_free_text(client: TestClient, auth: dict, db: Session):
+def test_context_health_is_recent_and_carries_no_free_text(client: TestClient, auth: dict, db: Session):
     me = user_id(db)
     add(
         db,
@@ -400,26 +401,22 @@ def test_context_health_and_mood_are_recent_and_carry_no_free_text(client: TestC
         Workout(user_id=me, type="swim", logged_at=local("2026-09-01")),
     )
     data = context(db)
-    assert data["journal_moods"] == [{"date": "2026-11-01", "mood": "low"}]
+    assert "journal_moods" not in data
     assert data["sleep"] == [{"date": "2026-11-02", "hours": 7.5, "quality": 4}]
     assert data["workouts"] == [{"date": "2026-11-02", "type": "run", "minutes": 30, "calories": 300}]
 
 
-def test_context_habit_counts_and_goal_progress(client: TestClient, auth: dict, db: Session):
+def test_context_habit_counts(client: TestClient, auth: dict, db: Session):
     me = user_id(db)
     habit = Habit(user_id=me, name="Read", frequency="daily", target_count=1)
-    goal = Goal(user_id=me, title="Run 10k", target_at=date(2026, 12, 31))
-    add(db, habit, goal)
+    add(db, habit)
     add(
         db,
         *[HabitLog(user_id=me, habit_id=habit.id, logged_at=local("2026-11-02") - timedelta(days=n)) for n in range(3)],
         HabitLog(user_id=me, habit_id=habit.id, logged_at=local("2026-09-01")),
-        GoalMilestone(user_id=me, goal_id=goal.id, title="5k", completed_at=local("2026-10-01")),
-        GoalMilestone(user_id=me, goal_id=goal.id, title="10k"),
     )
     data = context(db)
     assert data["habits"] == [{"name": "Read", "frequency": "daily", "target": 1, "done_last_30_days": 3}]
-    assert data["goals"] == [{"title": "Run 10k", "target": "2026-12-31", "milestones_done": 1, "milestones_total": 2}]
 
 
 def test_a_cut_list_says_how_many_there_really_are(client: TestClient, auth: dict, db: Session):
@@ -431,18 +428,18 @@ def test_a_cut_list_says_how_many_there_really_are(client: TestClient, auth: dic
             Expense(user_id=me, merchant=f"Shop {n}", amount=1, currency="SAR", category="food", spent_at=local("2026-11-02"))
             for n in range(45)
         ],
-        *[Person(user_id=me, name=f"Person {n}") for n in range(limits["people"] + 7)],
+        *[Habit(user_id=me, name=f"Habit {n}") for n in range(limits["habits"] + 7)],
         *[Task(user_id=me, title=f"Open {n}") for n in range(limits["tasks"] + 2)],
         Task(user_id=me, title="Done lately", status="done"),
         Bill(user_id=me, name="Rent", amount=1, currency="SAR", due_at=date(2026, 11, 5)),
     )
     counts = context(db)["counts"]
     assert counts["expenses"] == {"shown": limits["expenses"], "total": 45}
-    assert counts["people"] == {"shown": limits["people"], "total": limits["people"] + 7}
+    assert counts["habits"] == {"shown": limits["habits"], "total": limits["habits"] + 7}
     # Open and done-lately tasks are one list: 40 shown of 43.
     assert counts["tasks"] == {"shown": limits["tasks"] + 1, "total": limits["tasks"] + 3}
     # An uncut list says so too, so "shown equals total" can be trusted.
-    assert counts["bills"] == {"shown": 1, "total": 1} and counts["goals"] == {"shown": 0, "total": 0}
+    assert counts["bills"] == {"shown": 1, "total": 1} and counts["workouts"] == {"shown": 0, "total": 0}
 
 
 def test_the_system_text_tells_the_ai_a_cut_list_is_incomplete(client: TestClient, auth: dict, provider):
@@ -519,15 +516,7 @@ def test_context_stays_under_the_ceiling_at_the_true_worst_case(client: TestClie
         ],
         *[Task(user_id=me, title=f"{mid}{n}", due_at=local("2026-11-02")) for n in range(200)],
         *[Task(user_id=me, title=f"{mid}{n}", status="done") for n in range(40)],
-        *[
-            Person(
-                user_id=me, name=f"{mid}{n}", relationship=mid, birthday=date(1990, 5, 1), last_contacted_at=TODAY, next_follow_up_at=TODAY
-            )
-            for n in range(200)
-        ],
         *[Habit(user_id=me, name=f"{mid}{n}") for n in range(100)],
-        *[Goal(user_id=me, title=f"{mid}{n}", target_at=TODAY) for n in range(100)],
-        *[JournalEntry(user_id=me, mood="great", body="b", entry_date=TODAY - timedelta(days=n)) for n in range(40)],
         *[SleepLog(user_id=me, sleep_date=TODAY - timedelta(days=n // 5), duration_minutes=400, quality=5) for n in range(300)],
         *[Workout(user_id=me, type=f"{mid}{n}", duration_minutes=60, calories=999, logged_at=local("2026-11-02")) for n in range(100)],
     )
@@ -539,10 +528,10 @@ def test_context_stays_under_the_ceiling_at_the_true_worst_case(client: TestClie
     # The cut happened (the totals alone are 12 currencies x 12 categories x 3 months) and it says so.
     assert counts["expense_totals"]["total"] == 432 and counts["expense_totals"]["shown"] < 432
     assert data["expense_totals"][0]["month"] == "2026-11"
-    assert counts["expenses"]["total"] == 432 and counts["people"]["total"] == 200
+    assert counts["expenses"]["total"] == 432 and counts["tasks"]["total"] == 240
     assert max(len(e["merchant"]) for e in data["expenses"]) <= assistant_router.TEXT_MAX
     limits = assistant_router.ASK_LIMITS
-    assert all(len(data[key]) <= limits[key] for key in ("expenses", "bills", "people", "habits", "goals", "workouts", "sleep"))
+    assert all(len(data[key]) <= limits[key] for key in ("expenses", "bills", "habits", "workouts", "sleep"))
 
 
 def test_context_has_whoop_days_for_this_user_only(client: TestClient, auth: dict, db: Session):
