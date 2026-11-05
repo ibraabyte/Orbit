@@ -31,7 +31,9 @@ export const EXPORT_TABLES = [
   { name: "goal_milestones", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "journal_entries", ownerColumn: "user_id", orderColumn: "entry_date", ascending: true },
   { name: "vehicles", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
-  { name: "watch_items", ownerColumn: "user_id", orderColumn: "created_at", ascending: true }
+  { name: "watch_items", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
+  { name: "gym_equipment", ownerColumn: "user_id", orderColumn: "equipment", ascending: true },
+  { name: "injuries", ownerColumn: "user_id", orderColumn: "created_at", ascending: true }
 ] as const satisfies readonly ExportTableDefinition[];
 
 type ExportTableName = (typeof EXPORT_TABLES)[number]["name"];

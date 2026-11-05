@@ -4,6 +4,7 @@ import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSh
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, flip, Glass, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
 import { backdrop, colors, fonts, radius } from "@/components/theme";
+import { et } from "@/lib/exercises";
 import { t } from "@/lib/i18n";
 
 // Space the tab bar takes at the bottom of a tab screen.
@@ -25,7 +26,10 @@ const stackScreens: Record<string, { title: string; siblings?: string[]; hint?: 
   "/media": { title: t.movies, siblings: ["/vehicles", "/media", "/servers"] },
   "/servers": { title: t.servers, siblings: ["/vehicles", "/media", "/servers"] },
   "/ask": { title: t.askOrbit },
-  "/settings": { title: t.settings }
+  "/settings": { title: t.settings },
+  "/exercises": { title: et.exercises, siblings: ["/exercises", "/gym", "/injuries"] },
+  "/gym": { title: et.gym, siblings: ["/exercises", "/gym", "/injuries"] },
+  "/injuries": { title: et.injuries, siblings: ["/exercises", "/gym", "/injuries"] }
 };
 
 export function openCapture(text?: string) {
@@ -68,7 +72,8 @@ export function Screen({
 
 function StackHeader({ action }: { action?: { label: string; onPress: () => void } }) {
   const path = usePathname();
-  const meta = stackScreens[path];
+  // One exercise's page sits under the library.
+  const meta = stackScreens[path] ?? (path.startsWith("/exercises/") ? { title: et.exercises } : undefined);
   return (
     <View style={{ gap: 10 }}>
       <View style={styles.stackBar}>

@@ -5,6 +5,7 @@ from app.models.bank_sms import BankSmsEvent, BankSmsToken, BankTransaction
 from app.models.base import Base
 from app.models.chatgpt import ChatgptConnection
 from app.models.finance import Bill, Budget, Expense
+from app.models.fitness import Exercise, GymEquipment, Injury
 from app.models.health import GroceryItem, Meal, MealPlan, SleepLog, WeightLog, Workout
 from app.models.integrations import AiConnection, ServiceConnection
 from app.models.library import Attachment, Capture, PushSubscription, Tag, Tagging
@@ -25,13 +26,16 @@ __all__ = [
     "Budget",
     "Capture",
     "ChatgptConnection",
+    "Exercise",
     "Expense",
     "FocusSession",
     "Goal",
     "GoalMilestone",
     "GroceryItem",
+    "GymEquipment",
     "Habit",
     "HabitLog",
+    "Injury",
     "JournalEntry",
     "Meal",
     "MealPlan",
