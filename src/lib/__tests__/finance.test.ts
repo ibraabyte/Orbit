@@ -49,6 +49,7 @@ function bill(overrides: Partial<Bill>): Bill {
     recurrence: "monthly",
     status: "active",
     autopay: false,
+    card_id: null,
     note: null,
     created_at: "2026-07-01T00:00:00.000Z",
     updated_at: "2026-07-01T00:00:00.000Z",
@@ -118,13 +119,22 @@ describe("subscriptions", () => {
   });
 
   it("alerts three days before each active bill, skipping ones already inside the window", () => {
-    const alerts = billRenewalAlerts([netflix, icloud, paused, rent], now);
+    const alerts = billRenewalAlerts([netflix, icloud, paused, rent], now, 3);
     // iCloud's heads-up (Jul 14) is already past on Jul 15.
     expect(alerts.map((alert) => alert.id)).toEqual(["bill-netflix-2026-07-20", "bill-rent-2026-08-01"]);
     expect(alerts[0].title).toBe("Netflix renews in 3 days");
     expect(alerts[0].at.getDate()).toBe(17);
     expect(alerts[0].at.getHours()).toBe(9);
     expect(alerts[1].title).toBe("Rent is due in 3 days");
+  });
+
+  it("alerts the day before by default", () => {
+    const alerts = billRenewalAlerts([netflix, icloud, paused, rent], now);
+    // iCloud renews on Jul 17, so its heads-up is Jul 16 at 9:00, still ahead on Jul 15.
+    expect(alerts.map((alert) => alert.id)).toEqual(["bill-icloud-2026-07-17", "bill-netflix-2026-07-20", "bill-rent-2026-08-01"]);
+    expect(alerts[0].title).toBe("iCloud renews tomorrow");
+    expect(alerts[0].at.getDate()).toBe(16);
+    expect(alerts[2].title).toBe("Rent is due tomorrow");
   });
 });
 

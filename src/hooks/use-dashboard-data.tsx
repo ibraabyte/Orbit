@@ -28,7 +28,12 @@ export const emptyData: DashboardData = {
   journalEntries: [],
   expenses: [],
   bills: [],
-  budgets: []
+  budgets: [],
+  cards: [],
+  moneyAccounts: [],
+  investments: [],
+  obligations: [],
+  obligationInstallments: []
 };
 
 // Orbit's own server returns the whole bundle in one call, same shape (backend/app/routers/dashboard.py).

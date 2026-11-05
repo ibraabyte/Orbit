@@ -43,6 +43,12 @@ LISTS: list[tuple[str, type[m.Base], Any, int]] = [
     ("expenses", m.Expense, m.Expense.spent_at.desc(), 1000),
     ("bills", m.Bill, m.Bill.due_at.asc(), 80),
     ("budgets", m.Budget, m.Budget.month.desc(), 240),
+    ("cards", m.Card, m.Card.created_at.asc(), 60),
+    ("moneyAccounts", m.MoneyAccount, m.MoneyAccount.created_at.asc(), 60),
+    ("investments", m.Investment, m.Investment.created_at.asc(), 100),
+    ("obligations", m.Obligation, m.Obligation.created_at.asc(), 60),
+    # ponytail: every installment of every plan; a 30-year monthly loan is 360 rows, so 1000 covers a few.
+    ("obligationInstallments", m.ObligationInstallment, m.ObligationInstallment.due_on.asc(), 1000),
 ]
 
 # Narrower than "everything the user owns", same as before.

@@ -45,10 +45,12 @@ def owned_crud_router(
     order_by: ColumnElement[Any],
     max_limit: int = 500,
     after_create: Callable[[Session, Any], None] | None = None,
+    after_update: Callable[[Any, set[str]], None] | None = None,
     tag_target: str | None = None,
 ) -> APIRouter:
     """tag_target: the taggings target_type for this table. Its create body may then carry `tags` (names),
-    attached in the same transaction, and deleting a row drops its taggings."""
+    attached in the same transaction, and deleting a row drops its taggings.
+    after_update gets the row and the names of the fields the client sent, before the commit."""
     router = APIRouter(prefix=prefix, tags=[prefix.strip("/")])
     Row = row_schema(model)
 
@@ -84,6 +86,8 @@ def owned_crud_router(
         def update_row(row_id: uuid.UUID, body: update, user_id: UserId, db: Db):  # type: ignore[valid-type]
             row = get_owned(db, model, row_id, user_id)
             apply_changes(row, body)
+            if after_update:
+                after_update(row, body.model_fields_set)
             db.commit()
             db.refresh(row)
             return row

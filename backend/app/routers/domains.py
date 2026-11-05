@@ -6,7 +6,7 @@ app used to do with a Supabase upsert: tags by name, one journal entry per day, 
 
 from datetime import date
 
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -131,6 +131,59 @@ bills = owned_crud_router(
     m.Bill, prefix="/bills", create=s.BillCreate, update=s.BillUpdate, order_by=m.Bill.due_at.asc(), tag_target="bill"
 )
 budgets = owned_crud_router(m.Budget, prefix="/budgets", create=s.BudgetCreate, update=s.BudgetUpdate, order_by=m.Budget.month.desc())
+# A bill's card_id must be one of the user's own cards: the (card_id, user_id) foreign key refuses any other.
+cards = owned_crud_router(m.Card, prefix="/cards", create=s.CardCreate, update=s.CardUpdate, order_by=m.Card.created_at.asc())
+money_accounts = owned_crud_router(
+    m.MoneyAccount,
+    prefix="/money-accounts",
+    create=s.MoneyAccountCreate,
+    update=s.MoneyAccountUpdate,
+    order_by=m.MoneyAccount.created_at.asc(),
+)
+
+
+def _revalued(row: m.Investment, sent: set[str]) -> None:
+    if "current_value" in sent:
+        row.valued_at = func.now()
+
+
+investments = owned_crud_router(
+    m.Investment,
+    prefix="/investments",
+    create=s.InvestmentCreate,
+    update=s.InvestmentUpdate,
+    order_by=m.Investment.created_at.asc(),
+    after_update=_revalued,
+)
+obligations = owned_crud_router(
+    m.Obligation, prefix="/obligations", create=s.ObligationCreate, update=s.ObligationUpdate, order_by=m.Obligation.created_at.asc()
+)
+ObligationRow = row_schema(m.Obligation)
+
+
+@obligations.post("/plan", response_model=ObligationRow, status_code=status.HTTP_201_CREATED)
+def create_plan(body: s.ObligationPlanCreate, user_id: UserId, db: Db):
+    """An obligation and its whole installment schedule, saved together or not at all."""
+    values = body.model_dump(exclude={"installments"})
+    obligation = m.Obligation(**values, user_id=user_id)
+    db.add(obligation)
+    db.flush()
+    for installment in body.installments:
+        db.add(m.ObligationInstallment(**installment.model_dump(), obligation_id=obligation.id, user_id=user_id))
+    db.commit()
+    db.refresh(obligation)
+    return obligation
+
+
+# The (obligation_id, user_id) foreign key keeps installments on the user's own obligations.
+obligation_installments = owned_crud_router(
+    m.ObligationInstallment,
+    prefix="/obligation-installments",
+    create=s.ObligationInstallmentCreate,
+    update=s.ObligationInstallmentUpdate,
+    order_by=m.ObligationInstallment.due_on.asc(),
+    max_limit=1000,
+)
 vehicles = owned_crud_router(
     m.Vehicle, prefix="/vehicles", create=s.VehicleCreate, update=s.VehicleUpdate, order_by=m.Vehicle.created_at.asc()
 )
@@ -180,6 +233,11 @@ ROUTERS: list[APIRouter] = [
     expenses,
     bills,
     budgets,
+    cards,
+    money_accounts,
+    investments,
+    obligations,
+    obligation_installments,
     vehicles,
     watch_items,
 ]

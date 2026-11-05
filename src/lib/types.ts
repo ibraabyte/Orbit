@@ -306,6 +306,8 @@ export type Bill = {
   note: string | null;
   created_at: string;
   updated_at: string;
+  // The card it is charged to, if one was picked.
+  card_id: string | null;
 };
 
 export type Budget = {
@@ -318,6 +320,79 @@ export type Budget = {
   currency: string;
   created_at: string;
   updated_at: string;
+};
+
+export type CardNetwork = "mada" | "visa" | "mastercard" | "amex" | "other";
+export type CardKind = "credit" | "debit" | "prepaid";
+
+// Only the last four digits are ever kept.
+export type PaymentCard = {
+  id: string;
+  user_id: string;
+  name: string;
+  network: CardNetwork;
+  kind: CardKind;
+  last4: string;
+  // First day of the month on the card (08/28 is 2028-08-01), or null.
+  expires_on: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type MoneyAccountKind = "bank" | "savings" | "wallet" | "cash" | "other";
+
+export type MoneyAccount = {
+  id: string;
+  user_id: string;
+  name: string;
+  kind: MoneyAccountKind;
+  balance: number;
+  currency: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvestmentKind = "stocks" | "funds" | "sukuk" | "crowdfunding" | "real_estate" | "crypto" | "gold" | "savings" | "other";
+
+export type Investment = {
+  id: string;
+  user_id: string;
+  name: string;
+  kind: InvestmentKind;
+  invested: number;
+  current_value: number;
+  currency: string;
+  started_on: string | null;
+  note: string | null;
+  valued_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ObligationKind = "bnpl" | "loan" | "installment" | "other";
+
+export type Obligation = {
+  id: string;
+  user_id: string;
+  name: string;
+  kind: ObligationKind;
+  provider: string | null;
+  total_amount: number;
+  currency: string;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ObligationInstallment = {
+  id: string;
+  user_id: string;
+  obligation_id: string;
+  due_on: string;
+  amount: number;
+  paid_at: string | null;
+  created_at: string;
 };
 
 export type Vehicle = {
@@ -377,4 +452,9 @@ export type DashboardData = {
   expenses: Expense[];
   bills: Bill[];
   budgets: Budget[];
+  cards: PaymentCard[];
+  moneyAccounts: MoneyAccount[];
+  investments: Investment[];
+  obligations: Obligation[];
+  obligationInstallments: ObligationInstallment[];
 };

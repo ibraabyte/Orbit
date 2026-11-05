@@ -5,6 +5,7 @@ import { Badge, Card, EmptyState, ListRow, ProgressBar, RowButton, StatGrid, Sta
 import { useOverlays } from "@/components/overlays";
 import { Screen } from "@/components/screen";
 import { useBankReview } from "@/hooks/use-bank-review";
+import { useCardPicker } from "@/hooks/use-card-picker";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
@@ -12,6 +13,7 @@ import { isToday } from "@/lib/dates";
 import { activeSubscriptions, financeSummary, formatMoney, mainCurrency, nextBillDueDate, spendingByCategory, subscriptionMonthlyTotal } from "@/lib/finance";
 import { formatDate, t } from "@/lib/i18n";
 import type { Bill } from "@/lib/types";
+import { cardLabel, formatPercent, wealthSummary } from "@/lib/wealth";
 
 const day = (date: string) => formatDate(`${date.slice(0, 10)}T12:00:00`);
 
@@ -26,6 +28,12 @@ export default function Finance() {
   const subscriptions = activeSubscriptions(data.bills);
   const categories = spendingByCategory(data.expenses);
   const topCategory = Math.max(1, ...categories.map((row) => row.total));
+  const wealth = wealthSummary(data, currency);
+  const pickCard = useCardPicker();
+  const cardName = (bill: Bill) => {
+    const card = data.cards.find((row) => row.id === bill.card_id);
+    return card ? cardLabel(card) : null;
+  };
 
   const markPaid = (bill: Bill) => {
     const nextDue = nextBillDueDate(bill);
@@ -42,6 +50,13 @@ export default function Finance() {
           <StatTile key="bills" label={t.monthlyBills} value={formatMoney(finance.monthlyCommitments, currency)} size={18} />
         ]}
       </StatGrid>
+      {/* Each part has its own page, so this screen stays about spending. */}
+      <Card title={t.wealth} action={<Text style={type.barValue}>{`${t.netWorth} ${formatMoney(wealth.net, currency)}`}</Text>}>
+        <ListRow first href="/accounts" title={t.moneyPlaces} meta={formatMoney(wealth.cash, currency)} />
+        <ListRow href="/investments" title={t.investments} subtitle={wealth.investments.count ? `${t.returnLabel} ${formatPercent(wealth.investments.percent)}` : null} meta={formatMoney(wealth.investments.value, currency)} />
+        <ListRow href="/obligations" title={t.obligations} subtitle={t.owed} meta={formatMoney(wealth.owed, currency)} />
+        <ListRow href="/cards" title={t.cards} meta={String(data.cards.length)} />
+      </Card>
       <BankReviewCard items={review.items} failed={review.failed} confirm={review.confirm} ignore={review.ignore} />
       <BudgetCard budgets={data.budgets} expenses={data.expenses} currency={currency} refresh={refresh} />
       <Card title={t.bills}>
@@ -66,7 +81,20 @@ export default function Finance() {
         )}
       </Card>
       <Card title={t.subscriptions} action={<Text style={type.barValue}>{t.monthlyTotal} {formatMoney(subscriptionMonthlyTotal(data.bills), currency)}</Text>}>
-        {subscriptions.length ? subscriptions.map((bill) => <ListRow key={bill.id} title={bill.name} subtitle={`${t.renews} ${day(bill.due_at)}`} meta={formatMoney(bill.amount, bill.currency)} />) : <EmptyState example="subscription netflix 45">{t.emptyEx}</EmptyState>}
+        {subscriptions.length ? (
+          subscriptions.map((bill) => (
+            <ListRow
+              key={bill.id}
+              title={bill.name}
+              subtitle={`${t.renews} ${day(bill.due_at)} · ${cardName(bill) ?? t.noCard}`}
+              meta={formatMoney(bill.amount, bill.currency)}
+              // Tap to pick the card it is charged to.
+              onPress={() => pickCard(bill)}
+            />
+          ))
+        ) : (
+          <EmptyState example="subscription netflix 45">{t.emptyEx}</EmptyState>
+        )}
       </Card>
       <Card title={t.byCategory}>
         {categories.map((row) => (

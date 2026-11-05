@@ -161,6 +161,11 @@ const baseData: DashboardData = {
     }
   ],
   budgets: [],
+  cards: [],
+  moneyAccounts: [],
+  investments: [],
+  obligations: [],
+  obligationInstallments: [],
   journalEntries: [
     {
       id: "journal-1",

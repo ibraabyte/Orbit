@@ -1,30 +1,34 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Badge, Card, CardLink, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, StatGrid, StatTile, type } from "@/components/drift";
+import { Badge, Card, CardLink, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { MorningBriefCard } from "@/components/morning-brief-card";
 import { useOverlays } from "@/components/overlays";
 import { ErrorState, HeaderButton, OfflineBanner, openCapture, Screen, Skeleton, TabHeader } from "@/components/screen";
 import { TaskRow } from "@/components/task-row";
 import { colors, fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { apiUpdate } from "@/lib/api-actions";
+import { getApi } from "@/lib/backend";
 import { useMorningBrief } from "@/hooks/use-morning-brief";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { appHref } from "@/lib/app-href";
 import { buildCalendarDays } from "@/lib/calendar";
 import { buildDailyBrief, overdueTasks, summarizeDashboard, todaysTasks } from "@/lib/dashboard";
 import { isToday } from "@/lib/dates";
-import { formatMoney } from "@/lib/finance";
+import { formatMoney, nextBillDueDate } from "@/lib/finance";
 import { formatFocusDuration } from "@/lib/focus";
 import { foodSummary } from "@/lib/food";
 import { captureStarters, formatClock, formatDate, formatIn, isArabic, t } from "@/lib/i18n";
 import { peopleSummary } from "@/lib/people";
 import { prayerNamesEn } from "@/lib/prayer-times";
 import { formatSleepDuration } from "@/lib/sleep";
+import { cardLabel, moneyDueSoon, type MoneyDue } from "@/lib/wealth";
 
 const hiddenKey = "orbit.today.hidden";
 const optional = [
   ["brief", t.morningBrief],
+  ["money", t.moneyDue],
   ["digest", t.digest],
   ["quick", t.quick],
   ["next", t.nextUp],
@@ -35,7 +39,7 @@ type OptionalSection = (typeof optional)[number][0];
 // Today = now: prayer, digest, today's counts, attention, capture, next up, health today.
 // The week's rollup and trends live in Plan, so each number has one home.
 export default function Today() {
-  const { data, loading, error, refresh } = useDashboardData();
+  const { data, loading, error, refresh, act } = useDashboardData();
   const { next: prayer } = usePrayerTimes();
   const { sheet } = useOverlays();
   const [hidden, setHidden] = useState<OptionalSection[]>([]);
@@ -54,6 +58,7 @@ export default function Today() {
   const summary = useMemo(() => summarizeDashboard(data), [data]);
   const digest = useMemo(() => buildDailyBrief(data).slice(0, 5), [data]);
   const food = useMemo(() => foodSummary(data), [data]);
+  const moneyDue = useMemo(() => moneyDueSoon(data), [data]);
   const people = useMemo(() => peopleSummary(data), [data]);
   const upcoming = useMemo(() => {
     const now = Date.now();
@@ -81,6 +86,14 @@ export default function Today() {
         }
       }))
     });
+
+  // Paid: an installment is ticked off; a repeating bill moves to its next date, a one-off one is marked paid.
+  const pay = (item: MoneyDue) => {
+    if (item.installment) return act(() => apiUpdate(getApi(), "/obligation-installments", item.installment!.id, { paid_at: new Date().toISOString() }));
+    if (!item.bill) return;
+    const nextDue = nextBillDueDate(item.bill);
+    return act(() => apiUpdate(getApi(), "/bills", item.bill!.id, nextDue ? { due_at: nextDue, status: "active" } : { status: "paid" }));
+  };
 
   // Pull-to-refresh also asks for a fresh brief; a failed brief never stops the rest from reloading.
   const reload = () => {
@@ -116,6 +129,22 @@ export default function Today() {
       ) : null}
 
       {show("brief") ? <MorningBriefCard state={brief.state} data={data} retry={() => void brief.refresh()} /> : null}
+
+      {show("money") && moneyDue.length ? (
+        <Card title={t.moneyDue} action={<CardLink href="/finance" label={t.finance} />}>
+          {moneyDue.map((item, index) => (
+            <ListRow
+              key={item.id}
+              first={index === 0}
+              title={item.title}
+              badges={item.state === "overdue" ? <Badge tone="urgent" glyph="!">{t.overdue}</Badge> : item.state === "today" ? <Badge tone="accent" glyph="◷">{t.dueToday}</Badge> : <Badge glyph="○">{t.dueTomorrow}</Badge>}
+              subtitle={item.kind === "installment" ? t.installment : item.card ? `${t.chargedTo} ${cardLabel(item.card)}` : null}
+              meta={formatMoney(item.amount, item.currency)}
+              trailing={<RowButton label={t.markPaid} onPress={() => void pay(item)} />}
+            />
+          ))}
+        </Card>
+      ) : null}
 
       {show("digest") ? (
         <Card title={t.digest} action={<Badge>{digest.length}</Badge>}>

@@ -7,9 +7,10 @@ import { useMorningNotifications } from "@/hooks/use-morning-brief";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { useWidgetSync } from "@/hooks/use-widget-sync";
-import { billRenewalAlerts } from "@/lib/finance";
+import { billRenewalAlerts, formatMoney } from "@/lib/finance";
 import { buildLocalReminderSchedule } from "@/lib/reminder-notifications";
 import { vehicleAlerts } from "@/lib/vehicles";
+import { installmentAlerts } from "@/lib/wealth";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false })
@@ -29,12 +30,13 @@ export function useReminderNotifications() {
       // Only clear our own alarms; prayer alerts are scheduled separately.
       const scheduled = await Notifications.getAllScheduledNotificationsAsync();
       await Promise.all(
-        scheduled.filter((item) => /^(reminder|task|bill|vehicle)-/.test(item.identifier)).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
+        scheduled.filter((item) => /^(reminder|task|bill|installment|vehicle)-/.test(item.identifier)).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
       );
-      // iOS keeps 64 pending alarms: 36 reminders + 8 bill + 4 car heads-ups + 10 prayers + 4 mornings = 62.
+      // iOS keeps 64 pending alarms: 32 reminders + 8 bill + 4 installment + 4 car heads-ups + 10 prayers + 4 mornings = 62.
       const items = [
-        ...buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 36 }),
+        ...buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 32 }),
         ...billRenewalAlerts(data.bills).slice(0, 8),
+        ...installmentAlerts({ obligations: data.obligations, obligationInstallments: data.obligationInstallments }, new Date(), formatMoney).slice(0, 4),
         ...vehicleAlerts(vehicles).slice(0, 4)
       ];
       for (const item of items) {
@@ -50,7 +52,7 @@ export function useReminderNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [data.reminders, data.tasks, data.bills, vehicles]);
+  }, [data.reminders, data.tasks, data.bills, data.obligations, data.obligationInstallments, vehicles]);
 
   useEffect(() => {
     function open(response: Notifications.NotificationResponse | null) {

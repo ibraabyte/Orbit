@@ -21,7 +21,7 @@ const now = new Date("2026-11-03T01:00:00.000Z"); // 04:00 local on 3 Nov
 const empty = {
   profile: null, tasks: [], reminders: [], captures: [], attachments: [], tags: [], taggings: [], meals: [], mealPlans: [], groceryItems: [], people: [],
   weightLogs: [], workouts: [], sleepLogs: [], focusSessions: [], habits: [], habitLogs: [], goals: [], goalMilestones: [], journalEntries: [],
-  expenses: [], bills: [], budgets: []
+  expenses: [], bills: [], budgets: [], cards: [], moneyAccounts: [], investments: [], obligations: [], obligationInstallments: []
 } satisfies DashboardData;
 
 const task = (overrides: Partial<Task>): Task => ({
@@ -34,7 +34,7 @@ const reminder = (overrides: Partial<Reminder>): Reminder => ({
 });
 const bill = (overrides: Partial<Bill>): Bill => ({
   id: "b1", user_id: "u", name: "Rent", amount: 100, currency: "SAR", category: "bills", due_at: "2026-11-03", recurrence: "monthly", status: "active",
-  autopay: false, note: null, created_at: "2026-11-01T00:00:00Z", updated_at: "2026-11-01T00:00:00Z", ...overrides
+  autopay: false, note: null, card_id: null, created_at: "2026-11-01T00:00:00Z", updated_at: "2026-11-01T00:00:00Z", ...overrides
 });
 
 describe("morning settings", () => {

@@ -141,6 +141,7 @@ const data: DashboardData = {
       recurrence: "monthly",
       status: "active",
       autopay: true,
+      card_id: null,
       note: null,
       created_at: "2026-07-01T00:00:00.000Z",
       updated_at: "2026-07-01T00:00:00.000Z"
@@ -162,6 +163,11 @@ const data: DashboardData = {
   ],
   goalMilestones: [],
   budgets: [],
+  cards: [],
+  moneyAccounts: [],
+  investments: [],
+  obligations: [],
+  obligationInstallments: [],
   journalEntries: [
     {
       id: "journal-1",

@@ -24,6 +24,8 @@ const kinds: Record<QuickAddDraft["kind"], [en: string, ar: string]> = {
 function draftFields(draft: QuickAddDraft) {
   const rows: [string, string][] = [[isArabic ? "العنوان" : "Title", draft.title]];
   if (draft.amount) rows.push([isArabic ? "المبلغ" : "Amount", `${draft.amount} ${draft.currency}`]);
+  // The guessed category is shown, so a wrong guess is seen before saving.
+  if (draft.kind === "expense") rows.push([isArabic ? "الفئة" : "Category", t.financeCategoryNames[draft.financeCategory]]);
   if (draft.sleepMinutes) rows.push([isArabic ? "المدة" : "Duration", `${Math.round((draft.sleepMinutes / 60) * 10) / 10}h`]);
   else if (draft.durationMinutes) rows.push([isArabic ? "المدة" : "Duration", `${draft.durationMinutes} ${t.min}`]);
   if (draft.weight && draft.kind === "weight") rows.push([t.weight, `${draft.weight} ${draft.unit}`]);

@@ -1,5 +1,5 @@
 import { parseQuickAdd, validateQuickAddDraft, type QuickAddDraft } from "@/lib/quick-add";
-import type { WeightUnit } from "@/lib/types";
+import type { FinanceCategory, WeightUnit } from "@/lib/types";
 
 // Turns plain speech ("expense 25 lunch tomorrow", "صرفت 25 غداء بكرة") into the
 // "kind: ... @date" syntax parseQuickAdd expects, so nobody has to learn the syntax.
@@ -34,6 +34,39 @@ const arabicDays: [RegExp, string][] = [
   [/(?:يوم\s+)?السبت/, "saturday"]
 ];
 
+// Spending words: "غداء 45" or "بنزين ١٢٠" alone is an expense, and these set its category.
+// Words that already start another kind (gym, groceries, اشتري) are left out so they keep their meaning.
+const spendingWords: [FinanceCategory, string[]][] = [
+  ["food", ["غداء", "عشاء", "عشا", "فطور", "فطار", "قهوة", "قهوه", "كوفي", "شاي", "مطعم", "كافيه", "برقر", "شاورما", "بيتزا", "lunch", "dinner", "breakfast", "coffee", "cafe", "restaurant"]],
+  ["transport", ["بنزين", "وقود", "تاكسي", "اوبر", "أوبر", "كريم", "مواصلات", "موقف", "مواقف", "باص", "مترو", "قطار", "تعبئة", "fuel", "gas", "petrol", "taxi", "uber", "careem", "parking"]],
+  ["groceries", ["بقالة", "بقاله", "سوبرماركت", "تموينات", "خضار", "supermarket"]],
+  ["shopping", ["ملابس", "تسوق", "هدية", "هديه", "امازون", "أمازون", "نون", "clothes", "amazon", "gift"]],
+  ["health", ["صيدلية", "صيدليه", "دواء", "علاج", "مستشفى", "دكتور", "pharmacy", "medicine", "doctor"]],
+  ["services", ["حلاق", "حلاقة", "حلاقه", "مغسلة", "مغسله", "غسيل", "barber", "laundry"]],
+  ["bills", ["كهرباء", "كهربا", "انترنت", "إنترنت", "جوال", "electricity", "internet"]],
+  ["home", ["ايجار", "إيجار", "rent"]],
+  ["travel", ["طيران", "فندق", "تذكرة", "تذكره", "flight", "hotel"]]
+];
+const spendingCategory = new Map(spendingWords.flatMap(([category, words]) => words.map((word) => [word, category] as const)));
+
+/** The category a spending word points to ("البنزين" counts as "بنزين"), or null. */
+export function guessFinanceCategory(text: string): FinanceCategory | null {
+  for (const raw of text.toLowerCase().split(/\s+/)) {
+    const word = raw.replace(/[.,،!؟?]+$/, "");
+    const found = spendingCategory.get(word) ?? spendingCategory.get(word.replace(/^(?:بال|وال|ال)/, ""));
+    if (found) return found;
+  }
+  return null;
+}
+
+// "غداء 45", "45 بنزين", "قهوة 18 ريال": a few words, one amount, a spending word, and no date or time.
+function looksLikeQuickExpense(text: string) {
+  if ((text.match(/\d+(?:\.\d+)?/g) ?? []).length !== 1) return false;
+  if (/:|\b(?:am|pm)\b|الساع[ةه]/i.test(text) || moveDateToMarker(text) !== text) return false;
+  const words = text.replace(/\d+(?:\.\d+)?/, " ").replace(/ريال|ر\.س|\bsar\b/gi, " ").trim().split(/\s+/).filter(Boolean);
+  return words.length >= 1 && words.length <= 4 && guessFinanceCategory(words.join(" ")) !== null;
+}
+
 const englishDate =
   /\s+((?:today|tonight|tomorrow|next\s+week|next\s+month|(?:next\s+)?(?:monday|mon|tuesday|tue|wednesday|wed|thursday|thu|friday|fri|saturday|sat|sunday|sun))(?:\s+(?:at\s+)?(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)?|noon))?)$/i;
 
@@ -48,6 +81,7 @@ export function naturalToCommand(input: string, options: { defaultCurrency?: str
     if (kind) text = rest.join(" ");
     // "subscription netflix 45" / "اشتراك نتفلكس 45" should land in Subscriptions.
     if (/^(?:subscription|اشتراك)$/i.test(first) && !/#subscriptions\b/.test(text)) text += " #subscriptions";
+    if (!kind && looksLikeQuickExpense(text)) kind = "expense";
   }
 
   text = arabicUnits(text);
@@ -65,12 +99,19 @@ export function naturalToCommand(input: string, options: { defaultCurrency?: str
 // ponytail: a guessed kind that fails validation ("focus on email") falls back to a plain task.
 export function parseNatural(input: string, options: { defaultCurrency?: string; defaultWeightUnit?: WeightUnit; now?: Date } = {}) {
   const { command, inferredKind } = naturalToCommand(input, options);
-  const draft = parseQuickAdd(command, options);
+  const draft = withGuessedCategory(parseQuickAdd(command, options), input);
   const validation = validateQuickAddDraft(draft, command);
   if (validation.ok || !inferredKind) return { command, draft, validation };
   const plain = naturalToCommand(`task: ${input.trim()}`, options).command;
   const task = parseQuickAdd(plain, options);
   return { command: plain, draft: task, validation: validateQuickAddDraft(task, plain) };
+}
+
+// An expense with no category said ("صرفت 40 بنزين") gets one from its words.
+function withGuessedCategory(draft: QuickAddDraft, input: string): QuickAddDraft {
+  if (draft.kind !== "expense" || draft.financeCategory !== "other") return draft;
+  const guessed = guessFinanceCategory(toWesternDigits(input));
+  return guessed ? { ...draft, financeCategory: guessed } : draft;
 }
 
 export function describeDraft(draft: QuickAddDraft) {
