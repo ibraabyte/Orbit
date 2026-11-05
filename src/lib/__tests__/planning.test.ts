@@ -37,6 +37,7 @@ function baseData(overrides: Partial<DashboardData> = {}): DashboardData {
     habitLogs: [],
     goals: [],
     goalMilestones: [],
+    budgets: [],
     journalEntries: [],
     expenses: [],
     bills: [],

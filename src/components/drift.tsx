@@ -367,9 +367,9 @@ export function MoreButton({ onPress, label }: { onPress: () => void; label: str
 }
 
 /** A row's direct action: Paid, Bought, Contacted. outline is the quieter version. */
-export function RowButton({ label, onPress, outline, icon }: { label?: string; onPress: () => void; outline?: boolean; icon?: IconName }) {
+export function RowButton({ label, onPress, outline, icon, disabled }: { label?: string; onPress: () => void; outline?: boolean; icon?: IconName; disabled?: boolean }) {
     return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.rowButton, outline ? styles.rowButtonOutline : { backgroundColor: colors.surfaceInset }, !label && { width: 36, paddingHorizontal: 0 }, pressed && { opacity: 0.7 }]}>
+    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: Boolean(disabled) }} style={({ pressed }) => [styles.rowButton, outline ? styles.rowButtonOutline : { backgroundColor: colors.surfaceInset }, !label && { width: 36, paddingHorizontal: 0 }, disabled && { opacity: 0.35 }, pressed && { opacity: 0.7 }]}>
       {icon ? <Icon name={icon} size={15} color={colors.ink} /> : null}
       {label && !(icon && outline) ? <Text style={type.pill}>{label}</Text> : null}
     </Pressable>

@@ -10,6 +10,7 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useServerStatus } from "@/hooks/use-server-status";
 import { openTasks } from "@/lib/dashboard";
 import { financeSummary } from "@/lib/finance";
+import { et } from "@/lib/exercises";
 import { foodSummary } from "@/lib/food";
 import { t, toggleLanguage } from "@/lib/i18n";
 import { peopleSummary } from "@/lib/people";
@@ -18,9 +19,9 @@ type Section = { key: string; href: Href; label: string; icon: IconName };
 
 const section = (key: string, label: string, icon: IconName): Section => ({ key, href: `/${key}` as Href, label, icon });
 const manage = [section("tasks", t.tasks, "check-square")];
-const logs = [section("health", t.health, "activity"), section("whoop", t.whoop, "watch"), section("food", t.food, "coffee"), section("finance", t.finance, "credit-card"), section("people", t.people, "users"), section("habits", t.habits, "repeat"), section("goals", t.goals, "flag"), section("journal", t.journal, "book-open"), section("library", t.library, "bookmark")];
+const logs = [section("health", t.health, "activity"), section("whoop", t.whoop, "watch"), section("food", t.food, "coffee"), section("exercises", et.exercises, "zap"), section("finance", t.finance, "credit-card"), section("people", t.people, "users"), section("habits", t.habits, "repeat"), section("goals", t.goals, "flag"), section("journal", t.journal, "book-open"), section("library", t.library, "bookmark")];
 const home = [section("vehicles", t.car, "truck"), section("media", t.movies, "film"), section("servers", t.servers, "server")];
-const system = [section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
+const system = [section("ask", t.askOrbit, "message-circle"), section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
 const groups: [string, Section[]][] = [[t.manageDay, manage], [t.lifeLogs, logs], [t.homeServices, home], [t.system, system]];
 const pinnable = [...manage, ...logs, ...home];
 

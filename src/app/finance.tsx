@@ -1,5 +1,6 @@
 import { Text, View } from "react-native";
 import { BankReviewCard } from "@/components/bank-review-card";
+import { BudgetCard } from "@/components/budget-card";
 import { Badge, Card, EmptyState, ListRow, ProgressBar, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Screen } from "@/components/screen";
@@ -8,7 +9,7 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
 import { isToday } from "@/lib/dates";
-import { activeSubscriptions, financeSummary, formatMoney, nextBillDueDate, spendingByCategory, subscriptionMonthlyTotal } from "@/lib/finance";
+import { activeSubscriptions, financeSummary, formatMoney, mainCurrency, nextBillDueDate, spendingByCategory, subscriptionMonthlyTotal } from "@/lib/finance";
 import { formatDate, t } from "@/lib/i18n";
 import type { Bill } from "@/lib/types";
 
@@ -19,8 +20,8 @@ export default function Finance() {
   const { toast } = useOverlays();
   const review = useBankReview(act);
   const finance = financeSummary(data);
-  // ponytail: totals assume one currency, same as the web app.
-  const currency = data.expenses[0]?.currency ?? data.bills[0]?.currency ?? "SAR";
+  // ponytail: totals assume one currency, same as the web app; it is the one most spending is in.
+  const currency = mainCurrency(data.expenses, data.bills);
   const bills = [...finance.overdueBills, ...finance.upcomingBills];
   const subscriptions = activeSubscriptions(data.bills);
   const categories = spendingByCategory(data.expenses);
@@ -42,6 +43,7 @@ export default function Finance() {
         ]}
       </StatGrid>
       <BankReviewCard items={review.items} failed={review.failed} confirm={review.confirm} ignore={review.ignore} />
+      <BudgetCard budgets={data.budgets} expenses={data.expenses} currency={currency} refresh={refresh} />
       <Card title={t.bills}>
         {bills.length ? (
           bills.map((bill) => (

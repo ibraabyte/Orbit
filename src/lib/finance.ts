@@ -1,5 +1,5 @@
 import { localDateKey, localDayOf, lastDays, type DailyMetric } from "@/lib/insights";
-import type { Bill, BillRecurrence, DashboardData, Expense, FinanceCategory } from "@/lib/types";
+import type { Bill, BillRecurrence, Budget, DashboardData, Expense, FinanceCategory } from "@/lib/types";
 
 export const financeCategories: FinanceCategory[] = [
   "food",
@@ -202,4 +202,93 @@ export function billRenewalAlerts(bills: Bill[], now = new Date(), daysBefore = 
     })
     .filter((alert) => alert.at.getTime() > now.getTime())
     .sort((a, b) => a.at.getTime() - b.at.getTime());
+}
+
+// Budgets. A month is named by its first local day, "2026-07-01", the way the server stores it.
+export type BudgetState = "ok" | "near" | "over";
+export type BudgetProgress = { budget: Budget; spent: number; limit: number; ratio: number; state: BudgetState };
+export type BudgetThreshold = 80 | 100;
+export type BudgetAlert = {
+  id: string;
+  category: FinanceCategory;
+  threshold: BudgetThreshold;
+  state: BudgetState;
+  spent: number;
+  limit: number;
+  currency: string;
+};
+
+// A typed limit, or null if it is not a positive amount the server accepts. Arabic digits and a decimal comma are fine;
+// a comma before exactly three digits ("1,500") is a thousands separator.
+export function parseBudgetAmount(text: string) {
+  const digits = text
+    .trim()
+    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/٬/g, ",");
+  const western = /^\d{1,3}(,\d{3})+$/.test(digits) ? digits.replace(/,/g, "") : digits.replace(/[٫,]/g, ".");
+  const value = /^\d+(\.\d+)?$/.test(western) ? Math.round(Number(western) * 100) / 100 : 0;
+  return value > 0 && value < 1e10 ? value : null;
+}
+
+// The currency most of the spending is in (then bills, then SAR), so one foreign charge doesn't set the currency of new limits.
+export function mainCurrency(expenses: Expense[], bills: Bill[]) {
+  for (const rows of [expenses, bills]) {
+    const counts = new Map<string, number>();
+    for (const row of rows) counts.set(row.currency, (counts.get(row.currency) ?? 0) + 1);
+    const top = [...counts].sort((a, b) => b[1] - a[1])[0];
+    if (top) return top[0];
+  }
+  return "SAR";
+}
+
+export function monthKey(date: Date) {
+  return `${localDateKey(date).slice(0, 7)}-01`;
+}
+
+export function shiftMonth(month: string, by: number) {
+  return monthKey(new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1 + by, 1, 12));
+}
+
+// Bills count only once they are logged as expenses, so only expenses are taken in.
+// Money is compared in whole cents so 80.00 of 100.00 is "near" however the cents added up.
+export function budgetProgress(budgets: Budget[], expenses: Expense[], month: string): BudgetProgress[] {
+  const cents = (value: number) => Math.round(Number(value) * 100);
+  const spentIn = (budget: Budget) =>
+    expenses
+      .filter((expense) => expense.category === budget.category && expense.currency === budget.currency && monthKey(new Date(expense.spent_at)) === month)
+      .reduce((sum, expense) => sum + cents(expense.amount), 0);
+
+  return budgets
+    .filter((budget) => budget.month.slice(0, 10) === month)
+    .sort((a, b) => financeCategories.indexOf(a.category) - financeCategories.indexOf(b.category))
+    .map((budget) => {
+      const spent = spentIn(budget);
+      const limit = cents(budget.amount);
+      const state: BudgetState = spent >= limit ? "over" : spent * 100 >= limit * 80 ? "near" : "ok";
+      return { budget, spent: spent / 100, limit: limit / 100, ratio: spent / limit, state };
+    });
+}
+
+// "Copy last month": the latest earlier month that has limits, minus categories the target month already has.
+export function budgetsToCopy(budgets: Budget[], targetMonth: string): Budget[] {
+  const earlier = budgets.filter((budget) => budget.month.slice(0, 10) < targetMonth);
+  const latest = earlier.map((budget) => budget.month.slice(0, 10)).sort().at(-1);
+  const taken = new Set(budgets.filter((budget) => budget.month.slice(0, 10) === targetMonth).map((budget) => budget.category));
+  return earlier.filter((budget) => budget.month.slice(0, 10) === latest && !taken.has(budget.category));
+}
+
+// Which alerts have not gone out yet. `fired` is what was remembered ("2026-07-01:food:80"); the new list
+// replaces it (ponytail: it only grows, about two keys per category per month). If a load jumps past both thresholds only the 100% alert is sent, but both are remembered.
+export function newBudgetAlerts(rows: BudgetProgress[], fired: string[]): { alerts: BudgetAlert[]; fired: string[] } {
+  const seen = new Set(fired);
+  const alerts: BudgetAlert[] = [];
+  for (const { budget, spent, limit, state } of rows) {
+    const month = budget.month.slice(0, 10);
+    const crossed: BudgetThreshold[] = state === "over" ? [80, 100] : state === "near" ? [80] : [];
+    const fresh = crossed.filter((threshold) => !seen.has(`${month}:${budget.category}:${threshold}`));
+    for (const threshold of crossed) seen.add(`${month}:${budget.category}:${threshold}`);
+    const top = fresh.at(-1);
+    if (top) alerts.push({ id: `budget-${month}-${budget.category}-${top}`, category: budget.category, threshold: top, state, spent, limit, currency: budget.currency });
+  }
+  return { alerts, fired: [...seen] };
 }

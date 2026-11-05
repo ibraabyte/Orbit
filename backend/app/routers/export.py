@@ -34,6 +34,7 @@ TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("focus_sessions", m.FocusSession, m.FocusSession.started_at),
     ("expenses", m.Expense, m.Expense.spent_at),
     ("bills", m.Bill, m.Bill.due_at),
+    ("budgets", m.Budget, m.Budget.month),
     ("bank_transactions", m.BankTransaction, m.BankTransaction.received_at),
     ("push_subscriptions", m.PushSubscription, m.PushSubscription.created_at),
     ("habits", m.Habit, m.Habit.created_at),
@@ -43,6 +44,8 @@ TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("journal_entries", m.JournalEntry, m.JournalEntry.entry_date),
     ("vehicles", m.Vehicle, m.Vehicle.created_at),
     ("watch_items", m.WatchItem, m.WatchItem.created_at),
+    ("gym_equipment", m.GymEquipment, m.GymEquipment.equipment),
+    ("injuries", m.Injury, m.Injury.created_at),
 ]
 
 REDACTED = {"push_subscriptions": ("endpoint", "p256dh", "auth"), "bank_transactions": ("message_mac", "reference_mac")}

@@ -1,15 +1,19 @@
 import { useEffect, useState } from "react";
 import { Alert, Pressable, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
+import { resyncWidget } from "@/hooks/use-widget-sync";
 import { Avatar, Card, Chevron, IconTile, ListRow, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { clearAskConsent, loadAskConsent } from "@/hooks/use-ask-consent";
+import { loadMorningSettings, saveMorningSettings } from "@/hooks/use-morning-brief";
 import { arePrayerAlertsEnabled, setPrayerAlertsEnabled } from "@/hooks/use-prayer-times";
 import { getApi, signOut } from "@/lib/backend";
-import { t, toggleLanguage } from "@/lib/i18n";
+import { formatClock, t, toggleLanguage } from "@/lib/i18n";
 import { adminApi, type ServerSettings } from "@/lib/integrations";
+import { MORNING_DEFAULT, type MorningSettings } from "@/lib/morning-brief";
 
 function Setting({ label, detail, children }: { label: string; detail?: string; children: React.ReactNode }) {
   return (
@@ -24,10 +28,13 @@ function Setting({ label, detail, children }: { label: string; detail?: string; 
 }
 
 export default function Settings() {
-  const { data } = useDashboardData();
-  const { toast } = useOverlays();
+  const { data, userId } = useDashboardData();
+  const { sheet, toast } = useOverlays();
   const [lock, setLock] = useState(true);
   const [prayers, setPrayers] = useState(true);
+  const [morning, setMorning] = useState<MorningSettings>(MORNING_DEFAULT);
+  // The AI the person agreed to send their data to for Ask Orbit; null when not agreed.
+  const [askConsent, setAskConsent] = useState<string | null>(null);
   // Only the server's admin (the first account) sees the Server card.
   const [server, setServer] = useState<ServerSettings | null>(null);
   const name = data.profile?.display_name ?? "Orbit";
@@ -35,6 +42,8 @@ export default function Settings() {
   useEffect(() => {
     void isAppLockEnabled().then(setLock);
     void arePrayerAlertsEnabled().then(setPrayers);
+    void loadMorningSettings().then(setMorning);
+    void loadAskConsent(userId).then(setAskConsent);
     void (async () => {
       const api = getApi();
       const me = await adminApi.me(api);
@@ -53,6 +62,35 @@ export default function Settings() {
     }
   };
 
+  const withdrawAsk = async () => {
+    try {
+      await clearAskConsent(userId);
+      setAskConsent(null);
+      toast(t.askWithdrawn);
+    } catch {
+      Alert.alert(t.changeFailed, t.tryAgain);
+    }
+  };
+
+  // Shown only once saved, so a change that failed never looks like it worked.
+  const changeMorning = async (next: MorningSettings) => {
+    try {
+      await saveMorningSettings(next);
+      setMorning(next);
+    } catch {
+      Alert.alert(t.changeFailed, t.tryAgain);
+    }
+  };
+  const clockAt = (hour: number, minute: number) => formatClock(new Date(2000, 0, 1, hour, minute));
+  const pickMorningTime = () =>
+    sheet({
+      title: t.morningAlertTime,
+      options: Array.from({ length: 12 }, (_, index) => ({ hour: 5 + Math.floor(index / 2), minute: (index % 2) * 30 })).map(({ hour, minute }) => ({
+        label: `${morning.hour === hour && morning.minute === minute ? "● " : "○ "}${clockAt(hour, minute)}`,
+        run: () => void changeMorning({ ...morning, hour, minute })
+      }))
+    });
+
   const track = { true: colors.accent, false: colors.hairline };
 
   return (
@@ -70,7 +108,7 @@ export default function Settings() {
               value={lock}
               onValueChange={(next) => {
                 setLock(next);
-                void setAppLockEnabled(next);
+                void setAppLockEnabled(next).then(resyncWidget);
               }}
             />
           </Setting>
@@ -86,6 +124,22 @@ export default function Settings() {
             }}
           />
         </Setting>
+        <Setting label={t.morningAlert} detail={t.morningAlertDetail}>
+          <Switch accessibilityLabel={t.morningAlert} trackColor={track} value={morning.enabled} onValueChange={(next) => void changeMorning({ ...morning, enabled: next })} />
+        </Setting>
+        {morning.enabled ? (
+          <Pressable accessibilityRole="button" accessibilityLabel={`${t.morningAlertTime}, ${clockAt(morning.hour, morning.minute)}`} onPress={pickMorningTime}>
+            <Setting label={t.morningAlertTime}>
+              <Text style={type.rowSubtitle}>{clockAt(morning.hour, morning.minute)}</Text>
+              <Chevron />
+            </Setting>
+          </Pressable>
+        ) : null}
+        {askConsent ? (
+          <Setting label={t.askShare} detail={t.askShareDetail.replace("{provider}", askConsent)}>
+            <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />
+          </Setting>
+        ) : null}
         <Pressable
           accessibilityRole="button"
           onPress={() => {

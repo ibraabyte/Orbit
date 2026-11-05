@@ -23,6 +23,7 @@ export const EXPORT_TABLES = [
   { name: "focus_sessions", ownerColumn: "user_id", orderColumn: "started_at", ascending: true },
   { name: "expenses", ownerColumn: "user_id", orderColumn: "spent_at", ascending: true },
   { name: "bills", ownerColumn: "user_id", orderColumn: "due_at", ascending: true },
+  { name: "budgets", ownerColumn: "user_id", orderColumn: "month", ascending: true },
   { name: "bank_transactions", ownerColumn: "user_id", orderColumn: "received_at", ascending: true },
   { name: "push_subscriptions", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "habits", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
@@ -31,7 +32,9 @@ export const EXPORT_TABLES = [
   { name: "goal_milestones", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "journal_entries", ownerColumn: "user_id", orderColumn: "entry_date", ascending: true },
   { name: "vehicles", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
-  { name: "watch_items", ownerColumn: "user_id", orderColumn: "created_at", ascending: true }
+  { name: "watch_items", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
+  { name: "gym_equipment", ownerColumn: "user_id", orderColumn: "equipment", ascending: true },
+  { name: "injuries", ownerColumn: "user_id", orderColumn: "created_at", ascending: true }
 ] as const satisfies readonly ExportTableDefinition[];
 
 type ExportTableName = (typeof EXPORT_TABLES)[number]["name"];

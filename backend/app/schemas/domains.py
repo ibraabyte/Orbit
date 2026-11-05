@@ -9,7 +9,7 @@ import uuid
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from app.models.finance import FINANCE_CATEGORIES
 from app.models.library import TAGGING_TARGETS
@@ -373,6 +373,30 @@ class BillUpdate(Input):
     status: BillStatus | None = None
     autopay: bool | None = None
     note: str | None = None
+
+
+def first_of_month(value: date | None) -> date | None:
+    if value is not None and value.day != 1:
+        raise ValueError("month must be the first day of the month")
+    return value
+
+
+class BudgetCreate(Input):
+    month: date
+    category: FinanceCategory
+    amount: float = Field(gt=0, lt=10**10)
+    currency: str = Field(default="USD", min_length=3, max_length=3)
+
+    _month = field_validator("month")(first_of_month)
+
+
+class BudgetUpdate(Input):
+    month: date | None = None
+    category: FinanceCategory | None = None
+    amount: float | None = Field(default=None, gt=0, lt=10**10)
+    currency: str | None = Field(default=None, min_length=3, max_length=3)
+
+    _month = field_validator("month")(first_of_month)
 
 
 # Car and watch list

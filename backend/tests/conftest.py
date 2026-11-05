@@ -26,6 +26,8 @@ from app.main import app  # noqa: E402
 from app.models import Base  # noqa: E402
 from app.routers.auth import throttle  # noqa: E402
 
+SHARED_TABLES = {"exercises"}
+
 
 @pytest.fixture(scope="session", autouse=True)
 def schema() -> Iterator[None]:
@@ -40,7 +42,8 @@ def schema() -> Iterator[None]:
 @pytest.fixture(autouse=True)
 def clean(schema: None) -> Iterator[None]:
     yield
-    tables = ", ".join(table.name for table in Base.metadata.sorted_tables)
+    # The exercise catalogue is shared data loaded by the migration, not something a test writes.
+    tables = ", ".join(table.name for table in Base.metadata.sorted_tables if table.name not in SHARED_TABLES)
     with get_engine().begin() as connection:
         connection.execute(text(f"truncate {tables} cascade"))
     throttle._failures.clear()

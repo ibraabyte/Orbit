@@ -207,6 +207,7 @@ const data: DashboardData = {
   habitLogs: [],
   goals: [],
   goalMilestones: [],
+  budgets: [],
   journalEntries: []
 };
 

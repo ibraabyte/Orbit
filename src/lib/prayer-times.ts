@@ -7,6 +7,7 @@ export type PrayerPlace = { latitude: number; longitude: number };
 export const RIYADH: PrayerPlace = { latitude: 24.7136, longitude: 46.6753 };
 
 const labels: Record<PrayerName, string> = { fajr: "الفجر", dhuhr: "الظهر", asr: "العصر", maghrib: "المغرب", isha: "العشاء" };
+export const prayerNamesEn: Record<PrayerName, string> = { fajr: "Fajr", dhuhr: "Dhuhr", asr: "Asr", maghrib: "Maghrib", isha: "Isha" };
 const order: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
 // Umm al-Qura, calculated on the phone: no network needed.

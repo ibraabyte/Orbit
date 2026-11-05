@@ -17,6 +17,16 @@ export async function setAppLockEnabled(enabled: boolean) {
   await SecureStore.setItemAsync(LOCK_KEY, enabled ? "on" : "off");
 }
 
+// The lock is on and can actually engage (Face ID or Touch ID is set up), so the app does lock.
+// Task titles stay off the widget and the lock screen only then. If it can't be read, assume locked.
+export async function lockEngages() {
+  try {
+    return (await isAppLockEnabled()) && (await LocalAuthentication.hasHardwareAsync()) && (await LocalAuthentication.isEnrolledAsync());
+  } catch {
+    return true;
+  }
+}
+
 // Locks behind Face ID / passcode on launch and whenever the app returns from the background.
 // While the app is in the app switcher the content is covered, so the snapshot shows nothing private.
 export function AppLock({ children }: { children: ReactNode }) {
@@ -28,8 +38,7 @@ export function AppLock({ children }: { children: ReactNode }) {
     if (authenticating.current) return;
     authenticating.current = true;
     try {
-      const enrolled = (await LocalAuthentication.hasHardwareAsync()) && (await LocalAuthentication.isEnrolledAsync());
-      if (!(await isAppLockEnabled()) || !enrolled) {
+      if (!(await lockEngages())) {
         setLocked(false);
         return;
       }

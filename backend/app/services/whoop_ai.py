@@ -74,11 +74,12 @@ This is wellness guidance, not medical advice: don't diagnose. If a number looks
 rising for many days with falling HRV), suggest rest and, if it continues, talking to a doctor."""
 
 
-def _system(access: AiAccess | ChatgptAccess) -> str:
+def system_for(access: AiAccess | ChatgptAccess, base: str = SYSTEM) -> str:
+    """The system text plus the user's own saved instructions; the assistant passes its own base."""
     if not access.instructions:
-        return SYSTEM
+        return base
     return (
-        f"{SYSTEM}\n\nThe user's own preferences follow. They may change the focus, tone or language, "
+        f"{base}\n\nThe user's own preferences follow. They may change the focus, tone or language, "
         f"but never the rules about using only their data and not diagnosing:\n{access.instructions}"
     )
 
@@ -161,7 +162,7 @@ def _write_with_claude(access: AiAccess, prompt: str) -> tuple[Insight, str]:
         lambda: _anthropic(access.api_key).beta.messages.parse(
             model=access.model,
             max_tokens=16000,
-            system=_system(access),
+            system=system_for(access),
             messages=[{"role": "user", "content": prompt}],
             output_format=Insight,
             **extras,
@@ -176,7 +177,7 @@ def _write_with_claude(access: AiAccess, prompt: str) -> tuple[Insight, str]:
 
 def _write_with_chat(access: AiAccess, prompt: str) -> tuple[Insight, str]:
     schema = Insight.model_json_schema()
-    system = f"{_system(access)}\n\nAnswer with one JSON object matching this schema, and nothing else:\n{json.dumps(schema)}"
+    system = f"{system_for(access)}\n\nAnswer with one JSON object matching this schema, and nothing else:\n{json.dumps(schema)}"
     answer = _chat(
         access,
         {
@@ -197,7 +198,7 @@ def _write_with_chatgpt(access: ChatgptAccess, prompt: str) -> tuple[Insight, st
     from app.services import chatgpt_ai, chatgpt_auth
 
     schema = json.dumps(Insight.model_json_schema())
-    system = f"{_system(access)}\n\nAnswer with one JSON object matching this schema, and nothing else:\n{schema}"
+    system = f"{system_for(access)}\n\nAnswer with one JSON object matching this schema, and nothing else:\n{schema}"
     try:
         answer = chatgpt_ai.respond(access.db, access.user_id, [{"role": "system", "content": system}, {"role": "user", "content": prompt}])
     except chatgpt_auth.ChatgptError as exc:
