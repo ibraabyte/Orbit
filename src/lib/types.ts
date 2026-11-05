@@ -123,6 +123,9 @@ export type Meal = {
   fat_g: number | null;
   logged_at: string;
   created_at: string;
+  food_id?: string | null;
+  servings?: number | null;
+  meal_type?: "breakfast" | "lunch" | "dinner" | "snack" | "other" | null;
 };
 
 export type MealPlan = {

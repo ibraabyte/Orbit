@@ -199,6 +199,22 @@ def _message_text(content: Any) -> str:
     raise chatgpt_auth.ChatgptError("Orbit couldn't prepare this ChatGPT request.")
 
 
+def _input_parts(content: Any) -> list[dict[str, Any]] | None:
+    """A user message with a photo: OpenAI chat parts turned into Responses parts. None when there's no image."""
+    if not isinstance(content, list) or not any(isinstance(part, dict) and part.get("type") == "image_url" for part in content):
+        return None
+    parts = []
+    for part in content:
+        url = part.get("image_url", {}).get("url") if isinstance(part, dict) and isinstance(part.get("image_url"), dict) else None
+        if isinstance(part, dict) and part.get("type") == "text" and isinstance(part.get("text"), str):
+            parts.append({"type": "input_text", "text": part["text"]})
+        elif isinstance(part, dict) and part.get("type") == "image_url" and isinstance(url, str):
+            parts.append({"type": "input_image", "image_url": url})
+        else:
+            raise chatgpt_auth.ChatgptError("Orbit couldn't prepare this ChatGPT request.")
+    return parts
+
+
 def _body(model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]] | None) -> dict[str, Any]:
     instructions = []
     items = []
@@ -207,6 +223,10 @@ def _body(model: str, messages: list[dict[str, Any]], tools: list[dict[str, Any]
             items.append(message)
             continue
         role = message.get("role")
+        parts = _input_parts(message.get("content")) if role == "user" else None
+        if parts is not None:
+            items.append({"type": "message", "role": "user", "content": parts})
+            continue
         content = _message_text(message.get("content"))
         if role in ("system", "developer"):
             instructions.append(content)

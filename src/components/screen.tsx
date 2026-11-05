@@ -4,6 +4,7 @@ import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSh
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, flip, Glass, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
 import { backdrop, colors, fonts, radius } from "@/components/theme";
+import { et } from "@/lib/exercises";
 import { t } from "@/lib/i18n";
 
 // Space the tab bar takes at the bottom of a tab screen.
@@ -16,6 +17,9 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/health": { title: t.health, hint: "slept 7h q4 · workout 40m run" },
   "/whoop": { title: t.whoop },
   "/food": { title: t.food, hint: "buy milk · plan dinner salmon @friday" },
+  "/food-add": { title: t.addFood },
+  "/food-scan": { title: t.scanBarcode },
+  "/food-photo": { title: t.platePhoto },
   "/finance": { title: t.finance, hint: "lunch 45 · subscription netflix 45" },
   "/accounts": { title: t.moneyPlaces },
   "/investments": { title: t.investments },
@@ -30,7 +34,10 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/media": { title: t.movies },
   "/servers": { title: t.servers },
   "/ask": { title: t.askOrbit },
-  "/settings": { title: t.settings }
+  "/settings": { title: t.settings },
+  "/exercises": { title: et.exercises },
+  "/gym": { title: et.gym },
+  "/injuries": { title: et.injuries }
 };
 
 export function openCapture(text?: string) {
@@ -73,7 +80,8 @@ export function Screen({
 
 function StackHeader({ action }: { action?: { label: string; onPress: () => void } }) {
   const path = usePathname();
-  const meta = stackScreens[path];
+  // One exercise's page sits under the library.
+  const meta = stackScreens[path] ?? (path.startsWith("/exercises/") ? { title: et.exercises } : undefined);
   return (
     <View style={{ gap: 10 }}>
       <View style={styles.stackBar}>

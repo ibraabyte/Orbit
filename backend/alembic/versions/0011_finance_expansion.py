@@ -1,7 +1,7 @@
 """Finance expansion: cards (last four digits only), where money is, investments, obligations with their
 installments, and an optional card on each bill. All new and owned by a user; nothing existing is changed or removed.
 
-Numbered 0011, not 0009, so it does not collide with the two migrations waiting in other branches.
+Comes after 0010 (food tracking).
 """
 
 from collections.abc import Sequence
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0011"
-down_revision: str | None = "0008"
+down_revision: str | None = "0010"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

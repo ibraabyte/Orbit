@@ -14,7 +14,12 @@ class Meal(Owned, Base):
     __table_args__ = (
         CheckConstraint("char_length(name) <= 220", name="name_length"),
         CheckConstraint("calories >= 0", name="calories"),
+        CheckConstraint("servings is null or servings > 0", name="servings"),
+        CheckConstraint("meal_type is null or meal_type in ('breakfast', 'lunch', 'dinner', 'snack', 'other')", name="meal_type"),
+        # The food stays optional: deleting a saved food keeps the meals logged from it.
+        ForeignKeyConstraint(["food_id", "user_id"], ["foods.id", "foods.user_id"], ondelete="SET NULL (food_id)"),
         Index("meals_user_logged_idx", "user_id", text("logged_at desc")),
+        Index("meals_food_idx", "food_id"),
     )
 
     name: Mapped[str] = mapped_column(Text, nullable=False)
@@ -23,6 +28,11 @@ class Meal(Owned, Base):
     carbs_g: Mapped[Decimal | None] = mapped_column(Numeric)
     fat_g: Mapped[Decimal | None] = mapped_column(Numeric)
     logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # Set when the meal was logged from a saved food: which one and how many servings. The numbers above are a copy,
+    # so editing the food later doesn't rewrite what was eaten.
+    food_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    servings: Mapped[Decimal | None] = mapped_column(Numeric)
+    meal_type: Mapped[str | None] = mapped_column(Text)
 
 
 class WeightLog(Owned, Base):

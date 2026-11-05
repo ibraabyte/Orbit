@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     whoop_sync_minutes: int = 120
     whoop_backfill_days: int = 180
 
+    # Food search. Open Food Facts needs no key. USDA FoodData Central needs a free key from
+    # https://fdc.nal.usda.gov/api-key-signup ; empty means basic foods come only from Open Food Facts.
+    usda_api_key: str = ""
+
     # Claude writes the Arabic WHOOP summary. Empty key means the AI summary is off.
     anthropic_api_key: str = ""
     insights_model: str = "claude-opus-5-5"

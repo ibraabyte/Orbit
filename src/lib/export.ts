@@ -13,6 +13,7 @@ export const EXPORT_TABLES = [
   { name: "tags", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "taggings", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "meals", ownerColumn: "user_id", orderColumn: "logged_at", ascending: true },
+  { name: "foods", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "meal_plans", ownerColumn: "user_id", orderColumn: "plan_date", ascending: true },
   { name: "grocery_items", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "people", ownerColumn: "user_id", orderColumn: "name", ascending: true },
@@ -36,7 +37,9 @@ export const EXPORT_TABLES = [
   { name: "goal_milestones", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "journal_entries", ownerColumn: "user_id", orderColumn: "entry_date", ascending: true },
   { name: "vehicles", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
-  { name: "watch_items", ownerColumn: "user_id", orderColumn: "created_at", ascending: true }
+  { name: "watch_items", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
+  { name: "gym_equipment", ownerColumn: "user_id", orderColumn: "equipment", ascending: true },
+  { name: "injuries", ownerColumn: "user_id", orderColumn: "created_at", ascending: true }
 ] as const satisfies readonly ExportTableDefinition[];
 
 type ExportTableName = (typeof EXPORT_TABLES)[number]["name"];

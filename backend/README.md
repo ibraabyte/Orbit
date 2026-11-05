@@ -56,6 +56,7 @@
 | `WHOOP_CLIENT_SECRET` | من تطبيق WHOOP (سري) |
 | `WHOOP_REDIRECT_URI` | نفس الـ Redirect URL بالضبط |
 | `ANTHROPIC_API_KEY` | مفتاح من `console.anthropic.com` لملخص الأدمن فقط (سري، اختياري) |
+| `USDA_API_KEY` | مفتاح مجاني من `fdc.nal.usda.gov/api-key-signup` لبحث الأكل الأساسي (سري، اختياري) |
 
 بعدها Redeploy. لا ترسل القيم السرية في أي محادثة.
 
