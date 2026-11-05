@@ -1,22 +1,124 @@
-import { Badge, Card, EmptyState, ListRow, RowButton, StatGrid, StatTile } from "@/components/drift";
+import { router, useFocusEffect, type Href } from "expo-router";
+import { useCallback, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Badge, Card, EmptyState, GoalBar, Icon, ListRow, MoreButton, RingGauge, RowButton, StatGrid, StatTile, type, type IconName } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
-import { getApi } from "@/lib/backend";
+import { getApi, hasServer } from "@/lib/backend";
 import { isToday } from "@/lib/dates";
 import { foodSummary, mealTypeLabel } from "@/lib/food";
+import { foodApi, formatNumber, macroText, mealsByType, targetPercent, type FoodDay } from "@/lib/food-log";
 import { formatDate, t } from "@/lib/i18n";
+
+const addActions: { label: string; icon: IconName; href: Href }[] = [
+  { label: t.addFood, icon: "search", href: "/food-add" },
+  { label: t.scanBarcode, icon: "maximize", href: "/food-scan" },
+  { label: t.platePhoto, icon: "camera", href: "/food-photo" },
+  { label: t.myFood, icon: "edit-3", href: { pathname: "/food-add", params: { mode: "new" } } }
+];
 
 export default function Food() {
   const { data, loading, refresh, act } = useDashboardData();
-  const { toast } = useOverlays();
+  const { toast, sheet } = useOverlays();
   const food = foodSummary(data);
   const plans = [...food.overdueMealPlans, ...food.upcomingMealPlans];
+  const [day, setDay] = useState<FoodDay | null>(null);
+  const [dayError, setDayError] = useState<string | null>(null);
+
+  const loadDay = useCallback(async () => {
+    if (!hasServer()) return;
+    try {
+      setDay(await foodApi.day(getApi()));
+      setDayError(null);
+    } catch (error) {
+      setDayError(error instanceof Error ? error.message : String(error));
+    }
+  }, []);
+
+  // Coming back from search, scan or photo shows what was just logged.
+  useFocusEffect(
+    useCallback(() => {
+      void loadDay();
+    }, [loadDay])
+  );
+
+  const reload = () => {
+    refresh();
+    void loadDay();
+  };
+
+  const mealOptions = (mealId: string, name: string) =>
+    sheet({
+      title: name,
+      options: [
+        {
+          label: t.deleteMeal,
+          destructive: true,
+          run: () =>
+            void foodApi
+              .deleteMeal(getApi(), mealId)
+              .then(loadDay)
+              .catch((error: unknown) => toast(error instanceof Error ? error.message : String(error)))
+        }
+      ]
+    });
+
+  const target = day?.targets.calories ?? null;
+  const eaten = day?.totals.calories ?? 0;
 
   return (
-    <Screen refreshing={loading} onRefresh={refresh}>
+    <Screen refreshing={loading} onRefresh={reload}>
+      <Card title={t.foodLog}>
+        <View style={styles.summary}>
+          <RingGauge value={targetPercent(eaten, target) / 100} size={76} label={String(eaten)} sublabel={t.kcal} />
+          <View style={{ flex: 1, gap: 6 }}>
+            {target ? (
+              <Text style={type.body}>
+                {eaten <= target ? `${target - eaten} ${t.kcal} ${t.left}` : `${eaten - target} ${t.kcal} ${t.over}`}
+              </Text>
+            ) : (
+              <Text style={type.rowSubtitle}>{t.noTarget}</Text>
+            )}
+            {day ? (
+              <>
+                <GoalBar label={t.protein} value={`${formatNumber(day.totals.protein_g)} g`} goal={day.targets.protein_g ? `${day.targets.protein_g} g` : null} percent={targetPercent(day.totals.protein_g, day.targets.protein_g)} />
+                <Text style={type.rowSubtitle}>{macroText(day.totals)}</Text>
+              </>
+            ) : null}
+          </View>
+        </View>
+        <View style={styles.actions}>
+          {addActions.map((action) => (
+            <Pressable key={action.label} onPress={() => router.push(action.href)} accessibilityRole="button" style={({ pressed }) => [styles.action, pressed && { opacity: 0.7 }]}>
+              <Icon name={action.icon} size={18} color={colors.ink} />
+              <Text style={styles.actionText} numberOfLines={2}>
+                {action.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        {dayError ? <Text style={type.rowSubtitle}>{dayError}</Text> : null}
+        {day && !day.meals.length ? <Text style={type.rowSubtitle}>{t.nothingEaten}</Text> : null}
+        {day
+          ? mealsByType(day.meals).map((group) => (
+              <View key={group.type}>
+                <Text style={[type.tileLabel, { marginTop: 8 }]}>{`${t.mealTypeNames[group.type]} · ${group.calories} ${t.kcal}`}</Text>
+                {group.meals.map((meal) => (
+                  <ListRow
+                    key={meal.id}
+                    title={meal.name}
+                    subtitle={[meal.servings && meal.servings !== 1 ? `× ${formatNumber(meal.servings)}` : null, macroText(meal)].filter(Boolean).join(" · ") || null}
+                    meta={`${meal.calories} ${t.kcal}`}
+                    trailing={<MoreButton label={meal.name} onPress={() => mealOptions(meal.id, meal.name)} />}
+                  />
+                ))}
+              </View>
+            ))
+          : null}
+      </Card>
       <StatGrid columns={3}>
         {[
           <StatTile key="meals" label={t.mealsToday} value={food.todayPlannedMeals} />,
@@ -64,3 +166,10 @@ export default function Food() {
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  summary: { flexDirection: "row", alignItems: "center", gap: 14 },
+  actions: { flexDirection: "row", gap: 8 },
+  action: { flex: 1, minHeight: 64, paddingVertical: 10, paddingHorizontal: 4, borderRadius: radius.tile, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center", gap: 6 },
+  actionText: { fontFamily: fonts.semibold, fontSize: 11, lineHeight: 14, color: colors.ink, textAlign: "center" }
+});

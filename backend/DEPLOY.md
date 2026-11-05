@@ -60,6 +60,7 @@
 | سر تطبيق WHOOP | `WHOOP_CLIENT_SECRET` | أنت، اختياري وسري |
 | رابط رجوع WHOOP: `https://<دومينك>/whoop/callback` | `WHOOP_REDIRECT_URI` | أنت، اختياري |
 | مفتاح Claude لملخص الأدمن فقط | `ANTHROPIC_API_KEY` | أنت، اختياري وسري |
+| مفتاح USDA المجاني للأكل الأساسي، من `fdc.nal.usda.gov/api-key-signup` | `USDA_API_KEY` | أنت، اختياري وسري. بدونه يبحث الأكل في Open Food Facts فقط |
 | نموذج ChatGPT بدل الاختيار التلقائي | `CHATGPT_MODEL` | اختياري؛ اتركه فارغًا لاختيار نموذج متاح للحساب |
 
 مهم:

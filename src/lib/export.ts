@@ -13,6 +13,7 @@ export const EXPORT_TABLES = [
   { name: "tags", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "taggings", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "meals", ownerColumn: "user_id", orderColumn: "logged_at", ascending: true },
+  { name: "foods", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "meal_plans", ownerColumn: "user_id", orderColumn: "plan_date", ascending: true },
   { name: "grocery_items", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "people", ownerColumn: "user_id", orderColumn: "name", ascending: true },

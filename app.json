@@ -64,6 +64,23 @@
             }
           ]
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Orbit uses the camera to scan food barcodes and to photograph your meals for calorie estimates.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Orbit lets you pick a photo of your meal to estimate its calories.",
+          "cameraPermission": "Orbit uses the camera to scan food barcodes and to photograph your meals for calorie estimates.",
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {
