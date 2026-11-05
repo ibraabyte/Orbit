@@ -188,25 +188,21 @@ describe("calendar", () => {
   });
 
   it("normalizes records into calendar events", () => {
-    expect(buildCalendarEvents(data, now).map((event) => event.kind)).toEqual(["task", "reminder", "meal", "mealPlan", "grocery", "person", "person", "sleep", "focus", "expense", "bill", "journal", "goal"]);
+    expect(buildCalendarEvents(data, now).map((event) => event.kind)).toEqual(["task", "reminder", "meal", "mealPlan", "grocery", "sleep", "expense", "bill"]);
   });
 
   it("groups and counts events by day", () => {
     const days = buildCalendarDays(data, 3, now);
-    expect(days[0].events.map((event) => event.id)).toEqual(["bill-bill-1", "journal-journal-1", "task-reminder-task-1", "task-due-task-1"]);
+    expect(days[0].events.map((event) => event.id)).toEqual(["bill-bill-1", "task-reminder-task-1", "task-due-task-1"]);
     expect(calendarEventCounts(days)).toMatchObject({
       task: 1,
       reminder: 1,
       meal: 1,
       mealPlan: 1,
       grocery: 1,
-      person: 2,
       sleep: 1,
-      focus: 1,
       expense: 1,
-      bill: 1,
-      journal: 1,
-      goal: 1
+      bill: 1
     });
   });
 

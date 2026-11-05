@@ -6,11 +6,9 @@ import { openCapture } from "@/components/screen";
 import { colors, fonts } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
-// A floating glass capsule with four tabs, and the lime glass Capture button beside it.
+// A floating glass capsule with the tabs, and the lime glass Capture button beside it.
 const tabs: Record<string, { label: string; icon: IconName }> = {
   index: { label: t.today, icon: "home" },
-  plan: { label: t.plan, icon: "clipboard" },
-  focus: { label: t.momentum, icon: "bar-chart-2" },
   more: { label: t.more, icon: "menu" }
 };
 

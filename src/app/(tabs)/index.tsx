@@ -17,10 +17,8 @@ import { buildCalendarDays } from "@/lib/calendar";
 import { buildDailyBrief, overdueTasks, summarizeDashboard, todaysTasks } from "@/lib/dashboard";
 import { isToday } from "@/lib/dates";
 import { formatMoney, nextBillDueDate } from "@/lib/finance";
-import { formatFocusDuration } from "@/lib/focus";
 import { foodSummary } from "@/lib/food";
 import { captureStarters, formatClock, formatDate, formatIn, isArabic, t } from "@/lib/i18n";
-import { peopleSummary } from "@/lib/people";
 import { prayerNamesEn } from "@/lib/prayer-times";
 import { formatSleepDuration } from "@/lib/sleep";
 import { cardLabel, moneyDueSoon, type MoneyDue } from "@/lib/wealth";
@@ -37,7 +35,6 @@ const optional = [
 type OptionalSection = (typeof optional)[number][0];
 
 // Today = now: prayer, digest, today's counts, attention, capture, next up, health today.
-// The week's rollup and trends live in Plan, so each number has one home.
 export default function Today() {
   const { data, loading, error, refresh, act } = useDashboardData();
   const { next: prayer } = usePrayerTimes();
@@ -59,7 +56,6 @@ export default function Today() {
   const digest = useMemo(() => buildDailyBrief(data).slice(0, 5), [data]);
   const food = useMemo(() => foodSummary(data), [data]);
   const moneyDue = useMemo(() => moneyDueSoon(data), [data]);
-  const people = useMemo(() => peopleSummary(data), [data]);
   const upcoming = useMemo(() => {
     const now = Date.now();
     return buildCalendarDays(data, 7).flatMap((day) => day.events).filter((event) => new Date(event.at).getTime() >= now).slice(0, 4);
@@ -169,11 +165,8 @@ export default function Today() {
           {[
             <StatTile key="tasks" href="/tasks" label={t.openTasks} value={summary.openTaskCount} alert={summary.overdueTaskCount > 0} />,
             <StatTile key="reminders" href="/tasks" label={t.dueReminders} value={summary.dueReminderCount} alert={summary.dueReminderCount > 0} />,
-            <StatTile key="focus" href="/focus" label={t.focus} value={formatFocusDuration(summary.todayFocusMinutes)} />,
             <StatTile key="meals" href="/food" label={t.mealsPlanned} value={food.todayPlannedMeals} />,
-            <StatTile key="follow" href="/people" label={t.followUps} value={people.dueFollowUps.length} alert={people.overdueFollowUps.length > 0} />,
             <StatTile key="spent" href="/finance" label={t.spentToday} value={formatMoney(summary.todaySpending, currency)} />,
-            <StatTile key="goals" href="/goals" label={t.activeGoals} value={summary.activeGoalCount} />,
             <StatTile key="habits" href="/habits" label={t.habitsDone} value={`${summary.completedHabitCount}/${summary.activeHabitCount}`} />
           ]}
         </StatGrid>
@@ -202,7 +195,7 @@ export default function Today() {
       </Card>
 
       {show("next") ? (
-        <Card title={t.nextUp} action={<CardLink href="/plan" label={t.plan} />}>
+        <Card title={t.nextUp}>
           {upcoming.length ? (
             upcoming.map((event) => (
               <ListRow
@@ -214,7 +207,7 @@ export default function Today() {
               />
             ))
           ) : (
-            <EmptyState example="focus 50m AWS @4pm">{t.emptyEx}</EmptyState>
+            <EmptyState example="call mom tomorrow 9am">{t.emptyEx}</EmptyState>
           )}
         </Card>
       ) : null}

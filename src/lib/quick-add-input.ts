@@ -8,14 +8,14 @@ const firstWordKinds: Record<string, string> = {
   // English: same words parseQuickAdd accepts before a colon.
   todo: "task", remind: "reminder", reminder: "reminder", note: "capture", link: "capture", capture: "capture",
   meal: "meal", ate: "meal", grocery: "grocery", groceries: "grocery", buy: "grocery", workout: "workout", gym: "workout",
-  weight: "weight", sleep: "sleep", slept: "sleep", focus: "focus", expense: "expense", spent: "expense", spend: "expense",
-  paid: "expense", bill: "bill", subscription: "bill", habit: "habit", goal: "goal", journal: "journal", mood: "journal",
+  weight: "weight", sleep: "sleep", slept: "sleep", expense: "expense", spent: "expense", spend: "expense",
+  paid: "expense", bill: "bill", subscription: "bill", habit: "habit",
   // Arabic (Saudi everyday words).
   مهمة: "task", مهمه: "task", ذكرني: "reminder", تذكير: "reminder", ملاحظة: "capture", ملاحظه: "capture", رابط: "capture",
   اكلت: "meal", أكلت: "meal", وجبة: "meal", وجبه: "meal", مقاضي: "grocery", اشتري: "grocery", شراء: "grocery",
-  تمرين: "workout", تمرنت: "workout", وزني: "weight", وزن: "weight", نمت: "sleep", نوم: "sleep", تركيز: "focus",
+  تمرين: "workout", تمرنت: "workout", وزني: "weight", وزن: "weight", نمت: "sleep", نوم: "sleep",
   صرفت: "expense", مصروف: "expense", دفعت: "expense", فاتورة: "bill", فاتوره: "bill", اشتراك: "bill",
-  عادة: "habit", عاده: "habit", هدف: "goal", يوميات: "journal", مذكرات: "journal"
+  عادة: "habit", عاده: "habit"
 };
 
 const arabicDays: [RegExp, string][] = [
@@ -128,8 +128,8 @@ export function describeDraft(draft: QuickAddDraft) {
 
 const kindLabels: Record<QuickAddDraft["kind"], string> = {
   task: "Task", reminder: "Reminder", capture: "Note", meal: "Meal", mealPlan: "Meal plan", grocery: "Grocery",
-  person: "Person", workout: "Workout", weight: "Weight", sleep: "Sleep", focus: "Focus", expense: "Expense",
-  bill: "Bill", habit: "Habit", goal: "Goal", journal: "Journal"
+  workout: "Workout", weight: "Weight", sleep: "Sleep", expense: "Expense",
+  bill: "Bill", habit: "Habit"
 };
 
 function toWesternDigits(value: string) {

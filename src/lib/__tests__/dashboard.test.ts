@@ -12,7 +12,7 @@ import {
   todaysTasks,
   weeklySummary
 } from "@/lib/dashboard";
-import type { Bill, DashboardData, FocusSession, Goal, GroceryItem, Habit, HabitLog, Meal, MealPlan, Person, Reminder, SleepLog, Task, Workout } from "@/lib/types";
+import type { Bill, DashboardData, FocusSession, GroceryItem, Habit, HabitLog, Meal, MealPlan, Reminder, SleepLog, Task, Workout } from "@/lib/types";
 
 const now = new Date("2026-07-01T12:00:00.000Z");
 
@@ -95,24 +95,6 @@ function focusSession(overrides: Partial<FocusSession>): FocusSession {
   };
 }
 
-function person(overrides: Partial<Person>): Person {
-  return {
-    id: crypto.randomUUID(),
-    user_id: "user-1",
-    name: "Person",
-    relationship: null,
-    contact_method: null,
-    birthday: null,
-    last_contacted_at: null,
-    next_follow_up_at: null,
-    notes: null,
-    favorite: false,
-    created_at: now.toISOString(),
-    updated_at: now.toISOString(),
-    ...overrides
-  };
-}
-
 function bill(overrides: Partial<Bill>): Bill {
   return {
     id: crypto.randomUUID(),
@@ -190,20 +172,6 @@ function habitLog(overrides: Partial<HabitLog>): HabitLog {
     logged_at: now.toISOString(),
     note: null,
     created_at: now.toISOString(),
-    ...overrides
-  };
-}
-
-function goal(overrides: Partial<Goal>): Goal {
-  return {
-    id: crypto.randomUUID(),
-    user_id: "user-1",
-    title: "Goal",
-    notes: null,
-    status: "active",
-    target_at: null,
-    created_at: now.toISOString(),
-    updated_at: now.toISOString(),
     ...overrides
   };
 }
@@ -462,15 +430,10 @@ describe("dashboard summaries", () => {
       todayWorkoutMinutes: 45,
       todaySpending: 12,
       todaySleepMinutes: 420,
-      todayFocusMinutes: 50,
       latestWeight: 82.5,
       recentCaptureCount: 1,
       completedHabitCount: 1,
-      activeHabitCount: 1,
-      activeGoalCount: 1,
-      completedGoalCount: 0,
-      journaledToday: true,
-      sevenDayMood: "good"
+      activeHabitCount: 1
     });
 
     expect(weeklySummary(data, now)).toMatchObject({
@@ -480,12 +443,9 @@ describe("dashboard summaries", () => {
       capturesSaved: 1,
       spending: 12,
       expensesLogged: 1,
-      focusMinutes: 50,
-      focusSessions: 1,
       sleepAverageMinutes: 420,
       sleepNights: 1,
-      habitCheckIns: 1,
-      journalEntries: 1
+      habitCheckIns: 1
     });
     expect(todaysSpending(data.expenses, now)).toBe(12);
     expect(todaysSleepMinutes(data.sleepLogs, now)).toBe(420);
@@ -498,25 +458,23 @@ describe("dashboard summaries", () => {
         task({ title: "Today", due_at: "2026-07-01T18:00:00.000Z" })
       ],
       reminders: [reminder({ remind_at: "2026-07-01T08:00:00.000Z" })],
-      people: [person({ next_follow_up_at: "2026-06-29" })],
       bills: [bill({ due_at: "2026-06-30" })],
       mealPlans: [mealPlan({ plan_date: "2026-06-30" })],
       groceryItems: [groceryItem({ due_at: "2026-07-01" })],
-      habits: [habit({ id: "habit-1" })],
-      goals: [goal({ target_at: "2026-07-04" })]
+      habits: [habit({ id: "habit-1" })]
     });
 
     expect(buildDailyBrief(data, now, 6).map((item) => item.id)).toEqual([
       "due-reminders",
       "overdue-tasks",
       "overdue-bills",
-      "overdue-followups",
       "overdue-meal-plans",
-      "due-groceries"
+      "due-groceries",
+      "today-tasks"
     ]);
   });
 
-  it("falls back to missing daily logs when urgent items are clear", () => {
+  it("stays quiet when urgent items are clear and the day's logs are in", () => {
     const data = dashboardData({
       mealPlans: [mealPlan({ plan_date: "2026-07-01", status: "planned" })],
       meals: [meal({ calories: 600 })],
@@ -538,7 +496,7 @@ describe("dashboard summaries", () => {
       ]
     });
 
-    expect(buildDailyBrief(data, now, 3).map((item) => item.id)).toEqual(["journal"]);
+    expect(buildDailyBrief(data, now, 3).map((item) => item.id)).toEqual([]);
   });
 
   it("puts overdue installments near the top", () => {

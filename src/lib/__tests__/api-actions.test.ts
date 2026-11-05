@@ -40,16 +40,12 @@ describe("api actions", () => {
       meal: "meal: Chicken bowl 650cal #lunch",
       mealPlan: "mealplan: Kabsa dinner @2026-07-03",
       grocery: "grocery: Rice 2kg",
-      person: "person: Test Person",
       workout: "workout: Run 30min",
       weight: "weight: 82kg",
       sleep: "sleep: 7.5h",
-      focus: "focus: Deep work 50min",
       expense: "expense: Coffee 18 SAR",
       bill: "bill: Internet 299 SAR monthly",
-      habit: "habit: Read daily",
-      goal: "goal: Run 10k",
-      journal: "journal: A calm day"
+      habit: "habit: Read daily"
     };
     const paths: Record<string, string> = {};
     for (const [kind, line] of Object.entries(lines)) {
@@ -66,48 +62,18 @@ describe("api actions", () => {
       meal: "post /meals",
       mealPlan: "post /meal-plans",
       grocery: "post /grocery-items",
-      person: "post /people",
       workout: "post /workouts",
       weight: "post /weight-logs",
       sleep: "post /sleep-logs",
-      focus: "post /focus-sessions",
       expense: "post /expenses",
       bill: "post /bills",
-      habit: "post /habits",
-      goal: "post /goals",
-      journal: "put /journal-entries/day/2026-07-01"
-    });
-  });
-
-  it("adds people with relationship, contact method, birthday, and follow-up date", () => {
-    const request = quickAddRequest(parseQuickAdd("person: Sara relationship friend via WhatsApp birthday 1996-07-12 favorite @2026-07-08"), now);
-    expect(request.body).toMatchObject({
-      name: "Sara",
-      relationship: "friend",
-      contact_method: "WhatsApp",
-      birthday: "1996-07-12",
-      next_follow_up_at: "2026-07-08",
-      favorite: true
+      habit: "post /habits"
     });
   });
 
   it("adds bills with autopay and tags", () => {
     const request = quickAddRequest(parseQuickAdd("bill: Internet 65 USD monthly autopay @2026-07-10 #home"), now);
     expect(request.body).toMatchObject({ name: "Internet", amount: 65, currency: "USD", recurrence: "monthly", autopay: true, due_at: "2026-07-10", tags: ["home"] });
-  });
-
-  it("marks a future focus block as planned and a past one as done", () => {
-    const planned = quickAddRequest(parseQuickAdd("focus: Write 50min @2026-07-02T09:00"), now).body;
-    expect(planned).toMatchObject({ status: "planned", ended_at: null, energy: null });
-    const done = quickAddRequest(parseQuickAdd("focus: Write 50min"), now).body;
-    expect(done).toMatchObject({ status: "completed", started_at: now.toISOString(), ended_at: "2026-07-01T08:50:00.000Z" });
-  });
-
-  it("writes the journal through the one-entry-per-day route", async () => {
-    const api = fakeApi();
-    await apiQuickAdd(api as never, parseQuickAdd("journal: A calm day @2026-07-04"));
-    expect(api.put).toHaveBeenCalledWith("/journal-entries/day/2026-07-04", expect.objectContaining({ body: "A calm day" }));
-    expect(api.post).not.toHaveBeenCalled();
   });
 
   it("still validates before sending", async () => {

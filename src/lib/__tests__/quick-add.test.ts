@@ -30,8 +30,8 @@ describe("quick add parser", () => {
       tags: ["admin"]
     });
 
-    expect(parseQuickAdd("focus: Weekly review 30min @friday-14:30", { now })).toMatchObject({
-      kind: "focus",
+    expect(parseQuickAdd("task: Weekly review @friday-14:30", { now })).toMatchObject({
+      kind: "task",
       title: "Weekly review",
       at: new Date(2026, 6, 3, 14, 30).toISOString()
     });
@@ -47,14 +47,14 @@ describe("quick add parser", () => {
       reminderAt: new Date(2026, 6, 1, 12, 0).toISOString()
     });
 
-    expect(parseQuickAdd("person: Call Sara @next week", { now })).toMatchObject({
-      kind: "person",
+    expect(parseQuickAdd("task: Call Sara @next week", { now })).toMatchObject({
+      kind: "task",
       title: "Call Sara",
       at: new Date(2026, 6, 8, 12, 0).toISOString()
     });
 
-    expect(parseQuickAdd("focus: Planning 45min @next monday at 2:30pm", { now })).toMatchObject({
-      kind: "focus",
+    expect(parseQuickAdd("task: Planning @next monday at 2:30pm", { now })).toMatchObject({
+      kind: "task",
       title: "Planning",
       at: new Date(2026, 6, 6, 14, 30).toISOString()
     });
@@ -141,25 +141,6 @@ describe("quick add parser", () => {
     });
   });
 
-  it("parses people commands", () => {
-    expect(parseQuickAdd("person: Sara favorite @2026-07-12 #family")).toMatchObject({
-      kind: "person",
-      title: "Sara",
-      personRelationship: "family",
-      favorite: true,
-      tags: ["family"]
-    });
-    expect(parseQuickAdd("person: Sara relationship close friend via WhatsApp birthday 1996-07-12 favorite @next week #family")).toMatchObject({
-      kind: "person",
-      title: "Sara",
-      personRelationship: "close friend",
-      contactMethod: "WhatsApp",
-      birthday: "1996-07-12",
-      favorite: true,
-      tags: ["family"]
-    });
-  });
-
   it("parses finance commands", () => {
     expect(parseQuickAdd("expense: Coffee 4.50 USD #food")).toMatchObject({
       kind: "expense",
@@ -184,24 +165,8 @@ describe("quick add parser", () => {
     });
   });
 
-  it("parses focus commands", () => {
-    expect(parseQuickAdd("focus: Deep work 50min energy 4 #work")).toMatchObject({
-      kind: "focus",
-      title: "Deep work",
-      durationMinutes: 50,
-      focusEnergy: 4,
-      tags: ["work"]
-    });
-  });
-
-  it("parses habit, goal, and journal commands", () => {
+  it("parses habit commands", () => {
     expect(parseQuickAdd("habit: Walk weekly")).toMatchObject({ kind: "habit", title: "Walk", frequency: "weekly", recurrence: null });
-    expect(parseQuickAdd("goal: Cut to 80kg @2026-09-01")).toMatchObject({ kind: "goal", title: "Cut to 80kg" });
-    expect(parseQuickAdd("journal: good Strong focus today")).toMatchObject({
-      kind: "journal",
-      title: "Strong focus today",
-      mood: "good"
-    });
   });
 
   it("validates incomplete commands before saving", () => {
@@ -212,10 +177,6 @@ describe("quick add parser", () => {
     expect(validateQuickAddDraft(parseQuickAdd("sleep: rough night"))).toMatchObject({
       ok: false,
       message: "Sleep commands need a duration like 7.5h or 450min."
-    });
-    expect(validateQuickAddDraft(parseQuickAdd("focus: Inbox cleanup"))).toMatchObject({
-      ok: false,
-      message: "Focus commands need a duration like 50min."
     });
     expect(validateQuickAddDraft(parseQuickAdd("expense: Coffee"))).toMatchObject({
       ok: false,

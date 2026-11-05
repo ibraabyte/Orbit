@@ -60,20 +60,6 @@ export function quickAddRequest(draft: QuickAddDraft, now = new Date()): { metho
         path: "/grocery-items",
         body: { name: draft.title, quantity: draft.groceryQuantity, category: draft.groceryCategory, due_at: day(draft.at, null), tags }
       };
-    case "person":
-      return {
-        method: "post",
-        path: "/people",
-        body: {
-          name: draft.title,
-          relationship: draft.personRelationship,
-          contact_method: draft.contactMethod,
-          birthday: draft.birthday,
-          next_follow_up_at: day(draft.at, null),
-          notes: draft.note,
-          favorite: draft.favorite
-        }
-      };
     case "workout":
       return {
         method: "post",
@@ -96,25 +82,6 @@ export function quickAddRequest(draft: QuickAddDraft, now = new Date()): { metho
           tags
         }
       };
-    case "focus": {
-      if (!draft.durationMinutes) throw new Error("Focus commands need a duration like 50min.");
-      const startedAt = draft.at ?? nowIso;
-      const isPlanned = new Date(startedAt).getTime() > now.getTime();
-      return {
-        method: "post",
-        path: "/focus-sessions",
-        body: {
-          title: draft.title,
-          duration_minutes: draft.durationMinutes,
-          started_at: startedAt,
-          ended_at: isPlanned ? null : new Date(new Date(startedAt).getTime() + draft.durationMinutes * 60_000).toISOString(),
-          status: isPlanned ? "planned" : "completed",
-          energy: isPlanned ? null : draft.focusEnergy,
-          note: draft.note,
-          tags
-        }
-      };
-    }
     case "expense":
       if (!draft.amount) throw new Error("Expense commands need an amount like 4.50 USD.");
       return {
@@ -141,11 +108,6 @@ export function quickAddRequest(draft: QuickAddDraft, now = new Date()): { metho
       };
     case "habit":
       return { method: "post", path: "/habits", body: { name: draft.title, frequency: draft.frequency } };
-    case "goal":
-      return { method: "post", path: "/goals", body: { title: draft.title, notes: draft.note, target_at: day(draft.at, null) } };
-    case "journal":
-      // One entry per day: writing today again replaces it.
-      return { method: "put", path: `/journal-entries/day/${day(draft.at, nowIso)}`, body: { mood: draft.mood, body: draft.title } };
   }
 }
 
