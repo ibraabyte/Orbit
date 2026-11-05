@@ -1,12 +1,13 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.db import get_db
 from app.models import User
+from app.models.integrations import AI_CHOICES
 from app.security import decode_access_token
 
 _bearer = HTTPBearer(auto_error=False)
@@ -33,3 +34,7 @@ def current_admin_id(user_id: UserId, db: Db) -> uuid.UUID:
 
 
 AdminId = Annotated[uuid.UUID, Depends(current_admin_id)]
+
+
+# ?ai=... on an AI request: which of the user's connected AIs to use this time. Left out: their default.
+AiPick = Annotated[Literal[AI_CHOICES] | None, Query(alias="ai")]  # type: ignore[valid-type]

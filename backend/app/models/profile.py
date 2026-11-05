@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, created_at
+from app.models.integrations import AI_CHOICES
 
 DASHBOARD_MODULES = (
     "attention",
@@ -25,6 +26,7 @@ DASHBOARD_MODULES = (
     "journal",
 )
 
+_ai_sql = ", ".join(f"'{p}'" for p in AI_CHOICES)
 _modules_sql = "array[" + ", ".join(f"'{m}'" for m in DASHBOARD_MODULES) + "]::text[]"
 
 
@@ -46,6 +48,7 @@ class Profile(Base):
             "weekly_workout_minutes_target >= 0 and weekly_workout_minutes_target <= 10080", name="weekly_workout_minutes_target"
         ),
         CheckConstraint(f"cardinality(dashboard_modules) > 0 and dashboard_modules <@ {_modules_sql}", name="dashboard_modules_valid"),
+        CheckConstraint(f"ai_default is null or ai_default in ({_ai_sql})", name="ai_default"),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
@@ -58,4 +61,6 @@ class Profile(Base):
     daily_fat_target: Mapped[int | None] = mapped_column(Integer)
     weekly_workout_minutes_target: Mapped[int] = mapped_column(Integer, nullable=False, server_default="150")
     dashboard_modules: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default=text(_modules_sql))
+    # The AI used when the app doesn't pick one: a provider in ai_connections, or "chatgpt". Null: the first connected.
+    ai_default: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = created_at()

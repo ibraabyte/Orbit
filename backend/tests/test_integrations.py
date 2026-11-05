@@ -100,8 +100,9 @@ def test_overview_starts_empty(client: TestClient, auth: dict):
     body = client.get("/integrations", headers=auth).json()
     assert body["seerr"] == {"connected": False, "url": None, "account_name": None, "connected_at": None}
     assert body["whoop"]["connected"] is False
-    assert set(body) == {"whoop", "seerr", "ai", "chatgpt"}
+    assert set(body) == {"whoop", "seerr", "ai", "ais", "chatgpt"}
     assert body["chatgpt"] == {"status": "not_connected"}
+    assert body["ais"] == {"choices": [], "default": None, "server_key": False}
 
 
 def test_connect_seerr_checks_the_key_and_stores_it_encrypted(client: TestClient, auth: dict, db: Session, fake_seerr):

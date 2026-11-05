@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app import models as m
 from app.crud import get_owned, owned_crud_router
-from app.deps import Db, UserId
+from app.deps import AiPick, Db, UserId
 from app.schemas import food as s
 from app.schemas.rows import row_schema
 from app.services import food_photo, food_sources, whoop_ai
@@ -196,9 +196,9 @@ def recent(user_id: UserId, db: Db, limit: int = Query(12, ge=1, le=50)):
 
 
 @router.post("/photo", response_model=s.PhotoOut)
-def photo(body: s.PhotoIn, user_id: UserId, db: Db):
+def photo(body: s.PhotoIn, user_id: UserId, db: Db, ai: AiPick = None):
     """A plate photo in, a draft list of foods with estimated calories out. Nothing is saved; the photo isn't kept."""
-    access = whoop_ai.access_for(db, user_id)
+    access = whoop_ai.access_for(db, user_id, ai)
     if access is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Connect your AI in Integrations first.")
     try:
