@@ -1,15 +1,17 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
+import { AiPicker } from "@/components/ai-picker";
 import { Card, CardLink, type } from "@/components/drift";
 import { Button, ErrorState, Input, Loading, Screen } from "@/components/screen";
 import { colors, radius } from "@/components/theme";
+import { useAiChoices } from "@/hooks/use-ai-choices";
 import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { activeProvider, askBody, askGate, ASK_QUESTION_MAX, cleanQuestion, exchanges, historyFor, serverDetail, type ChatItem } from "@/lib/ask";
 import { getApi } from "@/lib/backend";
 import { isArabic, t } from "@/lib/i18n";
-import { integrationsApi } from "@/lib/integrations";
+import { aiQuery } from "@/lib/integrations";
 import { isNoAiError } from "@/lib/morning-brief";
 
 const suggestions = [t.askQ1, t.askQ2, t.askQ3, t.askQ4];
@@ -18,8 +20,9 @@ const suggestions = [t.askQ1, t.askQ2, t.askQ3, t.askQ4];
 // Nothing is sent until you agree, once, to sending your data to the AI that is connected now.
 export default function Ask() {
   const { userId } = useDashboardData();
+  const ai = useAiChoices("ask");
   // undefined: not read yet. null: no AI connected / not agreed.
-  const [provider, setProvider] = useState<string | null | undefined>(undefined);
+  const provider = ai.overview ? activeProvider(ai.overview, ai.current) : ai.error ? null : undefined;
   const [accepted, setAccepted] = useState<string | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [items, setItems] = useState<ChatItem[]>([]);
@@ -30,14 +33,13 @@ export default function Ask() {
 
   const load = useCallback(async () => {
     try {
-      const [overview, consent] = await Promise.all([integrationsApi.overview(getApi()), loadAskConsent(userId)]);
-      setProvider(activeProvider(overview));
+      const [overview, consent] = await Promise.all([ai.reload(), loadAskConsent(userId)]);
       setAccepted(consent);
-      setLoadError(null);
+      setLoadError(overview ? null : t.tryAgain);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : t.tryAgain);
     }
-  }, [userId]);
+  }, [userId, ai.reload]);
 
   // Coming back from Integrations or Settings should show the new state.
   useFocusEffect(
@@ -59,7 +61,7 @@ export default function Ask() {
     else update(itemsRef.current.map((item) => (item.id === id ? { ...item, failed: undefined } : item)));
     setSending(true);
     try {
-      const { text } = await getApi().post<{ text: string }>("/assistant/ask", askBody(question, historyFor(itemsRef.current, id), isArabic ? "ar" : "en"));
+      const { text } = await getApi().post<{ text: string }>(`/assistant/ask${aiQuery(ai.current)}`, askBody(question, historyFor(itemsRef.current, id), isArabic ? "ar" : "en"));
       const at = itemsRef.current.findIndex((item) => item.id === id);
       const next = [...itemsRef.current];
       next.splice(at + 1, 0, { id: ++counter.current, role: "assistant", content: text });
@@ -85,7 +87,7 @@ export default function Ask() {
     if (!provider) return;
     try {
       await saveAskConsent(userId, provider);
-      setAccepted(provider);
+      setAccepted(await loadAskConsent(userId));
     } catch {
       Alert.alert(t.askAgreeFailed, t.tryAgain);
     }
@@ -111,6 +113,7 @@ export default function Ask() {
 
   return (
     <Screen>
+      <AiPicker choices={ai.choices} value={ai.current} onChange={ai.setPicked} onShell />
       {gate === "no-ai" ? (
         <Card title={t.askOrbit} action={<CardLink href="/integrations" label={t.askConnect} />}>
           <Text style={type.body}>{t.askNoAi}</Text>

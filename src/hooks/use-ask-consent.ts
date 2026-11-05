@@ -1,5 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { consentKey, parseConsent, withdrawKeys } from "@/lib/ask";
+import { consentKey, consentWith, parseConsent, withdrawKeys } from "@/lib/ask";
 
 // Whether this person agreed to send their data to an AI (Ask Orbit and the morning brief), and to which one. Kept only on this phone.
 
@@ -13,6 +13,10 @@ export async function loadAskConsent(userId: string): Promise<string | null> {
 }
 
 // These two throw if the change did not happen, so the screen never shows a choice that was not kept.
-export const saveAskConsent = (userId: string, provider: string) => AsyncStorage.setItem(consentKey(userId), JSON.stringify({ provider }));
+// Adds `provider` to the AIs already agreed to, so picking another AI never takes the first agreement away.
+export async function saveAskConsent(userId: string, provider: string) {
+  const current = await loadAskConsent(userId);
+  await AsyncStorage.setItem(consentKey(userId), consentWith(current, provider));
+}
 // Also drops the saved AI brief, so a text written under the agreement is not shown after it is withdrawn.
 export const clearAskConsent = (userId: string) => AsyncStorage.multiRemove(withdrawKeys(userId));

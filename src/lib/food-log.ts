@@ -2,6 +2,7 @@
 // Plain TypeScript so it can be tested without React Native.
 
 import type { ApiClient } from "@/lib/api";
+import { aiQuery, type AiChoiceName } from "@/lib/integrations";
 import type { Meal } from "@/lib/types";
 
 type Api = Pick<ApiClient, "get" | "post" | "patch" | "delete">;
@@ -84,8 +85,8 @@ export const foodApi = {
   logPlateItem: (api: Api, item: PlateItem, mealType: MealType, at = new Date()) =>
     api.post<Meal>("/meals", { ...plateItemNutrition(item), name: item.name.trim() || "Food", meal_type: mealType, logged_at: at.toISOString() }),
   deleteMeal: (api: Api, mealId: string) => api.delete(`/meals/${mealId}`),
-  photo: (api: Api, image: string, mediaType: "image/jpeg" | "image/png" | "image/webp", note?: string) =>
-    api.post<PlateEstimate>("/food/photo", { image, media_type: mediaType, note: note?.trim() || null })
+  photo: (api: Api, image: string, mediaType: "image/jpeg" | "image/png" | "image/webp", note?: string, ai?: AiChoiceName | null) =>
+    api.post<PlateEstimate>(`/food/photo${aiQuery(ai)}`, { image, media_type: mediaType, note: note?.trim() || null })
 };
 
 /** Logs a search, barcode or saved result: reuses the saved copy, or saves an outside result first. */

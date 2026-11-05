@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminApi, aiFormReady, aiState, chatgptState, integrationsApi, seerrState, whoopState } from "@/lib/integrations";
+import { adminApi, aiChoicesOf, aiFormReady, aiName, aiQuery, aiState, chatgptState, integrationsApi, pickedAi, seerrState, whoopState, type AiChoiceName } from "@/lib/integrations";
 
 function fakeApi() {
   const calls: { method: string; path: string; body?: unknown }[] = [];
@@ -96,5 +96,46 @@ describe("integrations", () => {
     // The saved key only stands in for its own provider.
     expect(aiFormReady({ ...form, apiKey: "" }, "openai")).toBe(true);
     expect(aiFormReady({ ...form, apiKey: "" }, "gemini")).toBe(false);
+  });
+});
+
+describe("more than one AI", () => {
+  const choice = (provider: AiChoiceName, is_default = false) => ({ provider, model: "m", instructions: null, connected_at: null, is_default });
+  const base = {
+    whoop: { configured: false, connected: false, last_synced_at: null, last_sync_error: null },
+    seerr: { connected: false, url: null, account_name: null, connected_at: null },
+    ai: { configured: false, connected: false, provider: null, model: null, instructions: null, connected_at: null },
+    chatgpt: { status: "not_connected" as const }
+  };
+
+  it("reads the list from the server, or from an older server's single AI", () => {
+    const ais = { choices: [choice("chatgpt", true), choice("openai")], default: "chatgpt" as const, server_key: false };
+    expect(aiChoicesOf({ ...base, ais })).toBe(ais);
+    expect(aiChoicesOf({ ...base, ai: { ...base.ai, configured: true, connected: true, provider: "gemini", model: "m" } })).toMatchObject({ default: "gemini", choices: [{ provider: "gemini" }] });
+    expect(aiChoicesOf({ ...base, chatgpt: { status: "connected" } })).toMatchObject({ default: "chatgpt" });
+    expect(aiChoicesOf(base)).toEqual({ choices: [], default: null, server_key: false });
+  });
+
+  it("uses the pick only while it is connected, and names the server key as Claude", () => {
+    const ais = { choices: [choice("openai", true), choice("anthropic")], default: "openai" as const, server_key: false };
+    expect(pickedAi(ais, null)).toBe("openai");
+    expect(pickedAi(ais, "anthropic")).toBe("anthropic");
+    expect(pickedAi(ais, "gemini")).toBe("openai");
+    expect(aiName(ais, "anthropic")).toBe("Claude");
+    expect(aiName(ais)).toBe("OpenAI");
+    expect(aiName({ choices: [], default: null, server_key: true })).toBe("Claude");
+    expect(aiName({ choices: [], default: null, server_key: false })).toBeNull();
+    expect(aiQuery("gemini")).toBe("?ai=gemini");
+    expect(aiQuery(null)).toBe("");
+  });
+
+  it("removes one AI or changes the default", async () => {
+    const { api, calls } = fakeApi();
+    await integrationsApi.disconnectOneAi(api, "gemini");
+    await integrationsApi.setAiDefault(api, "chatgpt");
+    expect(calls).toEqual([
+      { method: "DELETE", path: "/integrations/ai/gemini", body: undefined },
+      { method: "PUT", path: "/integrations/ai/default", body: { provider: "chatgpt" } }
+    ]);
   });
 });
