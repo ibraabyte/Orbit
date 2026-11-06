@@ -27,7 +27,7 @@ const arabic: WidgetCopy = { ...english, arabic: true, number: (value) => `ar-${
 const empty = {
   profile: null,
   ...Object.fromEntries(
-    ["tasks", "taskLists", "taskSteps", "reminders", "captures", "attachments", "tags", "taggings", "meals", "mealPlans", "groceryItems", "people", "weightLogs", "workouts", "sleepLogs", "focusSessions", "habits", "habitLogs", "goals", "goalMilestones", "journalEntries", "expenses", "bills", "budgets", "cards", "moneyAccounts", "investments", "obligations", "obligationInstallments"].map((key) => [key, []])
+    ["tasks", "taskLists", "taskSteps", "reminders", "captures", "attachments", "tags", "taggings", "meals", "mealPlans", "groceryItems", "weightLogs", "workouts", "sleepLogs", "habits", "habitLogs", "expenses", "bills", "budgets", "cards", "moneyAccounts", "investments", "obligations", "obligationInstallments"].map((key) => [key, []])
   )
 } as unknown as DashboardData;
 const withData = (overrides: Partial<DashboardData>): DashboardData => ({ ...empty, ...overrides });

@@ -101,9 +101,8 @@ ORBIT_TEST_DATABASE_URL=postgresql+psycopg://orbit:orbit@localhost:5432/orbit_te
 | `POST /tasks/{id}/complete` | إنهاء مهمة: يلغي تذكيراتها، ولو متكررة يسوي اللي بعدها بنفس الوسوم |
 | `/reminders` و `/reminders/{id}` | التذكيرات |
 | `GET /dashboard` | كل بيانات "اليوم" و"الخطة" في طلب واحد، بنفس شكل `DashboardData` في التطبيق |
-| الأقسام: `/captures`، `/meals`، `/meal-plans`، `/grocery-items`، `/weight-logs`، `/workouts`، `/sleep-logs`، `/focus-sessions`، `/habits`، `/habit-logs`، `/goals`، `/goal-milestones`، `/journal-entries`، `/people`، `/expenses`، `/bills`، `/vehicles`، `/watch-items` | قائمة وإضافة وتعديل وحذف لكل قسم، محمية بحساب المستخدم |
+| الأقسام: `/captures`، `/meals`، `/meal-plans`، `/grocery-items`، `/weight-logs`، `/workouts`، `/sleep-logs`، `/habits`، `/habit-logs`، `/expenses`، `/bills`، `/vehicles`، `/watch-items` | قائمة وإضافة وتعديل وحذف لكل قسم، محمية بحساب المستخدم |
 | الوسوم: `/tags`، `/taggings`، `POST /tags/ensure` | الوسوم. أغلب الأقسام تقبل `tags` (أسماء) مع الإضافة، فتنربط في نفس الطلب |
-| `PUT /journal-entries/day/{date}` | يوميات اليوم: وحدة لكل يوم، الكتابة الثانية تستبدل الأولى |
 | `PUT /watch-items` | يضيف فيلم أو مسلسل، أو يحدّثه لو موجود |
 | `GET /export` | كل بيانات المستخدم في ملف JSON واحد (بدون أسرار الإشعارات) |
 | `GET /whoop/status`، `POST /whoop/connect`، `GET /whoop/callback` | حالة WHOOP والربط |

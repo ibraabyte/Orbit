@@ -241,32 +241,7 @@ class SleepLogUpdate(Input):
     note: str | None = None
 
 
-FocusStatus = Literal["planned", "completed", "cancelled"]
-
-
-class FocusSessionCreate(Tagged):
-    task_id: uuid.UUID | None = None
-    title: str = name_field()
-    duration_minutes: int = Field(ge=0, le=1440)
-    started_at: datetime
-    ended_at: datetime | None = None
-    status: FocusStatus = "completed"
-    energy: int | None = Field(default=None, ge=1, le=5)
-    note: str | None = None
-
-
-class FocusSessionUpdate(Input):
-    task_id: uuid.UUID | None = None
-    title: str | None = name_field(None)
-    duration_minutes: int | None = Field(default=None, ge=0, le=1440)
-    started_at: datetime | None = None
-    ended_at: datetime | None = None
-    status: FocusStatus | None = None
-    energy: int | None = Field(default=None, ge=1, le=5)
-    note: str | None = None
-
-
-# Habits, goals, journal, people
+# Habits
 
 
 class HabitCreate(Input):
@@ -293,79 +268,6 @@ class HabitLogCreate(Input):
 class HabitLogUpdate(Input):
     logged_at: datetime | None = None
     note: str | None = None
-
-
-GoalStatus = Literal["active", "completed", "archived"]
-
-
-class GoalCreate(Input):
-    title: str = name_field()
-    notes: str | None = None
-    status: GoalStatus = "active"
-    target_at: date | None = None
-
-
-class GoalUpdate(Input):
-    title: str | None = name_field(None)
-    notes: str | None = None
-    status: GoalStatus | None = None
-    target_at: date | None = None
-
-
-class GoalMilestoneCreate(Input):
-    goal_id: uuid.UUID
-    title: str = name_field()
-    completed_at: datetime | None = None
-
-
-class GoalMilestoneUpdate(Input):
-    title: str | None = name_field(None)
-    completed_at: datetime | None = None
-
-
-Mood = Literal["great", "good", "neutral", "low", "bad"]
-
-
-class JournalEntryCreate(Input):
-    mood: Mood = "neutral"
-    title: str | None = Field(default=None, max_length=220)
-    body: str = Field(min_length=1)
-    entry_date: date
-
-
-class JournalEntryUpdate(Input):
-    mood: Mood | None = None
-    title: str | None = Field(default=None, max_length=220)
-    body: str | None = Field(default=None, min_length=1)
-    entry_date: date | None = None
-
-
-class JournalDayIn(Input):
-    mood: Mood = "neutral"
-    title: str | None = Field(default=None, max_length=220)
-    body: str = Field(min_length=1)
-
-
-class PersonCreate(Input):
-    name: str = name_field()
-    relationship: str | None = None
-    contact_method: str | None = None
-    birthday: date | None = None
-    last_contacted_at: date | None = None
-    next_follow_up_at: date | None = None
-    notes: str | None = None
-    favorite: bool = False
-
-
-class PersonUpdate(Input):
-    name: str | None = name_field(None)
-    relationship: str | None = None
-    contact_method: str | None = None
-    birthday: date | None = None
-    last_contacted_at: date | None = None
-    next_follow_up_at: date | None = None
-    notes: str | None = None
-    favorite: bool | None = None
 
 
 # Money

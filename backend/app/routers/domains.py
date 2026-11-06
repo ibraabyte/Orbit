@@ -1,10 +1,8 @@
 """Create, read, update and delete for every owner-scoped table that has no special rules of its own.
 
 Each is the shared owner-filtered router from app/crud.py. The few extra routes below are the writes the
-app used to do with a Supabase upsert: tags by name, one journal entry per day, one watch-list row per title.
+app used to do with a Supabase upsert: tags by name and one watch-list row per title.
 """
-
-from datetime import date
 
 from fastapi import APIRouter, status
 from sqlalchemy import func, select
@@ -80,50 +78,10 @@ sleep_logs = owned_crud_router(
     order_by=m.SleepLog.sleep_date.desc(),
     tag_target="sleep",
 )
-focus_sessions = owned_crud_router(
-    m.FocusSession,
-    prefix="/focus-sessions",
-    create=s.FocusSessionCreate,
-    update=s.FocusSessionUpdate,
-    order_by=m.FocusSession.started_at.desc(),
-    tag_target="focus_session",
-)
 habits = owned_crud_router(m.Habit, prefix="/habits", create=s.HabitCreate, update=s.HabitUpdate, order_by=m.Habit.created_at.desc())
 habit_logs = owned_crud_router(
     m.HabitLog, prefix="/habit-logs", create=s.HabitLogCreate, update=s.HabitLogUpdate, order_by=m.HabitLog.logged_at.desc()
 )
-goals = owned_crud_router(m.Goal, prefix="/goals", create=s.GoalCreate, update=s.GoalUpdate, order_by=m.Goal.updated_at.desc())
-goal_milestones = owned_crud_router(
-    m.GoalMilestone,
-    prefix="/goal-milestones",
-    create=s.GoalMilestoneCreate,
-    update=s.GoalMilestoneUpdate,
-    order_by=m.GoalMilestone.created_at.desc(),
-)
-journal_entries = owned_crud_router(
-    m.JournalEntry,
-    prefix="/journal-entries",
-    create=s.JournalEntryCreate,
-    update=s.JournalEntryUpdate,
-    order_by=m.JournalEntry.entry_date.desc(),
-)
-JournalRow = row_schema(m.JournalEntry)
-
-
-@journal_entries.put("/day/{entry_date}", response_model=JournalRow)
-def write_day(entry_date: date, body: s.JournalDayIn, user_id: UserId, db: Db):
-    """One entry per day: writes that day's entry, replacing what was there."""
-    changes = {**body.model_dump(), "updated_at": func.now()}
-    db.execute(
-        insert(m.JournalEntry)
-        .values(**body.model_dump(), user_id=user_id, entry_date=entry_date)
-        .on_conflict_do_update(constraint="journal_entries_user_id_entry_date_key", set_=changes)
-    )
-    db.commit()
-    return db.scalar(select(m.JournalEntry).where(m.JournalEntry.user_id == user_id, m.JournalEntry.entry_date == entry_date))
-
-
-people = owned_crud_router(m.Person, prefix="/people", create=s.PersonCreate, update=s.PersonUpdate, order_by=m.Person.updated_at.desc())
 expenses = owned_crud_router(
     m.Expense, prefix="/expenses", create=s.ExpenseCreate, update=s.ExpenseUpdate, order_by=m.Expense.spent_at.desc(), tag_target="expense"
 )
@@ -223,13 +181,8 @@ ROUTERS: list[APIRouter] = [
     weight_logs,
     workouts,
     sleep_logs,
-    focus_sessions,
     habits,
     habit_logs,
-    goals,
-    goal_milestones,
-    journal_entries,
-    people,
     expenses,
     bills,
     budgets,

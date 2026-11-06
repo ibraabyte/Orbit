@@ -1,10 +1,10 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from app.models import Expense, Goal, Habit, Meal
+from app.models import Expense, Habit, Meal
 from app.routers.dashboard import LISTS
 from tests.conftest import bearer, sign_up
 
@@ -50,21 +50,19 @@ def test_dashboard_carries_a_heavy_months_expenses(client: TestClient, auth: dic
     assert len(client.get("/dashboard", headers=auth).json()["expenses"]) == 300
 
 
-def test_dashboard_skips_archived_habits_and_goals(client: TestClient, auth: dict, me: dict, db: Session):
+def test_dashboard_skips_archived_habits(client: TestClient, auth: dict, me: dict, db: Session):
     user_id = me["user_id"]
     db.add_all(
         [
             Habit(user_id=user_id, name="Read"),
             Habit(user_id=user_id, name="Old", archived_at=datetime(2026, 1, 1, tzinfo=UTC)),
-            Goal(user_id=user_id, title="Run 10k", target_at=date(2027, 1, 1)),
-            Goal(user_id=user_id, title="Dropped", status="archived"),
         ]
     )
     db.commit()
     data = client.get("/dashboard", headers=auth).json()
     assert [h["name"] for h in data["habits"]] == ["Read"]
-    assert [g["title"] for g in data["goals"]] == ["Run 10k"]
-    assert data["goals"][0]["target_at"] == "2027-01-01"
+    # Removed sections are no longer part of the bundle.
+    assert not {"people", "focusSessions", "goals", "goalMilestones", "journalEntries"} & set(data)
 
 
 def test_dashboard_is_private(client: TestClient, auth: dict):

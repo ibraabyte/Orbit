@@ -34,7 +34,6 @@ const baseData: DashboardData = {
   ],
   mealPlans: [],
   groceryItems: [],
-  people: [],
   weightLogs: [
     {
       id: "weight-2",
@@ -80,34 +79,6 @@ const baseData: DashboardData = {
       created_at: "2026-07-07T08:00:00.000Z"
     }
   ],
-  focusSessions: [
-    {
-      id: "focus-1",
-      user_id: "user-1",
-      task_id: null,
-      title: "Deep work",
-      duration_minutes: 50,
-      started_at: "2026-07-07T10:00:00.000Z",
-      ended_at: "2026-07-07T10:50:00.000Z",
-      status: "completed",
-      energy: 4,
-      note: null,
-      created_at: "2026-07-07T10:00:00.000Z"
-    },
-    {
-      id: "focus-2",
-      user_id: "user-1",
-      task_id: null,
-      title: "Admin block",
-      duration_minutes: 25,
-      started_at: "2026-07-06T10:00:00.000Z",
-      ended_at: "2026-07-06T10:25:00.000Z",
-      status: "completed",
-      energy: 2,
-      note: null,
-      created_at: "2026-07-06T10:00:00.000Z"
-    }
-  ],
   habits: [
     {
       id: "habit-1",
@@ -130,54 +101,12 @@ const baseData: DashboardData = {
       created_at: "2026-07-07T10:00:00.000Z"
     }
   ],
-  goals: [
-    {
-      id: "goal-1",
-      user_id: "user-1",
-      title: "Launch",
-      notes: null,
-      status: "active",
-      target_at: null,
-      created_at: "2026-07-01T00:00:00.000Z",
-      updated_at: "2026-07-01T00:00:00.000Z"
-    }
-  ],
-  goalMilestones: [
-    {
-      id: "milestone-1",
-      user_id: "user-1",
-      goal_id: "goal-1",
-      title: "Build",
-      completed_at: "2026-07-06T00:00:00.000Z",
-      created_at: "2026-07-01T00:00:00.000Z"
-    },
-    {
-      id: "milestone-2",
-      user_id: "user-1",
-      goal_id: "goal-1",
-      title: "Ship",
-      completed_at: null,
-      created_at: "2026-07-01T00:00:00.000Z"
-    }
-  ],
   budgets: [],
   cards: [],
   moneyAccounts: [],
   investments: [],
   obligations: [],
   obligationInstallments: [],
-  journalEntries: [
-    {
-      id: "journal-1",
-      user_id: "user-1",
-      mood: "good",
-      title: null,
-      body: "Solid",
-      entry_date: "2026-07-07",
-      created_at: "2026-07-07T00:00:00.000Z",
-      updated_at: "2026-07-07T00:00:00.000Z"
-    }
-  ]
 };
 
 describe("insights", () => {
