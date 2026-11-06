@@ -1,55 +1,59 @@
 import { isArabic } from "@/lib/i18n";
 
-// Dark glass: a calm forest backdrop, translucent cards with a lit edge, one lime accent. Fixed, not a light/dark toggle.
-// Real Liquid Glass is only on what floats (see Glass in drift.tsx). Urgency is a pale pill, never red. Status is always glyph + label.
+// Night (Orbit Concept, "WHOOP ground"): near-black, hairlines instead of cards, one sand accent used as a line and as
+// text, filled only on the main button. Real Liquid Glass stays on what floats (see Glass in drift.tsx).
+// No colour for status: always glyph + label. Fixed, not a light/dark toggle.
 export const colors = {
-  // Chrome (the dark background) and text on it.
-  shell: "#0c120e",
-  shellTop: "#141c16",
-  onShell: "#f1f4ea",
-  onShellMuted: "#a3afa6",
-  // Cards and text on them. Cards are translucent, so anything drawn behind them shows through.
-  surface: "rgba(255,255,255,0.07)",
-  surfaceInset: "rgba(255,255,255,0.09)", // inner dividers, tracks, wells
-  hairline: "rgba(255,255,255,0.12)",
-  field: "rgba(0,0,0,0.25)",
-  ink: "#f1f4ea",
-  inkMuted: "#c6d0c8",
-  inkFaint: "#aab6ad",
+  // The black ground and text on it.
+  shell: "#0a0a0b",
+  shellTop: "#0a0a0b",
+  onShell: "#ece9e2",
+  onShellMuted: "#8f8d87",
+  // Sections sit straight on the ground. surface is a barely lifted well for inputs, tiles and bordered rows.
+  surface: "#121214",
+  surfaceInset: "#1d1d20", // inner dividers, tracks, wells
+  hairline: "#2a2a2e",
+  field: "#121214",
+  ink: "#ece9e2",
+  inkMuted: "#a19f98",
+  inkFaint: "#807e78",
   // Solid stand-in for glass: older iOS, Android, Reduce Transparency.
-  glassSolid: "#232b26",
+  glassSolid: "#1a1a1d",
   // Ring gauges need a solid middle, because the arc is drawn behind it.
-  ringHole: "#141b16",
-  // Lime: the Capture button, rings and the active tab. Solid lime always takes dark ink.
-  accent: "#9bdc33",
-  accentInk: "#132419",
-  accentDeep: "#a8e24a", // large numbers and highlights on cards
-  link: "#b5e56a",
-  accentTint: "rgba(155,220,51,0.16)",
-  accentTintInk: "#c4ec80",
-  // Hero cards: lime-tinted glass with pale lime text.
-  hero: "rgba(155,220,51,0.13)",
-  heroEdge: "rgba(155,220,51,0.26)",
-  heroInk: "#e9f7cf",
-  accentMuted: "#b9cf95", // secondary text on a hero
-  heroHole: "#141d10",
-  // Status.
-  urgent: "#edf0e7",
-  urgentInk: "#132419",
-  success: "#8ae3a8",
-  successTint: "rgba(111,207,142,0.16)",
-  sage: "#8fb89a", // second data series
-  // Destructive text.
-  dangerOnShell: "#ff9f92"
+  ringHole: "#0a0a0b",
+  // Sand: the one accent. Filled only for the main action; elsewhere it is a line or text. Solid sand takes black text.
+  accent: "#e8c890",
+  accentInk: "#0a0a0b",
+  accentDeep: "#e8c890", // large numbers and highlights
+  link: "#e8c890",
+  accentTint: "#221e17",
+  accentTintInk: "#e8c890",
+  // Heroes: one big number on the ground, no fill.
+  hero: "#0a0a0b",
+  heroEdge: "#2a2a2e",
+  heroInk: "#ece9e2",
+  accentMuted: "#a19f98", // secondary text on a hero
+  heroHole: "#0a0a0b",
+  // Status: a pale pill with black text, always with a glyph or label.
+  urgent: "#ece9e2",
+  urgentInk: "#0a0a0b",
+  success: "#c9c6bd",
+  successTint: "#1d1d20",
+  sage: "#5d5b56", // second data series: grey bars beside the sand one
+  // Error text.
+  dangerOnShell: "#f2a091"
 } as const;
 
-// Soft light behind everything, so translucent cards have something to catch.
-export const backdrop = `radial-gradient(circle at 12% 0%, rgba(155,220,51,0.13), transparent 55%), radial-gradient(circle at 100% 55%, rgba(143,184,154,0.12), transparent 50%), linear-gradient(180deg, ${colors.shellTop} 0%, ${colors.shell} 60%)`;
+// The ground is flat black.
+export const backdrop = `linear-gradient(180deg, ${colors.shellTop} 0%, ${colors.shell} 100%)`;
 
-export const radius = { card: 24, tile: 16, control: 12, chip: 7, pill: 999 } as const;
+export const radius = { card: 14, tile: 12, control: 10, chip: 999, pill: 999 } as const;
 
 // One family per weight (custom fonts ignore fontWeight on iOS); files load in src/app/_layout.tsx.
-// Space Grotesk for Latin, Almarai for Arabic.
+// JetBrains Mono for Latin and numbers, IBM Plex Sans Arabic for Arabic.
 export const fonts = isArabic
-  ? { regular: "Almarai_400Regular", medium: "Almarai_400Regular", semibold: "Almarai_700Bold", bold: "Almarai_800ExtraBold" }
-  : { regular: "SpaceGrotesk_400Regular", medium: "SpaceGrotesk_500Medium", semibold: "SpaceGrotesk_600SemiBold", bold: "SpaceGrotesk_700Bold" };
+  ? { regular: "IBMPlexSansArabic_400Regular", medium: "IBMPlexSansArabic_500Medium", semibold: "IBMPlexSansArabic_600SemiBold", bold: "IBMPlexSansArabic_700Bold" }
+  : { regular: "JetBrainsMono_400Regular", medium: "JetBrainsMono_500Medium", semibold: "JetBrainsMono_600SemiBold", bold: "JetBrainsMono_700Bold" };
+
+// Small labels are uppercase with wide tracking (Latin only; Arabic has no case).
+export const labelCase = isArabic ? ({} as const) : ({ textTransform: "uppercase", letterSpacing: 1.2 } as const);

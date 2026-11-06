@@ -349,5 +349,5 @@ const styles = StyleSheet.create({
   field: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
   missing: { backgroundColor: colors.accentTint, borderRadius: radius.control, paddingHorizontal: 10, paddingVertical: 8 },
   recent: { minHeight: 40, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, backgroundColor: colors.surface, borderRadius: radius.control },
-  recentText: { flex: 1, fontFamily: "Menlo", fontSize: 13, color: colors.ink }
+  recentText: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.ink }
 });

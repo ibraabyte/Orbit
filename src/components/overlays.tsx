@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { flip, Glass, Icon, type } from "@/components/drift";
 import { colors, fonts, radius } from "@/components/theme";
 import { formatDate, t } from "@/lib/i18n";
@@ -23,7 +23,15 @@ export function useOverlays() {
   return value;
 }
 
+// Sheets and the toast keep a phone width on iPad, centered.
+function useSides() {
+  const { width } = useWindowDimensions();
+  const side = Math.max(12, (width - 540) / 2);
+  return { left: side, right: side };
+}
+
 export function OverlayProvider({ children }: { children: ReactNode }) {
+  const sides = useSides();
   const [sheet, setSheet] = useState<SheetRequest | null>(null);
   const [picker, setPicker] = useState<PickerRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -57,7 +65,7 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
       <Modal visible={Boolean(sheet)} transparent animationType="fade" onRequestClose={() => setSheet(null)}>
         <Pressable style={styles.backdrop} onPress={() => setSheet(null)} accessibilityLabel={t.cancel} />
         {sheet ? (
-          <View style={styles.sheetWrap}>
+          <View style={[styles.sheetWrap, sides]}>
             <Glass style={styles.sheet}>
               <View style={styles.sheetHeader}>
                 <Text style={[type.title, { textAlign: "center" }]}>{sheet.title}</Text>
@@ -90,7 +98,7 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
         {picker ? <DatePicker key={picker.title} title={picker.title} initial={picker.initial} onPick={closePicker} /> : null}
       </Modal>
       {message ? (
-        <View pointerEvents="none" style={styles.toastWrap} accessibilityLiveRegion="polite">
+        <View pointerEvents="none" style={[styles.toastWrap, sides]} accessibilityLiveRegion="polite">
           <Glass style={styles.toast}>
             <View style={styles.toastMark}>
               <Icon name="check" size={14} color={colors.accentInk} />
@@ -109,6 +117,7 @@ export function toDateKey(date: Date) {
 }
 
 function DatePicker({ title, initial, onPick }: { title: string; initial: Date; onPick: (date: string) => void }) {
+  const sides = useSides();
   const [month, setMonth] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1));
   const selected = toDateKey(initial);
   const today = toDateKey(new Date());
@@ -119,7 +128,7 @@ function DatePicker({ title, initial, onPick }: { title: string; initial: Date; 
   const step = (by: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + by, 1));
 
   return (
-    <Glass style={[styles.sheetWrap, styles.picker]}>
+    <Glass style={[styles.sheetWrap, styles.picker, sides]}>
       <Text style={[type.rowSubtitle, { textAlign: "center" }]}>{title}</Text>
       <View style={styles.pickerHead}>
         <Pressable onPress={() => step(-1)} accessibilityRole="button" accessibilityLabel="Previous month" style={[styles.pickerStep, flip]}>

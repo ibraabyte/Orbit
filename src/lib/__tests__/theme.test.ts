@@ -26,16 +26,17 @@ function contrast(a: Rgb, b: Rgb) {
   return (high + 0.05) / (low + 0.05);
 }
 
-// The worst case for pale text: the top of the screen, where the lime glow of the backdrop is strongest.
-const glow = over("rgba(155,220,51,0.13)", toRgb(colors.shellTop));
-const card = over(colors.surface, glow);
+// Night: everything sits straight on the black ground; surface and inset are the slightly lifted wells.
+const ground = toRgb(colors.shell);
+const card = over(colors.surface, ground);
 const inset = over(colors.surfaceInset, card);
-const hero = over(colors.hero, glow);
+const hero = over(colors.hero, ground);
+const glow = ground;
 
-describe("Dark glass theme", () => {
-  it("keeps the dark chrome and the lime accent", () => {
-    expect(colors.shell).toBe("#0c120e");
-    expect(colors.accent).toBe("#9bdc33");
+describe("Night theme", () => {
+  it("keeps the black ground and the one sand accent", () => {
+    expect(colors.shell).toBe("#0a0a0b");
+    expect(colors.accent).toBe("#e8c890");
   });
 
   it.each<[string, Rgb, Rgb]>([
@@ -45,22 +46,23 @@ describe("Dark glass theme", () => {
     ["ink on an inset well", toRgb(colors.ink), inset],
     ["muted ink on an inset well", toRgb(colors.inkMuted), inset],
     ["links on a card", toRgb(colors.link), card],
-    ["lime numbers on a card", toRgb(colors.accentDeep), card],
-    ["text on the backdrop", toRgb(colors.onShell), glow],
-    ["muted text on the backdrop", toRgb(colors.onShellMuted), glow],
+    ["sand numbers on a card", toRgb(colors.accentDeep), card],
+    ["text on the ground", toRgb(colors.onShell), glow],
+    ["muted text on the ground", toRgb(colors.onShellMuted), glow],
     ["errors on a card", toRgb(colors.dangerOnShell), card],
-    ["dark text on a lime button", toRgb(colors.accentInk), toRgb(colors.accent)],
+    ["black text on the sand button", toRgb(colors.accentInk), toRgb(colors.accent)],
     ["dark text on the pale urgent pill", toRgb(colors.urgentInk), toRgb(colors.urgent)],
     ["hero text", toRgb(colors.heroInk), hero],
     ["secondary hero text", toRgb(colors.accentMuted), hero],
     ["tinted badge", toRgb(colors.accentTintInk), over(colors.accentTint, card)],
     ["success badge", toRgb(colors.success), over(colors.successTint, card)],
-    ["text on the solid glass stand-in", toRgb(colors.ink), toRgb(colors.glassSolid)]
+    ["text on the solid glass stand-in", toRgb(colors.ink), toRgb(colors.glassSolid)],
+    ["sand text on the ground", toRgb(colors.accent), ground]
   ])("%s is readable (AA, 4.5:1)", (_name, fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it("names one Space Grotesk family per weight", () => {
-    expect(Object.values(fonts)).toEqual(["SpaceGrotesk_400Regular", "SpaceGrotesk_500Medium", "SpaceGrotesk_600SemiBold", "SpaceGrotesk_700Bold"]);
+  it("names one JetBrains Mono family per weight (English; Arabic uses IBM Plex Sans Arabic)", () => {
+    expect(Object.values(fonts)).toEqual(["JetBrainsMono_400Regular", "JetBrainsMono_500Medium", "JetBrainsMono_600SemiBold", "JetBrainsMono_700Bold"]);
   });
 });

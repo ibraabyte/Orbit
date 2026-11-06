@@ -218,7 +218,7 @@ export default function Saver() {
           onSubmitEditing={saveTyped}
           style={{ flex: 1 }}
         />
-        <Button title={saving ? st.saving : st.save} onPress={saveTyped} disabled={saving || !link.trim()} variant="primary" />
+        <Button title={saving ? st.saving : st.save} onPress={saveTyped} disabled={saving || !link.trim()} />
       </View>
 
       <BleedRow>
@@ -278,7 +278,7 @@ function SavedRow({ item, busy, onPress, onMore, onToggle }: { item: Capture; bu
       </View>
       <View style={styles.side}>
         <Pressable onPress={onToggle} hitSlop={8} accessibilityRole="checkbox" accessibilityState={{ checked: done }} accessibilityLabel={done ? st.markWant : st.markDone} style={[styles.check, done && styles.checkOn]}>
-          {done ? <Icon name="check" size={14} color={colors.accentInk} /> : null}
+          {done ? <Icon name="check" size={14} color={colors.accent} /> : null}
         </Pressable>
         <Pressable onPress={onMore} hitSlop={8} accessibilityRole="button" accessibilityLabel={st.moveTo} style={styles.more}>
           <Icon name="more-horizontal" size={18} color={colors.inkFaint} />
@@ -291,11 +291,12 @@ function SavedRow({ item, busy, onPress, onMore, onToggle }: { item: Capture; bu
 const styles = StyleSheet.create({
   saveRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   row: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
-  thumb: { width: 64, height: 64, borderRadius: radius.control, backgroundColor: colors.surfaceInset },
+  thumb: { width: 64, height: 64, borderRadius: radius.control, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
   thumbEmpty: { alignItems: "center", justifyContent: "center" },
   body: { flex: 1, gap: 3 },
   side: { alignItems: "center", gap: 10 },
   check: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: colors.inkFaint, alignItems: "center", justifyContent: "center" },
-  checkOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  // Night: sand is a line here, never a fill (only the main button is filled).
+  checkOn: { borderColor: colors.accent },
   more: { width: 26, height: 26, alignItems: "center", justifyContent: "center" }
 });
