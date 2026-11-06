@@ -1,6 +1,23 @@
+# Orbit Design System — Refined
+
+> **2026-11-06:** the Expo app uses this ("Orbit Refined" from the design handoff), applied to every screen. Live tokens are in `src/components/theme.ts`, parts in `src/components/drift.tsx`, `screen.tsx`, `overlays.tsx`, `tab-bar.tsx`, `chips.tsx` and `auth-panel.tsx`. "Night + Rail" below is the look before it, kept for history. Refined drew the old app (People, Plan, Momentum tabs); those sections stay deleted, and its look is carried onto the screens the app has now.
+
+- **Ground and accent stay:** flat near-black (`#0a0a0b`) and one Sand accent (`#e8c890`). Text is `#f2f0ea`, muted `#8a8a90`.
+- **Cards are back:** a section is a card: `surface` (`#131315`) with a 1px `hairline` (`#2a2a2e`) edge and 22px corners (`Card`). Rows inside are divided by the inset colour (`#1e1e21`). Tiles and inputs use 14px corners, badges 6px.
+- **Type:** JetBrains Mono for Latin and numbers, IBM Plex Sans Arabic for Arabic. Screen titles 30px semibold; card titles 15px semibold, sentence case. Only group labels (PINNED, LIFE LOGS) are small uppercase.
+- **Buttons:** the main button is pale (`#f2f0ea`) with dark text and round 22px corners. Sand fills only the assistant button, Capture marks and the stack action. Card links are outlined sand pills ("Tasks ›").
+- **Status is glyph + label, never colour alone:** overdue is a pale tag with dark text, today a dark sand tag, the rest grey tags.
+- **Heroes** (next prayer, totals) are cards with a soft sand edge.
+- **Tab bar:** docked to the bottom on the card colour with a hairline on top: Today, the raised sand assistant button (mic, "Capture"), More. The open tab is sand, its icon on a soft sand pill.
+- **Today:** the date and title with Customize, the next prayer card, the capture bar, then cards: morning brief, digest, quick numbers (readiness from WHOOP is one of them), needs attention (overdue tasks, money due), next up (timed things still ahead; swipe a task to complete it) and health. iPad: overview left, what to do right.
+- **Sign in / sign up:** the whole screen is the card colour; the sand Trail mark on a dark tile, "Orbit", what the page does, labelled fields, the pale button.
+- **Floating things:** sheets and the date picker keep Liquid Glass (solid `glassSolid` on older iOS, Android and with Reduce Transparency); the iPad sidebar too. The toast is pale with a sand check, like Refined.
+- **The widget** keeps its Rail layout, in the Refined text colours.
+- **Contrast:** `src/lib/__tests__/theme.test.ts` checks AA for text pairs. Add new pairs there.
+
 # Orbit Design System — Night + Rail
 
-> **2026-11-06:** the Expo app uses this ("Orbit Concept" 1a Night and 2b Rail from the design handoff). Live tokens are in `src/components/theme.ts`, parts in `src/components/drift.tsx`, `screen.tsx`, `overlays.tsx`, `tab-bar.tsx` and `swipe-to-done.tsx`; the Today rail logic is `src/lib/rail.ts`. Everything from "Dark Glass" down is older, kept for history.
+> **2026-11-06 (until Refined, same day):** the Expo app used this ("Orbit Concept" 1a Night and 2b Rail from the design handoff). Live tokens are in `src/components/theme.ts`, parts in `src/components/drift.tsx`, `screen.tsx`, `overlays.tsx`, `tab-bar.tsx` and `swipe-to-done.tsx`; the Today rail logic is `src/lib/rail.ts`. Everything from "Dark Glass" down is older, kept for history.
 
 - **Ground:** flat near-black (`colors.shell`, `#0a0a0b`). Fixed; there is no light mode.
 - **One accent, Sand (`#e8c890`):** a line or text almost everywhere; filled only on the main button (the assistant button, the capture +). Solid sand takes black text (`accentInk`).

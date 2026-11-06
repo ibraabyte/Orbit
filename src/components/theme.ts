@@ -16,7 +16,7 @@ export const colors = {
   field: "#1e1e21",
   ink: "#f2f0ea",
   inkMuted: "#8a8a90",
-  inkFaint: "#808086",
+  inkFaint: "#87878d",
   // Solid stand-in for glass: older iOS, Android, Reduce Transparency.
   glassSolid: "#131315",
   // Ring gauges need a solid middle, because the arc is drawn behind it. Rings sit on cards.
