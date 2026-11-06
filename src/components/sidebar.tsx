@@ -7,7 +7,7 @@ import { Glass, Icon, type, type IconName } from "@/components/drift";
 import { openCapture, useSidebar } from "@/components/screen";
 import { groups, useSectionCounts } from "@/components/sections";
 import { colors, fonts, labelCase, radius } from "@/components/theme";
-import { t } from "@/lib/i18n";
+import { formatNumber, t } from "@/lib/i18n";
 import { activeKey, SIDEBAR_WIDTH, sidebarSteps } from "@/lib/sidebar";
 
 // iPad: a floating Liquid Glass sidebar at the start edge replaces the tab bar. It holds the assistant (the one sand
@@ -85,7 +85,7 @@ function Item({ icon, label, count, selected, onPress, tab }: { icon: IconName; 
       onPress={onPress}
       accessibilityRole={tab ? "tab" : "link"}
       accessibilityState={{ selected }}
-      accessibilityLabel={count ? `${label}, ${count}` : label}
+      accessibilityLabel={count ? `${label}, ${formatNumber(count)}` : label}
       style={({ pressed }) => [styles.item, selected && styles.itemSelected, pressed && { opacity: 0.7 }]}
     >
       {/* The open item: sand text and a short sand line at its start, as on the phone's tab bar. */}
@@ -94,7 +94,7 @@ function Item({ icon, label, count, selected, onPress, tab }: { icon: IconName; 
       <Text style={[styles.itemText, { color: tint }]} numberOfLines={1}>
         {label}
       </Text>
-      {count ? <Text style={[type.badge, { color: colors.accent }]}>{count}</Text> : null}
+      {count ? <Text style={[type.badge, { color: colors.accent }]}>{formatNumber(count)}</Text> : null}
     </Pressable>
   );
 }
