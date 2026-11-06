@@ -14,6 +14,7 @@ from app.models.life import Habit, HabitLog
 from app.models.profile import Profile
 from app.models.tasks import Reminder, Task, TaskList, TaskStep
 from app.models.things import Vehicle, WatchItem
+from app.models.training import BodyMeasurement, WorkoutExercise, WorkoutSet
 from app.models.whoop import WhoopConnection, WhoopCycle, WhoopInsight, WhoopRecovery, WhoopSleep, WhoopWorkout
 
 __all__ = [
@@ -24,6 +25,7 @@ __all__ = [
     "BankTransaction",
     "Base",
     "Bill",
+    "BodyMeasurement",
     "Budget",
     "Capture",
     "Card",
@@ -65,4 +67,6 @@ __all__ = [
     "WhoopSleep",
     "WhoopWorkout",
     "Workout",
+    "WorkoutExercise",
+    "WorkoutSet",
 ]

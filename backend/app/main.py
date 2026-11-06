@@ -26,6 +26,7 @@ from app.routers import (
     profile,
     saver,
     tasks,
+    training,
     whoop,
 )
 from app.services.whoop_sync import scheduler
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
         saver.router,
         *domains.ROUTERS,
         *exercises.ROUTERS,
+        *training.ROUTERS,
     ):
         app.include_router(router)
     return app

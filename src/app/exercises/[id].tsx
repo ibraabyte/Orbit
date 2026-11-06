@@ -1,23 +1,33 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Badge, Card, EmptyState, Icon, type } from "@/components/drift";
-import { Loading, Screen } from "@/components/screen";
+import { Badge, Card, EmptyState, Icon, ListRow, type } from "@/components/drift";
+import { useOverlays } from "@/components/overlays";
+import { Button, Loading, Screen } from "@/components/screen";
 import { colors, radius } from "@/components/theme";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, injuryNote, label, type ExerciseDetail } from "@/lib/exercises";
+import { formatDate } from "@/lib/i18n";
+import { amountText, sessionLine, setText, trainingApi, tt, volumeText, type Best, type ExerciseHistory, type Session } from "@/lib/training";
 
 export default function ExerciseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [exercise, setExercise] = useState<ExerciseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<ExerciseHistory | null>(null);
+  const [active, setActive] = useState<Session | null>(null);
+  const { toast } = useOverlays();
 
   const load = useCallback(async () => {
     if (!id) return;
     setLoading(true);
     try {
-      setExercise(await exercisesApi.detail(getApi(), id));
+      const api = getApi();
+      const [detail, past, live] = await Promise.all([exercisesApi.detail(api, id), trainingApi.history(api, { exercise_id: id, name: "" }, undefined, 5).catch(() => null), trainingApi.active(api).catch(() => null)]);
+      setExercise(detail);
+      setHistory(past);
+      setActive(live);
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -39,6 +49,22 @@ export default function ExerciseScreen() {
   }
 
   const warning = injuryNote(exercise);
+  const bests = history?.bests;
+  const bestRows: [string, Best | null | undefined, (best: Best) => string][] = [
+    [tt.heaviest, bests?.heaviest, setText],
+    [tt.oneRepMax, bests?.one_rep_max, (best) => amountText(Math.round(best.value), best.unit)],
+    [tt.mostReps, bests?.most_reps, setText],
+    [tt.bestVolume, bests?.best_volume, (best) => volumeText(best.value)]
+  ];
+  const addToWorkout = async () => {
+    if (!active) return;
+    try {
+      await trainingApi.addExercise(getApi(), active.id, { exercise_id: exercise.id, sets: 3 });
+      router.push({ pathname: "/workout", params: { id: active.id } });
+    } catch (addError) {
+      toast(addError instanceof Error ? addError.message : String(addError));
+    }
+  };
 
   return (
     <Screen refreshing={loading} onRefresh={load}>
@@ -73,6 +99,21 @@ export default function ExerciseScreen() {
           {exercise.mechanic ? <Badge>{label(exercise.mechanic)}</Badge> : null}
         </View>
       </Card>
+
+      {active ? <Button variant="primary" title={`${tt.addExercise} · ${active.type}`} onPress={() => void addToWorkout()} /> : null}
+
+      {history ? (
+        <Card title={tt.bests}>
+          {!history.sessions.length ? <Text style={type.rowSubtitle}>{tt.noHistory}</Text> : null}
+          {bestRows.map(([name, best, show]) =>
+            best ? <ListRow key={name} title={name} subtitle={formatDate(best.logged_at, { day: "numeric", month: "short", year: "numeric" })} meta={show(best)} /> : null
+          )}
+          {history.sessions.length ? <Text style={[type.sectionLabel, { paddingTop: 8 }]}>{tt.recentSessions}</Text> : null}
+          {history.sessions.map((past) => (
+            <ListRow key={past.workout_id} href={{ pathname: "/workout", params: { id: past.workout_id } }} title={sessionLine(past.sets)} subtitle={formatDate(past.logged_at, { weekday: "short", day: "numeric", month: "short" })} meta={past.volume_kg ? volumeText(past.volume_kg) : undefined} />
+          ))}
+        </Card>
+      ) : null}
 
       <Card title={et.steps}>
         {exercise.instructions.map((step, index) => (

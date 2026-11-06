@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, Text, UniqueConstraint, text
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKeyConstraint, Index, Integer, Numeric, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -55,13 +55,18 @@ class Workout(Owned, Base):
         CheckConstraint("duration_minutes >= 0", name="duration_minutes"),
         CheckConstraint("calories >= 0", name="calories"),
         Index("workouts_user_logged_idx", "user_id", text("logged_at desc")),
+        # Lets a session's exercises point at (workout, owner), so they can only join the owner's own workouts.
+        UniqueConstraint("id", "user_id"),
     )
 
     type: Mapped[str] = mapped_column(Text, nullable=False)
     duration_minutes: Mapped[int | None] = mapped_column(Integer)
     calories: Mapped[int | None] = mapped_column(Integer)
     notes: Mapped[str | None] = mapped_column(Text)
+    # When a gym session started (for a session logged set by set) or when the workout was logged.
     logged_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # True while a set-by-set session is still going (app/models/training.py). Workouts logged in one line are never live.
+    in_progress: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
 
 
 class SleepLog(Owned, Base):
