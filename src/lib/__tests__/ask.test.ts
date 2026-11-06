@@ -145,7 +145,7 @@ describe("the morning brief follows the same consent", () => {
   });
 
   it("is withdrawn together with the saved AI brief, so a cached text is not shown afterwards", () => {
-    expect(withdrawKeys("u1")).toEqual([consentKey("u1"), briefCacheKey("u1")]);
+    expect(withdrawKeys("u1")).toEqual([consentKey("u1"), briefCacheKey("u1"), "orbit.cache.week.u1"]);
     expect(withdrawKeys("u1")).not.toEqual(withdrawKeys("u2"));
   });
 });

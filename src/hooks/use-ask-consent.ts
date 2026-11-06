@@ -18,5 +18,5 @@ export async function saveAskConsent(userId: string, provider: string) {
   const current = await loadAskConsent(userId);
   await AsyncStorage.setItem(consentKey(userId), consentWith(current, provider));
 }
-// Also drops the saved AI brief, so a text written under the agreement is not shown after it is withdrawn.
+// Also drops the saved AI brief and weekly summary, so a text written under the agreement is not shown after it is withdrawn.
 export const clearAskConsent = (userId: string) => AsyncStorage.multiRemove(withdrawKeys(userId));
