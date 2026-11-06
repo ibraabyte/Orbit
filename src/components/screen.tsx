@@ -69,6 +69,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/media": { title: t.movies },
   "/ask": { title: t.askOrbit },
   "/settings": { title: t.settings },
+  "/integrations": { title: t.integrations },
   "/exercises": { title: et.exercises },
   "/gym": { title: et.gym },
   "/injuries": { title: et.injuries }
@@ -257,7 +258,7 @@ export function Skeleton() {
 
 export function Segments<T extends string>({ options, value, onChange, labels, small }: { options: readonly T[]; value: T; onChange: (next: T) => void; labels?: Record<T, string>; small?: boolean }) {
   return (
-    <View style={[styles.segments, small && { borderRadius: 9 }]} accessibilityRole="tablist">
+    <View style={[styles.segments, small && styles.segmentsSmall]} accessibilityRole="tablist">
       {options.map((option) => {
         const selected = option === value;
         return (
@@ -345,7 +346,8 @@ const styles = StyleSheet.create({
   errorGlyph: { fontFamily: fonts.semibold, fontSize: 28, color: colors.urgentInk },
   segments: { flexDirection: "row", backgroundColor: colors.surfaceInset, borderRadius: radius.tile, borderCurve: "continuous", padding: 3, gap: 3 },
   segment: { flex: 1, minHeight: 38, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
-  segmentSmall: { flex: 0, minHeight: 30, paddingHorizontal: 12 },
+  segmentsSmall: { alignSelf: "flex-start", borderRadius: 12 },
+  segmentSmall: { flex: 0, flexShrink: 0, minHeight: 30, paddingHorizontal: 12, borderRadius: 9 },
   segmentSelected: { backgroundColor: colors.urgent },
   segmentText: { fontFamily: fonts.semibold, fontSize: 14 },
   button: { minHeight: 50, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: 20, alignItems: "center", justifyContent: "center" },
