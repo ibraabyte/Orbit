@@ -1,38 +1,19 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Link, type Href } from "expo-router";
+import { Link } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Card, Icon, IconTile, ListRow, type, type IconName } from "@/components/drift";
+import { Card, Icon, IconTile, ListRow, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { HeaderButton, Screen, ShellLabel, TabHeader } from "@/components/screen";
+import { groups, pinnable, useSectionCounts } from "@/components/sections";
 import { colors, radius } from "@/components/theme";
-import { useDashboardData } from "@/hooks/use-dashboard-data";
-import { openTasks } from "@/lib/dashboard";
-import { financeSummary } from "@/lib/finance";
-import { et } from "@/lib/exercises";
-import { foodSummary } from "@/lib/food";
 import { t, toggleLanguage } from "@/lib/i18n";
-
-type Section = { key: string; href: Href; label: string; icon: IconName };
-
-const section = (key: string, label: string, icon: IconName): Section => ({ key, href: `/${key}` as Href, label, icon });
-const manage = [section("tasks", t.tasks, "check-square")];
-// Food, Exercises and WHOOP live inside Health now; they can still be pinned for one tap.
-const logs = [section("health", t.health, "activity"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "bookmark")];
-const insideHealth = [section("food", t.food, "coffee"), section("exercises", et.exercises, "zap"), section("whoop", t.whoop, "watch")];
-// Money places, investments, cards and installments live inside Finance; they can be pinned the same way.
-const insideFinance = [section("accounts", t.moneyPlaces, "briefcase"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
-const home = [section("vehicles", t.car, "truck"), section("media", t.movies, "film")];
-const system = [section("ask", t.askOrbit, "message-circle"), section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
-const groups: [string, Section[]][] = [[t.manageDay, manage], [t.lifeLogs, logs], [t.homeServices, home], [t.system, system]];
-const pinnable = [...manage, ...logs, ...insideHealth, ...insideFinance, ...home];
 
 const pinsKey = "orbit.more.pins";
 const defaultPins = ["tasks", "health", "finance", "vehicles"];
 const MAX_PINS = 4;
 
 export default function More() {
-  const { data } = useDashboardData();
   const { sheet, toast } = useOverlays();
   const [pins, setPins] = useState(defaultPins);
 
@@ -42,13 +23,7 @@ export default function More() {
       .catch(() => undefined);
   }, []);
 
-  // Live counts: a number on a section means something there is waiting for you.
-  const finance = financeSummary(data);
-  const counts: Record<string, number> = {
-    tasks: openTasks(data.tasks).length,
-    food: foodSummary(data).neededGroceries.length,
-    finance: finance.overdueBills.length
-  };
+  const counts = useSectionCounts();
 
   const editPins = () =>
     sheet({

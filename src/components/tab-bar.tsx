@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { Glass, Icon } from "@/components/drift";
-import { openCapture } from "@/components/screen";
+import { openCapture, useSidebar } from "@/components/screen";
 import { colors, fonts, labelCase } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
@@ -13,6 +13,8 @@ const tabs: Record<string, string> = { index: t.today, more: t.more };
 export function DriftTabBar({ state, emitter, navigateToTab, insets }: BottomTabBarProps) {
   // On iPad the bar keeps a phone width, centered, instead of spreading across the screen.
   const side = Math.max(16, (useWindowDimensions().width - 480) / 2);
+  // An iPad-sized window shows the sidebar instead (src/components/sidebar.tsx).
+  const sidebar = useSidebar();
   const buttons = state.routes
     .filter((route) => tabs[route.name])
     .map((route) => {
@@ -47,6 +49,7 @@ export function DriftTabBar({ state, emitter, navigateToTab, insets }: BottomTab
     </Pressable>
   );
 
+  if (sidebar) return null;
   return (
     <View style={[styles.bar, { left: side, right: side, bottom: Math.max(14, insets.bottom - 6) }]}>
       <Glass tint="rgba(10,10,11,0.6)" style={styles.capsule}>
