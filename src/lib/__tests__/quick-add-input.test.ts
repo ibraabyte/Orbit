@@ -48,6 +48,18 @@ describe("natural quick add", () => {
     expect(parseNatural("call +966500000000", opts).draft).toMatchObject({ title: "call +966500000000", listName: null, steps: [] });
   });
 
+  it("reads a trailing date that comes before !priority and #tags", () => {
+    expect(parseNatural("pay rent fri 5pm !high", opts).draft).toMatchObject({ title: "pay rent", priority: "high", at: new Date(2026, 6, 3, 17, 0).toISOString() });
+    expect(parseNatural("call mom tomorrow 9am #family !low", opts).draft).toMatchObject({ title: "call mom", priority: "low", tags: ["family"], at: new Date(2026, 6, 2, 9, 0).toISOString() });
+    expect(parseNatural("fix sink !high", opts).draft).toMatchObject({ title: "fix sink", priority: "high", at: null });
+  });
+
+  it("plans a meal when plan is followed by a meal word, otherwise keeps a task", () => {
+    expect(parseNatural("plan dinner salmon @friday", opts).draft).toMatchObject({ kind: "mealPlan", title: "salmon", mealType: "dinner", at: new Date(2026, 6, 3, 12, 0).toISOString() });
+    expect(parseNatural("plan lunch shawarma tomorrow", opts).draft).toMatchObject({ kind: "mealPlan", title: "shawarma", mealType: "lunch" });
+    expect(parseNatural("plan the trip @friday", opts).draft).toMatchObject({ kind: "task", title: "plan the trip" });
+  });
+
   it("does not turn a time into money", () => {
     expect(naturalToCommand("spent lunch tomorrow 9am", opts).command).toBe("expense: lunch @tomorrow 9am");
   });
