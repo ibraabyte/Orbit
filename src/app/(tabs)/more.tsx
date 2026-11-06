@@ -6,7 +6,7 @@ import { Card, Icon, IconTile, ListRow, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { HeaderButton, Screen, ShellLabel, TabHeader } from "@/components/screen";
 import { groups, pinnable, useSectionCounts } from "@/components/sections";
-import { colors, radius } from "@/components/theme";
+import { colors, fonts, radius } from "@/components/theme";
 import { t, toggleLanguage } from "@/lib/i18n";
 
 const pinsKey = "orbit.more.pins";
@@ -50,8 +50,8 @@ export default function More() {
       <View style={{ gap: 8 }}>
         <View style={styles.pinHead}>
           <ShellLabel>{t.pinned}</ShellLabel>
-          <Pressable onPress={editPins} accessibilityRole="button" hitSlop={8}>
-            <Text style={[type.link, { color: colors.accent }]}>{t.editPins}</Text>
+          <Pressable onPress={editPins} accessibilityRole="button" hitSlop={8} style={({ pressed }) => [styles.edit, pressed && { opacity: 0.7 }]}>
+            <Text style={type.link}>{t.editPins}</Text>
           </Pressable>
         </View>
         <View style={styles.pins}>
@@ -62,7 +62,7 @@ export default function More() {
               <Link key={key} href={pin.href} asChild>
                 <Pressable accessibilityRole="link" style={styles.pin}>
                   <Icon name={pin.icon} size={20} color={colors.ink} />
-                  <Text style={[type.pill, { color: colors.ink }]} numberOfLines={1}>
+                  <Text style={[type.pill, { fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }]} numberOfLines={1}>
                     {pin.label}
                   </Text>
                   {counts[key] ? (
@@ -94,6 +94,7 @@ export default function More() {
 
 const styles = StyleSheet.create({
   pinHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  edit: { minHeight: 32, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.accentLine, justifyContent: "center" },
   pins: { flexDirection: "row", gap: 8 },
   pin: { flex: 1, minHeight: 76, backgroundColor: colors.surfaceInset, borderRadius: radius.card, paddingHorizontal: 8, paddingVertical: 10, justifyContent: "space-between" },
   pinCount: { position: "absolute", top: 8, end: 8, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 9, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },

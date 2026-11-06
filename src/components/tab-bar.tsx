@@ -1,72 +1,77 @@
 import * as Haptics from "expo-haptics";
 import type { BottomTabBarProps } from "expo-router/js-tabs";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { Glass, Icon } from "@/components/drift";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Icon, type IconName } from "@/components/drift";
 import { openCapture, useSidebar } from "@/components/screen";
 import { colors, fonts, labelCase } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
-// Night tab bar: a floating Liquid Glass capsule. Tabs are words in small capitals; the open one is sand with a sand
-// line under it. The sand button in the middle opens the assistant.
-const tabs: Record<string, string> = { index: t.today, more: t.more };
+// Refined tab bar: a bar docked to the bottom on the card colour with a hairline on top. Each tab is an icon over a
+// short label; the open one is sand, its icon on a soft sand pill. The raised sand button in the middle opens the
+// assistant.
+const tabs: Record<string, { label: string; icon: IconName }> = { index: { label: t.today, icon: "disc" }, more: { label: t.more, icon: "menu" } };
 
 export function DriftTabBar({ state, emitter, navigateToTab, insets }: BottomTabBarProps) {
-  // On iPad the bar keeps a phone width, centered, instead of spreading across the screen.
-  const side = Math.max(16, (useWindowDimensions().width - 480) / 2);
   // An iPad-sized window shows the sidebar instead (src/components/sidebar.tsx).
   const sidebar = useSidebar();
   const buttons = state.routes
     .filter((route) => tabs[route.name])
     .map((route) => {
       const focused = state.routes[state.index]?.key === route.key;
-      const label = tabs[route.name];
+      const { label, icon } = tabs[route.name];
       const onPress = () => {
         const event = emitter.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
         if (!focused && !event.defaultPrevented) navigateToTab(route.key);
       };
+      const color = focused ? colors.accent : colors.inkMuted;
       return (
         <Pressable key={route.key} onPress={onPress} accessibilityRole="tab" accessibilityState={{ selected: focused }} accessibilityLabel={label} style={styles.tab}>
-          <Text style={[styles.label, { color: focused ? colors.accent : colors.inkMuted }]} numberOfLines={1}>
+          <View style={[styles.iconPill, focused && { backgroundColor: "rgba(232,200,144,0.14)" }]}>
+            <Icon name={icon} size={17} color={color} />
+          </View>
+          <Text style={[styles.label, { color }]} numberOfLines={1}>
             {label}
           </Text>
-          <View style={[styles.underline, focused && { backgroundColor: colors.accent }]} />
         </Pressable>
       );
     });
 
   const assistant = (
-    <Pressable
-      key="assistant"
-      onPress={() => {
-        void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        openCapture();
-      }}
-      accessibilityRole="button"
-      accessibilityLabel={t.assistantTitle}
-      style={styles.assistant}
-    >
-      <Icon name="mic" size={22} color={colors.accentInk} />
-    </Pressable>
+    <View key="assistant" style={styles.center}>
+      <Pressable
+        onPress={() => {
+          void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          openCapture();
+        }}
+        accessibilityRole="button"
+        accessibilityLabel={t.assistantTitle}
+        style={({ pressed }) => [styles.assistant, pressed && { opacity: 0.85 }]}
+      >
+        <Icon name="mic" size={24} color={colors.accentInk} />
+      </Pressable>
+      <Text style={styles.centerLabel} numberOfLines={1}>
+        {t.capture}
+      </Text>
+    </View>
   );
 
   if (sidebar) return null;
   return (
-    <View style={[styles.bar, { left: side, right: side, bottom: Math.max(14, insets.bottom - 6) }]}>
-      <Glass tint="rgba(10,10,11,0.6)" style={styles.capsule}>
-        <View style={styles.tabs} accessibilityRole="tablist">
-          {[buttons[0], assistant, ...buttons.slice(1)]}
-        </View>
-      </Glass>
+    <View style={[styles.bar, { paddingBottom: Math.max(10, insets.bottom - 4) }]}>
+      <View style={styles.tabs} accessibilityRole="tablist">
+        {[buttons[0], assistant, ...buttons.slice(1)]}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  bar: { position: "absolute" },
-  capsule: { height: 64, borderRadius: 32 },
-  tabs: { flex: 1, flexDirection: "row", alignItems: "center", paddingHorizontal: 8 },
-  tab: { flex: 1, minHeight: 48, alignItems: "center", justifyContent: "center", gap: 6 },
-  label: { fontFamily: fonts.medium, fontSize: 11, ...labelCase },
-  underline: { width: 22, height: 2, borderRadius: 1, backgroundColor: "transparent" },
-  assistant: { width: 48, height: 48, borderRadius: 24, marginHorizontal: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }
+  bar: { position: "absolute", left: 0, right: 0, bottom: 0, backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.hairline, paddingTop: 6 },
+  tabs: { flexDirection: "row", alignItems: "flex-end", justifyContent: "center", alignSelf: "center", width: "100%", maxWidth: 480, paddingHorizontal: 8 },
+  tab: { flex: 1, minHeight: 48, alignItems: "center", justifyContent: "flex-end", gap: 3, paddingVertical: 4 },
+  iconPill: { width: 40, height: 24, borderRadius: 7, alignItems: "center", justifyContent: "center" },
+  label: { fontFamily: fonts.semibold, fontSize: 10 },
+  center: { width: 88, alignItems: "center", paddingBottom: 4 },
+  assistant: { width: 56, height: 56, marginTop: -26, borderRadius: 28, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  centerLabel: { marginTop: 5, fontFamily: fonts.medium, fontSize: 10, color: colors.accent, ...labelCase }
 });

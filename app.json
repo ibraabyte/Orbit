@@ -28,8 +28,8 @@
     "android": {
       "package": "com.ibraabyte.orbit",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/brand/icons/expo-adaptive-foreground-1024.png",
-        "backgroundColor": "#101511"
+        "foregroundImage": "./assets/brand/night/adaptive-foreground-1024.png",
+        "backgroundColor": "#0A0A0B"
       },
       "permissions": [
         "android.permission.USE_BIOMETRIC",
@@ -41,6 +41,15 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/brand/night/symbol-sand-1024.png",
+          "imageWidth": 120,
+          "resizeMode": "contain",
+          "backgroundColor": "#0A0A0B"
+        }
+      ],
       "expo-secure-store",
       [
         "expo-local-authentication",

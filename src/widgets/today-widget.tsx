@@ -10,10 +10,10 @@ declare const font: any, foregroundStyle: any, frame: any, lineLimit: any, conta
 const TodayWidget = (props: WidgetProps, env: WidgetEnvironment) => {
   "widget";
   // Night colours from theme.ts: the widget can't import it.
-  const ink = "#ece9e2";
-  const muted = "#8f8d87";
+  const ink = "#f2f0ea";
+  const muted = "#8a8a90";
   const sand = "#e8c890";
-  const hairline = "#2b2b2e";
+  const hairline = "#2a2a2e";
   const black = "#0a0a0b";
   const rtl = props.rtl;
   const side = rtl ? "trailing" : "leading";

@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   dayField: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
   time: { width: 84, textAlign: "center", fontFamily: fonts.medium },
   inline: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
-  step: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 44, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline },
+  step: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 44, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   stepDelete: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   struck: { textDecorationLine: "line-through", color: colors.inkMuted },
   actions: { gap: 10, paddingTop: 8 },

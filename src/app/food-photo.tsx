@@ -171,7 +171,7 @@ export default function FoodPhoto() {
 const styles = StyleSheet.create({
   photo: { width: "100%", aspectRatio: 4 / 3, borderRadius: radius.tile, backgroundColor: colors.surfaceInset },
   row: { flexDirection: "row", gap: 8 },
-  item: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingTop: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.hairline },
+  item: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
   small: { minHeight: 40, fontSize: 14 }
 });
