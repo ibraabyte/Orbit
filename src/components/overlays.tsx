@@ -99,12 +99,12 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
       </Modal>
       {message ? (
         <View pointerEvents="none" style={[styles.toastWrap, sides]} accessibilityLiveRegion="polite">
-          <Glass style={styles.toast}>
+          <View style={styles.toast}>
             <View style={styles.toastMark}>
               <Icon name="check" size={14} color={colors.accentInk} />
             </View>
             <Text style={styles.toastText}>{message}</Text>
-          </Glass>
+          </View>
         </View>
       ) : null}
     </OverlayContext.Provider>
@@ -161,18 +161,19 @@ function DatePicker({ title, initial, onPick }: { title: string; initial: Date; 
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.45)" },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.6)" },
   sheetWrap: { position: "absolute", left: 12, right: 12, bottom: 28, gap: 8 },
-  sheet: { borderRadius: 26 },
+  sheet: { borderRadius: 20, borderCurve: "continuous" },
   sheetHeader: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 2 },
   option: { minHeight: 52, alignItems: "center", justifyContent: "center", borderTopWidth: 1, borderTopColor: colors.surfaceInset, paddingHorizontal: 16 },
   optionText: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, textAlign: "center" },
+  // The toast is the one pale floating thing: dark text, a sand check.
   cancel: { minHeight: 52, alignItems: "center", justifyContent: "center" },
   toastWrap: { position: "absolute", left: 16, right: 16, bottom: 108 },
-  toast: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12 },
+  toast: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: radius.card, borderCurve: "continuous", backgroundColor: colors.urgent, paddingHorizontal: 14, paddingVertical: 12, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 15, shadowOffset: { width: 0, height: 10 } },
   toastMark: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
-  toastText: { flex: 1, fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
-  picker: { borderRadius: 26, padding: 16, gap: 10 },
+  toastText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.urgentInk },
+  picker: { borderRadius: 20, borderCurve: "continuous", padding: 16, gap: 10 },
   pickerHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   pickerStep: { width: 36, height: 36, borderRadius: radius.control, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
   pickerGrid: { flexDirection: "row", flexWrap: "wrap" },

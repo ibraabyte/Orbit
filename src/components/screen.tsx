@@ -2,8 +2,8 @@ import { router, usePathname } from "expo-router";
 import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View, type TextInputProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Card, flip, Glass, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
-import { backdrop, colors, fonts, labelCase, radius } from "@/components/theme";
+import { Card, flip, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
+import { backdrop, colors, fonts, radius } from "@/components/theme";
 import { et } from "@/lib/exercises";
 import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
@@ -69,6 +69,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/media": { title: t.movies },
   "/ask": { title: t.askOrbit },
   "/settings": { title: t.settings },
+  "/integrations": { title: t.integrations },
   "/exercises": { title: et.exercises },
   "/gym": { title: et.gym },
   "/injuries": { title: et.injuries }
@@ -125,17 +126,17 @@ function StackHeader({ action }: { action?: { label: string; onPress: () => void
   return (
     <View style={{ gap: 10 }}>
       <View style={styles.stackBar}>
-        <Glass interactive style={styles.backButton}>
-          <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t.back} style={[styles.glassPress, flip]}>
+        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t.back} style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}>
+          <View style={flip}>
             <Icon name="chevron-left" size={22} color={colors.ink} />
-          </Pressable>
-        </Glass>
+          </View>
+        </Pressable>
         <Text style={styles.stackTitle} accessibilityRole="header">
           {meta?.title}
         </Text>
         {action ? (
           <Pressable onPress={action.onPress} accessibilityRole="button" style={styles.stackAction}>
-            <Text style={[type.pill, { fontSize: 13, color: colors.accentInk }]}>{action.label}</Text>
+            <Text style={[type.pill, { fontFamily: fonts.semibold, color: colors.accentInk }]}>{action.label}</Text>
           </Pressable>
         ) : null}
       </View>
@@ -144,16 +145,16 @@ function StackHeader({ action }: { action?: { label: string; onPress: () => void
   );
 }
 
-/** Hairline pill with an example line for this section and the sand + at its end; opens Capture. */
-function CaptureHint({ hint }: { hint: string }) {
+/** Dashed bar with the sand + and an example line for this section; opens Capture. */
+export function CaptureHint({ hint }: { hint: string }) {
   return (
-    <Pressable onPress={() => openCapture()} accessibilityRole="button" accessibilityLabel={t.capture} style={styles.hint}>
+    <Pressable onPress={() => openCapture()} accessibilityRole="button" accessibilityLabel={t.capture} style={({ pressed }) => [styles.hint, pressed && { opacity: 0.7 }]}>
+      <View style={styles.hintMark}>
+        <Icon name="plus" size={15} color={colors.accentInk} />
+      </View>
       <Text style={styles.hintText} numberOfLines={1}>
         {hint}
       </Text>
-      <View style={styles.hintMark}>
-        <Icon name="plus" size={17} color={colors.accentInk} />
-      </View>
     </Pressable>
   );
 }
@@ -171,14 +172,13 @@ export function TabHeader({ title, kicker, action }: { title: string; kicker?: s
   );
 }
 
-/** Small glass control beside a tab title (Customize, language). With an icon it shows only the icon. */
+/** Small control beside a tab title (Customize, language): a card-coloured button with a hairline edge. With an icon it shows the icon before the label. */
 export function HeaderButton({ label, icon, onPress }: { label: string; icon?: "sliders"; onPress: () => void }) {
   return (
-    <Glass interactive style={icon ? styles.backButton : styles.headerButton}>
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={styles.glassPress}>
-        {icon ? <Icon name={icon} size={17} color={colors.ink} /> : <Text style={[type.pill, { fontSize: 13, color: colors.ink }]}>{label}</Text>}
-      </Pressable>
-    </Glass>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.headerButton, pressed && { opacity: 0.7 }]}>
+      {icon ? <Icon name={icon} size={15} color={colors.ink} /> : null}
+      <Text style={[type.pill, { color: colors.ink }]}>{label}</Text>
+    </Pressable>
   );
 }
 
@@ -258,12 +258,12 @@ export function Skeleton() {
 
 export function Segments<T extends string>({ options, value, onChange, labels, small }: { options: readonly T[]; value: T; onChange: (next: T) => void; labels?: Record<T, string>; small?: boolean }) {
   return (
-    <View style={[styles.segments, small && { borderRadius: 9 }]} accessibilityRole="tablist">
+    <View style={[styles.segments, small && styles.segmentsSmall]} accessibilityRole="tablist">
       {options.map((option) => {
         const selected = option === value;
         return (
           <Pressable key={option} onPress={() => onChange(option)} accessibilityRole="tab" accessibilityState={{ selected }} style={[styles.segment, small && styles.segmentSmall, selected && styles.segmentSelected]}>
-            <Text style={[styles.segmentText, small && { fontSize: 12 }, { color: selected ? colors.urgentInk : colors.ink }]}>{labels ? labels[option] : option}</Text>
+            <Text style={[styles.segmentText, small && { fontSize: 12 }, { color: selected ? colors.urgentInk : colors.inkMuted }]}>{labels ? labels[option] : option}</Text>
           </Pressable>
         );
       })}
@@ -287,7 +287,7 @@ export function Input({ style, ...props }: TextInputProps) {
   return <TextInput placeholderTextColor={colors.inkFaint} selectionColor={colors.accentDeep} style={[ui.input, onSurface && { backgroundColor: colors.field }, style]} {...props} />;
 }
 
-/** The ⌕ field on a glass bar (Library, Movies). */
+/** The ⌕ field in a card-coloured bar (Library, Movies). */
 export function SearchBar(props: TextInputProps) {
   return (
     <View style={styles.search}>
@@ -311,7 +311,7 @@ export function Loading() {
 
 export const ui = StyleSheet.create({
   error: { fontFamily: fonts.medium, fontSize: 14, color: colors.dangerOnShell },
-  input: { minHeight: 48, backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.tile, paddingHorizontal: 14, fontSize: 16, fontFamily: fonts.medium, color: colors.ink }
+  input: { minWidth: 0, minHeight: 48, backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 14, fontSize: 16, fontFamily: fonts.medium, color: colors.ink }
 });
 
 const buttonStyles = StyleSheet.create({
@@ -327,31 +327,32 @@ const styles = StyleSheet.create({
   column: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   columns: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   columnHalf: { flex: 1, minWidth: 0, gap: 14 },
-  tabHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, paddingBottom: 2 },
-  headerButton: { height: 44, minWidth: 44, borderRadius: 22 },
-  glassPress: { flexGrow: 1, minHeight: 44, paddingHorizontal: 10, alignItems: "center", justifyContent: "center" },
+  tabHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, paddingTop: 4, paddingBottom: 2 },
+  headerButton: { minHeight: 44, minWidth: 44, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: radius.tile, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
   stackBar: { flexDirection: "row", alignItems: "center", gap: 8 },
-  backButton: { width: 44, height: 44, borderRadius: 22 },
-  stackTitle: { flex: 1, fontFamily: fonts.medium, fontSize: 24, lineHeight: 30, letterSpacing: -0.4, color: colors.onShell },
-  stackAction: { minHeight: 40, paddingHorizontal: 14, borderRadius: radius.pill, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  backButton: { width: 44, height: 44, borderRadius: radius.tile, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
+  stackTitle: { flex: 1, fontFamily: fonts.semibold, fontSize: 26, lineHeight: 30, letterSpacing: -0.4, color: colors.onShell },
+  stackAction: { minHeight: 40, paddingHorizontal: 12, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   bleed: { marginHorizontal: -20, flexGrow: 0 },
   bleedContent: { paddingHorizontal: 20, gap: 6 },
-  hint: { minHeight: 46, flexDirection: "row", alignItems: "center", gap: 10, paddingStart: 16, paddingEnd: 6, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.pill, borderCurve: "continuous" },
-  hintMark: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  hint: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, borderWidth: 1, borderStyle: "dashed", borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
+  hintMark: { width: 22, height: 22, borderRadius: radius.badge, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   hintText: { flex: 1, fontFamily: fonts.regular, fontSize: 12, color: colors.inkFaint },
-  offline: { flexDirection: "row", alignItems: "center", gap: 8, borderBottomWidth: 1, borderBottomColor: colors.hairline, paddingHorizontal: 20, paddingVertical: 6 },
+  offline: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.urgent, paddingHorizontal: 20, paddingVertical: 6 },
   offlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
-  offlineText: { flex: 1, fontFamily: fonts.medium, fontSize: 11, color: colors.ink, ...labelCase },
+  offlineText: { flex: 1, fontFamily: fonts.medium, fontSize: 12, color: colors.urgentInk },
   error: { alignItems: "center", gap: 14, paddingHorizontal: 12, paddingVertical: 60 },
-  errorMark: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, borderColor: colors.accent, alignItems: "center", justifyContent: "center" },
-  errorGlyph: { fontFamily: fonts.medium, fontSize: 26, color: colors.accent },
-  segments: { flexDirection: "row", borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.pill, padding: 3, gap: 3 },
-  segment: { flex: 1, minHeight: 36, borderRadius: radius.pill, alignItems: "center", justifyContent: "center" },
-  segmentSmall: { flex: 0, minHeight: 30, paddingHorizontal: 12 },
+  errorMark: { width: 56, height: 56, borderRadius: 20, borderCurve: "continuous", backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
+  errorGlyph: { fontFamily: fonts.semibold, fontSize: 28, color: colors.urgentInk },
+  segments: { flexDirection: "row", backgroundColor: colors.surfaceInset, borderRadius: radius.tile, borderCurve: "continuous", padding: 3, gap: 3 },
+  segment: { flex: 1, minHeight: 38, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
+  segmentsSmall: { alignSelf: "flex-start", borderRadius: 12 },
+  // flexBasis too: on the web a 0% basis from flex: 1 would survive flex: 0 and squeeze the labels.
+  segmentSmall: { flexGrow: 0, flexShrink: 0, flexBasis: "auto", minHeight: 30, paddingHorizontal: 12, borderRadius: 9 },
   segmentSelected: { backgroundColor: colors.urgent },
-  segmentText: { fontFamily: fonts.medium, fontSize: 12, ...labelCase },
-  button: { minHeight: 48, borderRadius: radius.pill, paddingHorizontal: 20, alignItems: "center", justifyContent: "center" },
-  buttonText: { fontFamily: fonts.medium, fontSize: 13, ...labelCase },
-  search: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.pill },
+  segmentText: { fontFamily: fonts.semibold, fontSize: 14 },
+  button: { minHeight: 50, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: 20, alignItems: "center", justifyContent: "center" },
+  buttonText: { fontFamily: fonts.semibold, fontSize: 16 },
+  search: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
   searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.ink, minHeight: 44 }
 });

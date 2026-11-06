@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Glass, Icon, type, type IconName } from "@/components/drift";
 import { openCapture, useSidebar } from "@/components/screen";
 import { groups, useSectionCounts } from "@/components/sections";
-import { colors, fonts, labelCase, radius } from "@/components/theme";
+import { colors, fonts, radius } from "@/components/theme";
 import { formatNumber, t } from "@/lib/i18n";
 import { activeKey, SIDEBAR_WIDTH, sidebarSteps } from "@/lib/sidebar";
 
@@ -105,9 +105,9 @@ const styles = StyleSheet.create({
   rail: { width: SIDEBAR_WIDTH, paddingStart: 12, paddingEnd: 4 },
   panel: { flex: 1, borderRadius: 28, overflow: "hidden" },
   content: { padding: 12, gap: 6 },
-  brand: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent, paddingHorizontal: 12, paddingTop: 6, paddingBottom: 8, ...labelCase, letterSpacing: 3 },
-  assistant: { minHeight: 48, borderRadius: radius.pill, backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
-  assistantText: { fontFamily: fonts.medium, fontSize: 13, color: colors.accentInk, ...labelCase },
+  brand: { fontFamily: fonts.semibold, fontSize: 22, letterSpacing: -0.3, color: colors.ink, paddingHorizontal: 12, paddingTop: 6, paddingBottom: 10 },
+  assistant: { minHeight: 48, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+  assistantText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.accentInk },
   group: { gap: 0, paddingTop: 10 },
   groupLabel: { paddingHorizontal: 12, paddingBottom: 4 },
   item: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 12, paddingStart: 10, paddingEnd: 12, borderRadius: radius.tile, borderCurve: "continuous" },

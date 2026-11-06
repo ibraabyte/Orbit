@@ -45,7 +45,7 @@ export function SwipeToDone({ onDone, children }: { onDone: () => void; children
         accessibilityActions={[{ name: "complete", label: t.complete }]}
         onAccessibilityAction={(event) => event.nativeEvent.actionName === "complete" && onDone()}
         accessibilityHint={t.swipeDone}
-        style={{ transform: [{ translateX: x }], backgroundColor: colors.shell }}
+        style={{ transform: [{ translateX: x }], backgroundColor: colors.surface }}
       >
         {children}
       </Animated.View>
