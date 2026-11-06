@@ -311,7 +311,7 @@ export function Loading() {
 
 export const ui = StyleSheet.create({
   error: { fontFamily: fonts.medium, fontSize: 14, color: colors.dangerOnShell },
-  input: { minHeight: 48, backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 14, fontSize: 16, fontFamily: fonts.medium, color: colors.ink }
+  input: { minWidth: 0, minHeight: 48, backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 14, fontSize: 16, fontFamily: fonts.medium, color: colors.ink }
 });
 
 const buttonStyles = StyleSheet.create({
@@ -347,7 +347,8 @@ const styles = StyleSheet.create({
   segments: { flexDirection: "row", backgroundColor: colors.surfaceInset, borderRadius: radius.tile, borderCurve: "continuous", padding: 3, gap: 3 },
   segment: { flex: 1, minHeight: 38, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   segmentsSmall: { alignSelf: "flex-start", borderRadius: 12 },
-  segmentSmall: { flex: 0, flexShrink: 0, minHeight: 30, paddingHorizontal: 12, borderRadius: 9 },
+  // flexBasis too: on the web a 0% basis from flex: 1 would survive flex: 0 and squeeze the labels.
+  segmentSmall: { flexGrow: 0, flexShrink: 0, flexBasis: "auto", minHeight: 30, paddingHorizontal: 12, borderRadius: 9 },
   segmentSelected: { backgroundColor: colors.urgent },
   segmentText: { fontFamily: fonts.semibold, fontSize: 14 },
   button: { minHeight: 50, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: 20, alignItems: "center", justifyContent: "center" },
