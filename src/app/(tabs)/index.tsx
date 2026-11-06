@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Badge, Card, CardLink, Chevron, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { MorningBriefCard } from "@/components/morning-brief-card";
+import { WeeklySummaryCard } from "@/components/weekly-summary";
 import { useOverlays } from "@/components/overlays";
 import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, Skeleton, TabHeader } from "@/components/screen";
 import { SwipeToDone } from "@/components/swipe-to-done";
@@ -14,6 +15,7 @@ import { useMorningBrief } from "@/hooks/use-morning-brief";
 import { useNow } from "@/hooks/use-now";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useReadiness } from "@/hooks/use-readiness";
+import { useWeeklySummary } from "@/hooks/use-weekly-summary";
 import { apiCompleteTask, apiUpdate } from "@/lib/api-actions";
 import { appHref } from "@/lib/app-href";
 import { getApi } from "@/lib/backend";
@@ -27,11 +29,13 @@ import { prayerNamesEn, type PrayerTime } from "@/lib/prayer-times";
 import { buildRail, type RailEntry } from "@/lib/rail";
 import { formatSleepDuration } from "@/lib/sleep";
 import { cardLabel, moneyDueSoon, type MoneyDue } from "@/lib/wealth";
+import { isFriday } from "@/lib/weekly-summary";
 
 const hiddenKey = "orbit.today.hidden";
 // "upnext" is the Next up card. The old "next" id (from before the rail) is ignored, so an old saved choice cannot hide it.
 const optional = [
   ["brief", t.morningBrief],
+  ["week", t.weekSummary],
   ["money", t.moneyDue],
   ["digest", t.digest],
   ["quick", t.quick],
@@ -57,6 +61,9 @@ export default function Today() {
   // Not asked until the saved choice of hidden sections is read, so a hidden brief is never fetched.
   const [choicesRead, setChoicesRead] = useState(false);
   const brief = useMorningBrief(choicesRead && show("brief"));
+  // The weekly summary is a Friday card; on other days it is one tap away in the assistant.
+  const friday = isFriday(now);
+  const week = useWeeklySummary(choicesRead && show("week") && friday);
 
   useEffect(() => {
     AsyncStorage.getItem(hiddenKey)
@@ -109,6 +116,7 @@ export default function Today() {
   const reload = () => {
     void brief.refresh();
     void readiness.refresh();
+    if (friday) void week.refresh();
     return refresh();
   };
 
@@ -240,6 +248,7 @@ export default function Today() {
             {prayerCard}
             <CaptureHint hint={t.capturePh} />
             {show("brief") ? <MorningBriefCard state={brief.state} data={data} retry={() => void brief.refresh()} /> : null}
+            {friday && show("week") ? <WeeklySummaryCard state={week.state} retry={() => void week.refresh()} /> : null}
             {digestCard}
             {quickTiles}
           </>

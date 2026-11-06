@@ -1,5 +1,6 @@
 import { aiChoicesOf, aiName, type AiChoiceName, type IntegrationsOverview } from "@/lib/integrations";
 import { briefCacheKey } from "@/lib/morning-brief";
+import { weekCacheKey } from "@/lib/weekly-summary";
 
 // Ask Orbit: questions answered by the user's own AI from their data. The server builds the data and sends it;
 // the phone keeps the chat in memory only and remembers one thing: that this person agreed to that. The same agreement
@@ -97,8 +98,8 @@ export function briefStep(accepted: string | null, provider: string | null): Bri
   return gate === "ready" ? "ask" : gate === "no-ai" ? "no-ai" : "consent";
 }
 
-// Withdrawing removes the agreement and the saved AI brief, which was written from data sent under it.
-export const withdrawKeys = (userId: string) => [consentKey(userId), briefCacheKey(userId)];
+// Withdrawing removes the agreement and the saved AI brief and weekly summary, which were written from data sent under it.
+export const withdrawKeys = (userId: string) => [consentKey(userId), briefCacheKey(userId), weekCacheKey(userId)];
 
 // The server's own message is English; in Arabic only the local text is shown, never a mix.
 export const serverDetail = (error: unknown, arabic: boolean) => (!arabic && error instanceof Error ? error.message : "");
