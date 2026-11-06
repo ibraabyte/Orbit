@@ -207,7 +207,7 @@ export default function Capture() {
           })}
           {answer.actions.length ? (
             <Button
-              title={busy ? t.assistantThinking : chosen.length === 1 ? t.assistantConfirmOne : t.assistantConfirm.replace("{n}", String(chosen.length))}
+              title={busy ? t.assistantThinking : chosen.length === 1 ? t.assistantConfirmOne : t.assistantConfirm.replace("{n}", digits(chosen.length))}
               variant="primary"
               disabled={busy || !chosen.length}
               onPress={() => void confirm()}

@@ -1,4 +1,4 @@
-import { isArabic } from "@/lib/i18n";
+import { digits, isArabic } from "@/lib/i18n";
 import type { Profile, WeightLog } from "@/lib/types";
 
 // Health is one place: today's numbers on top, then Food, Exercises and WHOOP under it, your body and your goals.
@@ -38,7 +38,7 @@ const en = {
   badNumber: (label: string) => `${label}: type a whole number`,
   tooBig: (label: string, max: number) => `${label}: ${max} at most`,
   workoutNeeded: "Workout minutes can't be empty",
-  activeInjuries: (n: number) => `${n} active`
+  activeInjuries: (n: number) => `${digits(n)} active`
 };
 
 const ar: typeof en = {
@@ -76,7 +76,7 @@ const ar: typeof en = {
   badNumber: (label: string) => `${label}: اكتب رقم صحيح`,
   tooBig: (label: string, max: number) => `${label}: الحد ${max}`,
   workoutNeeded: "دقائق التمرين ما تكون فاضية",
-  activeInjuries: (n: number) => `${n} نشطة`
+  activeInjuries: (n: number) => `${digits(n)} نشطة`
 };
 
 export const ht = isArabic ? ar : en;
