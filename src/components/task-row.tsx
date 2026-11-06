@@ -13,8 +13,9 @@ const when = (iso: string) => formatDate(iso, { weekday: "short", day: "numeric"
 const clock = (iso: string) => formatDate(iso, { hour: "numeric", minute: "2-digit" });
 
 // A task with a check circle, its day, list, repeat and checklist count. Tap opens the task; ⋯ has the quick actions.
-// Today and Tasks share it. In Tasks the day is the group's title, so the row shows only the time (timeOnly).
-export function TaskRow({ task, showPriority, showList, timeOnly, first }: { task: Task; showPriority?: boolean; showList?: boolean; timeOnly?: boolean; first?: boolean }) {
+// Today and Tasks share it. In Tasks the day is the group's title (grouped), so there is no day badge, and today's and
+// tomorrow's rows show only the time (timeOnly).
+export function TaskRow({ task, showPriority, showList, grouped, timeOnly, first }: { task: Task; showPriority?: boolean; showList?: boolean; grouped?: boolean; timeOnly?: boolean; first?: boolean }) {
   const { data } = useDashboardData();
   const { sheet } = useOverlays();
   const actions = useTaskActions();
@@ -37,7 +38,7 @@ export function TaskRow({ task, showPriority, showList, timeOnly, first }: { tas
     });
 
   const subtitle = task.due_at ? (timeOnly ? clock(task.due_at) : when(task.due_at)) : null;
-  const dayBadge = timeOnly ? null : overdue ? (
+  const dayBadge = grouped ? null : overdue ? (
     <Badge tone="urgent" glyph="!">
       {t.overdue}
     </Badge>

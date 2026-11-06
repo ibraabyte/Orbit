@@ -94,7 +94,7 @@ export default function Tasks() {
       {groups.map(({ group, tasks }) => (
         <Card key={group} title={t.dayGroups[group]} action={<Text style={[styles.count, group === "overdue" && { color: colors.accent }]}>{formatNumber(tasks.length)}</Text>}>
           {tasks.map((task, index) => (
-            <TaskRow key={task.id} task={task} first={index === 0} showPriority showList={active === "all"} timeOnly={group !== "later" && group !== "overdue"} />
+            <TaskRow key={task.id} task={task} first={index === 0} showPriority showList={active === "all"} grouped timeOnly={group === "today" || group === "tomorrow"} />
           ))}
         </Card>
       ))}

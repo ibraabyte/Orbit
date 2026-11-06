@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Chip, Chips } from "@/components/chips";
 import { Card, CheckItem, EmptyState, Icon, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
-import { Button, Input, Screen, Segments } from "@/components/screen";
+import { Button, Input, Screen } from "@/components/screen";
 import { colors, fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useTaskActions } from "@/hooks/use-task-actions";
@@ -181,7 +181,7 @@ export default function TaskScreen() {
       </Card>
 
       <Card title={t.priority}>
-        <Segments small options={["low", "normal", "high"] as const} value={draft.priority} onChange={(priority) => set({ priority })} labels={t.priorityNames} />
+        <Chips options={["low", "normal", "high"] as const} value={draft.priority} onChange={(priority) => set({ priority })} label={(key) => t.priorityNames[key]} />
       </Card>
 
       <Card title={t.checklist} action={steps.length ? <Text style={type.sectionLabel}>{`${formatNumber(done)}/${formatNumber(steps.length)}`}</Text> : undefined}>

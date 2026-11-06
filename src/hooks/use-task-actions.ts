@@ -27,7 +27,7 @@ export function useTaskActions() {
   };
 
   const reschedule = async (task: Task) => {
-    const day = await pickDate(t.reschedule, task.due_at);
+    const day = await pickDate(t.pickDay, task.due_at);
     if (day) await moveTo(task, onDay(task, day), t.moved);
   };
 
@@ -41,7 +41,7 @@ export function useTaskActions() {
           const until = snoozeTarget(choice, task);
           return until ? [{ label: `◷ ${t.snoozeNames[choice]}`, run: () => void moveTo(task, until) }] : [];
         }),
-        { label: `▭ ${t.reschedule}`, run: () => void reschedule(task) }
+        { label: `▭ ${t.pickDay}`, run: () => void reschedule(task) }
       ]
     });
 
