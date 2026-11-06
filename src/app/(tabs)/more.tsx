@@ -2,12 +2,12 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Link } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Card, Icon, IconTile, ListRow, type } from "@/components/drift";
+import { Card, IconTile, ListRow, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
-import { HeaderButton, Screen, ShellLabel, TabHeader } from "@/components/screen";
+import { GroupHeader, HeaderButton, Screen, TabHeader } from "@/components/screen";
 import { groups, pinnable, useSectionCounts } from "@/components/sections";
 import { colors, fonts, radius } from "@/components/theme";
-import { t, toggleLanguage } from "@/lib/i18n";
+import { digits, t, toggleLanguage } from "@/lib/i18n";
 
 const pinsKey = "orbit.more.pins";
 const defaultPins = ["tasks", "health", "finance", "vehicles"];
@@ -47,27 +47,22 @@ export default function More() {
 
   return (
     <Screen header={<TabHeader title={t.more} action={<HeaderButton label={t.langLabel} onPress={switchLanguage} />} />}>
-      <View style={{ gap: 8 }}>
-        <View style={styles.pinHead}>
-          <ShellLabel>{t.pinned}</ShellLabel>
-          <Pressable onPress={editPins} accessibilityRole="button" hitSlop={8} style={({ pressed }) => [styles.edit, pressed && { opacity: 0.7 }]}>
-            <Text style={type.link}>{t.editPins}</Text>
-          </Pressable>
-        </View>
+      <View style={styles.group}>
+        <GroupHeader label={t.pinned} action={{ label: t.editPins, onPress: editPins }} />
         <View style={styles.pins}>
           {pins.map((key) => {
             const pin = pinnable.find((item) => item.key === key);
             if (!pin) return null;
             return (
               <Link key={key} href={pin.href} asChild>
-                <Pressable accessibilityRole="link" style={styles.pin}>
-                  <Icon name={pin.icon} size={20} color={colors.ink} />
-                  <Text style={[type.pill, { fontFamily: fonts.semibold, fontSize: 12, color: colors.ink }]} numberOfLines={1}>
+                <Pressable accessibilityRole="link" accessibilityLabel={counts[key] ? `${pin.label}, ${digits(counts[key])}` : pin.label} style={styles.pin}>
+                  <IconTile name={pin.icon} size={36} tone="accent" />
+                  <Text style={styles.pinLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                     {pin.label}
                   </Text>
                   {counts[key] ? (
                     <View style={styles.pinCount}>
-                      <Text style={[type.badge, { color: colors.accentInk }]}>{counts[key]}</Text>
+                      <Text style={[type.badge, { color: colors.accentInk }]}>{digits(counts[key])}</Text>
                     </View>
                   ) : null}
                 </Pressable>
@@ -77,13 +72,11 @@ export default function More() {
         </View>
       </View>
       {groups.map(([label, items]) => (
-        <View key={label} style={{ gap: 8 }}>
-          <ShellLabel>{label}</ShellLabel>
-          <Card style={{ paddingVertical: 0, gap: 0, overflow: "hidden" }}>
+        <View key={label} style={styles.group}>
+          <GroupHeader label={label} />
+          <Card list>
             {items.map((item, index) => (
-              <View key={item.key} style={index === 0 ? styles.firstRow : undefined}>
-                <ListRow href={item.href} leading={<IconTile name={item.icon} />} title={item.label} meta={counts[item.key] ? String(counts[item.key]) : undefined} />
-              </View>
+              <ListRow key={item.key} first={index === 0} href={item.href} leading={<IconTile name={item.icon} />} title={item.label} meta={counts[item.key] ? String(counts[item.key]) : undefined} />
             ))}
           </Card>
         </View>
@@ -93,11 +86,10 @@ export default function More() {
 }
 
 const styles = StyleSheet.create({
-  pinHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  edit: { minHeight: 32, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.accentLine, justifyContent: "center" },
+  group: { gap: 8 },
   pins: { flexDirection: "row", gap: 8 },
-  pin: { flex: 1, minHeight: 76, backgroundColor: colors.surfaceInset, borderRadius: radius.card, paddingHorizontal: 8, paddingVertical: 10, justifyContent: "space-between" },
-  pinCount: { position: "absolute", top: 8, end: 8, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 9, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
-  // The first row has no divider above it.
-  firstRow: { marginTop: -1 }
+  // Same surface and edge as the cards below, so the grid reads as part of the page.
+  pin: { flex: 1, minWidth: 0, minHeight: 88, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 6, paddingVertical: 12, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous" },
+  pinLabel: { fontFamily: fonts.medium, fontSize: 12, lineHeight: 16, color: colors.ink, textAlign: "center" },
+  pinCount: { position: "absolute", top: 6, end: 6, minWidth: 18, height: 18, paddingHorizontal: 5, borderRadius: 9, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }
 });

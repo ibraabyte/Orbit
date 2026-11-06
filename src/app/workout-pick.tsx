@@ -65,7 +65,7 @@ export default function WorkoutPick() {
       </BleedRow>
 
       {typed ? (
-        <Card style={{ paddingVertical: 0 }}>
+        <Card list>
           <ListRow first leading={<Icon name="edit-3" size={18} color={colors.accent} />} title={tt.custom(typed)} onPress={() => void add({ name: typed })} />
         </Card>
       ) : null}
@@ -73,7 +73,7 @@ export default function WorkoutPick() {
       {!result ? (
         loading ? <Loading /> : <EmptyState>{tt.couldNotLoad}</EmptyState>
       ) : (
-        <Card style={{ paddingVertical: 0, gap: 0, overflow: "hidden" }}>
+        <Card list>
           {!result.items.length ? <EmptyState>{et.noMatches}</EmptyState> : null}
           {result.items.map((exercise, index) => {
             const warning = injuryNote(exercise);

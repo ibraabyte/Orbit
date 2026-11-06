@@ -17,9 +17,10 @@ import { adminApi, type ServerSettings } from "@/lib/integrations";
 import { MORNING_DEFAULT, type MorningSettings } from "@/lib/morning-brief";
 import type { Numerals } from "@/lib/numerals";
 
-function Setting({ label, detail, children }: { label: string; detail?: string; children: React.ReactNode }) {
+// A row in the settings card. The top row (first) has no line above it.
+function Setting({ label, detail, first, children }: { label: string; detail?: string; first?: boolean; children: React.ReactNode }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, borderTopWidth: 1, borderTopColor: colors.surfaceInset }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 10, borderTopWidth: first ? 0 : 1, borderTopColor: colors.surfaceInset }}>
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={type.rowTitle}>{label}</Text>
         {detail ? <Text style={type.rowSubtitle}>{detail}</Text> : null}
@@ -120,20 +121,18 @@ export default function Settings() {
         <Avatar name={name} size={48} dark />
         <Text style={[type.title, { flex: 1, fontSize: 16 }]}>{name}</Text>
       </Card>
-      <Card style={{ paddingVertical: 0, gap: 0, overflow: "hidden" }}>
-        <View style={{ marginTop: -1 }}>
-          <Setting label={t.faceId}>
-            <Switch
-              accessibilityLabel={t.faceId}
-              trackColor={track} thumbColor={colors.ink}
-              value={lock}
-              onValueChange={(next) => {
-                setLock(next);
-                void setAppLockEnabled(next).then(resyncWidget);
-              }}
-            />
-          </Setting>
-        </View>
+      <Card list>
+        <Setting first label={t.faceId}>
+          <Switch
+            accessibilityLabel={t.faceId}
+            trackColor={track} thumbColor={colors.ink}
+            value={lock}
+            onValueChange={(next) => {
+              setLock(next);
+              void setAppLockEnabled(next).then(resyncWidget);
+            }}
+          />
+        </Setting>
         <Setting label={t.prayerAlerts} detail={t.prayerSource}>
           <Switch
             accessibilityLabel={t.prayerAlerts}

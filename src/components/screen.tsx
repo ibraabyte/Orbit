@@ -205,6 +205,22 @@ export function ShellLabel({ children }: { children: string }) {
   return <Text style={type.shellLabel}>{children}</Text>;
 }
 
+/** A group's label above its card, lined up with the text inside the card, with an optional small link at the end ("Edit"). */
+export function GroupHeader({ label, action }: { label: string; action?: { label: string; onPress: () => void } }) {
+  return (
+    <View style={styles.groupHeader}>
+      <Text style={[type.shellLabel, { flexShrink: 1 }]} numberOfLines={1}>
+        {label}
+      </Text>
+      {action ? (
+        <Pressable onPress={action.onPress} accessibilityRole="button" accessibilityLabel={`${action.label} ${label}`} hitSlop={12} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+          <Text style={type.link}>{action.label}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 /** Strip on top: offline, showing the saved copy. */
 export function OfflineBanner({ message }: { message: string }) {
   return (
@@ -336,6 +352,7 @@ const styles = StyleSheet.create({
   column: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
   columns: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
   columnHalf: { flex: 1, minWidth: 0, gap: 14 },
+  groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 20, paddingHorizontal: 4 },
   tabHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, paddingTop: 4, paddingBottom: 2 },
   headerButton: { minHeight: 44, minWidth: 44, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: radius.tile, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
   stackBar: { flexDirection: "row", alignItems: "center", gap: 8 },
