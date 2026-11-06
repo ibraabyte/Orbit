@@ -197,3 +197,33 @@ def test_claude_runs_the_same_tools(client: TestClient, auth: dict, monkeypatch)
     assert {tool["name"] for tool in requests[1]["tools"]} >= {"propose_create", "find_items"}
     result = requests[2]["messages"][-1]["content"][0]
     assert result["type"] == "tool_result" and result["tool_use_id"] == "toolu_1"
+
+
+def test_a_task_goes_in_a_list_with_its_checklist(client: TestClient, ready: dict, script: Script):
+    work = client.post("/task-lists", json={"name": "Work"}, headers=ready).json()
+    script.append(
+        {
+            "tool_calls": [
+                call(
+                    "propose_create",
+                    kind="task",
+                    fields={"title": "Send report", "list_id": "task_list-1", "steps": ["Draft", "Check numbers"]},
+                ),
+                call("propose_create", kind="task", fields={"title": "Fix tap", "list_name": "Home"}),
+            ]
+        }
+    )
+    body = act(client, ready, "add send report to work with draft and check numbers, and fix tap at home").json()
+    # The AI sees the user's lists by ref, never their ids.
+    prompt = script.seen[0]["messages"][1]["content"]
+    assert '"ref":"task_list-1","name":"Work"' in prompt and work["id"] not in json.dumps(script.seen[0])
+    first, second = body["actions"]
+    assert first["fields"]["list_id"] == work["id"] and first["fields"]["steps"] == ["Draft", "Check numbers"]
+    assert second["fields"]["list_name"] == "Home"
+
+    # Each confirmed change goes through the task route as it is.
+    made = client.post("/tasks", json=first["fields"], headers=ready).json()
+    assert made["list_id"] == work["id"]
+    assert [s["title"] for s in client.get("/task-steps", headers=ready).json()] == ["Draft", "Check numbers"]
+    assert client.post("/tasks", json=second["fields"], headers=ready).status_code == 201
+    assert [row["name"] for row in client.get("/task-lists", headers=ready).json()] == ["Work", "Home"]

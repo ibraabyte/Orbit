@@ -23,14 +23,14 @@ from sqlalchemy.orm import Session
 
 from app import models as m
 from app.schemas import domains as s
-from app.schemas.tasks import ReminderCreate, ReminderUpdate, TaskCreate, TaskUpdate
+from app.schemas.tasks import ReminderCreate, ReminderUpdate, TaskCreate, TaskListCreate, TaskListUpdate, TaskUpdate
 from app.services.agent import Call, Tool
 
 MAX_ACTIONS = 12
 TEXT_MAX = 120
 FIND_LIMIT = 10
 # Fields the assistant never sets: bookkeeping the app or the server fills in.
-HIDDEN = {"reminder_sent_at", "sent_at", "food_id", "servings", "meal_plan_id", "color", "poster_path"}
+HIDDEN = {"reminder_sent_at", "sent_at", "food_id", "servings", "meal_plan_id", "color", "poster_path", "position"}
 
 
 @dataclass(frozen=True)
@@ -53,8 +53,12 @@ class Kind:
 
 def _kinds() -> dict[str, Kind]:
     k = [
-        Kind("task", "a to-do", m.Task, TaskCreate, TaskUpdate, "title", ("due_at", "priority", "recurrence"), 40,
-             m.Task.due_at.asc().nulls_last(), (m.Task.status == "open",)),
+        Kind("task", "a to-do. Put it in a list with list_id (a task_list ref) or list_name (a new list is made if none has "
+             "that name); steps are its checklist lines", m.Task, TaskCreate, TaskUpdate, "title",
+             ("due_at", "priority", "recurrence", "list_id"), 40, m.Task.due_at.asc().nulls_last(), (m.Task.status == "open",),
+             {"list_id": "task_list"}),
+        Kind("task_list", "a list that groups tasks, like Home or Work", m.TaskList, TaskListCreate, TaskListUpdate, "name", (),
+             30, m.TaskList.position.asc()),
         Kind("reminder", "a reminder at a set time", m.Reminder, ReminderCreate, ReminderUpdate, "title", ("remind_at",), 20,
              m.Reminder.remind_at.asc(), (m.Reminder.status == "scheduled",), {"task_id": "task"}),
         Kind("expense", "money spent", m.Expense, s.ExpenseCreate, s.ExpenseUpdate, "merchant",
@@ -214,9 +218,10 @@ def _owned(kind: Kind, user_id: uuid.UUID, *conditions: ColumnElement[bool]):
 
 
 def recent_items(run: Run) -> dict[str, list[dict[str, Any]]]:
-    """Each kind's recent or open items. Kinds others point at (cards, habits, tasks) come first, so their refs exist."""
+    """Each kind's recent or open items. Kinds others point at (cards, habits, lists, tasks) come first, so their refs exist."""
     items: dict[str, list[dict[str, Any]]] = {}
-    for name in ("card", "habit", "task", *[n for n in KINDS if n not in ("card", "habit", "task")]):
+    first = ("card", "habit", "task_list", "task")
+    for name in (*first, *[n for n in KINDS if n not in first]):
         kind = KINDS[name]
         rows = run.db.scalars(_owned(kind, run.user_id).order_by(kind.order, kind.model.id).limit(kind.recent)).all()
         if rows:

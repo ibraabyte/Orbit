@@ -30,7 +30,7 @@ def test_dashboard_rows_match_the_app_types(client: TestClient, auth: dict, me: 
     assert meal["carbs_g"] is None
     assert set(data["tasks"][0]) == {
         "id", "user_id", "title", "notes", "status", "priority", "due_at", "reminder_at",
-        "reminder_sent_at", "recurrence", "created_at", "updated_at",
+        "reminder_sent_at", "recurrence", "list_id", "created_at", "updated_at",
     }  # fmt: skip
 
 
