@@ -7,7 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, Owned, updated_at
 
-TAGGING_TARGETS = ("task", "capture", "meal", "workout", "expense", "bill", "sleep", "focus_session", "meal_plan", "grocery_item")
+TAGGING_TARGETS = ("task", "capture", "meal", "workout", "expense", "bill", "sleep", "meal_plan", "grocery_item")
 
 
 class Capture(Owned, Base):

@@ -95,27 +95,3 @@ class Reminder(Owned, Base):
     remind_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="scheduled")
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-
-
-class FocusSession(Owned, Base):
-    __tablename__ = "focus_sessions"
-    __table_args__ = (
-        CheckConstraint("char_length(title) <= 220", name="title_length"),
-        CheckConstraint("duration_minutes >= 0 and duration_minutes <= 1440", name="duration_minutes"),
-        CheckConstraint("status in ('planned', 'completed', 'cancelled')", name="status"),
-        CheckConstraint("energy is null or (energy >= 1 and energy <= 5)", name="energy"),
-        # Deleting the task keeps the session and clears only task_id.
-        ForeignKeyConstraint(["task_id", "user_id"], ["tasks.id", "tasks.user_id"], ondelete="SET NULL (task_id)"),
-        Index("focus_sessions_user_started_idx", "user_id", text("started_at desc")),
-        Index("focus_sessions_user_status_idx", "user_id", "status", "started_at"),
-        Index("focus_sessions_task_idx", "task_id", text("started_at desc")),
-    )
-
-    task_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
-    title: Mapped[str] = mapped_column(Text, nullable=False)
-    duration_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
-    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="completed")
-    energy: Mapped[int | None] = mapped_column(Integer)
-    note: Mapped[str | None] = mapped_column(Text)

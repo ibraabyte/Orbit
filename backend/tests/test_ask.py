@@ -22,12 +22,8 @@ from app.models import (
     Budget,
     ChatgptConnection,
     Expense,
-    Goal,
-    GoalMilestone,
     Habit,
     HabitLog,
-    JournalEntry,
-    Person,
     ServiceConnection,
     SleepLog,
     Task,
@@ -212,15 +208,10 @@ def test_nothing_sensitive_or_foreign_reaches_the_provider(client: TestClient, a
 
     def seed(owner, mark: str, visible: str, v: dict) -> None:
         zone_day = local("2026-11-02")
-        goal = Goal(user_id=owner, title=f"{visible} goal", notes=f"{mark}-goal-notes", target_at=date(2026, 12, 1))
         habit = Habit(user_id=owner, name=f"{visible} habit")
-        add(db, goal, habit)
+        add(db, habit)
         add(
             db,
-            *[
-                GoalMilestone(user_id=owner, goal_id=goal.id, title=f"{mark}-milestone", completed_at=zone_day if n < v["done"] else None)
-                for n in range(v["milestones"])
-            ],
             *[
                 HabitLog(user_id=owner, habit_id=habit.id, logged_at=zone_day - timedelta(hours=n), note=f"{mark}-habit-note")
                 for n in range(v["logs"])
@@ -239,14 +230,6 @@ def test_nothing_sensitive_or_foreign_reaches_the_provider(client: TestClient, a
             ),
             Budget(user_id=owner, month=date(2026, 11, 1), category="food", amount=v["budget"], currency="SAR"),
             Task(user_id=owner, title=f"{visible} task", notes=f"{mark}-task-notes", due_at=zone_day),
-            Person(
-                user_id=owner,
-                name=f"{visible} Friend",
-                relationship="friend",
-                contact_method=f"{mark}-+966500000000",
-                notes=f"{mark}-person-notes",
-            ),
-            JournalEntry(user_id=owner, mood=v["mood"], title=f"{mark}-journal-title", body=f"{mark}-journal-body", entry_date=TODAY),
             SleepLog(user_id=owner, sleep_date=TODAY, duration_minutes=v["sleep"], note=f"{mark}-sleep-note"),
             Workout(user_id=owner, type=f"{visible}-run", duration_minutes=v["workout"], notes=f"{mark}-workout-notes", logged_at=zone_day),
             BankTransaction(
@@ -272,8 +255,8 @@ def test_nothing_sensitive_or_foreign_reaches_the_provider(client: TestClient, a
         )
 
     # Different numbers for each person, so a query that forgot its owner filter would change what the provider gets.
-    mine = {"expense": 12, "bill": 900, "budget": 300, "mood": "good", "sleep": 420, "workout": 30, "logs": 1, "milestones": 1, "done": 0}
-    theirs = {"expense": 777, "bill": 55, "budget": 999, "mood": "bad", "sleep": 111, "workout": 33, "logs": 4, "milestones": 3, "done": 2}
+    mine = {"expense": 12, "bill": 900, "budget": 300, "sleep": 420, "workout": 30, "logs": 1}
+    theirs = {"expense": 777, "bill": 55, "budget": 999, "sleep": 111, "workout": 33, "logs": 4}
     seed(me, "MINE", "Mine", mine)
     seed(other, "THEIRS", "Theirs", theirs)
     assert other_tokens  # the other account exists and has its own data and connections
@@ -285,9 +268,6 @@ def test_nothing_sensitive_or_foreign_reaches_the_provider(client: TestClient, a
     # This user's rows are there (so the check above is not vacuous): titles, names, amounts, moods, minutes.
     for shown in ("Mine habit", "Mine Cafe", "Mine Rent", "Mine task", "Mine-run"):
         assert shown in sent, shown
-    # People, goals and the journal were taken out of the app, so none of them is sent.
-    for gone in ("Mine goal", "Mine Friend"):
-        assert gone not in sent, gone
     prompt = provider[0]["messages"][1]["content"]
     data = json.loads(prompt.splitlines()[2])
     assert data["expense_totals"] == [{"month": "2026-11", "category": "food", "currency": "SAR", "total": 12.0}]
@@ -299,7 +279,7 @@ def test_nothing_sensitive_or_foreign_reaches_the_provider(client: TestClient, a
     assert [(h["name"], h["done_last_30_days"]) for h in data["habits"]] == [("Mine habit", 1)]
     assert [t["title"] for t in data["tasks"]] == ["Mine task"]
     assert not {"people", "goals", "journal_moods"} & set(data)
-    for number in ("777", "999", "111", '"bad"'):
+    for number in ("777", "999", "111"):
         assert number not in json.dumps(data), number
     # Nobody else's, and no free text, contact detail, card, token or secret of anyone's.
     for hidden in (
@@ -332,12 +312,8 @@ def test_context_has_the_documented_sections_and_only_the_users_rows(client: Tes
         Task(user_id=me, title="Done lately", status="done"),
         Task(user_id=me, title="Archived", status="archived"),
         Task(user_id=other, title="Someone else's"),
-        Person(user_id=me, name="Sam", relationship="friend", birthday=date(1990, 5, 1), next_follow_up_at=date(2026, 11, 9)),
-        Person(user_id=other, name="Not mine"),
         Habit(user_id=me, name="Read"),
         Habit(user_id=me, name="Old habit", archived_at=datetime(2026, 1, 1, tzinfo=UTC)),
-        Goal(user_id=me, title="Run 10k"),
-        Goal(user_id=me, title="Finished goal", status="completed"),
     )
     data = context(db)
     assert data["today"] == "2026-11-03"
@@ -393,8 +369,6 @@ def test_context_health_is_recent_and_carries_no_free_text(client: TestClient, a
     me = user_id(db)
     add(
         db,
-        JournalEntry(user_id=me, mood="low", title="T", body="B", entry_date=date(2026, 11, 1)),
-        JournalEntry(user_id=me, mood="great", body="old", entry_date=date(2026, 9, 1)),
         SleepLog(user_id=me, sleep_date=date(2026, 11, 2), duration_minutes=450, quality=4, note="N"),
         SleepLog(user_id=me, sleep_date=date(2026, 9, 1), duration_minutes=100),
         Workout(user_id=me, type="run", duration_minutes=30, calories=300, notes="N", logged_at=local("2026-11-02")),

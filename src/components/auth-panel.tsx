@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
 import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { type } from "@/components/drift";
-import { backdrop, colors, fonts, labelCase, radius } from "@/components/theme";
-import { useNow } from "@/hooks/use-now";
-import { formatClock24, formatDate, t } from "@/lib/i18n";
+import { colors, fonts, radius } from "@/components/theme";
 
-// Auth sits straight on the backdrop, with no card. On iPad the form keeps a phone width, centered.
+// Auth fills the screen with the card colour. On iPad the form keeps a phone width, centered.
 export function AuthPage({ children }: { children: ReactNode }) {
   return (
     <KeyboardAvoidingView style={styles.page} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -16,24 +14,18 @@ export function AuthPage({ children }: { children: ReactNode }) {
   );
 }
 
-// The Night header: the sand mark and wordmark, then the Rail's big clock (sand colon) with the date and a tagline.
-export function AuthHeader() {
-  const now = useNow();
-  const [hours, minutes] = formatClock24(now).split(/[:٫]/);
+// The Refined header: the sand Trail mark on a dark tile, the name, and what this page does (Sign in, Create account).
+export function AuthHeader({ subtitle }: { subtitle: string }) {
   return (
     <View style={styles.header}>
-      <View style={styles.brandRow} accessibilityRole="image" accessibilityLabel="Orbit">
+      <View style={styles.markTile} accessibilityRole="image" accessibilityLabel="Orbit">
         <Image source={require("../../assets/brand/night/symbol-sand-1024.png")} style={styles.mark} />
-        <Text style={styles.wordmark}>ORBIT</Text>
       </View>
-      <View style={styles.clockBlock}>
-        <Text style={styles.date}>{formatDate(now, { weekday: "long", day: "numeric", month: "long" })}</Text>
-        <Text style={styles.clock} accessibilityLabel={formatClock24(now)}>
-          {hours}
-          <Text style={{ color: colors.accent }}>:</Text>
-          {minutes}
+      <View>
+        <Text style={styles.wordmark} accessibilityRole="header">
+          Orbit
         </Text>
-        <Text style={styles.tagline}>{t.authTagline}</Text>
+        <Text style={styles.subtitle}>{subtitle}</Text>
       </View>
     </View>
   );
@@ -41,8 +33,8 @@ export function AuthHeader() {
 
 export function Field({ label, error, style, trailing, ...props }: TextInputProps & { label: string; error?: string | null; trailing?: ReactNode }) {
   return (
-    <View style={{ gap: 6 }}>
-      <Text style={type.tileLabel}>{label}</Text>
+    <View style={{ gap: 4 }}>
+      <Text style={styles.label}>{label}</Text>
       <View style={[styles.inputWrap, error ? styles.inputError : null]}>
         <TextInput accessibilityLabel={label} placeholderTextColor={colors.inkFaint} selectionColor={colors.accentDeep} style={[styles.input, style]} {...props} />
         {trailing}
@@ -53,27 +45,19 @@ export function Field({ label, error, style, trailing, ...props }: TextInputProp
 }
 
 export const authStyles = StyleSheet.create({
-  title: { fontFamily: fonts.bold, fontSize: 30, lineHeight: 36, color: colors.ink },
-  // The form's own heading under the header: a small label with a hairline, like the Rail's section labels.
-  section: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 8 },
-  sectionLabel: { fontFamily: fonts.medium, fontSize: 11, color: colors.inkMuted, ...labelCase },
-  sectionLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.hairline },
-  subtitle: { fontFamily: fonts.medium, fontSize: 14, color: colors.inkMuted },
-  link: { fontFamily: fonts.semibold, color: colors.link, fontSize: 14, textAlign: "center", paddingVertical: 12 }
+  link: { fontFamily: fonts.medium, color: colors.link, fontSize: 14, textAlign: "center", paddingVertical: 12 }
 });
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: colors.shell, experimental_backgroundImage: backdrop },
-  content: { flexGrow: 1, width: "100%", maxWidth: 480, alignSelf: "center", paddingHorizontal: 28, paddingTop: 72, paddingBottom: 32, gap: 16 },
-  header: { gap: 40, marginBottom: 12 },
-  brandRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  mark: { width: 28, height: 28 },
-  wordmark: { fontFamily: "JetBrainsMono_500Medium", fontSize: 14, letterSpacing: 5, color: colors.onShell },
-  clockBlock: { gap: 6 },
-  date: { fontFamily: fonts.regular, fontSize: 12, color: colors.onShellMuted, ...labelCase },
-  clock: { fontFamily: "JetBrainsMono_500Medium", fontSize: 72, lineHeight: 76, letterSpacing: -3, color: colors.onShell, writingDirection: "ltr" },
-  tagline: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.inkMuted },
-  inputWrap: { minHeight: 50, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, backgroundColor: colors.surface },
+  page: { flex: 1, backgroundColor: colors.surface },
+  content: { flexGrow: 1, width: "100%", maxWidth: 480, alignSelf: "center", paddingHorizontal: 28, paddingTop: 98, paddingBottom: 32, gap: 18 },
+  header: { gap: 18 },
+  markTile: { width: 56, height: 56, borderRadius: 16, borderCurve: "continuous", backgroundColor: colors.shell, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
+  mark: { width: 30, height: 30 },
+  wordmark: { fontFamily: "JetBrainsMono_600SemiBold", fontSize: 30, lineHeight: 36, color: colors.onShell },
+  subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
+  label: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted },
+  inputWrap: { minHeight: 50, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: "#26262a" },
   input: { flex: 1, minWidth: 0, minHeight: 48, paddingHorizontal: 14, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
   inputError: { borderWidth: 2, borderColor: colors.dangerOnShell }
 });

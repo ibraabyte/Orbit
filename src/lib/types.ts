@@ -4,13 +4,10 @@ export type CaptureType = "link" | "screenshot" | "note";
 export type ReminderStatus = "scheduled" | "sent" | "cancelled";
 export type RecurrenceRule = "daily" | "weekly" | "monthly";
 export type HabitFrequency = "daily" | "weekly";
-export type GoalStatus = "active" | "completed" | "archived";
-export type JournalMood = "great" | "good" | "neutral" | "low" | "bad";
 export type WeightUnit = "kg" | "lb";
 export type FinanceCategory = "food" | "transport" | "fitness" | "home" | "subscriptions" | "shopping" | "health" | "travel" | "groceries" | "bills" | "services" | "other";
 export type BillRecurrence = "once" | "weekly" | "monthly" | "yearly";
 export type BillStatus = "active" | "paid" | "paused";
-export type FocusSessionStatus = "planned" | "completed" | "cancelled";
 export type MealPlanType = "breakfast" | "lunch" | "dinner" | "snack" | "other";
 export type MealPlanStatus = "planned" | "prepped" | "eaten" | "skipped";
 export type GroceryCategory = "produce" | "protein" | "dairy" | "pantry" | "frozen" | "household" | "other";
@@ -137,7 +134,7 @@ export type Tagging = {
   id: string;
   user_id: string;
   tag_id: string;
-  target_type: "task" | "capture" | "meal" | "workout" | "expense" | "bill" | "sleep" | "focus_session" | "meal_plan" | "grocery_item";
+  target_type: "task" | "capture" | "meal" | "workout" | "expense" | "bill" | "sleep" | "meal_plan" | "grocery_item";
   target_id: string;
   created_at: string;
 };
@@ -186,21 +183,6 @@ export type GroceryItem = {
   updated_at: string;
 };
 
-export type Person = {
-  id: string;
-  user_id: string;
-  name: string;
-  relationship: string | null;
-  contact_method: string | null;
-  birthday: string | null;
-  last_contacted_at: string | null;
-  next_follow_up_at: string | null;
-  notes: string | null;
-  favorite: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
 export type WeightLog = {
   id: string;
   user_id: string;
@@ -229,20 +211,6 @@ export type SleepLog = {
   quality: number | null;
   bedtime_at: string | null;
   woke_at: string | null;
-  note: string | null;
-  created_at: string;
-};
-
-export type FocusSession = {
-  id: string;
-  user_id: string;
-  task_id: string | null;
-  title: string;
-  duration_minutes: number;
-  started_at: string;
-  ended_at: string | null;
-  status: FocusSessionStatus;
-  energy: number | null;
   note: string | null;
   created_at: string;
 };
@@ -276,37 +244,6 @@ export type HabitLog = {
   logged_at: string;
   note: string | null;
   created_at: string;
-};
-
-export type Goal = {
-  id: string;
-  user_id: string;
-  title: string;
-  notes: string | null;
-  status: GoalStatus;
-  target_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-export type GoalMilestone = {
-  id: string;
-  user_id: string;
-  goal_id: string;
-  title: string;
-  completed_at: string | null;
-  created_at: string;
-};
-
-export type JournalEntry = {
-  id: string;
-  user_id: string;
-  mood: JournalMood;
-  title: string | null;
-  body: string;
-  entry_date: string;
-  created_at: string;
-  updated_at: string;
 };
 
 export type Expense = {
@@ -470,16 +407,11 @@ export type DashboardData = {
   meals: Meal[];
   mealPlans: MealPlan[];
   groceryItems: GroceryItem[];
-  people: Person[];
   weightLogs: WeightLog[];
   workouts: Workout[];
   sleepLogs: SleepLog[];
-  focusSessions: FocusSession[];
   habits: Habit[];
   habitLogs: HabitLog[];
-  goals: Goal[];
-  goalMilestones: GoalMilestone[];
-  journalEntries: JournalEntry[];
   expenses: Expense[];
   bills: Bill[];
   budgets: Budget[];

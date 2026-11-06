@@ -31,16 +31,11 @@ LISTS: list[tuple[str, type[m.Base], Any, int]] = [
     ("meals", m.Meal, m.Meal.logged_at.desc(), 80),
     ("mealPlans", m.MealPlan, m.MealPlan.plan_date.desc(), 120),
     ("groceryItems", m.GroceryItem, m.GroceryItem.created_at.desc(), 160),
-    ("people", m.Person, m.Person.updated_at.desc(), 120),
     ("weightLogs", m.WeightLog, m.WeightLog.logged_at.desc(), 40),
     ("workouts", m.Workout, m.Workout.logged_at.desc(), 50),
     ("sleepLogs", m.SleepLog, m.SleepLog.sleep_date.desc(), 90),
-    ("focusSessions", m.FocusSession, m.FocusSession.started_at.desc(), 120),
     ("habits", m.Habit, m.Habit.created_at.desc(), 60),
     ("habitLogs", m.HabitLog, m.HabitLog.logged_at.desc(), 240),
-    ("goals", m.Goal, m.Goal.updated_at.desc(), 60),
-    ("goalMilestones", m.GoalMilestone, m.GoalMilestone.created_at.desc(), 240),
-    ("journalEntries", m.JournalEntry, m.JournalEntry.entry_date.desc(), 90),
     # ponytail: budgets add up these rows on the phone, so a very heavy spender (over 1000 expenses) is undercounted;
     # the upgrade is a server-side month total per category.
     ("expenses", m.Expense, m.Expense.spent_at.desc(), 1000),
@@ -57,7 +52,6 @@ LISTS: list[tuple[str, type[m.Base], Any, int]] = [
 # Narrower than "everything the user owns", same as before.
 FILTERS = {
     "habits": lambda user_id: m.Habit.archived_at.is_(None),
-    "goals": lambda user_id: m.Goal.status != "archived",
     # Only the checklists of open tasks; a finished task's steps are history.
     "taskSteps": lambda user_id: m.TaskStep.task_id.in_(select(m.Task.id).where(m.Task.user_id == user_id, m.Task.status == "open")),
 }

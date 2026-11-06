@@ -22,7 +22,6 @@ TARGET_MODELS: dict[str, type[m.Base]] = {
     "expense": m.Expense,
     "bill": m.Bill,
     "sleep": m.SleepLog,
-    "focus_session": m.FocusSession,
     "meal_plan": m.MealPlan,
     "grocery_item": m.GroceryItem,
 }

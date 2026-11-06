@@ -7,7 +7,7 @@ import { colors, fonts, labelCase, radius } from "@/components/theme";
 import { isArabic } from "@/lib/i18n";
 import { barHeights, ringRotations } from "@/lib/ring";
 
-// Drift's building blocks. Icons are Feather. Layout flips by itself in RTL; only
+// Refined's building blocks. Icons are Feather. Layout flips by itself in RTL; only
 // direction-carrying icons (chevrons) need the flip below.
 
 export type IconName = ComponentProps<typeof Feather>["name"];
@@ -53,7 +53,7 @@ export const useOnSurface = () => useContext(OnSurface);
 /** A section that folds away: tap its header to show or hide it. `summary` stays in the header while it is closed. */
 export type Fold = { open: boolean; onToggle: () => void; summary?: string };
 
-/** A section on the black ground: a hairline on top, a small uppercase title, and an action at its end. No box. */
+/** A card: a lifted surface with a hairline edge and round corners, a sentence-case title, and an action at its end. */
 export function Card({ title, action, children, style, fold }: { title?: string; action?: ReactNode; children?: ReactNode; style?: ViewStyle; fold?: Fold }) {
   const header = fold ? (
     <Pressable
@@ -64,14 +64,14 @@ export function Card({ title, action, children, style, fold }: { title?: string;
       hitSlop={6}
       style={({ pressed }) => [styles.cardHeader, styles.foldHeader, pressed && { opacity: 0.7 }]}
     >
-      <Text style={[type.sectionLabel, { flex: 1 }]}>{title}</Text>
+      <Text style={[type.cardTitle, { flex: 1 }]}>{title}</Text>
       {action}
       {fold.summary ? <Text style={type.barValue}>{fold.summary}</Text> : null}
       <Icon name={fold.open ? "chevron-up" : "chevron-down"} size={16} color={colors.inkFaint} />
     </Pressable>
   ) : title || action ? (
     <View style={styles.cardHeader}>
-      <Text style={[type.sectionLabel, { flex: 1 }]}>{title}</Text>
+      <Text style={[type.cardTitle, { flex: 1 }]}>{title}</Text>
       {action}
     </View>
   ) : null;
@@ -85,18 +85,18 @@ export function Card({ title, action, children, style, fold }: { title?: string;
   );
 }
 
-/** Hero (prayer, readiness, completion, recovery, car): one big number on the ground, no fill. */
+/** Hero (prayer, readiness, completion, recovery, car): a card with a sand edge. */
 export function Hero({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   return <View style={[styles.hero, style]}>{children}</View>;
 }
 
-/** Green "Tasks ›" link in a card's header. */
+/** Outlined sand "Tasks ›" pill in a card's header. */
 export function CardLink({ href, label }: { href: Href; label: string }) {
   return (
     <Link href={href} asChild>
       <Pressable accessibilityRole="link" hitSlop={8} style={styles.cardLink}>
         <Text style={type.link}>{label}</Text>
-        <Chevron size={15} color={colors.link} />
+        <Chevron size={14} color={colors.link} />
       </Pressable>
     </Link>
   );
@@ -186,12 +186,13 @@ export function Avatar({ name, size = 40, dark }: { name: string; size?: number;
 }
 
 export type BadgeTone = "neutral" | "accent" | "urgent" | "success";
-// Outlined pills; only urgent is filled (pale, black text). The glyph and label carry the meaning, not the colour.
+// Small filled tags: urgent is pale with dark text, accent is a dark sand tint, the rest sit in the inset well.
+// The glyph and label carry the meaning, not the colour.
 const badgeTones: Record<BadgeTone, { backgroundColor: string; borderColor: string; color: string }> = {
-  neutral: { backgroundColor: "transparent", borderColor: colors.hairline, color: colors.inkMuted },
-  accent: { backgroundColor: "transparent", borderColor: colors.accent, color: colors.accent },
+  neutral: { backgroundColor: colors.surfaceInset, borderColor: colors.surfaceInset, color: colors.inkMuted },
+  accent: { backgroundColor: colors.accentTint, borderColor: colors.accentTint, color: colors.accentTintInk },
   urgent: { backgroundColor: colors.urgent, borderColor: colors.urgent, color: colors.urgentInk },
-  success: { backgroundColor: "transparent", borderColor: colors.hairline, color: colors.success }
+  success: { backgroundColor: colors.successTint, borderColor: colors.successTint, color: colors.success }
 };
 
 /** Small label: glyph + text, so status never relies on color alone. */
@@ -367,11 +368,11 @@ export function TrendBars({ values, labels, height = 80, label, color = colors.a
   );
 }
 
-/** Round check with a 2px ink ring. The mark (a shape) shows the state, not only the color. */
+/** Round check with a 2px pale ring; checked fills pale with a dark mark. The mark (a shape) shows the state, not only the color. */
 export function CheckItem({ checked, onPress, label, size = 28, ring = colors.ink }: { checked: boolean; onPress: () => void; label: string; size?: number; ring?: string }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={label} hitSlop={8} style={[styles.check, { width: size, height: size, borderRadius: size / 2, borderColor: ring }, checked && { backgroundColor: colors.accent, borderColor: colors.accent }]}>
-      {checked ? <Icon name="check" size={size / 2} color={colors.accentInk} /> : null}
+    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={label} hitSlop={8} style={[styles.check, { width: size, height: size, borderRadius: size / 2, borderColor: ring }, checked && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
+      {checked ? <Icon name="check" size={size / 2} color={colors.urgentInk} /> : null}
     </Pressable>
   );
 }
@@ -385,13 +386,13 @@ export function MoreButton({ onPress, label }: { onPress: () => void; label: str
   );
 }
 
-/** A row's direct action: Paid, Bought, Contacted, Start. A sand outline; outline is the quieter grey version. */
+/** A row's direct action: Paid, Bought, Contacted, Start. Pale with dark text; outline is the quieter version. */
 export function RowButton({ label, onPress, outline, icon, disabled }: { label?: string; onPress: () => void; outline?: boolean; icon?: IconName; disabled?: boolean }) {
-  const fg = outline ? colors.ink : colors.accent;
+  const fg = outline ? colors.ink : colors.urgentInk;
   return (
-    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: Boolean(disabled) }} style={({ pressed }) => [styles.rowButton, { borderColor: outline ? colors.hairline : colors.accent }, !label && { width: 36, paddingHorizontal: 0 }, disabled && { opacity: 0.35 }, pressed && { opacity: 0.7 }]}>
+    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: Boolean(disabled) }} style={({ pressed }) => [styles.rowButton, outline ? { borderColor: colors.hairline } : { borderColor: colors.urgent, backgroundColor: colors.urgent }, !label && { width: 36, paddingHorizontal: 0 }, disabled && { opacity: 0.35 }, pressed && { opacity: 0.7 }]}>
       {icon ? <Icon name={icon} size={15} color={fg} /> : null}
-      {label && !(icon && outline) ? <Text style={[type.pill, { color: fg }]}>{label}</Text> : null}
+      {label && !(icon && outline) ? <Text style={[type.pill, { fontFamily: fonts.semibold, color: fg }]}>{label}</Text> : null}
     </Pressable>
   );
 }
@@ -422,52 +423,53 @@ export function PageTitle({ children }: { children: string }) {
   );
 }
 
-/** Round Orbit mark on an ink tile (sign in). */
 export const type = StyleSheet.create({
-  h1: { fontFamily: fonts.medium, fontSize: 28, lineHeight: 34, letterSpacing: -0.5, color: colors.onShell },
-  h2: { fontFamily: fonts.medium, fontSize: 18, lineHeight: 24, color: colors.ink },
-  title: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 20, color: colors.ink },
-  // Section titles: 11px uppercase, wide tracking, muted.
-  sectionLabel: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 16, color: colors.inkMuted, ...labelCase },
-  link: { fontFamily: fonts.medium, fontSize: 12, color: colors.link, ...labelCase },
-  stat: { fontFamily: fonts.medium, fontSize: 20, color: colors.ink },
-  metric: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
-  // Tighter tracking than other labels: four tiles share a phone row, and "REMINDERS" must not break mid-word.
-  tileLabel: { fontFamily: fonts.medium, fontSize: 10, lineHeight: 14, color: colors.inkMuted, ...labelCase, letterSpacing: isArabic ? 0 : 0.5 },
+  // Screen titles: big, semibold, sentence case.
+  h1: { fontFamily: fonts.semibold, fontSize: 30, lineHeight: 34, letterSpacing: -0.45, color: colors.onShell },
+  h2: { fontFamily: fonts.semibold, fontSize: 18, lineHeight: 24, color: colors.ink },
+  title: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
+  // A card's title: 15px semibold, sentence case.
+  cardTitle: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
+  // Small group labels: 12px uppercase, a little tracking, muted.
+  sectionLabel: { fontFamily: fonts.semibold, fontSize: 12, lineHeight: 16, color: colors.inkMuted, ...labelCase },
+  link: { fontFamily: fonts.medium, fontSize: 12, color: colors.link, letterSpacing: isArabic ? 0 : 0.7 },
+  stat: { fontFamily: fonts.semibold, fontSize: 20, color: colors.ink },
+  metric: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
+  tileLabel: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 14, color: colors.inkMuted },
   hint: { fontFamily: fonts.regular, fontSize: 11, color: colors.inkMuted },
-  body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 22, color: colors.ink },
-  rowTitle: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, color: colors.ink },
-  rowSubtitle: { fontFamily: fonts.regular, fontSize: 11, lineHeight: 16, color: colors.inkMuted },
-  rowValue: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
-  barLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  barValue: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
-  axis: { fontFamily: fonts.regular, fontSize: 10, color: colors.inkMuted, ...labelCase },
-  badge: { fontFamily: fonts.medium, fontSize: 10, ...labelCase },
-  pill: { fontFamily: fonts.medium, fontSize: 11, color: colors.ink, ...labelCase },
-  code: { fontFamily: fonts.regular, fontSize: 12, color: colors.ink, backgroundColor: colors.surfaceInset, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, overflow: "hidden" },
-  shellMeta: { fontFamily: fonts.regular, fontSize: 11, color: colors.onShellMuted, ...labelCase },
+  body: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.ink },
+  rowTitle: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 20, color: colors.ink },
+  rowSubtitle: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.inkMuted },
+  rowValue: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
+  barLabel: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+  barValue: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
+  axis: { fontFamily: fonts.regular, fontSize: 10, color: colors.inkMuted },
+  badge: { fontFamily: fonts.semibold, fontSize: 11 },
+  pill: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+  code: { fontFamily: fonts.regular, fontSize: 12, color: colors.ink, backgroundColor: colors.surfaceInset, paddingHorizontal: 6, paddingVertical: 1, borderRadius: 4, overflow: "hidden" },
+  shellMeta: { fontFamily: fonts.medium, fontSize: 13, color: colors.onShellMuted },
   shellMuted: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.onShellMuted },
-  shellLabel: { fontFamily: fonts.medium, fontSize: 11, color: colors.onShellMuted, ...labelCase }
+  shellLabel: { fontFamily: fonts.semibold, fontSize: 12, color: colors.onShellMuted, ...labelCase }
 });
 
 const styles = StyleSheet.create({
-  card: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline, paddingTop: 14, paddingBottom: 4, gap: 8 },
-  cardHeader: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 24 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 8 },
+  cardHeader: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 32 },
   // A folding header is a tap target, so it gets a finger's height.
   foldHeader: { minHeight: 36 },
-  cardLink: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 32 },
-  hero: { flexDirection: "row", alignItems: "center", gap: 16, paddingVertical: 8 },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline },
+  cardLink: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 32, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.accentLine },
+  hero: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, paddingHorizontal: 16, backgroundColor: colors.hero, borderWidth: 1, borderColor: colors.heroEdge, borderRadius: radius.card, borderCurve: "continuous" },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   rowMeta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
   iconTile: { borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
-  badge: { borderRadius: radius.pill, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 1 },
-  tile: { flex: 1, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 8, paddingVertical: 10, gap: 4, minHeight: 64 },
-  tileDot: { position: "absolute", top: 8, end: 8, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
+  badge: { borderRadius: radius.badge, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1 },
+  tile: { flex: 1, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 10, paddingVertical: 10, gap: 4, minHeight: 72 },
+  tileDot: { position: "absolute", top: 8, end: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.urgent },
   ringHole: { position: "absolute", alignItems: "center", justifyContent: "center" },
   track: { width: "100%", borderRadius: radius.pill, backgroundColor: colors.surfaceInset, overflow: "hidden" },
-  check: { borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
-  moreButton: { width: 36, height: 36, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
-  rowButton: { minHeight: 34, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
+  check: { borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  moreButton: { width: 40, height: 40, borderRadius: radius.pill, borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", alignItems: "center", justifyContent: "center" },
+  rowButton: { minHeight: 36, paddingHorizontal: 12, borderRadius: radius.control, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
   empty: { alignItems: "center", gap: 8, paddingVertical: 16 },
-  exampleLink: { color: colors.accent, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: colors.hairline }
+  exampleLink: { color: colors.accent }
 });

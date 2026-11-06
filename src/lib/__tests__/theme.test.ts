@@ -26,14 +26,14 @@ function contrast(a: Rgb, b: Rgb) {
   return (high + 0.05) / (low + 0.05);
 }
 
-// Night: everything sits straight on the black ground; surface and inset are the slightly lifted wells.
+// Refined: cards (surface) sit on the black ground; inset is the well inside a card.
 const ground = toRgb(colors.shell);
 const card = over(colors.surface, ground);
 const inset = over(colors.surfaceInset, card);
 const hero = over(colors.hero, ground);
 const glow = ground;
 
-describe("Night theme", () => {
+describe("Refined theme", () => {
   it("keeps the black ground and the one sand accent", () => {
     expect(colors.shell).toBe("#0a0a0b");
     expect(colors.accent).toBe("#e8c890");
@@ -57,7 +57,9 @@ describe("Night theme", () => {
     ["tinted badge", toRgb(colors.accentTintInk), over(colors.accentTint, card)],
     ["success badge", toRgb(colors.success), over(colors.successTint, card)],
     ["text on the solid glass stand-in", toRgb(colors.ink), toRgb(colors.glassSolid)],
-    ["sand text on the ground", toRgb(colors.accent), ground]
+    ["sand text on the ground", toRgb(colors.accent), ground],
+    ["faint ink on an inset well (placeholders in fields)", toRgb(colors.inkFaint), inset],
+    ["dark text on the pale button", toRgb(colors.urgentInk), toRgb(colors.ink)]
   ])("%s is readable (AA, 4.5:1)", (_name, fg, bg) => {
     expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
   });

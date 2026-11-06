@@ -20,11 +20,7 @@ CASES = [
     ("/weight-logs", {"weight": 82.4, "logged_at": NOW}, {"unit": "lb"}, "unit"),
     ("/workouts", {"type": "Run", "duration_minutes": 30, "logged_at": NOW}, {"calories": 300}, "calories"),
     ("/sleep-logs", {"sleep_date": "2026-11-01", "duration_minutes": 420}, {"quality": 4}, "quality"),
-    ("/focus-sessions", {"title": "Deep work", "duration_minutes": 50, "started_at": NOW}, {"energy": 3}, "energy"),
     ("/habits", {"name": "Read"}, {"archived_at": NOW}, "archived_at"),
-    ("/goals", {"title": "Run 10k"}, {"status": "completed"}, "status"),
-    ("/journal-entries", {"body": "A good day", "entry_date": "2026-11-01"}, {"mood": "great"}, "mood"),
-    ("/people", {"name": "Test Person"}, {"favorite": True}, "favorite"),
     ("/expenses", {"merchant": "Cafe", "amount": 18.5, "currency": "SAR", "spent_at": NOW}, {"category": "food"}, "category"),
     ("/bills", {"name": "Internet", "amount": 299, "currency": "SAR", "due_at": "2026-11-05"}, {"status": "paid"}, "status"),
     ("/budgets", {"month": "2026-11-01", "category": "food", "amount": 800, "currency": "SAR"}, {"amount": 900}, "amount"),
@@ -100,7 +96,6 @@ def test_ensure_tags_reuses_and_creates(client: TestClient, auth: dict):
 def test_references_must_belong_to_the_same_user(client: TestClient, auth: dict):
     task = client.post("/tasks", headers=auth, json={"title": "Mine"}).json()
     habit = client.post("/habits", headers=auth, json={"name": "Mine"}).json()
-    goal = client.post("/goals", headers=auth, json={"title": "Mine"}).json()
     plan = client.post("/meal-plans", headers=auth, json={"name": "Mine", "plan_date": "2026-11-02"}).json()
     tag = client.post("/tags", headers=auth, json={"name": "Mine"}).json()
 
@@ -108,9 +103,7 @@ def test_references_must_belong_to_the_same_user(client: TestClient, auth: dict)
     other_tag = client.post("/tags", headers=other, json={"name": "Theirs"}).json()
     attempts = [
         ("/habit-logs", {"habit_id": habit["id"]}),
-        ("/goal-milestones", {"goal_id": goal["id"], "title": "Sneaky"}),
         ("/grocery-items", {"name": "Sneaky", "meal_plan_id": plan["id"]}),
-        ("/focus-sessions", {"title": "Sneaky", "duration_minutes": 5, "started_at": NOW, "task_id": task["id"]}),
         ("/taggings", {"tag_id": tag["id"], "target_type": "task", "target_id": task["id"]}),
         ("/taggings", {"tag_id": other_tag["id"], "target_type": "task", "target_id": task["id"]}),
     ]
@@ -120,22 +113,19 @@ def test_references_must_belong_to_the_same_user(client: TestClient, auth: dict)
 
     # The owner can.
     assert client.post("/habit-logs", headers=auth, json={"habit_id": habit["id"]}).status_code == 201
-    milestone = client.post("/goal-milestones", headers=auth, json={"goal_id": goal["id"], "title": "Half"}).json()
-    done = client.patch(f"/goal-milestones/{milestone['id']}", headers=auth, json={"completed_at": NOW}).json()
-    assert done["completed_at"] is not None
     tagging = client.post("/taggings", headers=auth, json={"tag_id": tag["id"], "target_type": "task", "target_id": task["id"]})
     assert tagging.status_code == 201
     assert client.delete(f"/taggings/{tagging.json()['id']}", headers=auth).status_code == 204
 
 
-def test_journal_keeps_one_entry_per_day(client: TestClient, auth: dict):
-    first = client.put("/journal-entries/day/2026-11-01", headers=auth, json={"body": "Morning", "mood": "good"})
-    assert first.status_code == 200, first.text
-    second = client.put("/journal-entries/day/2026-11-01", headers=auth, json={"body": "Evening"}).json()
-    assert second["id"] == first.json()["id"]
-    assert (second["body"], second["mood"]) == ("Evening", "neutral")
-    assert len(client.get("/journal-entries", headers=auth).json()) == 1
-    assert client.post("/journal-entries", headers=auth, json={"body": "Again", "entry_date": "2026-11-01"}).status_code == 409
+def test_removed_sections_are_gone(client: TestClient, auth: dict):
+    """People, goals, the journal and focus sessions were taken out of the app, then out of the database (0015)."""
+    for path in ("/people", "/goals", "/goal-milestones", "/journal-entries", "/focus-sessions"):
+        assert client.get(path, headers=auth).status_code == 404, path
+    task = client.post("/tasks", headers=auth, json={"title": "Mine"}).json()
+    tag = client.post("/tags", headers=auth, json={"name": "Mine"}).json()
+    body = {"tag_id": tag["id"], "target_type": "focus_session", "target_id": task["id"]}
+    assert client.post("/taggings", headers=auth, json=body).status_code == 422
 
 
 def test_watch_list_keeps_one_row_per_title(client: TestClient, auth: dict):

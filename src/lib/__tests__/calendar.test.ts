@@ -73,22 +73,6 @@ const data: DashboardData = {
       updated_at: "2026-07-02T08:00:00.000Z"
     }
   ],
-  people: [
-    {
-      id: "person-1",
-      user_id: "user-1",
-      name: "Sara",
-      relationship: "family",
-      contact_method: "WhatsApp",
-      birthday: "1996-07-03",
-      last_contacted_at: null,
-      next_follow_up_at: "2026-07-02",
-      notes: "Check in after trip",
-      favorite: true,
-      created_at: "2026-07-01T00:00:00.000Z",
-      updated_at: "2026-07-01T00:00:00.000Z"
-    }
-  ],
   weightLogs: [],
   workouts: [],
   sleepLogs: [
@@ -102,21 +86,6 @@ const data: DashboardData = {
       woke_at: null,
       note: null,
       created_at: "2026-07-02T08:00:00.000Z"
-    }
-  ],
-  focusSessions: [
-    {
-      id: "focus-1",
-      user_id: "user-1",
-      task_id: null,
-      title: "Deep work",
-      duration_minutes: 45,
-      started_at: "2026-07-02T10:00:00.000Z",
-      ended_at: "2026-07-02T10:45:00.000Z",
-      status: "completed",
-      energy: 4,
-      note: null,
-      created_at: "2026-07-02T10:00:00.000Z"
     }
   ],
   expenses: [
@@ -152,37 +121,12 @@ const data: DashboardData = {
   ],
   habits: [],
   habitLogs: [],
-  goals: [
-    {
-      id: "goal-1",
-      user_id: "user-1",
-      title: "Finish Orbit",
-      notes: null,
-      status: "active",
-      target_at: "2026-07-03",
-      created_at: "2026-07-01T00:00:00.000Z",
-      updated_at: "2026-07-01T00:00:00.000Z"
-    }
-  ],
-  goalMilestones: [],
   budgets: [],
   cards: [],
   moneyAccounts: [],
   investments: [],
   obligations: [],
   obligationInstallments: [],
-  journalEntries: [
-    {
-      id: "journal-1",
-      user_id: "user-1",
-      mood: "good",
-      title: "Good day",
-      body: "Progress",
-      entry_date: "2026-07-01",
-      created_at: "2026-07-01T00:00:00.000Z",
-      updated_at: "2026-07-01T00:00:00.000Z"
-    }
-  ]
 };
 
 describe("calendar", () => {
