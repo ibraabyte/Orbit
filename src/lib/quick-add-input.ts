@@ -71,7 +71,10 @@ const englishDate =
   /\s+((?:today|tonight|tomorrow|next\s+week|next\s+month|(?:next\s+)?(?:monday|mon|tuesday|tue|wednesday|wed|thursday|thu|friday|fri|saturday|sat|sunday|sun))(?:\s+(?:at\s+)?(?:\d{1,2}(?::\d{2})?\s*(?:am|pm)?|noon))?)$/i;
 
 export function naturalToCommand(input: string, options: { defaultCurrency?: string } = {}) {
-  let text = toWesternDigits(input).trim().replace(/\s+/g, " ");
+  // A checklist after ";" ("pack bag tomorrow; passport; charger") rides along untouched, so the date is still found.
+  const [head, ...steps] = toWesternDigits(input).trim().replace(/\s+/g, " ").split(/\s*[;؛]\s*/);
+  const tail = steps.length ? `; ${steps.join("; ")}` : "";
+  let text = head;
 
   // Already in "kind: ..." form: leave the kind alone.
   let kind: string | null = /^https?:\/\//i.test(text) ? "capture" : null;
@@ -93,7 +96,7 @@ export function naturalToCommand(input: string, options: { defaultCurrency?: str
     text = head.replace(/(\d+(?:\.\d+)?)(?=\s|$)(?!\s*[A-Za-z]{3}\b)/, `$1 ${options.defaultCurrency}`) + (at < 0 ? "" : text.slice(at));
   }
 
-  return { command: kind ? `${kind}: ${text}` : text, inferredKind: Boolean(kind) };
+  return { command: (kind ? `${kind}: ${text}` : text) + tail, inferredKind: Boolean(kind) };
 }
 
 // ponytail: a guessed kind that fails validation ("focus on email") falls back to a plain task.

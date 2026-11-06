@@ -20,7 +20,7 @@ const arabic: WidgetCopy = { ...english, arabic: true, number: (value) => `ar-${
 
 const task = (overrides: Partial<Task>): Task => ({
   id: "t1", user_id: "u", title: "Task", notes: null, status: "open", priority: "normal", due_at: "2026-11-03T12:00:00.000Z", reminder_at: null, reminder_sent_at: null,
-  recurrence: null, created_at: "2026-11-01T00:00:00Z", updated_at: "2026-11-01T00:00:00Z", ...overrides
+  recurrence: null, list_id: null, created_at: "2026-11-01T00:00:00Z", updated_at: "2026-11-01T00:00:00Z", ...overrides
 });
 const prayer = (name: PrayerTime["name"], label: string, at: string): PrayerTime => ({ name, label, at: new Date(at) });
 const dhuhr = prayer("dhuhr", "الظهر", "2026-11-03T08:45:00.000Z");

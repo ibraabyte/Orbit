@@ -8,6 +8,8 @@ import type { DashboardData } from "@/lib/types";
 export const emptyData: DashboardData = {
   profile: null,
   tasks: [],
+  taskLists: [],
+  taskSteps: [],
   reminders: [],
   captures: [],
   attachments: [],

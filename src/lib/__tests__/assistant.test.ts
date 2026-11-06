@@ -91,5 +91,12 @@ describe("what the person checks", () => {
       ["Due", "—"]
     ]);
     expect(actionRows(action({ fields: { amount: 1200 } }), true)).toEqual([["المبلغ", "1,200"]]);
+    // A task's list and checklist read as words; the list's id stays hidden.
+    expect(actionRows(action({ kind: "task", fields: { title: "Pack", list_id: ID, list_name: "Travel", steps: ["Passport", "Charger"] } }), false)).toEqual([
+      ["Title", "Pack"],
+      ["List", "Travel"],
+      ["Checklist", "Passport · Charger"]
+    ]);
+    expect(actionRequest(action({ kind: "task_list", fields: { name: "Work" } }))).toEqual({ method: "POST", path: "/task-lists", body: { name: "Work" } });
   });
 });

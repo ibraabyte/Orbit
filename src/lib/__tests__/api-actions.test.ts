@@ -25,6 +25,12 @@ describe("api actions", () => {
     expect(body).not.toHaveProperty("user_id");
   });
 
+  it("sends a task's list by name and its checklist in the same call", () => {
+    const { body } = quickAddRequest(parseQuickAdd("task: Pack +Travel; Passport; Charger"), now);
+    expect(body).toMatchObject({ title: "Pack", list_name: "Travel", steps: ["Passport", "Charger"] });
+    expect(quickAddRequest(parseQuickAdd("task: Plain"), now).body).toMatchObject({ list_name: null, steps: [] });
+  });
+
   it("adds a reminder", async () => {
     const api = fakeApi();
     await apiQuickAdd(api as never, parseQuickAdd("reminder: Call mum ~2026-07-01T20:00"));

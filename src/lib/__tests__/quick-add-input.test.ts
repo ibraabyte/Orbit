@@ -30,6 +30,24 @@ describe("natural quick add", () => {
     expect(parseNatural("watch today show", opts).draft.at).toBeNull();
   });
 
+  it("reads a list and a checklist on a task, and still finds the date", () => {
+    expect(parseNatural("pack bag +travel tomorrow 9am; passport; charger", opts).draft).toMatchObject({
+      kind: "task",
+      title: "pack bag",
+      listName: "travel",
+      steps: ["passport", "charger"],
+      at: new Date(2026, 6, 2, 9, 0).toISOString()
+    });
+    expect(parseNatural("مهمة رتب الدولاب +البيت؛ الملابس؛ الأحذية", opts).draft).toMatchObject({
+      kind: "task",
+      title: "رتب الدولاب",
+      listName: "البيت",
+      steps: ["الملابس", "الأحذية"]
+    });
+    // A phone number is not a list.
+    expect(parseNatural("call +966500000000", opts).draft).toMatchObject({ title: "call +966500000000", listName: null, steps: [] });
+  });
+
   it("does not turn a time into money", () => {
     expect(naturalToCommand("spent lunch tomorrow 9am", opts).command).toBe("expense: lunch @tomorrow 9am");
   });

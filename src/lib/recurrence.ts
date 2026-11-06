@@ -65,6 +65,7 @@ export function nextRecurringTask(task: Task, after = new Date()) {
     due_at: nextDue?.value ?? null,
     reminder_at: nextReminder,
     reminder_sent_at: null,
-    recurrence: task.recurrence
+    recurrence: task.recurrence,
+    list_id: task.list_id
   };
 }
