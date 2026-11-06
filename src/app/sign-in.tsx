@@ -58,11 +58,7 @@ export default function SignIn() {
 
   return (
     <AuthPage>
-      <AuthHeader />
-      <View style={styles.section}>
-        <Text style={styles.sectionLabel}>{t.signIn}</Text>
-        <View style={styles.sectionLine} />
-      </View>
+      <AuthHeader subtitle={t.signIn} />
       <Field label={t.email} placeholder="you@example.com" autoCapitalize="none" autoCorrect={false} autoComplete="email" keyboardType="email-address" textContentType="emailAddress" returnKeyType="next" value={email} onChangeText={setEmail} style={{ writingDirection: "ltr" }} />
       <Field
         label={t.password}
@@ -84,15 +80,14 @@ export default function SignIn() {
           </Pressable>
         }
       />
-      <View style={{ height: 4 }} />
-      <Button variant="primary" title={busy ? `${t.loading}…` : t.signIn} disabled={busy || !email || !password} onPress={signIn} />
+      <Button variant="dark" title={busy ? `${t.loading}…` : t.signIn} disabled={busy || !email || !password} onPress={signIn} />
       {options.google ? (
         <Pressable
           onPress={signInWithGoogle}
           disabled={busy}
           accessibilityRole="button"
           accessibilityState={{ disabled: busy }}
-          style={({ pressed }) => ({ minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.pill, opacity: busy ? 0.45 : pressed ? 0.8 : 1 })}>
+          style={({ pressed }) => ({ minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous", opacity: busy ? 0.45 : pressed ? 0.8 : 1 })}>
           <FontAwesome name="google" size={18} color={colors.ink} />
           <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.ink }}>{t.continueWithGoogle}</Text>
         </Pressable>
@@ -110,9 +105,9 @@ export default function SignIn() {
         }}
         accessibilityRole="button"
         accessibilityLabel={t.language}
-        style={({ pressed }) => ({ alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 8, minHeight: 40, paddingHorizontal: 16, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.pill, opacity: pressed ? 0.7 : 1 })}>
+        style={({ pressed }) => ({ alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 8, minHeight: 40, paddingHorizontal: 16, opacity: pressed ? 0.7 : 1 })}>
         <Feather name="globe" size={14} color={colors.inkMuted} />
-        <Text style={[type.pill, { fontSize: 13 }]}>{t.langLabel}</Text>
+        <Text style={[type.pill, { color: colors.inkMuted }]}>{t.langLabel}</Text>
       </Pressable>
     </AuthPage>
   );
