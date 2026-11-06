@@ -18,6 +18,8 @@ const firstWordKinds: Record<string, string> = {
   عادة: "habit", عاده: "habit"
 };
 
+const mealWord = /^(?:breakfast|lunch|dinner|snack)$/i;
+
 const arabicDays: [RegExp, string][] = [
   [/بعد\s+بكر[ةها]/, "in 2 days"],
   [/(?:الأسبوع|الاسبوع)\s+(?:الجاي|القادم)/, "next week"],
@@ -81,6 +83,8 @@ export function naturalToCommand(input: string, options: { defaultCurrency?: str
   if (!kind && !/^[^\s:]+\s*:/.test(text)) {
     const [first, ...rest] = text.split(" ");
     kind = firstWordKinds[first.toLowerCase()] ?? null;
+    // ponytail: "plan" alone stays a task ("plan the trip"); "plan dinner with Ali" reads as a meal plan.
+    if (!kind && first.toLowerCase() === "plan" && mealWord.test(rest[0] ?? "")) kind = "mealPlan";
     if (kind) text = rest.join(" ");
     // "subscription netflix 45" / "اشتراك نتفلكس 45" should land in Subscriptions.
     if (/^(?:subscription|اشتراك)$/i.test(first) && !/#subscriptions\b/.test(text)) text += " #subscriptions";
@@ -162,8 +166,11 @@ function moveDateToMarker(value: string) {
     return `${rest} @${english}${english.startsWith("in ") ? "" : time}`.trim();
   }
 
-  const match = value.match(englishDate);
-  return match ? `${value.slice(0, match.index)} @${match[1].replace(/\s+at\s+/i, " ")}` : value;
+  // "!high" and "#tag" may follow the date.
+  const tail = value.match(/(?:\s+[!#]\S+)+$/)?.[0] ?? "";
+  const head = value.slice(0, value.length - tail.length);
+  const match = head.match(englishDate);
+  return match ? `${head.slice(0, match.index)} @${match[1].replace(/\s+at\s+/i, " ")}${tail}` : value;
 }
 
 function arabicHour(hour: number, period?: string) {
