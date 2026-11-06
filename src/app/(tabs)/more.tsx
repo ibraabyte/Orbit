@@ -55,7 +55,7 @@ export default function More() {
             if (!pin) return null;
             return (
               <Link key={key} href={pin.href} asChild>
-                <Pressable accessibilityRole="link" accessibilityLabel={counts[key] ? `${pin.label}, ${digits(counts[key])}` : pin.label} style={({ pressed }) => [styles.pin, pressed && { opacity: 0.7 }]}>
+                <Pressable accessibilityRole="link" accessibilityLabel={counts[key] ? `${pin.label}, ${digits(counts[key])}` : pin.label} style={styles.pin}>
                   <IconTile name={pin.icon} size={36} tone="accent" />
                   <Text style={styles.pinLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>
                     {pin.label}
