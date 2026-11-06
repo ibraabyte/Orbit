@@ -3,19 +3,24 @@ import { useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import { lockEngages } from "@/components/app-lock";
 import { emptyData, useDashboardData } from "@/hooks/use-dashboard-data";
-import { formatClock, formatNumber, isArabic, t } from "@/lib/i18n";
+import { formatClock24, formatDate, formatNumber, isArabic, t } from "@/lib/i18n";
 import type { PrayerTime } from "@/lib/prayer-times";
 import { signedOutWidget, widgetWritePlan, writeWidget, type WidgetCopy } from "@/lib/widget-snapshot";
 
 const copy: WidgetCopy = {
   arabic: isArabic,
-  time: formatClock,
+  time: formatClock24,
+  day: (at) => formatDate(at, { weekday: "short", day: "numeric", month: "short" }),
   number: formatNumber,
   today: t.today,
-  nothingDue: t.morningClear,
+  now: t.now,
+  tomorrow: t.dayGroups.tomorrow,
+  offRail: t.widgetOffRail,
+  nothingAhead: t.widgetNothingAhead,
   openToUpdate: t.widgetOpenToUpdate,
   signedOut: t.widgetSignedOut,
-  capture: t.capture
+  capture: t.capture,
+  kinds: t.railKinds
 };
 
 type TodayWidget = (typeof import("@/widgets/today-widget"))["default"];
@@ -54,7 +59,7 @@ export function useWidgetSync(prayers: PrayerTime[]) {
     void lockEngages().then((hideTitles) => {
       if (cancelled) return;
       writeWidget(allowed, load, (widget) => {
-        const plan = widgetWritePlan({ loading, loaded: data !== emptyData, tasks: data.tasks, prayers, now: new Date(), copy, hideTitles, lastKey: written.current });
+        const plan = widgetWritePlan({ loading, loaded: data !== emptyData, data, prayers, now: new Date(), copy, hideTitles, lastKey: written.current });
         if (!plan) return;
         widget.updateTimeline(plan.entries);
         written.current = plan.key;
