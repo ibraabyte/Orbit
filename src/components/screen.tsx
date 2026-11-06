@@ -297,7 +297,7 @@ export function SearchBar(props: TextInputProps) {
   );
 }
 
-/** The Trail logo, turning head-first. */
+/** The Trail logo in sand, turning head-first. */
 export function Loading() {
   const turn = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -306,7 +306,7 @@ export function Loading() {
     return () => loop.stop();
   }, [turn]);
   const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-  return <Animated.View accessibilityRole="progressbar" accessibilityLabel={t.loading} style={{ alignSelf: "center", transform: [{ rotate }] }}><Image source={require("../../assets/brand/icons/expo-splash-icon-1024.png")} style={{ width: 32, height: 32 }} /></Animated.View>;
+  return <Animated.View accessibilityRole="progressbar" accessibilityLabel={t.loading} style={{ alignSelf: "center", transform: [{ rotate }] }}><Image source={require("../../assets/brand/night/symbol-sand-1024.png")} style={{ width: 32, height: 32 }} /></Animated.View>;
 }
 
 export const ui = StyleSheet.create({

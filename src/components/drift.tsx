@@ -2,7 +2,7 @@ import Feather from "@expo/vector-icons/Feather";
 import { Link, router, type Href } from "expo-router";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import { createContext, useContext, useEffect, useState, type ComponentProps, type ReactNode } from "react";
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { AccessibilityInfo, Image, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { colors, fonts, labelCase, radius } from "@/components/theme";
 import { isArabic } from "@/lib/i18n";
 import { barHeights, ringRotations } from "@/lib/ring";
@@ -423,10 +423,11 @@ export function PageTitle({ children }: { children: string }) {
 }
 
 /** Round Orbit mark on an ink tile (sign in). */
+/** The Orbit Trail mark in sand, on a dark tile (sign-in). */
 export function Brand({ size = 56 }: { size?: number }) {
   return (
     <View style={{ width: size, height: size, borderRadius: size * 0.29, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" }} accessibilityRole="image" accessibilityLabel="Orbit">
-      <View style={{ width: size * 0.4, height: size * 0.4, borderRadius: size * 0.2, borderWidth: 3, borderColor: colors.accent }} />
+      <Image source={require("../../assets/brand/night/symbol-sand-1024.png")} style={{ width: size * 0.56, height: size * 0.56 }} />
     </View>
   );
 }
