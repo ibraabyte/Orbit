@@ -63,9 +63,9 @@
             {
               "name": "TodayWidget",
               "displayName": "Orbit Today",
-              "description": "Today's tasks and the next prayer · مهام اليوم والصلاة القادمة",
+              "description": "Your day on the rail: next prayers, tasks and meals · يومك على المسطرة: الصلوات والمهام والوجبات الجاية",
               "ios": {
-                "supportedFamilies": ["systemSmall", "systemMedium"],
+                "supportedFamilies": ["systemSmall", "systemMedium", "systemLarge"],
                 "initialLayout": "src/widgets/today-widget.tsx"
               },
               "android": null
