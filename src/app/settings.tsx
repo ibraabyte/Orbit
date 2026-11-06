@@ -1,5 +1,6 @@
+import * as Updates from "expo-updates";
 import { useEffect, useState } from "react";
-import { Alert, Pressable, Switch, Text, View } from "react-native";
+import { Alert, DevSettings, Pressable, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
 import { resyncWidget } from "@/hooks/use-widget-sync";
 import { Avatar, Card, Chevron, IconTile, ListRow, type } from "@/components/drift";
@@ -11,9 +12,10 @@ import { clearAskConsent, loadAskConsent } from "@/hooks/use-ask-consent";
 import { loadMorningSettings, saveMorningSettings } from "@/hooks/use-morning-brief";
 import { arePrayerAlertsEnabled, setPrayerAlertsEnabled } from "@/hooks/use-prayer-times";
 import { getApi, signOut } from "@/lib/backend";
-import { formatClock, t, toggleLanguage } from "@/lib/i18n";
+import { currentNumerals, formatClock, saveNumerals, t, toggleLanguage } from "@/lib/i18n";
 import { adminApi, type ServerSettings } from "@/lib/integrations";
 import { MORNING_DEFAULT, type MorningSettings } from "@/lib/morning-brief";
+import type { Numerals } from "@/lib/numerals";
 
 function Setting({ label, detail, children }: { label: string; detail?: string; children: React.ReactNode }) {
   return (
@@ -33,6 +35,7 @@ export default function Settings() {
   const [lock, setLock] = useState(true);
   const [prayers, setPrayers] = useState(true);
   const [morning, setMorning] = useState<MorningSettings>(MORNING_DEFAULT);
+  const [numerals, setNumerals] = useState<Numerals>(currentNumerals);
   // The AI the person agreed to send their data to for Ask Orbit; null when not agreed.
   const [askConsent, setAskConsent] = useState<string | null>(null);
   // Only the server's admin (the first account) sees the Server card.
@@ -88,6 +91,24 @@ export default function Settings() {
       options: Array.from({ length: 12 }, (_, index) => ({ hour: 5 + Math.floor(index / 2), minute: (index % 2) * 30 })).map(({ hour, minute }) => ({
         label: `${morning.hour === hour && morning.minute === minute ? "● " : "○ "}${clockAt(hour, minute)}`,
         run: () => void changeMorning({ ...morning, hour, minute })
+      }))
+    });
+
+  // Every screen already drawn holds its digits, so the app reloads to redraw them all. No reload (web): ask for a restart.
+  const changeNumerals = (next: Numerals) => {
+    if (next === numerals) return;
+    saveNumerals(next);
+    setNumerals(next);
+    if (__DEV__ && typeof DevSettings.reload === "function") return DevSettings.reload();
+    Updates.reloadAsync().catch(() => toast(t.restartForNumerals));
+  };
+  const numeralsLabel = { arab: t.numeralsArab, latn: t.numeralsLatn };
+  const pickNumerals = () =>
+    sheet({
+      title: t.numerals,
+      options: (["arab", "latn"] as const).map((choice) => ({
+        label: `${choice === numerals ? "● " : "○ "}${numeralsLabel[choice]}`,
+        run: () => changeNumerals(choice)
       }))
     });
 
@@ -149,6 +170,12 @@ export default function Settings() {
         >
           <Setting label={t.language}>
             <Text style={type.rowSubtitle}>{t.langLabel}</Text>
+            <Chevron />
+          </Setting>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel={`${t.numerals}, ${numeralsLabel[numerals]}`} onPress={pickNumerals}>
+          <Setting label={t.numerals}>
+            <Text style={type.rowSubtitle}>{numeralsLabel[numerals]}</Text>
             <Chevron />
           </Setting>
         </Pressable>

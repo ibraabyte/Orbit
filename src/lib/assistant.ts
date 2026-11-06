@@ -1,4 +1,5 @@
 import type { ApiClient } from "@/lib/api";
+import { digits } from "@/lib/i18n";
 import { parseNatural, naturalToCommand } from "@/lib/quick-add-input";
 import type { WeightUnit } from "@/lib/types";
 
@@ -130,14 +131,14 @@ function formatValue(value: unknown, locale: string): string {
   if (value === null) return "—";
   if (typeof value === "boolean") return value ? "✓" : "✗";
   if (Array.isArray(value)) return value.map((item) => formatValue(item, locale)).join(" · ");
-  if (typeof value === "number") return value.toLocaleString(locale);
+  if (typeof value === "number") return digits(value.toLocaleString(locale));
   if (typeof value === "string" && ISO_TIME.test(value)) {
     const at = new Date(value);
-    if (!Number.isNaN(at.getTime())) return at.toLocaleString(locale, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+    if (!Number.isNaN(at.getTime())) return digits(at.toLocaleString(locale, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }));
   }
   if (typeof value === "string" && ISO_DAY.test(value)) {
     const day = new Date(`${value}T12:00:00`);
-    if (!Number.isNaN(day.getTime())) return day.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    if (!Number.isNaN(day.getTime())) return digits(day.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short", year: "numeric" }));
   }
   return String(value);
 }

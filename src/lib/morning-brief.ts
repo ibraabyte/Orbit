@@ -2,6 +2,7 @@ import { ApiError } from "@/lib/api";
 import { overdueTasks, scheduledReminders, todaysTasks } from "@/lib/dashboard";
 import { isToday } from "@/lib/dates";
 import { overdueBills, upcomingBills } from "@/lib/finance";
+import { digits } from "@/lib/i18n";
 import { localDateKey } from "@/lib/insights";
 import type { DashboardData } from "@/lib/types";
 
@@ -85,10 +86,10 @@ export function morningLines(data: DashboardData, at: Date, labels: MorningLabel
   const bills = overdueBills(data.bills, at).length + upcomingBills(data.bills, 1, at).length;
   const first = due[0] ?? late[0];
   return [
-    due.length ? labels.tasks.replace("{n}", String(due.length)) : null,
-    late.length ? labels.overdue.replace("{n}", String(late.length)) : null,
-    reminders === 1 ? labels.reminder : reminders ? labels.reminders.replace("{n}", String(reminders)) : null,
-    bills === 1 ? labels.bill : bills ? labels.bills.replace("{n}", String(bills)) : null,
+    due.length ? labels.tasks.replace("{n}", digits(due.length)) : null,
+    late.length ? labels.overdue.replace("{n}", digits(late.length)) : null,
+    reminders === 1 ? labels.reminder : reminders ? labels.reminders.replace("{n}", digits(reminders)) : null,
+    bills === 1 ? labels.bill : bills ? labels.bills.replace("{n}", digits(bills)) : null,
     first && !hideTitles ? labels.first.replace("{title}", first.title) : null
   ].filter((line): line is string => Boolean(line));
 }

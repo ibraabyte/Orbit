@@ -1,5 +1,5 @@
 import type { ApiClient } from "@/lib/api";
-import { isArabic } from "@/lib/i18n";
+import { digits, isArabic } from "@/lib/i18n";
 
 // Exercise library from Orbit's server (free-exercise-db, public domain), fitted to your gym and injuries.
 // Shapes and lists mirror backend/app/routers/exercises.py and backend/app/models/fitness.py.
@@ -118,24 +118,24 @@ export function label(key: string | null | undefined) {
 
 const en = {
   exercises: "Exercises", gym: "My gym", injuries: "Injuries", searchExercises: "Search exercises", onlyMyGym: "Only my gym", showInjured: "Show injured", allMuscles: "All muscles", anyEquipment: "Any equipment", muscle: "Muscle",
-  results: (n: number) => `${n} exercise${n === 1 ? "" : "s"}`,
-  hiddenGym: (n: number) => `${n} need equipment your gym doesn't have`, hiddenInjury: (n: number) => `${n} hidden for your injuries`,
+  results: (n: number) => `${digits(n)} exercise${n === 1 ? "" : "s"}`,
+  hiddenGym: (n: number) => `${digits(n)} need equipment your gym doesn't have`, hiddenInjury: (n: number) => `${digits(n)} hidden for your injuries`,
   loadMore: "Show more", noMatches: "No exercises match. Try fewer filters.", setUpGym: "Pick your gym's equipment to see only what you can do there.", setUpGymAction: "Set up my gym",
   avoid: (areas: string) => `Works your injured ${areas}`, caution: (areas: string) => `Also loads your ${areas}. Go light.`,
   notInGym: "Your gym list doesn't have this equipment.", steps: "How to do it", primary: "Main muscles", secondary: "Also works", equipment: "Equipment", level: "Level", category: "Type",
-  gymHint: "Tick what your gym has. Bodyweight exercises always count.", gymSaved: "Gym saved", saveGym: "Save", gymCount: (n: number) => `${n} selected`,
+  gymHint: "Tick what your gym has. Bodyweight exercises always count.", gymSaved: "Gym saved", saveGym: "Save", gymCount: (n: number) => `${digits(n)} selected`,
   injuriesHint: "While an injury is active, exercises that mainly work it are hidden, and ones that also load it are marked.", addInjury: "Add injury", where: "Where", joints: "Joints and areas", muscles: "Muscles", notePh: "Note, e.g. pain on deep squats", since: "Since", active: "Active", healed: "Healed",
   markHealed: "Mark healed", reopen: "Hurts again", deleteInjury: "Delete", deleteInjuryTitle: "Delete this injury?", deleteInjuryBody: "It's removed from your history too.", noInjuries: "No injuries. Add one if something hurts.", photoCredit: "Photos and steps: free-exercise-db (public domain)", couldNotLoad: "Couldn't load exercises. Pull to try again."
 };
 
 const ar: typeof en = {
   exercises: "التمارين", gym: "ناديي", injuries: "الإصابات", searchExercises: "ابحث عن تمرين", onlyMyGym: "ناديي فقط", showInjured: "أظهر المتأثرة بالإصابة", allMuscles: "كل العضلات", anyEquipment: "أي أدوات", muscle: "العضلة",
-  results: (n: number) => `${n} تمرين`,
-  hiddenGym: (n: number) => `${n} تحتاج أدوات غير موجودة في ناديك`, hiddenInjury: (n: number) => `${n} مخفية بسبب إصاباتك`,
+  results: (n: number) => `${digits(n)} تمرين`,
+  hiddenGym: (n: number) => `${digits(n)} تحتاج أدوات غير موجودة في ناديك`, hiddenInjury: (n: number) => `${digits(n)} مخفية بسبب إصاباتك`,
   loadMore: "عرض المزيد", noMatches: "لا توجد تمارين مطابقة. خفف الفلاتر.", setUpGym: "اختر أدوات ناديك لتظهر لك التمارين الممكنة فيه فقط.", setUpGymAction: "إعداد ناديي",
   avoid: (areas: string) => `يشغّل منطقة الإصابة: ${areas}`, caution: (areas: string) => `يضغط أيضًا على: ${areas}. خفف الوزن.`,
   notInGym: "أدوات هذا التمرين ليست في قائمة ناديك.", steps: "طريقة الأداء", primary: "العضلات الأساسية", secondary: "يشغّل أيضًا", equipment: "الأدوات", level: "المستوى", category: "النوع",
-  gymHint: "حدد الموجود في ناديك. تمارين وزن الجسم محسوبة دائمًا.", gymSaved: "تم حفظ النادي", saveGym: "حفظ", gymCount: (n: number) => `${n} محدد`,
+  gymHint: "حدد الموجود في ناديك. تمارين وزن الجسم محسوبة دائمًا.", gymSaved: "تم حفظ النادي", saveGym: "حفظ", gymCount: (n: number) => `${digits(n)} محدد`,
   injuriesHint: "ما دامت الإصابة نشطة، تختفي التمارين التي تشغّلها بشكل أساسي، وتتعلّم التي تضغط عليها جزئيًا.", addInjury: "إضافة إصابة", where: "المكان", joints: "المفاصل والمناطق", muscles: "العضلات", notePh: "ملاحظة، مثل: ألم مع السكوات العميق", since: "منذ", active: "نشطة", healed: "تعافيت",
   markHealed: "تعافيت", reopen: "رجع الألم", deleteInjury: "حذف", deleteInjuryTitle: "حذف هذه الإصابة؟", deleteInjuryBody: "ستُحذف من السجل أيضًا.", noInjuries: "لا توجد إصابات. أضف واحدة إذا شيء يوجعك.", photoCredit: "الصور والخطوات: free-exercise-db (ملكية عامة)", couldNotLoad: "تعذر تحميل التمارين. اسحب للمحاولة مرة أخرى."
 };

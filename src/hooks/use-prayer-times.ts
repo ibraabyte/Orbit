@@ -2,6 +2,7 @@ import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useMemo, useState } from "react";
+import { formatClock } from "@/lib/i18n";
 import { prayerTimesFor, RIYADH, upcomingPrayers, type PrayerPlace, type PrayerTime } from "@/lib/prayer-times";
 
 const PRAYER_ALERTS_KEY = "orbit.prayer-alerts";
@@ -37,7 +38,7 @@ async function schedulePrayerAlerts(place?: PrayerPlace) {
   for (const prayer of upcomingPrayers(place ?? (await currentPlace()), new Date(), 2)) {
     await Notifications.scheduleNotificationAsync({
       identifier: `prayer-${prayer.name}-${prayer.at.toISOString()}`,
-      content: { title: `حان وقت صلاة ${prayer.label}`, body: prayer.at.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) },
+      content: { title: `حان وقت صلاة ${prayer.label}`, body: formatClock(prayer.at) },
       trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: prayer.at }
     });
   }

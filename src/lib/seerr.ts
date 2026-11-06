@@ -1,5 +1,5 @@
 import type { ApiClient } from "@/lib/api";
-import { isArabic } from "@/lib/i18n";
+import { digits, isArabic } from "@/lib/i18n";
 
 // Seerr (Overseerr / Jellyseerr) API client and the pieces the Movies & TV screens build on. Same /api/v1 for all.
 // The server URL and API key are entered in the app once and kept, encrypted, on Orbit's server for this account.
@@ -275,13 +275,13 @@ export function factLine(details: SeerrDetails) {
   return [
     details.mediaType === "tv" ? mt.series : mt.movie,
     seerrYear(details) || null,
-    details.mediaType === "tv" && details.numberOfSeasons ? `${details.numberOfSeasons} ${details.numberOfSeasons === 1 ? mt.season : mt.seasons}` : null,
+    details.mediaType === "tv" && details.numberOfSeasons ? `${digits(details.numberOfSeasons)} ${details.numberOfSeasons === 1 ? mt.season : mt.seasons}` : null,
     runtimeLabel(runtime),
-    details.voteAverage ? `★ ${details.voteAverage.toFixed(1)}` : null
+    details.voteAverage ? `★ ${digits(details.voteAverage.toFixed(1))}` : null
   ].filter((part): part is string => Boolean(part));
 }
 
-const money = (value: number) => `$${value >= 1e9 ? `${(value / 1e9).toFixed(1)}B` : value >= 1e6 ? `${Math.round(value / 1e6)}M` : value.toLocaleString("en")}`;
+const money = (value: number) => digits(`$${value >= 1e9 ? `${(value / 1e9).toFixed(1)}B` : value >= 1e6 ? `${Math.round(value / 1e6)}M` : value.toLocaleString("en")}`);
 
 function languageName(code: string | undefined) {
   if (!code) return null;
@@ -409,7 +409,7 @@ const en = {
   requestMore: "Request more seasons",
   requestSeasons: "Request seasons",
   requestAll: "All seasons",
-  requestPicked: (count: number) => (count === 1 ? "Request 1 season" : `Request ${count} seasons`),
+  requestPicked: (count: number) => (count === 1 ? "Request 1 season" : `Request ${digits(count)} seasons`),
   pickSeasons: "Pick the seasons to ask for.",
   requestedOk: "Requested",
   cancelRequest: "Cancel my request",
@@ -424,7 +424,7 @@ const en = {
   overview: "Overview",
   cast: "Cast",
   seasonsTitle: "Seasons",
-  episodes: (count: number) => (count === 1 ? "1 episode" : `${count} episodes`),
+  episodes: (count: number) => (count === 1 ? "1 episode" : `${digits(count)} episodes`),
   noEpisodes: "No episode list yet.",
   recommended: "Recommended",
   similar: "Similar",
@@ -433,7 +433,7 @@ const en = {
   tmdb: "TMDB",
   critics: "Critics",
   audience: "Audience",
-  votes: (count: number) => `${count.toLocaleString("en")} votes`,
+  votes: (count: number) => `${digits(count.toLocaleString("en"))} votes`,
   requestedBy: "Requested by",
   seasonsAsked: (list: string) => `Seasons ${list}`,
   fourK: "4K",
@@ -478,7 +478,7 @@ const ar: typeof en = {
   requestMore: "اطلب مواسم أخرى",
   requestSeasons: "اطلب مواسم",
   requestAll: "كل المواسم",
-  requestPicked: (count: number) => (count === 1 ? "اطلب موسمًا واحدًا" : `اطلب ${count} مواسم`),
+  requestPicked: (count: number) => (count === 1 ? "اطلب موسمًا واحدًا" : `اطلب ${digits(count)} مواسم`),
   pickSeasons: "اختر المواسم اللي تبيها.",
   requestedOk: "انطلب",
   cancelRequest: "ألغِ طلبي",
@@ -493,7 +493,7 @@ const ar: typeof en = {
   overview: "القصة",
   cast: "الممثلون",
   seasonsTitle: "المواسم",
-  episodes: (count: number) => (count === 1 ? "حلقة واحدة" : `${count} حلقة`),
+  episodes: (count: number) => (count === 1 ? "حلقة واحدة" : `${digits(count)} حلقة`),
   noEpisodes: "لا توجد قائمة حلقات بعد.",
   recommended: "ننصحك فيه",
   similar: "مشابه",
@@ -502,7 +502,7 @@ const ar: typeof en = {
   tmdb: "TMDB",
   critics: "النقاد",
   audience: "الجمهور",
-  votes: (count: number) => `${count.toLocaleString("en")} صوت`,
+  votes: (count: number) => `${digits(count.toLocaleString("en"))} صوت`,
   requestedBy: "طلبه",
   seasonsAsked: (list: string) => `المواسم ${list}`,
   fourK: "4K",

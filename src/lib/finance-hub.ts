@@ -1,5 +1,5 @@
 import { budgetProgress, monthKey, type BudgetState } from "@/lib/finance";
-import { isArabic } from "@/lib/i18n";
+import { digits, isArabic } from "@/lib/i18n";
 import type { Budget, Expense, PaymentCard } from "@/lib/types";
 import { cardExpiryState } from "@/lib/wealth";
 
@@ -20,11 +20,11 @@ const en = {
   investmentsDetail: "Funds, stocks, sukuk, gold",
   cardsDetail: "Last 4 digits and what each one pays",
   obligationsDetail: "What's paid and what's left",
-  overdue: (n: number) => `${n} overdue`,
-  due: (n: number) => `${n} due`,
-  subs: (n: number) => `${n} subscriptions`,
-  cardsCount: (n: number) => `${n} cards`,
-  cardsExpiring: (n: number) => `${n} expiring`,
+  overdue: (n: number) => `${digits(n)} overdue`,
+  due: (n: number) => `${digits(n)} due`,
+  subs: (n: number) => `${digits(n)} subscriptions`,
+  cardsCount: (n: number) => `${digits(n)} cards`,
+  cardsExpiring: (n: number) => `${digits(n)} expiring`,
   show: "Show",
   hide: "Hide"
 };
@@ -43,11 +43,11 @@ const ar: typeof en = {
   investmentsDetail: "الصناديق والأسهم والصكوك والذهب",
   cardsDetail: "آخر ٤ أرقام ووش ينخصم على كل وحدة",
   obligationsDetail: "المدفوع والمتبقي",
-  overdue: (n: number) => `${n} متأخرة`,
-  due: (n: number) => `${n} قادمة`,
-  subs: (n: number) => `${n} اشتراك`,
-  cardsCount: (n: number) => `${n} بطاقات`,
-  cardsExpiring: (n: number) => `${n} تنتهي قريب`,
+  overdue: (n: number) => `${digits(n)} متأخرة`,
+  due: (n: number) => `${digits(n)} قادمة`,
+  subs: (n: number) => `${digits(n)} اشتراك`,
+  cardsCount: (n: number) => `${digits(n)} بطاقات`,
+  cardsExpiring: (n: number) => `${digits(n)} تنتهي قريب`,
   show: "عرض",
   hide: "إخفاء"
 };
