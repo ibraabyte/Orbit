@@ -1,3 +1,4 @@
+import { digits } from "@/lib/i18n";
 import { localDateKey } from "@/lib/insights";
 import type { DashboardData } from "@/lib/types";
 
@@ -24,11 +25,13 @@ export function calendarRange(days: number, now = new Date()) {
     date.setDate(date.getDate() + index);
     return {
       date: localDateKey(date),
-      label: new Intl.DateTimeFormat(undefined, {
-        weekday: "short",
-        month: "short",
-        day: "numeric"
-      }).format(date)
+      label: digits(
+        new Intl.DateTimeFormat(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric"
+        }).format(date)
+      )
     };
   });
 }

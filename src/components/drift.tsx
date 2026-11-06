@@ -4,7 +4,7 @@ import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "ex
 import { createContext, useContext, useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { colors, fonts, labelCase, radius } from "@/components/theme";
-import { isArabic } from "@/lib/i18n";
+import { digits, isArabic } from "@/lib/i18n";
 import { barHeights, ringRotations } from "@/lib/ring";
 
 // Refined's building blocks. Icons are Feather. Layout flips by itself in RTL; only
@@ -143,7 +143,7 @@ export function ListRow({
           </View>
         ) : null}
       </View>
-      {meta ? <Text style={type.rowValue}>{meta}</Text> : null}
+      {meta ? <Text style={type.rowValue}>{digits(meta)}</Text> : null}
       {trailing}
       {chevron || href ? <Chevron /> : null}
     </View>
@@ -202,7 +202,7 @@ export function Badge({ tone = "neutral", glyph, children }: { tone?: BadgeTone;
     <View style={[styles.badge, { backgroundColor, borderColor }]}>
       <Text style={[type.badge, { color }]} numberOfLines={1}>
         {glyph ? `${glyph} ` : ""}
-        {children}
+        {digits(children)}
       </Text>
     </View>
   );
@@ -228,7 +228,7 @@ export function StatTile({ label, value, unit, color = colors.ink, href, alert, 
   const body = (
     <View style={styles.tile}>
       <Text style={[type.stat, { color, fontSize: size }]} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
+        {digits(value)}
         {unit ? <Text style={type.hint}> {unit}</Text> : null}
       </Text>
       <Text style={type.tileLabel}>{label}</Text>
@@ -276,7 +276,7 @@ export function Metric({ label, value, unit, onLime }: { label: string; value: s
     <View style={{ gap: 1 }}>
       <Text style={[type.tileLabel, onLime && { color: colors.accentMuted }]}>{label}</Text>
       <Text style={[type.metric, onLime && { color: colors.heroInk }]}>
-        {value}
+        {digits(value)}
         {unit ? <Text style={[type.hint, onLime && { color: colors.accentMuted }]}> {unit}</Text> : null}
       </Text>
     </View>
@@ -321,8 +321,8 @@ export function RingGauge({
         </View>
       </View>
       <View style={[styles.ringHole, { top: thickness, left: thickness, right: thickness, bottom: thickness, borderRadius: half - thickness, backgroundColor: hole }]}>
-        {label ? <Text style={{ fontFamily: fonts.bold, fontSize: size * 0.22, color: labelColor }}>{label}</Text> : null}
-        {sublabel ? <Text style={{ fontFamily: fonts.medium, fontSize: 10, color: labelColor }}>{sublabel}</Text> : null}
+        {label ? <Text style={{ fontFamily: fonts.bold, fontSize: size * 0.22, color: labelColor }}>{digits(label)}</Text> : null}
+        {sublabel ? <Text style={{ fontFamily: fonts.medium, fontSize: 10, color: labelColor }}>{digits(sublabel)}</Text> : null}
       </View>
     </View>
   );
@@ -344,8 +344,8 @@ export function GoalBar({ label, value, goal, percent, color }: { label: string;
       <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
         <Text style={type.barLabel}>{label}</Text>
         <Text style={type.barValue}>
-          {value}
-          {goal ? <Text style={type.rowSubtitle}> / {goal}</Text> : null}
+          {digits(value)}
+          {goal ? <Text style={type.rowSubtitle}> / {digits(goal)}</Text> : null}
         </Text>
       </View>
       <ProgressBar value={percent} color={color} />
@@ -361,7 +361,7 @@ export function TrendBars({ values, labels, height = 80, label, color = colors.a
       {heights.map((pct, index) => (
         <View key={index} style={{ flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center", gap: 3 }}>
           <View style={{ width: "100%", flexShrink: 1, height: `${pct}%`, minHeight: 2, borderTopLeftRadius: 3, borderTopRightRadius: 3, backgroundColor: index === highlight ? colors.ink : color }} />
-          {labels ? <Text style={type.axis}>{labels[index]}</Text> : null}
+          {labels ? <Text style={type.axis}>{digits(labels[index])}</Text> : null}
         </View>
       ))}
     </View>

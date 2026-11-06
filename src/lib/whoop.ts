@@ -1,4 +1,5 @@
 import type { ApiClient } from "@/lib/api";
+import { digits } from "@/lib/i18n";
 import type { AiChoiceName } from "@/lib/integrations";
 
 // Same names as the tones in components/screen.tsx.
@@ -120,18 +121,18 @@ export function zoneFor(score: number | null | undefined): WhoopDay["recovery_zo
 export function formatHours(hours: number | null | undefined) {
   if (hours === null || hours === undefined) return "-";
   const minutes = Math.round(hours * 60);
-  return `${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`;
+  return digits(`${Math.floor(minutes / 60)}h ${String(minutes % 60).padStart(2, "0")}m`);
 }
 
 export const metricLabels: Record<WhoopMetricKey, { label: string; format: (value: number) => string }> = {
-  recovery: { label: "Recovery", format: (v) => `${Math.round(v)}%` },
-  hrv: { label: "HRV", format: (v) => `${Math.round(v)} ms` },
-  resting_hr: { label: "Resting HR", format: (v) => `${Math.round(v)} bpm` },
-  strain: { label: "Strain", format: (v) => v.toFixed(1) },
+  recovery: { label: "Recovery", format: (v) => digits(`${Math.round(v)}%`) },
+  hrv: { label: "HRV", format: (v) => digits(`${Math.round(v)} ms`) },
+  resting_hr: { label: "Resting HR", format: (v) => digits(`${Math.round(v)} bpm`) },
+  strain: { label: "Strain", format: (v) => digits(v.toFixed(1)) },
   sleep_hours: { label: "Sleep", format: (v) => formatHours(v) },
-  sleep_performance: { label: "Sleep performance", format: (v) => `${Math.round(v)}%` },
-  sleep_efficiency: { label: "Sleep efficiency", format: (v) => `${Math.round(v)}%` },
-  respiratory_rate: { label: "Respiratory rate", format: (v) => `${v.toFixed(1)} rpm` }
+  sleep_performance: { label: "Sleep performance", format: (v) => digits(`${Math.round(v)}%`) },
+  sleep_efficiency: { label: "Sleep efficiency", format: (v) => digits(`${Math.round(v)}%`) },
+  respiratory_rate: { label: "Respiratory rate", format: (v) => digits(`${v.toFixed(1)} rpm`) }
 };
 
 // "+6% vs prior week" with a tone: green when it moved the good way, red the bad way, grey when it's context.

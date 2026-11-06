@@ -1,4 +1,4 @@
-import { isArabic } from "@/lib/i18n";
+import { digits, isArabic } from "@/lib/i18n";
 import type { Capture } from "@/lib/types";
 import { sourceLabel } from "@/lib/url";
 
@@ -43,7 +43,7 @@ const en = {
   notALink: "That doesn't look like a web link.",
   connectAi: "Connect an AI in Integrations to get summaries.",
   sharedHint: "From the share sheet",
-  count: (n: number) => `${n} saved`
+  count: (n: number) => `${digits(n)} saved`
 };
 
 const ar: typeof en = {
@@ -76,7 +76,7 @@ const ar: typeof en = {
   notALink: "هذا ما يبدو رابط.",
   connectAi: "اربط ذكاء اصطناعي من التكاملات عشان يطلع لك ملخص.",
   sharedHint: "من المشاركة",
-  count: (n: number) => `${n} محفوظ`
+  count: (n: number) => `${digits(n)} محفوظ`
 };
 
 export const st = isArabic ? ar : en;

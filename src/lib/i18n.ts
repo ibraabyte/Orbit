@@ -1,5 +1,7 @@
 import Constants, { ExecutionEnvironment } from "expo-constants";
+import * as SecureStore from "expo-secure-store";
 import { DevSettings, I18nManager } from "react-native";
+import { isNumerals, toNumerals, type Numerals } from "@/lib/numerals";
 
 // The app's language is its layout direction: forceRTL survives restarts natively and
 // can be read synchronously here, so strings and fonts are fixed before any style is built.
@@ -43,7 +45,7 @@ const en = {
   registration: "Registration", insurance: "Insurance", inspection: "Inspection", oilChange: "Oil change", daysLeft: "days left", daysOverdue: "days overdue", notSet: "Not set", renewedToday: "Renewed today", enterDate: "Enter date", odometer: "Odometer", oilAt: "Oil due at", addCar: "Add a car", km: "km", carMake: "Make", carModel: "Model", carYear: "Year", plateOptional: "Plate number (optional)", odometerOptional: "Odometer in km (optional)",
   seerrConnect: "Connect to Seerr", seerrHint: "Orbit keeps the key encrypted on its server, for your account only.", integrations: "Integrations", integrationsDetail: "WHOOP, Seerr and AI, for your account", serverCard: "Server", serverOnlyYou: "You run this Orbit server. Only you see this.", allowSignups: "Allow new sign-ups", signupsForced: "Kept open by the server's ORBIT_ALLOW_SIGNUPS setting", signupsOpen: "Anyone with the app can create an account", signupsClosed: "Only existing accounts can sign in", changeFailed: "Couldn't change it", serverUrl: "Server URL", apiKey: "API key", trending: "Trending", results: "Results", request: "Request", requested: "Requested", available: "Available", watching: "Watching now", wantToWatch: "Want to watch", nextEp: "Next episode", nextSeason: "Next season", finished: "Finished", remove: "Remove", pending: "Awaiting my approval", approve: "Approve", decline: "Decline", searchMedia: "Search movies & TV", movie: "Movie", series: "TV", watched: "Watched", seasonsShort: "seasons", minutesShort: "min", details: "Details",
   up: "Up", down: "Down", addServer: "Add server", serverName: "Name", checkedOnOpen: "Checked while the app is open", delete: "Delete", add: "Add",
-  faceId: "Lock with Face ID", prayerAlerts: "Prayer alerts", prayerSource: "Umm al-Qura", language: "Language · اللغة", langLabel: "العربية", restartForLanguage: "Close and reopen Orbit to switch language.", languageNeedsBuild: "Switching language needs the installed app, not Expo Go.", signOut: "Sign out", signIn: "Sign in", authTagline: "Your whole day, on one rail.", showPassword: "Show password", hidePassword: "Hide password", signUp: "Create account", email: "Email", password: "Password", confirm: "Confirm password", nameOpt: "Name (optional)", noAccount: "No account?", haveAccount: "Have an account?", locked: "Orbit is locked", unlock: "Unlock with Face ID", signInFailed: "Sign in failed", signUpFailed: "Sign up failed", continueWithGoogle: "Continue with Google", googleClosed: "This Google account has no Orbit account, and new sign-ups are closed.", googleUnverified: "Google hasn't verified this account's email.", checkForm: "Check the form", tryAgain: "Try again.",
+  numerals: "Numbers", numeralsArab: "Arabic ٠١٢٣", numeralsLatn: "English 0123", restartForNumerals: "Close Orbit and open it again to see the new numbers everywhere.", faceId: "Lock with Face ID", prayerAlerts: "Prayer alerts", prayerSource: "Umm al-Qura", language: "Language · اللغة", langLabel: "العربية", restartForLanguage: "Close and reopen Orbit to switch language.", languageNeedsBuild: "Switching language needs the installed app, not Expo Go.", signOut: "Sign out", signIn: "Sign in", authTagline: "Your whole day, on one rail.", showPassword: "Show password", hidePassword: "Hide password", signUp: "Create account", email: "Email", password: "Password", confirm: "Confirm password", nameOpt: "Name (optional)", noAccount: "No account?", haveAccount: "Have an account?", locked: "Orbit is locked", unlock: "Unlock with Face ID", signInFailed: "Sign in failed", signUpFailed: "Sign up failed", continueWithGoogle: "Continue with Google", googleClosed: "This Google account has no Orbit account, and new sign-ups are closed.", googleUnverified: "Google hasn't verified this account's email.", checkForm: "Check the form", tryAgain: "Try again.",
   loading: "Loading", offline: "Offline · showing saved data", error: "Couldn't reach the server", emptyEx: "Nothing here yet. Try:", min: "min", kcal: "kcal", couldNotAdd: "Could not add",
   budget: "Budget", budgetEmpty: "No limits for this month yet. Add one per category.", budgetAdd: "Add limit", budgetChange: "Change limit", budgetPickCategory: "Choose a category", budgetAmount: "Monthly limit", budgetCopy: "Copy last month's limits", budgetCopied: "Limits copied", budgetSaved: "Limit saved", budgetFailed: "Could not save the limit", budgetDeleted: "Limit deleted", budgetAllSet: "Every category already has a limit.", budgetPrevMonth: "Previous month", budgetNextMonth: "Next month", budgetStateOk: "On track", budgetStateNear: "Near the limit", budgetStateOver: "Over budget", budgetLeft: "left", budgetOverBy: "over", budgetUsed: "used", budgetAlertNear: "80% of this month's limit is used", budgetAlertOver: "This month's limit is passed",
   morningBrief: "Morning brief", morningBriefWriting: "Writing your brief…", morningBriefFailed: "The brief could not be written.", morningBriefRetry: "Try again", morningBriefNoAi: "Connect your AI to get a written brief. Here is the quick review for now.", morningBriefConnect: "Connect AI", morningBriefAllow: "Review and allow", morningBriefConsent: "Allow Orbit to send your day to your AI to get a written brief. Here is the quick review for now.",
@@ -105,7 +107,7 @@ const ar: typeof en = {
   registration: "الاستمارة", insurance: "التأمين", inspection: "الفحص", oilChange: "تغيير الزيت", daysLeft: "يوم متبقٍ", daysOverdue: "يوم تأخير", notSet: "غير محدد", renewedToday: "جددت اليوم", enterDate: "إدخال تاريخ", odometer: "العداد", oilAt: "الزيت عند", addCar: "إضافة سيارة", km: "كم", carMake: "الشركة", carModel: "الموديل", carYear: "السنة", plateOptional: "رقم اللوحة (اختياري)", odometerOptional: "العداد بالكيلومتر (اختياري)",
   seerrConnect: "الربط بسيرفر Seerr", seerrHint: "يحفظ Orbit المفتاح مشفرًا على سيرفره، لحسابك فقط.", integrations: "الربط", integrationsDetail: "WHOOP وSeerr والذكاء الاصطناعي، لحسابك", serverCard: "السيرفر", serverOnlyYou: "أنت تدير سيرفر Orbit هذا، وهذا القسم يظهر لك فقط.", allowSignups: "السماح بالتسجيل الجديد", signupsForced: "مفتوح بإعداد ORBIT_ALLOW_SIGNUPS في السيرفر", signupsOpen: "أي شخص لديه التطبيق يقدر ينشئ حسابًا", signupsClosed: "الحسابات الحالية فقط تقدر تدخل", changeFailed: "تعذّر التغيير", serverUrl: "رابط السيرفر", apiKey: "مفتاح API", trending: "رائج", results: "النتائج", request: "اطلب", requested: "مطلوب", available: "متوفر", watching: "أشاهده الآن", wantToWatch: "أريد مشاهدته", nextEp: "الحلقة التالية", nextSeason: "الموسم التالي", finished: "انتهيت", remove: "حذف", pending: "تنتظر موافقتي", approve: "موافقة", decline: "رفض", searchMedia: "ابحث عن فيلم أو مسلسل", movie: "فيلم", series: "مسلسل", watched: "شاهدته", seasonsShort: "مواسم", minutesShort: "د", details: "التفاصيل",
   up: "يعمل", down: "متوقف", addServer: "إضافة سيرفر", serverName: "الاسم", checkedOnOpen: "يُفحص أثناء فتح التطبيق", delete: "حذف", add: "إضافة",
-  faceId: "القفل بـ Face ID", prayerAlerts: "تنبيهات الصلاة", prayerSource: "أم القرى", language: "Language · اللغة", langLabel: "English", restartForLanguage: "أغلق Orbit وافتحه لتبديل اللغة.", languageNeedsBuild: "تبديل اللغة يحتاج التطبيق المثبّت، لا Expo Go.", signOut: "تسجيل الخروج", signIn: "تسجيل الدخول", authTagline: "يومك كله على مسطرة واحدة.", showPassword: "إظهار كلمة المرور", hidePassword: "إخفاء كلمة المرور", signUp: "إنشاء حساب", email: "البريد", password: "كلمة المرور", confirm: "تأكيد كلمة المرور", nameOpt: "الاسم (اختياري)", noAccount: "ما عندك حساب؟", haveAccount: "عندك حساب؟", locked: "Orbit مقفل", unlock: "افتح بـ Face ID", signInFailed: "تعذر تسجيل الدخول", signUpFailed: "تعذر إنشاء الحساب", continueWithGoogle: "المتابعة مع Google", googleClosed: "حساب Google هذا ليس له حساب في Orbit، والتسجيل الجديد مغلق.", googleUnverified: "لم يتحقق Google من بريد هذا الحساب.", checkForm: "راجع البيانات", tryAgain: "حاول مرة أخرى.",
+  numerals: "الأرقام", numeralsArab: "عربية ٠١٢٣", numeralsLatn: "إنجليزية 0123", restartForNumerals: "اقفل Orbit وافتحه من جديد عشان تظهر الأرقام الجديدة في كل مكان.", faceId: "القفل بـ Face ID", prayerAlerts: "تنبيهات الصلاة", prayerSource: "أم القرى", language: "Language · اللغة", langLabel: "English", restartForLanguage: "أغلق Orbit وافتحه لتبديل اللغة.", languageNeedsBuild: "تبديل اللغة يحتاج التطبيق المثبّت، لا Expo Go.", signOut: "تسجيل الخروج", signIn: "تسجيل الدخول", authTagline: "يومك كله على مسطرة واحدة.", showPassword: "إظهار كلمة المرور", hidePassword: "إخفاء كلمة المرور", signUp: "إنشاء حساب", email: "البريد", password: "كلمة المرور", confirm: "تأكيد كلمة المرور", nameOpt: "الاسم (اختياري)", noAccount: "ما عندك حساب؟", haveAccount: "عندك حساب؟", locked: "Orbit مقفل", unlock: "افتح بـ Face ID", signInFailed: "تعذر تسجيل الدخول", signUpFailed: "تعذر إنشاء الحساب", continueWithGoogle: "المتابعة مع Google", googleClosed: "حساب Google هذا ليس له حساب في Orbit، والتسجيل الجديد مغلق.", googleUnverified: "لم يتحقق Google من بريد هذا الحساب.", checkForm: "راجع البيانات", tryAgain: "حاول مرة أخرى.",
   loading: "جارٍ التحميل", offline: "بدون إنترنت · بيانات محفوظة", error: "تعذر الوصول للسيرفر", emptyEx: "لا شيء هنا بعد. جرّب:", min: "د", kcal: "سعرة", couldNotAdd: "تعذرت الإضافة",
   budget: "الميزانية", budgetEmpty: "لا حدود لهذا الشهر بعد. أضف حدًا لكل فئة.", budgetAdd: "إضافة حد", budgetChange: "تعديل الحد", budgetPickCategory: "اختر فئة", budgetAmount: "الحد الشهري", budgetCopy: "نسخ حدود الشهر السابق", budgetCopied: "تم نسخ الحدود", budgetSaved: "تم حفظ الحد", budgetFailed: "تعذر حفظ الحد", budgetDeleted: "تم حذف الحد", budgetAllSet: "كل الفئات لها حد بالفعل.", budgetPrevMonth: "الشهر السابق", budgetNextMonth: "الشهر التالي", budgetStateOk: "ضمن الحد", budgetStateNear: "قريب من الحد", budgetStateOver: "تجاوزت الميزانية", budgetLeft: "متبقي", budgetOverBy: "زيادة", budgetUsed: "مستخدم", budgetAlertNear: "استخدمت ٨٠٪ من حد هذا الشهر", budgetAlertOver: "تجاوزت حد هذا الشهر",
   morningBrief: "ملخص الصباح", morningBriefWriting: "جارٍ كتابة ملخصك…", morningBriefFailed: "تعذّرت كتابة الملخص.", morningBriefRetry: "حاول مرة أخرى", morningBriefNoAi: "اربط الذكاء الاصطناعي لتحصل على ملخص مكتوب. هذه مراجعة سريعة الآن.", morningBriefConnect: "ربط الذكاء الاصطناعي", morningBriefAllow: "مراجعة والسماح", morningBriefConsent: "اسمح لـ Orbit بإرسال يومك إلى ذكائك الاصطناعي لتحصل على ملخص مكتوب. هذه مراجعة سريعة الآن.",
@@ -134,15 +136,46 @@ export const t = isArabic ? ar : en;
 // Tap to start a line with the right word; the parser does the rest.
 export const captureStarters = isArabic ? ["صرفت ", "نمت ", "تمرين ", "وزني ", "اشتري ", "ملاحظة "] : ["spent ", "slept ", "workout ", "weight ", "buy ", "note "];
 
-// Gregorian in both languages; Arabic keeps Arabic digits.
+// Gregorian in both languages. Digits follow the numerals setting, not the language.
 const locale = isArabic ? "ar-SA-u-ca-gregory" : "en-GB";
+
+const NUMERALS_KEY = "orbit.numerals";
+/** What each language used before the setting existed: Arabic digits in Arabic, Western in English. */
+export const defaultNumerals: Numerals = isArabic ? "arab" : "latn";
+
+// Read synchronously so the first frame already has the right digits. Locked keychain or web: the default.
+function savedNumerals(): Numerals {
+  try {
+    const saved = SecureStore.getItem(NUMERALS_KEY);
+    return isNumerals(saved) ? saved : defaultNumerals;
+  } catch {
+    return defaultNumerals;
+  }
+}
+
+let numerals: Numerals = savedNumerals();
+
+export const currentNumerals = () => numerals;
+
+/** Saves the choice. Screens already drawn keep their digits until the app reloads. */
+export function saveNumerals(next: Numerals) {
+  numerals = next;
+  try {
+    SecureStore.setItem(NUMERALS_KEY, next);
+  } catch {
+    // Nowhere to keep it (web preview): it lasts until the app closes.
+  }
+}
+
+/** The one place every shown number passes through: writes its digits with the chosen numerals. */
+export const digits = (value: string | number) => toNumerals(String(value), numerals);
 
 export function formatDate(value: string | number | Date, options: Intl.DateTimeFormatOptions = { day: "numeric", month: "short" }) {
   // en-GB for day-before-month, but clocks read 2:58 PM as in the design.
-  return new Intl.DateTimeFormat(locale, options.hour ? { hour12: true, ...options } : options).format(new Date(value)).replace(/\b(am|pm)\b/, (period) => period.toUpperCase());
+  return digits(new Intl.DateTimeFormat(locale, options.hour ? { hour12: true, ...options } : options).format(new Date(value)).replace(/\b(am|pm)\b/, (period) => period.toUpperCase()));
 }
 
-export const formatNumber = (value: number) => new Intl.NumberFormat(locale).format(value);
+export const formatNumber = (value: number) => digits(new Intl.NumberFormat(locale).format(value));
 
 /** "in 42 min" / "بعد ٤٢ دقيقة". */
 export function formatIn(minutes: number) {
@@ -150,7 +183,7 @@ export function formatIn(minutes: number) {
   const hours = Math.floor(minutes / 60);
   const rest = minutes % 60;
   if (isArabic) return `بعد ${hours ? `${number(hours)} س ` : ""}${number(rest)} دقيقة`;
-  return `in ${hours ? `${hours}h ` : ""}${rest} min`;
+  return `in ${hours ? `${number(hours)}h ` : ""}${number(rest)} min`;
 }
 
 export const formatClock = (value: string | number | Date) => formatDate(value, { hour: "numeric", minute: "2-digit" });

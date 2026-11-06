@@ -10,7 +10,7 @@ import { BleedRow, Button, ErrorState, Input, Loading, Screen, SearchBar, Segmen
 import { colors, radius } from "@/components/theme";
 import { ApiError } from "@/lib/api";
 import { getApi } from "@/lib/backend";
-import { isArabic } from "@/lib/i18n";
+import { digits, isArabic } from "@/lib/i18n";
 import {
   categoryCounts,
   categoryLabel,
@@ -225,7 +225,7 @@ export default function Saver() {
         <Chip label={st.all} on={category === null} onPress={() => setCategory(null)} />
         {categories.map((name) => {
           const count = counts.get(name);
-          return <Chip key={name} label={count ? `${categoryLabel(name)} ${count}` : categoryLabel(name)} on={category === name} onPress={() => setCategory(category === name ? null : name)} />;
+          return <Chip key={name} label={count ? `${categoryLabel(name)} ${digits(count)}` : categoryLabel(name)} on={category === name} onPress={() => setCategory(category === name ? null : name)} />;
         })}
         <Chip label={st.newCategory} icon="plus" on={false} onPress={() => setNaming({ forId: null, name: "" })} />
       </BleedRow>

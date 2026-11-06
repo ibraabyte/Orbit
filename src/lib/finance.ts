@@ -1,3 +1,4 @@
+import { digits } from "@/lib/i18n";
 import { localDateKey, localDayOf, lastDays, type DailyMetric } from "@/lib/insights";
 import type { Bill, BillRecurrence, Budget, DashboardData, Expense, FinanceCategory } from "@/lib/types";
 
@@ -29,13 +30,15 @@ export function normalizeCurrency(value: string) {
 
 export function formatMoney(amount: number, currency = "USD") {
   try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: normalizeCurrency(currency),
-      maximumFractionDigits: amount % 1 === 0 ? 0 : 2
-    }).format(amount);
+    return digits(
+      new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: normalizeCurrency(currency),
+        maximumFractionDigits: amount % 1 === 0 ? 0 : 2
+      }).format(amount)
+    );
   } catch {
-    return `${normalizeCurrency(currency)} ${amount.toFixed(2)}`;
+    return `${normalizeCurrency(currency)} ${digits(amount.toFixed(2))}`;
   }
 }
 
