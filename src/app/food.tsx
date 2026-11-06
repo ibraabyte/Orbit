@@ -80,7 +80,9 @@ export default function Food() {
                 {eaten <= target ? `${target - eaten} ${t.kcal} ${t.left}` : `${eaten - target} ${t.kcal} ${t.over}`}
               </Text>
             ) : (
-              <Text style={type.rowSubtitle}>{t.noTarget}</Text>
+              <Pressable onPress={() => router.push("/health-goals")} accessibilityRole="link" hitSlop={8}>
+                <Text style={[type.link, { color: colors.accent }]}>{t.noTarget}</Text>
+              </Pressable>
             )}
             {day ? (
               <>
