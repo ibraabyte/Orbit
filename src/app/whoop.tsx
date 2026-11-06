@@ -10,7 +10,7 @@ import { Button, Loading, Screen, ui } from "@/components/screen";
 import { colors, fonts } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
 import { getApi, hasServer } from "@/lib/backend";
-import { t } from "@/lib/i18n";
+import { formatNumber, t } from "@/lib/i18n";
 import {
   connectResultMessage,
   describeChange,
@@ -214,7 +214,7 @@ export default function Whoop() {
       {summary?.workouts.count ? (
         <Card title={t.workouts}>
           {summary.workouts.by_sport.slice(0, 6).map((sport) => (
-            <ListRow key={sport.sport} title={sport.sport.replace(/-/g, " ")} subtitle={`${sport.count} ×`} meta={`${sport.minutes} ${t.min}`} />
+            <ListRow key={sport.sport} title={sport.sport.replace(/-/g, " ")} subtitle={`${formatNumber(sport.count)} ×`} meta={`${sport.minutes} ${t.min}`} />
           ))}
         </Card>
       ) : null}

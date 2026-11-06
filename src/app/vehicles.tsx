@@ -8,7 +8,7 @@ import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { parseKm } from "@/lib/car-catalog";
-import { formatDate, t } from "@/lib/i18n";
+import { formatDate, formatNumber, t } from "@/lib/i18n";
 import type { Vehicle } from "@/lib/types";
 
 type DateField = "registration_expires_at" | "insurance_expires_at" | "inspection_expires_at" | "next_oil_change_at";
@@ -107,7 +107,7 @@ export default function Vehicles() {
                 </View>
                 <View style={{ alignItems: "flex-end" }}>
                   <Text style={[type.tileLabel, { color: colors.accentMuted }]}>{t.odometer}</Text>
-                  <Text style={[type.title, { fontSize: 16, color: colors.heroInk }]}>{odometer === null ? "–" : `${odometer.toLocaleString()} ${t.km}`}</Text>
+                  <Text style={[type.title, { fontSize: 16, color: colors.heroInk }]}>{odometer === null ? "–" : `${formatNumber(odometer)} ${t.km}`}</Text>
                 </View>
               </Hero>
             </Pressable>
@@ -136,10 +136,10 @@ export default function Vehicles() {
               <Card>
                 <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
                   <Text style={type.barLabel}>
-                    {t.oilAt} {oilAt.toLocaleString()} {t.km}
+                    {t.oilAt} {formatNumber(oilAt)} {t.km}
                   </Text>
                   <Text style={type.rowSubtitle}>
-                    {Math.max(0, oilAt - odometer!).toLocaleString()} {t.km}
+                    {formatNumber(Math.max(0, oilAt - odometer!))} {t.km}
                   </Text>
                 </View>
                 <ProgressBar value={oilShare} height={8} />

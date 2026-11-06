@@ -2,6 +2,7 @@
 // Plain TypeScript so it can be tested without React Native.
 
 import type { ApiClient } from "@/lib/api";
+import { digits } from "@/lib/i18n";
 import { aiQuery, type AiChoiceName } from "@/lib/integrations";
 import type { Meal } from "@/lib/types";
 
@@ -172,7 +173,7 @@ export function sourceLabel(source: FoodSource) {
 }
 
 export function formatNumber(value: number) {
-  return Number.isInteger(value) ? String(value) : String(round1(value));
+  return digits(Number.isInteger(value) ? value : round1(value));
 }
 
 /** Steps for the servings control: quarters below 1, halves after. */

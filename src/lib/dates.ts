@@ -1,3 +1,5 @@
+import { digits } from "@/lib/i18n";
+
 const startOfLocalDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 export function isToday(value: string | null | undefined, now = new Date()) {
@@ -13,18 +15,22 @@ export function isPastDue(value: string | null | undefined, now = new Date()) {
 
 export function formatTime(value: string | null | undefined) {
   if (!value) return "No time";
-  return new Intl.DateTimeFormat(undefined, {
-    hour: "numeric",
-    minute: "2-digit"
-  }).format(new Date(value));
+  return digits(
+    new Intl.DateTimeFormat(undefined, {
+      hour: "numeric",
+      minute: "2-digit"
+    }).format(new Date(value))
+  );
 }
 
 export function formatShortDate(value: string | null | undefined) {
   if (!value) return "No date";
-  return new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric"
-  }).format(new Date(value));
+  return digits(
+    new Intl.DateTimeFormat(undefined, {
+      month: "short",
+      day: "numeric"
+    }).format(new Date(value))
+  );
 }
 
 export function todayInputValue(now = new Date()) {

@@ -12,7 +12,7 @@ import { backdrop as ground, colors, fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { formatDate, t } from "@/lib/i18n";
+import { digits, formatDate, t } from "@/lib/i18n";
 import {
   backdropUrl,
   canRequest,
@@ -288,7 +288,7 @@ export default function Title() {
           {item.voteAverage || ratings?.criticsScore || ratings?.audienceScore ? (
             <Card title={mt.ratings}>
               <View style={styles.ratings}>
-                {item.voteAverage ? <Rating label={mt.tmdb} value={`★ ${item.voteAverage.toFixed(1)}`} detail={item.voteCount ? mt.votes(item.voteCount) : undefined} /> : null}
+                {item.voteAverage ? <Rating label={mt.tmdb} value={`★ ${digits(item.voteAverage.toFixed(1))}`} detail={item.voteCount ? mt.votes(item.voteCount) : undefined} /> : null}
                 {ratings?.criticsScore ? <Rating label={mt.critics} value={`${ratings.criticsScore}%`} detail={ratings.criticsRating} /> : null}
                 {ratings?.audienceScore ? <Rating label={mt.audience} value={`${ratings.audienceScore}%`} detail={ratings.audienceRating} /> : null}
               </View>

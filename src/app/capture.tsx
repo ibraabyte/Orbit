@@ -15,7 +15,7 @@ import { apiQuickAdd } from "@/lib/api-actions";
 import { askGate, serverDetail } from "@/lib/ask";
 import { ACT_HISTORY_TURNS, ACT_TEXT_MAX, actBody, actionRows, applyActions, instantDraft, kindName, opName, type ActReply, type ActTurn } from "@/lib/assistant";
 import { getApi } from "@/lib/backend";
-import { captureStarters, formatDate, isArabic, t } from "@/lib/i18n";
+import { captureStarters, digits, formatDate, isArabic, t } from "@/lib/i18n";
 import type { QuickAddDraft } from "@/lib/quick-add";
 import { aiName, aiQuery } from "@/lib/integrations";
 import { isNoAiError } from "@/lib/morning-brief";
@@ -35,7 +35,7 @@ function draftFields(draft: QuickAddDraft) {
   if (draft.amount) rows.push([isArabic ? "المبلغ" : "Amount", `${draft.amount} ${draft.currency}`]);
   // The guessed category is shown, so a wrong guess is seen before saving.
   if (draft.kind === "expense") rows.push([isArabic ? "الفئة" : "Category", t.financeCategoryNames[draft.financeCategory]]);
-  if (draft.sleepMinutes) rows.push([isArabic ? "المدة" : "Duration", `${Math.round((draft.sleepMinutes / 60) * 10) / 10}h`]);
+  if (draft.sleepMinutes) rows.push([isArabic ? "المدة" : "Duration", digits(`${Math.round((draft.sleepMinutes / 60) * 10) / 10}h`)]);
   else if (draft.durationMinutes) rows.push([isArabic ? "المدة" : "Duration", `${draft.durationMinutes} ${t.min}`]);
   if (draft.weight && draft.kind === "weight") rows.push([t.weight, `${draft.weight} ${draft.unit}`]);
   if (draft.calories) rows.push([t.calories, `${draft.calories} ${t.kcal}`]);

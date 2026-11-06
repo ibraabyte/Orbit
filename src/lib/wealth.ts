@@ -1,4 +1,5 @@
 import { addMonths, billDay, monthlyCommitments } from "@/lib/finance";
+import { digits } from "@/lib/i18n";
 import { localDateKey } from "@/lib/insights";
 import type { Bill, DashboardData, Investment, MoneyAccount, Obligation, ObligationInstallment, PaymentCard } from "@/lib/types";
 
@@ -59,7 +60,7 @@ export function monthsHeld(startedOn: string | null, now = new Date()) {
 export function formatPercent(percent: number | null) {
   if (percent === null) return "–";
   const rounded = Math.round(percent * 10) / 10;
-  return `${rounded > 0 ? "+" : rounded < 0 ? "−" : ""}${Math.abs(rounded).toFixed(1)}%`;
+  return `${rounded > 0 ? "+" : rounded < 0 ? "−" : ""}${digits(Math.abs(rounded).toFixed(1))}%`;
 }
 
 // Cards
