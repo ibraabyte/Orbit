@@ -25,7 +25,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/investments": { title: t.investments },
   "/cards": { title: t.cards },
   "/obligations": { title: t.obligations },
-  "/library": { title: t.library, hint: "note idea for the weekend" },
+  "/library": { title: t.library },
   "/habits": { title: t.habits, hint: "habit read 20 min daily" },
   "/vehicles": { title: t.car },
   "/media": { title: t.movies },

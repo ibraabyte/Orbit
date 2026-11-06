@@ -6,9 +6,11 @@ import {
   SpaceGrotesk_700Bold
 } from "@expo-google-fonts/space-grotesk";
 import Feather from "@expo/vector-icons/Feather";
+import Constants, { ExecutionEnvironment } from "expo-constants";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
-import { Stack } from "expo-router";
+import { router, Stack, usePathname } from "expo-router";
+import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
@@ -22,6 +24,8 @@ import { clearWidget } from "@/hooks/use-widget-sync";
 import { hasServer, watchSession, type AppSession } from "@/lib/backend";
 
 const configured = hasServer();
+// Sharing into Orbit needs the native share extension, which Expo Go doesn't have.
+const shareDisabled = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
 // A widget tap can open Capture from closed; Today must be underneath for it to close back to.
 export const unstable_settings = { anchor: "(tabs)" };
@@ -88,7 +92,7 @@ export default function RootLayout() {
   );
 
   return (
-    <>
+    <ShareIntentProvider options={{ disabled: shareDisabled, resetOnBackground: true }}>
       <StatusBar style="light" />
       {session ? (
         <AppLock>
@@ -96,11 +100,22 @@ export default function RootLayout() {
             <OverlayProvider>{stack}</OverlayProvider>
             {/* After the stack, so a notification tap that opened the app navigates once it's mounted. */}
             <ReminderNotifications />
+            <SharedLinks />
           </DashboardDataProvider>
         </AppLock>
       ) : (
         stack
       )}
-    </>
+    </ShareIntentProvider>
   );
+}
+
+// Something shared from TikTok, X or any app: open the saver, which saves it.
+function SharedLinks() {
+  const { hasShareIntent } = useShareIntentContext();
+  const pathname = usePathname();
+  useEffect(() => {
+    if (hasShareIntent && pathname !== "/library") router.push("/library");
+  }, [hasShareIntent, pathname]);
+  return null;
 }

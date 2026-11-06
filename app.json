@@ -92,6 +92,19 @@
             "com.google.android.googlequicksearchbox"
           ]
         }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
+            "NSExtensionActivationSupportsText": true
+          },
+          "iosAppGroupIdentifier": "group.com.ibraabyte.orbit",
+          "iosShareExtensionName": "Orbit Share",
+          "androidIntentFilters": ["text/*"]
+        }
       ]
     ],
     "experiments": {
