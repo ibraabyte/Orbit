@@ -46,7 +46,7 @@ export function buildDueReminderNotifications({
     userId: reminder.user_id,
     title: reminder.title,
     body: reminder.body ?? "A reminder is due.",
-    url: reminder.task_id ? "/tasks" : "/dashboard",
+    url: reminder.task_id ? `/task/${reminder.task_id}` : "/dashboard",
     reminderId: reminder.id,
     taskId: reminder.task_id ?? undefined
   }));
@@ -67,7 +67,7 @@ export function buildDueReminderNotifications({
       userId: task.user_id,
       title: task.title,
       body: task.notes ?? "A task reminder is due.",
-      url: "/tasks",
+      url: `/task/${task.id}`,
       taskId: task.id
     }));
 
@@ -136,7 +136,7 @@ export function buildLocalReminderSchedule({
       title: reminder.title,
       body: reminder.body ?? "A reminder is due.",
       at: new Date(reminder.remind_at),
-      url: reminder.task_id ? "/tasks" : "/"
+      url: reminder.task_id ? `/task/${reminder.task_id}` : "/"
     })),
     ...tasks
       .filter((task) => task.status === "open" && task.reminder_at && !task.reminder_sent_at && new Date(task.reminder_at).getTime() > now.getTime() && !coveredTaskIds.has(task.id))
@@ -145,7 +145,7 @@ export function buildLocalReminderSchedule({
         title: task.title,
         body: task.notes ?? "A task reminder is due.",
         at: new Date(task.reminder_at as string),
-        url: "/tasks"
+        url: `/task/${task.id}`
       }))
   ]
     .sort((a, b) => a.at.getTime() - b.at.getTime())

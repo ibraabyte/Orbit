@@ -59,7 +59,7 @@ export function buildCalendarEvents(data: DashboardData, now = new Date()): Cale
           title: task.title,
           detail: `Due · ${task.priority}`,
           at: task.due_at,
-          href: "/tasks"
+          href: `/task/${task.id}`
         });
       }
       if (task.reminder_at) {
@@ -69,7 +69,7 @@ export function buildCalendarEvents(data: DashboardData, now = new Date()): Cale
           title: task.title,
           detail: "Task reminder",
           at: task.reminder_at,
-          href: "/tasks"
+          href: `/task/${task.id}`
         });
       }
       return events;
@@ -80,7 +80,7 @@ export function buildCalendarEvents(data: DashboardData, now = new Date()): Cale
       title: reminder.title,
       detail: reminder.status,
       at: reminder.remind_at,
-      href: "/tasks"
+      href: reminder.task_id ? `/task/${reminder.task_id}` : "/tasks"
     })),
     ...data.meals.map((meal) => ({
       id: `meal-${meal.id}`,

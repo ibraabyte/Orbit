@@ -6,7 +6,7 @@ import { bankSmsApi, type BankTransaction } from "@/lib/bank-sms";
 import type { FinanceCategory } from "@/lib/types";
 
 // Bank messages waiting for a decision. Saving goes through the dashboard's `act` because a confirmed purchase adds an expense.
-export function useBankReview(act: (write: () => PromiseLike<unknown>) => Promise<void>) {
+export function useBankReview(act: (write: () => PromiseLike<unknown>) => Promise<unknown>) {
   const [items, setItems] = useState<BankTransaction[]>([]);
   const [failed, setFailed] = useState(false);
 

@@ -92,16 +92,18 @@ function useDashboardDataSource(userId: string) {
     void refresh();
   }, [refresh, userId]);
 
-  // Run a write, then reload. Shows an alert instead of throwing so screens stay one-liners.
+  // Run a write, then reload. Shows an alert instead of throwing so screens stay one-liners; true when it saved.
   const act = useCallback(
     async (write: () => PromiseLike<unknown>) => {
       try {
         await write();
-        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        await refresh();
       } catch (actError) {
         Alert.alert("Could not save", actError instanceof Error ? actError.message : "Try again.");
+        return false;
       }
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await refresh();
+      return true;
     },
     [refresh]
   );
