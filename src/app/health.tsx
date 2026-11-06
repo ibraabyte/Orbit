@@ -11,23 +11,24 @@ import { buildHealthSnapshot } from "@/lib/health";
 import { deltaText, goalFields, ht, weightHistory, whoopWeekMinutes } from "@/lib/health-hub";
 import { formatDate, t } from "@/lib/i18n";
 import { formatSleepDuration } from "@/lib/sleep";
+import { trainingApi, tt } from "@/lib/training";
 import { formatHours, whoopApi, type WhoopStatus, type WhoopSummary } from "@/lib/whoop";
 
 const stamp = (iso: string) => formatDate(iso, { weekday: "short", day: "numeric", month: "short" });
 
-type Live = { day: FoodDay | null; whoop: WhoopStatus | null; summary: WhoopSummary | null; injuries: number | null };
+type Live = { day: FoodDay | null; whoop: WhoopStatus | null; summary: WhoopSummary | null; injuries: number | null; active: boolean };
 
 // Health is the one door: today's numbers, then Food, Exercises and WHOOP under it, your body, your goals,
 // and what you logged by hand. Each part keeps its own screen; this one gathers them.
 export default function Health() {
   const { data, loading, refresh } = useDashboardData();
-  const [live, setLive] = useState<Live>({ day: null, whoop: null, summary: null, injuries: null });
+  const [live, setLive] = useState<Live>({ day: null, whoop: null, summary: null, injuries: null, active: false });
 
   const loadLive = useCallback(async () => {
     if (!hasServer()) return;
     const api = getApi();
     // Each part loads on its own: WHOOP being off or down must not hide today's food.
-    const [day, whoop, injuries] = await Promise.allSettled([foodApi.day(api), whoopApi.status(api), exercisesApi.injuries(api)]);
+    const [day, whoop, injuries, active] = await Promise.allSettled([foodApi.day(api), whoopApi.status(api), exercisesApi.injuries(api), trainingApi.active(api)]);
     const status = whoop.status === "fulfilled" ? whoop.value : null;
     let summary: WhoopSummary | null = null;
     if (status?.connected) summary = await whoopApi.summary(api, 14).catch(() => null);
@@ -35,7 +36,8 @@ export default function Health() {
       day: day.status === "fulfilled" ? day.value : null,
       whoop: status,
       summary,
-      injuries: injuries.status === "fulfilled" ? injuries.value.filter((injury) => injury.active).length : null
+      injuries: injuries.status === "fulfilled" ? injuries.value.filter((injury) => injury.active).length : null,
+      active: active.status === "fulfilled" && active.value !== null
     });
   }, []);
 
@@ -70,9 +72,11 @@ export default function Health() {
 
   const sections: { href: Href; icon: IconName; title: string; subtitle: string; meta?: string }[] = [
     { href: "/food", icon: "coffee", title: t.food, subtitle: ht.foodDetail, meta: eaten ? `${eaten} ${t.kcal}` : undefined },
+    { href: "/training", icon: "bar-chart-2", title: tt.workouts, subtitle: tt.workoutsDetail, meta: live.active ? tt.inProgress : undefined },
     { href: "/exercises", icon: "zap", title: et.exercises, subtitle: ht.exercisesDetail },
     { href: "/gym", icon: "home", title: et.gym, subtitle: ht.gymDetail },
     { href: "/injuries", icon: "alert-circle", title: et.injuries, subtitle: ht.injuriesDetail, meta: live.injuries ? ht.activeInjuries(live.injuries) : undefined },
+    { href: "/body", icon: "maximize", title: tt.measurements, subtitle: tt.measurementsDetail },
     { href: "/whoop", icon: "watch", title: t.whoop, subtitle: ht.whoopDetail, meta: whoop?.connected ? (recovery === null ? undefined : `${Math.round(recovery)}%`) : whoop?.configured ? ht.whoopConnect : undefined }
   ];
 
@@ -109,7 +113,7 @@ export default function Health() {
 
   const right = (
     <>
-      <Card title={ht.body}>
+      <Card title={ht.body} action={<CardLink href="/body" label={tt.measurements} />}>
         {weights.length ? (
           weights.map(({ log, delta }) => <ListRow key={log.id} title={`${log.weight} ${log.unit}`} subtitle={stamp(log.logged_at)} meta={deltaText(delta) ?? undefined} />)
         ) : (

@@ -9,6 +9,7 @@ import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
 import { mt } from "@/lib/seerr";
 import { contentWidth, showsSidebar } from "@/lib/sidebar";
+import { tt } from "@/lib/training";
 
 // Space the tab bar takes at the bottom of a tab screen.
 export const TAB_BAR_SPACE = 120;
@@ -74,7 +75,11 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/integrations": { title: t.integrations },
   "/exercises": { title: et.exercises },
   "/gym": { title: et.gym },
-  "/injuries": { title: et.injuries }
+  "/injuries": { title: et.injuries },
+  "/training": { title: tt.workouts },
+  "/workout": { title: tt.workout },
+  "/workout-pick": { title: tt.pickExercise },
+  "/body": { title: tt.measurements }
 };
 
 export function openCapture(text?: string) {

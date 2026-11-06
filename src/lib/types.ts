@@ -200,6 +200,8 @@ export type Workout = {
   calories: number | null;
   notes: string | null;
   logged_at: string;
+  // True while a set-by-set session (src/app/workout.tsx) is still going.
+  in_progress?: boolean;
   created_at: string;
 };
 
