@@ -4,7 +4,7 @@ import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Badge, Card, CheckItem, EmptyState, flip, Glass, Icon, ListRow, RowButton, type } from "@/components/drift";
+import { Card, CheckItem, EmptyState, flip, Glass, Icon, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { CastCard, Chip, FactRows, openDiscover, Poster, PosterRail, StatusPill } from "@/components/seerr-parts";
 import { BleedRow, Button, CONTENT_MAX_WIDTH } from "@/components/screen";
@@ -169,7 +169,7 @@ export default function Title() {
       key={request.id}
       title={request.requestedBy?.displayName ?? mt.requestedBy}
       badges={<StatusPill badge={requestBadge(request.status)} />}
-      subtitle={[request.seasons?.length ? mt.seasonsAsked(request.seasons.map((season) => season.seasonNumber).join("، ")) : null, formatDate(request.createdAt)].filter(Boolean).join(" · ")}
+      subtitle={[request.seasons?.length ? mt.seasonsAsked(request.seasons.map((season) => season.seasonNumber).join(mt.sep)) : null, formatDate(request.createdAt)].filter(Boolean).join(" · ")}
       trailing={
         <View style={{ gap: 6 }}>
           <RowButton icon="check" label={mt.approve} disabled={busy} onPress={() => act(() => client!.approve(request.id))} />
@@ -321,14 +321,12 @@ export default function Title() {
 
           {watchlist.available ? (
             <Card title={mt.watchList}>
-              <View style={{ flexDirection: "row", gap: 8 }}>
+              <View style={styles.links}>
                 {listChoices.map(([value, label]) => (
-                  <View key={value} style={{ flex: 1 }}>
-                    <Button variant={onList?.status === value ? "dark" : "outline"} title={label} onPress={() => void setListStatus(value)} />
-                  </View>
+                  <Chip key={value} label={label} selected={onList?.status === value} onPress={() => void setListStatus(value)} />
                 ))}
+                {onList ? <RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(onList.id))} /> : null}
               </View>
-              {onList ? <Button variant="outline" title={t.remove} onPress={() => act(() => watchlist.remove(onList.id))} /> : null}
             </Card>
           ) : null}
 
@@ -346,7 +344,7 @@ function Rating({ label, value, detail }: { label: string; value: string; detail
     <View style={styles.rating}>
       <Text style={type.tileLabel}>{label}</Text>
       <Text style={styles.ratingValue}>{value}</Text>
-      {detail ? <Badge>{detail}</Badge> : null}
+      {detail ? <Text style={type.rowSubtitle}>{detail}</Text> : null}
     </View>
   );
 }

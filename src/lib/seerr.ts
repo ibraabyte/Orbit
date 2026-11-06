@@ -300,8 +300,8 @@ export function factRows(details: SeerrDetails, formatDay: (value: string) => st
     [mt.facts.lastAired, details.mediaType === "tv" && details.lastAirDate ? formatDay(details.lastAirDate) : null],
     [mt.facts.nextEpisode, details.nextEpisodeToAir?.airDate ? `${formatDay(details.nextEpisodeToAir.airDate)} · S${details.nextEpisodeToAir.seasonNumber ?? "?"} E${details.nextEpisodeToAir.episodeNumber ?? "?"}` : null],
     [mt.facts.episodes, details.numberOfEpisodes ? String(details.numberOfEpisodes) : null],
-    [details.mediaType === "tv" ? mt.facts.createdBy : mt.facts.director, makers(details).join("، ") || null],
-    [details.mediaType === "tv" ? mt.facts.network : mt.facts.studio, (details.mediaType === "tv" ? details.networks : details.productionCompanies)?.slice(0, 2).map((company) => company.name).join("، ") || null],
+    [details.mediaType === "tv" ? mt.facts.createdBy : mt.facts.director, makers(details).join(mt.sep) || null],
+    [details.mediaType === "tv" ? mt.facts.network : mt.facts.studio, (details.mediaType === "tv" ? details.networks : details.productionCompanies)?.slice(0, 2).map((company) => company.name).join(mt.sep) || null],
     [mt.facts.language, languageName(details.originalLanguage)],
     [mt.facts.originalTitle, (details.originalTitle ?? details.originalName) && (details.originalTitle ?? details.originalName) !== seerrName(details) ? (details.originalTitle ?? details.originalName)! : null],
     [mt.facts.budget, details.budget ? money(details.budget) : null],
@@ -383,6 +383,8 @@ export type SeerrClient = ReturnType<typeof createSeerrClient>;
 // Strings for the Movies & TV screens, English and Arabic.
 const en = {
   untitled: "Untitled",
+  sep: ", ",
+  fetching: "Fetching",
   movie: "Movie",
   series: "TV",
   season: "season",
@@ -450,6 +452,8 @@ const en = {
 
 const ar: typeof en = {
   untitled: "بدون اسم",
+  sep: "، ",
+  fetching: "يتحمّل",
   movie: "فيلم",
   series: "مسلسل",
   season: "موسم",

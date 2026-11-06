@@ -5,6 +5,7 @@ import { Badge, Card, Chevron, type } from "@/components/drift";
 import { BleedRow, CONTENT_MAX_WIDTH } from "@/components/screen";
 import { colors, fonts, radius } from "@/components/theme";
 import { mediaBadge, mt, posterUrl, seerrName, seerrYear, type DiscoverList, type SeerrCast, type SeerrMediaType, type SeerrResult, type StatusBadge } from "@/lib/seerr";
+import { isArabic } from "@/lib/i18n";
 import { contentWidth } from "@/lib/sidebar";
 
 // The Movies & TV pieces: posters, poster rows and grids, cast faces. Built from the shared theme only.
@@ -149,7 +150,8 @@ export function FactRows({ rows }: { rows: [string, string][] }) {
       {rows.map(([label, value], index) => (
         <View key={label} style={[styles.fact, index === 0 && { borderTopWidth: 0 }]}>
           <Text style={[type.rowSubtitle, { flex: 1 }]}>{label}</Text>
-          <Text style={[type.rowTitle, { flex: 1.6 }]}>{value}</Text>
+          {/* The paragraph's direction is the app's, so a Latin name lines up with an Arabic one in Arabic. */}
+          <Text style={[type.rowTitle, { flex: 1.6, writingDirection: isArabic ? "rtl" : "ltr" }]}>{value}</Text>
         </View>
       ))}
     </View>

@@ -158,7 +158,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
             <StatGrid columns={4}>
               {[
                 <StatTile key="pending" label={mt.filters.pending} value={counts?.pending ?? "–"} alert={Boolean(seerr.isAdmin && counts?.pending)} href={{ pathname: "/requests", params: { filter: "pending" } }} />,
-                <StatTile key="processing" label={mt.filters.processing} value={counts?.processing ?? "–"} href={{ pathname: "/requests", params: { filter: "processing" } }} />,
+                <StatTile key="processing" label={mt.fetching} value={counts?.processing ?? "–"} href={{ pathname: "/requests", params: { filter: "processing" } }} />,
                 <StatTile key="available" label={mt.filters.available} value={counts?.available ?? "–"} href={{ pathname: "/requests", params: { filter: "available" } }} />,
                 <StatTile key="all" label={mt.filters.all} value={counts?.total ?? "–"} href="/requests" />
               ]}

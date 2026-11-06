@@ -106,7 +106,7 @@ export default function Requests() {
           const look = looks[`${request.type}-${request.media.tmdbId}`];
           const title = look?.title ?? (request.type === "tv" ? mt.series : mt.movie);
           const mine = Boolean(seerr.user && request.requestedBy?.id === seerr.user.id);
-          const seasons = request.type === "tv" && request.seasons?.length ? mt.seasonsAsked(request.seasons.map((season) => season.seasonNumber).sort((a, b) => a - b).join("، ")) : null;
+          const seasons = request.type === "tv" && request.seasons?.length ? mt.seasonsAsked(request.seasons.map((season) => season.seasonNumber).sort((a, b) => a - b).join(mt.sep)) : null;
           const media = mediaBadge(request.media.status);
           return (
             <ListRow
