@@ -158,6 +158,53 @@ def test_proxy_refuses_calls_the_app_doesnt_make(client: TestClient, auth: dict,
     assert len(fake_seerr) == before
 
 
+def test_proxy_passes_on_the_detail_and_request_calls(client: TestClient, auth: dict, fake_seerr):
+    """The richer Movies & TV screens: discover rows, a title's seasons and cast, requests, retry, quota."""
+    client.put("/integrations/seerr", json={"url": "https://seerr.example.com", "api_key": KEY}, headers=auth)
+    for method, path in [
+        ("GET", "discover/movies"),
+        ("GET", "discover/tv/upcoming"),
+        ("GET", "discover/movies/genre/28"),
+        ("GET", "genres/tv"),
+        ("GET", "movie/7/recommendations"),
+        ("GET", "tv/5/similar"),
+        ("GET", "movie/7/ratings"),
+        ("GET", "tv/5/season/2"),
+        ("GET", "person/31"),
+        ("GET", "person/31/combined_credits"),
+        ("POST", "request/3/retry"),
+        ("GET", "user/1/quota"),
+    ]:
+        before = len(fake_seerr)
+        response = client.request(method, f"/integrations/seerr/api/{path}", headers=auth)
+        # The fake answers 500 to these; what matters is that the call went out, to the right place.
+        assert len(fake_seerr) == before + 1, path
+        assert fake_seerr[-1].method == method
+        assert fake_seerr[-1].url.path == f"/api/v1/{path}"
+        assert response.status_code == 502, path
+
+    page = client.get("/integrations/seerr/api/discover/movies", params={"page": 2, "sortBy": "popularity.desc"}, headers=auth)
+    assert page.status_code == 502
+    assert fake_seerr[-1].url.query == b"page=2&sortBy=popularity.desc"
+
+
+def test_proxy_still_refuses_near_misses(client: TestClient, auth: dict, fake_seerr):
+    client.put("/integrations/seerr", json={"url": "https://seerr.example.com", "api_key": KEY}, headers=auth)
+    before = len(fake_seerr)
+    for method, path in [
+        ("GET", "discover/watchlist"),
+        ("GET", "tv/5/season/2/episode/1"),
+        ("GET", "person/31/../../settings/main"),
+        ("GET", "user/1/settings/main"),
+        ("POST", "user/1/quota"),
+        ("DELETE", "movie/7"),
+        ("POST", "request/3/pending"),
+        ("GET", "genres/person"),
+    ]:
+        assert client.request(method, f"/integrations/seerr/api/{path}", headers=auth).status_code in (404, 405), path
+    assert len(fake_seerr) == before
+
+
 def test_private_addresses_are_for_the_admin_only(client: TestClient, auth: dict, fake_seerr):
     # The admin (first account) runs the server and may point at their home network.
     assert client.put("/integrations/seerr", json={"url": "http://home.example.com:5055", "api_key": KEY}, headers=auth).status_code == 200
