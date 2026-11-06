@@ -81,6 +81,12 @@ export type Capture = {
   title: string;
   note: string | null;
   source: string | null;
+  // The saver: a built-in category ("video", "post", ...) or one the user named; "want" = still to see, "done" = seen.
+  category: string;
+  status: "want" | "done";
+  image_url: string | null;
+  site_name: string | null;
+  summary: string | null;
   created_at: string;
 };
 
