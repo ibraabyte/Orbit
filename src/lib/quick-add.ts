@@ -45,6 +45,9 @@ export type QuickAddDraft = {
   billRecurrence: BillRecurrence;
   billAutopay: boolean;
   frequency: HabitFrequency;
+  // Tasks only: "+work" puts it in that list (made if new); "pack; passport; charger" adds a checklist.
+  listName: string | null;
+  steps: string[];
 };
 
 export type QuickAddValidation = {
@@ -93,7 +96,9 @@ const kindAliases: Record<string, QuickAddKind> = {
 };
 
 export function parseQuickAdd(input: string, options: { defaultWeightUnit?: WeightUnit; now?: Date } = {}): QuickAddDraft {
-  const { kind, body } = splitKind(input);
+  const { kind, body: whole } = splitKind(input);
+  const { body, steps } = splitSteps(kind, whole);
+  const listName = kind === "task" ? (body.match(listTokenPattern())?.[1] ?? null) : null;
   const tags = [...body.matchAll(/#([\w-]+)/g)].map((match) => match[1]);
   const priority = extractPriority(body);
   const recurrence = extractTaskRecurrence(kind, body);
@@ -148,8 +153,19 @@ export function parseQuickAdd(input: string, options: { defaultWeightUnit?: Weig
     financeCategory,
     billRecurrence,
     billAutopay,
-    frequency
+    frequency,
+    listName,
+    steps
   };
+}
+
+// "+home" or "+البيت": a letter first, so "+966..." and "+1" stay in the title.
+const listTokenPattern = (flags = "u") => new RegExp("(?:^|\\s)\\+(\\p{L}[\\p{L}\\p{N}_-]*)", flags);
+
+function splitSteps(kind: QuickAddKind, body: string) {
+  if (kind !== "task") return { body, steps: [] as string[] };
+  const [head, ...rest] = body.split(/\s*[;؛]\s*/);
+  return { body: head, steps: rest.map((step) => step.trim()).filter(Boolean).slice(0, 30) };
 }
 
 export function validateQuickAddDraft(draft: QuickAddDraft, input = ""): QuickAddValidation {
@@ -527,7 +543,9 @@ function cleanBody(kind: QuickAddKind, value: string) {
       .replace(/\b\d+(?:\.\d+)?\s*(?:h|hr|hrs|hour|hours|m|min|mins|minutes)\b/gi, "")
       .replace(/\b(?:quality|q)\s*[1-5]\b/gi, "");
   }
-  if (kind === "task") cleaned = cleaned.replace(/\b(?:repeat|repeats|every)\s+(?:daily|weekly|monthly|day|week|month)\b/gi, "");
+  if (kind === "task") {
+    cleaned = cleaned.replace(/\b(?:repeat|repeats|every)\s+(?:daily|weekly|monthly|day|week|month)\b/gi, "").replace(listTokenPattern("gu"), " ");
+  }
   if (kind === "expense" || kind === "bill") cleaned = cleaned.replace(/\$?\s*\b\d+(?:\.\d+)?\s*(?:[A-Za-z]{3})?\b/gi, "");
   if (kind === "bill") {
     cleaned = cleaned

@@ -28,6 +28,7 @@ function task(overrides: Partial<Task>): Task {
     reminder_at: null,
     reminder_sent_at: null,
     recurrence: null,
+    list_id: null,
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
     ...overrides
@@ -195,6 +196,8 @@ function dashboardData(overrides: Partial<DashboardData> = {}): DashboardData {
   return {
     profile: null,
     tasks: [],
+    taskLists: [],
+    taskSteps: [],
     reminders: [],
     captures: [],
     attachments: [],
@@ -307,6 +310,8 @@ describe("dashboard summaries", () => {
     const data: DashboardData = {
       profile: null,
       tasks: [task({ due_at: "2026-07-01T18:00:00.000Z" }), task({ due_at: "2026-06-30T18:00:00.000Z" })],
+      taskLists: [],
+      taskSteps: [],
       reminders: [reminder({ remind_at: "2026-07-01T08:00:00.000Z" })],
       captures: [
         {

@@ -22,7 +22,17 @@ export function quickAddRequest(draft: QuickAddDraft, now = new Date()): { metho
       return {
         method: "post",
         path: "/tasks",
-        body: { title: draft.title, notes: draft.note, priority: draft.priority, due_at: draft.at, reminder_at: draft.reminderAt, recurrence: draft.recurrence, tags }
+        body: {
+          title: draft.title,
+          notes: draft.note,
+          priority: draft.priority,
+          due_at: draft.at,
+          reminder_at: draft.reminderAt,
+          recurrence: draft.recurrence,
+          tags,
+          list_name: draft.listName,
+          steps: draft.steps
+        }
       };
     case "reminder":
       return { method: "post", path: "/reminders", body: { title: draft.title, body: draft.note, remind_at: draft.reminderAt ?? draft.at ?? nowIso } };

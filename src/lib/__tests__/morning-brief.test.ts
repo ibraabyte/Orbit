@@ -19,14 +19,14 @@ const settings = { enabled: true, hour: 7, minute: 0 };
 const now = new Date("2026-11-03T01:00:00.000Z"); // 04:00 local on 3 Nov
 
 const empty = {
-  profile: null, tasks: [], reminders: [], captures: [], attachments: [], tags: [], taggings: [], meals: [], mealPlans: [], groceryItems: [], people: [],
+  profile: null, tasks: [], taskLists: [], taskSteps: [], reminders: [], captures: [], attachments: [], tags: [], taggings: [], meals: [], mealPlans: [], groceryItems: [], people: [],
   weightLogs: [], workouts: [], sleepLogs: [], focusSessions: [], habits: [], habitLogs: [], goals: [], goalMilestones: [], journalEntries: [],
   expenses: [], bills: [], budgets: [], cards: [], moneyAccounts: [], investments: [], obligations: [], obligationInstallments: []
 } satisfies DashboardData;
 
 const task = (overrides: Partial<Task>): Task => ({
   id: "t1", user_id: "u", title: "Task", notes: null, status: "open", priority: "normal", due_at: null, reminder_at: null, reminder_sent_at: null,
-  recurrence: null, created_at: "2026-11-01T00:00:00Z", updated_at: "2026-11-01T00:00:00Z", ...overrides
+  recurrence: null, list_id: null, created_at: "2026-11-01T00:00:00Z", updated_at: "2026-11-01T00:00:00Z", ...overrides
 });
 const reminder = (overrides: Partial<Reminder>): Reminder => ({
   id: "r1", user_id: "u", task_id: null, title: "Reminder", body: null, remind_at: "2026-11-03T10:00:00Z", status: "scheduled", sent_at: null,

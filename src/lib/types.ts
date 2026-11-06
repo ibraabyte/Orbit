@@ -57,6 +57,29 @@ export type Task = {
   reminder_at: string | null;
   reminder_sent_at: string | null;
   recurrence: RecurrenceRule | null;
+  list_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// A named group of tasks (Home, Work). Deleting one keeps its tasks.
+export type TaskList = {
+  id: string;
+  user_id: string;
+  name: string;
+  position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+// One checklist line inside a task (a subtask).
+export type TaskStep = {
+  id: string;
+  user_id: string;
+  task_id: string;
+  title: string;
+  done: boolean;
+  position: number;
   created_at: string;
   updated_at: string;
 };
@@ -437,6 +460,8 @@ export type WatchItem = {
 export type DashboardData = {
   profile: Profile | null;
   tasks: Task[];
+  taskLists: TaskList[];
+  taskSteps: TaskStep[];
   reminders: Reminder[];
   captures: Capture[];
   attachments: Attachment[];

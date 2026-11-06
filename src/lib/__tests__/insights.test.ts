@@ -12,6 +12,8 @@ const now = new Date("2026-07-07T12:00:00.000Z");
 const baseData: DashboardData = {
   profile: null,
   tasks: [],
+  taskLists: [],
+  taskSteps: [],
   reminders: [],
   captures: [],
   attachments: [],

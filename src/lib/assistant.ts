@@ -19,6 +19,7 @@ export type ActTurn = { role: "user" | "assistant"; content: string };
 // Each kind the assistant can change, and the route that already saves it. Anything else is never sent.
 export const KIND_PATHS: Record<string, string> = {
   task: "/tasks",
+  task_list: "/task-lists",
   reminder: "/reminders",
   expense: "/expenses",
   bill: "/bills",
@@ -96,7 +97,7 @@ export const actBody = (text: string, history: ActTurn[], locale: "en" | "ar") =
 
 // The names shown for each kind and change, in the app's language.
 const KIND_NAMES: Record<string, [string, string]> = {
-  task: ["Task", "مهمة"], reminder: ["Reminder", "تذكير"], expense: ["Expense", "مصروف"], bill: ["Bill", "فاتورة"],
+  task: ["Task", "مهمة"], task_list: ["Task list", "قائمة مهام"], reminder: ["Reminder", "تذكير"], expense: ["Expense", "مصروف"], bill: ["Bill", "فاتورة"],
   budget: ["Budget", "ميزانية"], meal: ["Meal", "وجبة"], grocery: ["Grocery", "مشتريات"], workout: ["Workout", "تمرين"],
   sleep: ["Sleep", "نوم"], weight: ["Weight", "وزن"], habit: ["Habit", "عادة"], habit_log: ["Habit done", "إنجاز عادة"],
   note: ["Note", "ملاحظة"], money_account: ["Money place", "مكان فلوس"],
@@ -117,10 +118,10 @@ const FIELD_NAMES: Record<string, [string, string]> = {
   relationship: ["Relationship", "العلاقة"], next_follow_up_at: ["Next follow-up", "المتابعة القادمة"], balance: ["Balance", "الرصيد"],
   invested: ["Invested", "المستثمر"], current_value: ["Value now", "القيمة الحالية"], kind: ["Type", "النوع"], last4: ["Last 4", "آخر 4"],
   meal_type: ["Meal", "الوجبة"], frequency: ["How often", "كم مرة"], target_count: ["Target", "الهدف"], type: ["Type", "النوع"], url: ["Link", "الرابط"],
-  autopay: ["Autopay", "دفع تلقائي"], network: ["Network", "الشبكة"], protein_g: ["Protein g", "بروتين غ"], carbs_g: ["Carbs g", "كارب غ"], fat_g: ["Fat g", "دهون غ"]
+  list_name: ["List", "القائمة"], steps: ["Checklist", "الخطوات"], autopay: ["Autopay", "دفع تلقائي"], network: ["Network", "الشبكة"], protein_g: ["Protein g", "بروتين غ"], carbs_g: ["Carbs g", "كارب غ"], fat_g: ["Fat g", "دهون غ"]
 };
 // Ids are shown as the item they point at (the action's label) or not at all.
-const HIDDEN_FIELDS = new Set(["habit_id", "task_id", "card_id", "tags"]);
+const HIDDEN_FIELDS = new Set(["habit_id", "task_id", "card_id", "list_id", "tags"]);
 
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -128,6 +129,7 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 function formatValue(value: unknown, locale: string): string {
   if (value === null) return "—";
   if (typeof value === "boolean") return value ? "✓" : "✗";
+  if (Array.isArray(value)) return value.map((item) => formatValue(item, locale)).join(" · ");
   if (typeof value === "number") return value.toLocaleString(locale);
   if (typeof value === "string" && ISO_TIME.test(value)) {
     const at = new Date(value);

@@ -70,6 +70,8 @@ def create_app() -> FastAPI:
         profile.router,
         tasks.router,
         tasks.reminders_router,
+        tasks.lists_router,
+        tasks.steps_router,
         dashboard.router,
         export.router,
         whoop.router,

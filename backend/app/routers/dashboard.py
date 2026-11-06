@@ -19,7 +19,10 @@ router = APIRouter(tags=["dashboard"])
 
 # key in DashboardData, model, sort, limit
 LISTS: list[tuple[str, type[m.Base], Any, int]] = [
-    ("tasks", m.Task, m.Task.created_at.desc(), 80),
+    # Open tasks first, so finished ones never push an open one out of the bundle.
+    ("tasks", m.Task, (m.Task.status != "open", m.Task.created_at.desc()), 300),
+    ("taskLists", m.TaskList, m.TaskList.position.asc(), 100),
+    ("taskSteps", m.TaskStep, (m.TaskStep.task_id, m.TaskStep.position), 1000),
     ("reminders", m.Reminder, m.Reminder.remind_at.asc(), 80),
     ("captures", m.Capture, m.Capture.created_at.desc(), 60),
     ("attachments", m.Attachment, m.Attachment.created_at.desc(), 80),
@@ -53,8 +56,10 @@ LISTS: list[tuple[str, type[m.Base], Any, int]] = [
 
 # Narrower than "everything the user owns", same as before.
 FILTERS = {
-    "habits": lambda: m.Habit.archived_at.is_(None),
-    "goals": lambda: m.Goal.status != "archived",
+    "habits": lambda user_id: m.Habit.archived_at.is_(None),
+    "goals": lambda user_id: m.Goal.status != "archived",
+    # Only the checklists of open tasks; a finished task's steps are history.
+    "taskSteps": lambda user_id: m.TaskStep.task_id.in_(select(m.Task.id).where(m.Task.user_id == user_id, m.Task.status == "open")),
 }
 
 DashboardOut = create_model(
@@ -71,6 +76,7 @@ def dashboard(user_id: UserId, db: Db):
     for key, model, sort, limit in LISTS:
         query = select(model).where(model.user_id == user_id)
         if key in FILTERS:
-            query = query.where(FILTERS[key]())
-        data[key] = db.scalars(query.order_by(sort).limit(limit)).all()
+            query = query.where(FILTERS[key](user_id))
+        order = sort if isinstance(sort, tuple) else (sort,)
+        data[key] = db.scalars(query.order_by(*order, model.id).limit(limit)).all()
     return data

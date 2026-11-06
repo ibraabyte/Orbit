@@ -7,6 +7,8 @@ const PUSH_SUBSCRIPTION_REDACTED_FIELDS = ["endpoint", "p256dh", "auth"] as cons
 export const EXPORT_TABLES = [
   { name: "profiles", ownerColumn: "id", orderColumn: "created_at", ascending: true },
   { name: "tasks", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
+  { name: "task_lists", ownerColumn: "user_id", orderColumn: "position", ascending: true },
+  { name: "task_steps", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "reminders", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "captures", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "attachments", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },

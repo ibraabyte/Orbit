@@ -13,6 +13,7 @@ const baseTask: Task = {
   reminder_at: "2026-07-01T07:45:00.000Z",
   reminder_sent_at: null,
   recurrence: "weekly",
+  list_id: "list-1",
   created_at: "2026-07-01T00:00:00.000Z",
   updated_at: "2026-07-01T00:00:00.000Z"
 };
@@ -44,6 +45,7 @@ describe("recurrence", () => {
       due_at: "2026-07-08T08:00:00.000Z",
       reminder_at: "2026-07-08T07:45:00.000Z",
       recurrence: "weekly",
+      list_id: "list-1",
       status: "open"
     });
   });

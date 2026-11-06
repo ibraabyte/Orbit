@@ -42,7 +42,7 @@ export function Columns({ left, right }: { left: ReactNode; right: ReactNode }) 
 // Stack screens: their title and the example line on the capture bar. Each opens on its own, with no row of
 // other sections across the top, so a section only shows its own things.
 const stackScreens: Record<string, { title: string; hint?: string }> = {
-  "/tasks": { title: t.tasks, hint: "pay rent fri 5pm !high" },
+  "/tasks": { title: t.tasks, hint: "pay rent fri 5pm +home · pack; passport; charger" },
   "/health": { title: t.health, hint: "weight 82 · slept 7h q4 · workout 40m run" },
   "/health-goals": { title: ht.goals },
   "/whoop": { title: t.whoop },
@@ -110,7 +110,7 @@ export function Screen({
 function StackHeader({ action }: { action?: { label: string; onPress: () => void } }) {
   const path = usePathname();
   // One exercise's page sits under the library.
-  const meta = stackScreens[path] ?? (path.startsWith("/exercises/") ? { title: et.exercises } : undefined);
+  const meta = stackScreens[path] ?? (path.startsWith("/exercises/") ? { title: et.exercises } : path.startsWith("/task/") ? { title: t.task } : undefined);
   return (
     <View style={{ gap: 10 }}>
       <View style={styles.stackBar}>
