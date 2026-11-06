@@ -12,7 +12,7 @@ from app.models.integrations import AiConnection, ServiceConnection
 from app.models.library import Attachment, Capture, PushSubscription, Tag, Tagging
 from app.models.life import Goal, GoalMilestone, Habit, HabitLog, JournalEntry, Person
 from app.models.profile import Profile
-from app.models.tasks import FocusSession, Reminder, Task
+from app.models.tasks import FocusSession, Reminder, Task, TaskList, TaskStep
 from app.models.things import Vehicle, WatchItem
 from app.models.whoop import WhoopConnection, WhoopCycle, WhoopInsight, WhoopRecovery, WhoopSleep, WhoopWorkout
 
@@ -57,6 +57,8 @@ __all__ = [
     "Tag",
     "Tagging",
     "Task",
+    "TaskList",
+    "TaskStep",
     "User",
     "Vehicle",
     "WatchItem",

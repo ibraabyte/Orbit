@@ -18,6 +18,8 @@ router = APIRouter(tags=["export"])
 # key, model, sort
 TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("tasks", m.Task, m.Task.created_at),
+    ("task_lists", m.TaskList, m.TaskList.position),
+    ("task_steps", m.TaskStep, m.TaskStep.created_at),
     ("reminders", m.Reminder, m.Reminder.created_at),
     ("captures", m.Capture, m.Capture.created_at),
     ("attachments", m.Attachment, m.Attachment.created_at),

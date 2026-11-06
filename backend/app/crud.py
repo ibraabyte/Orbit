@@ -27,10 +27,10 @@ def get_owned[M: Base](db: Session, model: type[M], row_id: uuid.UUID, user_id: 
     return row
 
 
-def apply_changes(row: Base, changes: BaseModel) -> None:
+def apply_changes(row: Base, changes: BaseModel, skip: tuple[str, ...] = ()) -> None:
     """PATCH semantics: only fields the client sent change, and null clears a field where that's allowed."""
     columns = inspect(type(row)).columns
-    for key, value in changes.model_dump(exclude_unset=True).items():
+    for key, value in changes.model_dump(exclude_unset=True, exclude=set(skip)).items():
         if value is None and not columns[key].nullable:
             raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, f"{key} can't be empty.")
         setattr(row, key, value)
@@ -44,13 +44,16 @@ def owned_crud_router(
     update: type[BaseModel] | None,
     order_by: ColumnElement[Any],
     max_limit: int = 500,
-    after_create: Callable[[Session, Any], None] | None = None,
-    after_update: Callable[[Any, set[str]], None] | None = None,
+    after_create: Callable[..., None] | None = None,
+    after_update: Callable[..., None] | None = None,
     tag_target: str | None = None,
+    extras: tuple[str, ...] = (),
 ) -> APIRouter:
     """tag_target: the taggings target_type for this table. Its create body may then carry `tags` (names),
     attached in the same transaction, and deleting a row drops its taggings.
-    after_update gets the row and the names of the fields the client sent, before the commit."""
+    after_update gets the row and the names of the fields the client sent, before the commit.
+    extras: body fields that aren't columns. They are left off the row and handed to after_create / after_update
+    as keyword arguments (only the ones the client sent, on an update)."""
     router = APIRouter(prefix=prefix, tags=[prefix.strip("/")])
     Row = row_schema(model)
 
@@ -63,12 +66,13 @@ def owned_crud_router(
     def create_row(body: create, user_id: UserId, db: Db):  # type: ignore[valid-type]
         values = body.model_dump()
         tags = values.pop("tags", [])
+        extra = {name: values.pop(name) for name in extras if name in values}
         row = model(**values, user_id=user_id)
         db.add(row)
         if after_create or tags:
             db.flush()
         if after_create:
-            after_create(db, row)
+            after_create(db, row, **extra)
         if tags:
             assert tag_target, f"{model.__name__} can't be tagged."
             attach_tags(db, user_id, tag_target, row.id, tags)
@@ -85,9 +89,10 @@ def owned_crud_router(
         @router.patch("/{row_id}", response_model=Row)
         def update_row(row_id: uuid.UUID, body: update, user_id: UserId, db: Db):  # type: ignore[valid-type]
             row = get_owned(db, model, row_id, user_id)
-            apply_changes(row, body)
+            apply_changes(row, body, skip=extras)
             if after_update:
-                after_update(row, body.model_fields_set)
+                extra = {name: getattr(body, name) for name in extras if name in body.model_fields_set}
+                after_update(row, body.model_fields_set, **extra)
             db.commit()
             db.refresh(row)
             return row
