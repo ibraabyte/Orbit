@@ -17,11 +17,13 @@ type Section = { key: string; href: Href; label: string; icon: IconName };
 
 const section = (key: string, label: string, icon: IconName): Section => ({ key, href: `/${key}` as Href, label, icon });
 const manage = [section("tasks", t.tasks, "check-square")];
-const logs = [section("health", t.health, "activity"), section("whoop", t.whoop, "watch"), section("food", t.food, "coffee"), section("exercises", et.exercises, "zap"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "bookmark")];
+// Food, Exercises and WHOOP live inside Health now; they can still be pinned for one tap.
+const logs = [section("health", t.health, "activity"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "bookmark")];
+const insideHealth = [section("food", t.food, "coffee"), section("exercises", et.exercises, "zap"), section("whoop", t.whoop, "watch")];
 const home = [section("vehicles", t.car, "truck"), section("media", t.movies, "film")];
 const system = [section("ask", t.askOrbit, "message-circle"), section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
 const groups: [string, Section[]][] = [[t.manageDay, manage], [t.lifeLogs, logs], [t.homeServices, home], [t.system, system]];
-const pinnable = [...manage, ...logs, ...home];
+const pinnable = [...manage, ...logs, ...insideHealth, ...home];
 
 const pinsKey = "orbit.more.pins";
 const defaultPins = ["tasks", "health", "finance", "vehicles"];

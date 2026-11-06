@@ -39,7 +39,8 @@ Shared pieces in `src/components`: `Screen` (scroll + pull to refresh), `Section
 
 | Screen | File | What it does |
 | --- | --- | --- |
-| Health | `health.tsx` | Meals (calories, macros), workouts, sleep, weight. |
+| Health | `health.tsx` | The one door for health (2026-11-06): today (eaten vs goal, WHOOP recovery or weight, sleep, workout minutes, protein), then Food, Exercises, Gym, Injuries and WHOOP under it, the last weigh-ins, daily goals, and sleep/workouts logged by hand. Food, Exercises and WHOOP are no longer listed in More (still pinnable). |
+| Health goals | `health-goals.tsx` | Calorie, protein, carbs, fat and weekly workout goals, saved with `PATCH /profile`. |
 | Food | `food.tsx` | Meal plans and the grocery list by category. |
 | Finance | `finance.tsx` | Bills, a Subscriptions block with the monthly total, spending by category this month, recent expenses. Alerts 3 days before a subscription renews. |
 | People | `people.tsx` | Follow-ups, birthdays in the next 30 days, everyone. |
