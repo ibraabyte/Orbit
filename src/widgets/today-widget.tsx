@@ -9,9 +9,9 @@ declare const font: any, foregroundStyle: any, frame: any, lineLimit: any, conta
 const TodayWidget = (props: WidgetProps, env: WidgetEnvironment) => {
   "widget";
   // Colours from theme.ts: the widget can't import it.
-  const ink = "#f1f4ea";
-  const muted = "#a3afa6";
-  const lime = "#9bdc33";
+  const ink = "#ece9e2";
+  const muted = "#8f8d87";
+  const lime = "#e8c890"; // sand
   const side = props.rtl ? "trailing" : "leading";
   const line = (text: string, color: string, size: number, key: string) => (
     <Text key={key} modifiers={[font({ size }), foregroundStyle(color), lineLimit(1), frame({ maxWidth: Infinity, alignment: side })]}>
@@ -25,7 +25,7 @@ const TodayWidget = (props: WidgetProps, env: WidgetEnvironment) => {
   const head = props.rtl ? [add, <Spacer key="gap" />, title, ...count] : [...count, title, <Spacer key="gap" />, add];
   const tasks = props.tasks.slice(0, env.widgetFamily === "systemSmall" ? 2 : 3);
   return (
-    <VStack alignment={side} spacing={5} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: props.rtl ? "topTrailing" : "topLeading" }), containerBackground("#0c120e", "widget"), widgetURL("orbit://capture")]}>
+    <VStack alignment={side} spacing={5} modifiers={[frame({ maxWidth: Infinity, maxHeight: Infinity, alignment: props.rtl ? "topTrailing" : "topLeading" }), containerBackground("#0a0a0b", "widget"), widgetURL("orbit://capture")]}>
       <HStack spacing={6}>{head}</HStack>
       {props.message ? line(props.message, muted, 13, "message") : null}
       {tasks.map((task, index) => line(task, ink, 13, `task-${index}`))}

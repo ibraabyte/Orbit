@@ -104,7 +104,7 @@ export default function Settings() {
           <Setting label={t.faceId}>
             <Switch
               accessibilityLabel={t.faceId}
-              trackColor={track}
+              trackColor={track} thumbColor={colors.ink}
               value={lock}
               onValueChange={(next) => {
                 setLock(next);
@@ -116,7 +116,7 @@ export default function Settings() {
         <Setting label={t.prayerAlerts} detail={t.prayerSource}>
           <Switch
             accessibilityLabel={t.prayerAlerts}
-            trackColor={track}
+            trackColor={track} thumbColor={colors.ink}
             value={prayers}
             onValueChange={(next) => {
               setPrayers(next);
@@ -125,7 +125,7 @@ export default function Settings() {
           />
         </Setting>
         <Setting label={t.morningAlert} detail={t.morningAlertDetail}>
-          <Switch accessibilityLabel={t.morningAlert} trackColor={track} value={morning.enabled} onValueChange={(next) => void changeMorning({ ...morning, enabled: next })} />
+          <Switch accessibilityLabel={t.morningAlert} trackColor={track} thumbColor={colors.ink} value={morning.enabled} onValueChange={(next) => void changeMorning({ ...morning, enabled: next })} />
         </Setting>
         {morning.enabled ? (
           <Pressable accessibilityRole="button" accessibilityLabel={`${t.morningAlertTime}, ${clockAt(morning.hour, morning.minute)}`} onPress={pickMorningTime}>
@@ -166,7 +166,7 @@ export default function Settings() {
             trailing={
               <Switch
                 accessibilityLabel={t.allowSignups}
-                trackColor={track}
+                trackColor={track} thumbColor={colors.ink}
                 value={server.signups_open || server.signups_forced_by_server}
                 disabled={server.signups_forced_by_server}
                 onValueChange={(next) => void setSignups(next)}

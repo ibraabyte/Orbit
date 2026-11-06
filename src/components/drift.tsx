@@ -1,9 +1,9 @@
 import Feather from "@expo/vector-icons/Feather";
-import { Link, type Href } from "expo-router";
+import { Link, router, type Href } from "expo-router";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import { createContext, useContext, useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, labelCase, radius } from "@/components/theme";
 import { isArabic } from "@/lib/i18n";
 import { barHeights, ringRotations } from "@/lib/ring";
 
@@ -43,21 +43,21 @@ export function Glass({ tint, interactive, style, children }: { tint?: string; i
       </GlassView>
     );
   }
-  return <View style={[{ borderCurve: "continuous", backgroundColor: tint ?? colors.glassSolid }, style]}>{children}</View>;
+  return <View style={[{ borderCurve: "continuous", backgroundColor: colors.glassSolid }, style]}>{children}</View>;
 }
 
 // True inside a card, so shared pieces (empty states, text) pick the right colors.
 const OnSurface = createContext(false);
 export const useOnSurface = () => useContext(OnSurface);
 
-/** Glass card: translucent, lit top edge, optional title and an action at its end. */
+/** A section on the black ground: a hairline on top, a small uppercase title, and an action at its end. No box. */
 export function Card({ title, action, children, style }: { title?: string; action?: ReactNode; children?: ReactNode; style?: ViewStyle }) {
   return (
     <OnSurface.Provider value>
       <View style={[styles.card, style]}>
         {title || action ? (
           <View style={styles.cardHeader}>
-            <Text style={[type.title, { flex: 1 }]}>{title}</Text>
+            <Text style={[type.sectionLabel, { flex: 1 }]}>{title}</Text>
             {action}
           </View>
         ) : null}
@@ -67,7 +67,7 @@ export function Card({ title, action, children, style }: { title?: string; actio
   );
 }
 
-/** Lime-tinted hero card (prayer, readiness, completion, recovery, car). */
+/** Hero (prayer, readiness, completion, recovery, car): one big number on the ground, no fill. */
 export function Hero({ children, style }: { children: ReactNode; style?: ViewStyle }) {
   return <View style={[styles.hero, style]}>{children}</View>;
 }
@@ -168,18 +168,19 @@ export function Avatar({ name, size = 40, dark }: { name: string; size?: number;
 }
 
 export type BadgeTone = "neutral" | "accent" | "urgent" | "success";
-const badgeTones: Record<BadgeTone, { backgroundColor: string; color: string }> = {
-  neutral: { backgroundColor: colors.surfaceInset, color: colors.inkMuted },
-  accent: { backgroundColor: colors.accentTint, color: colors.accentTintInk },
-  urgent: { backgroundColor: colors.urgent, color: colors.urgentInk },
-  success: { backgroundColor: colors.successTint, color: colors.success }
+// Outlined pills; only urgent is filled (pale, black text). The glyph and label carry the meaning, not the colour.
+const badgeTones: Record<BadgeTone, { backgroundColor: string; borderColor: string; color: string }> = {
+  neutral: { backgroundColor: "transparent", borderColor: colors.hairline, color: colors.inkMuted },
+  accent: { backgroundColor: "transparent", borderColor: colors.accent, color: colors.accent },
+  urgent: { backgroundColor: colors.urgent, borderColor: colors.urgent, color: colors.urgentInk },
+  success: { backgroundColor: "transparent", borderColor: colors.hairline, color: colors.success }
 };
 
 /** Small label: glyph + text, so status never relies on color alone. */
 export function Badge({ tone = "neutral", glyph, children }: { tone?: BadgeTone; glyph?: string; children: string | number }) {
-  const { backgroundColor, color } = badgeTones[tone];
+  const { backgroundColor, borderColor, color } = badgeTones[tone];
   return (
-    <View style={[styles.badge, { backgroundColor }]}>
+    <View style={[styles.badge, { backgroundColor, borderColor }]}>
       <Text style={[type.badge, { color }]} numberOfLines={1}>
         {glyph ? `${glyph} ` : ""}
         {children}
@@ -248,7 +249,7 @@ export function StatGrid({ children, columns = 4 }: { children: ReactNode[]; col
 }
 
 /** Ring colors for a gauge sitting on a Hero. */
-export const heroRing = { color: colors.accent, track: "rgba(255,255,255,0.12)", hole: colors.heroHole, labelColor: colors.heroInk };
+export const heroRing = { color: colors.accent, track: colors.surfaceInset, hole: colors.heroHole, labelColor: colors.heroInk };
 
 /** Label over number, plain (inside heroes and summary cards). */
 export function Metric({ label, value, unit, onLime }: { label: string; value: string | number; unit?: string; onLime?: boolean }) {
@@ -366,12 +367,13 @@ export function MoreButton({ onPress, label }: { onPress: () => void; label: str
   );
 }
 
-/** A row's direct action: Paid, Bought, Contacted. outline is the quieter version. */
+/** A row's direct action: Paid, Bought, Contacted, Start. A sand outline; outline is the quieter grey version. */
 export function RowButton({ label, onPress, outline, icon, disabled }: { label?: string; onPress: () => void; outline?: boolean; icon?: IconName; disabled?: boolean }) {
-    return (
-    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: Boolean(disabled) }} style={({ pressed }) => [styles.rowButton, outline ? styles.rowButtonOutline : { backgroundColor: colors.surfaceInset }, !label && { width: 36, paddingHorizontal: 0 }, disabled && { opacity: 0.35 }, pressed && { opacity: 0.7 }]}>
-      {icon ? <Icon name={icon} size={15} color={colors.ink} /> : null}
-      {label && !(icon && outline) ? <Text style={type.pill}>{label}</Text> : null}
+  const fg = outline ? colors.ink : colors.accent;
+  return (
+    <Pressable onPress={onPress} disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled: Boolean(disabled) }} style={({ pressed }) => [styles.rowButton, { borderColor: outline ? colors.hairline : colors.accent }, !label && { width: 36, paddingHorizontal: 0 }, disabled && { opacity: 0.35 }, pressed && { opacity: 0.7 }]}>
+      {icon ? <Icon name={icon} size={15} color={fg} /> : null}
+      {label && !(icon && outline) ? <Text style={[type.pill, { color: fg }]}>{label}</Text> : null}
     </Pressable>
   );
 }
@@ -383,7 +385,12 @@ export function EmptyState({ example, children, icon }: { example?: string; chil
     <View style={styles.empty}>
       {icon ? <IconTile name={icon} size={48} /> : null}
       {children ? <Text style={[onSurface ? type.rowSubtitle : type.shellMuted, { textAlign: "center" }]}>{children}</Text> : null}
-      {example ? <Text style={type.code}>{example}</Text> : null}
+      {example ? (
+        // The example is a starting line: tap it and the assistant opens with it typed in.
+        <Pressable onPress={() => router.push({ pathname: "/capture", params: { text: example } })} accessibilityRole="button" accessibilityLabel={example} hitSlop={8}>
+          <Text style={[type.code, styles.exampleLink]}>{example} ↗</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -400,52 +407,55 @@ export function PageTitle({ children }: { children: string }) {
 /** Round Orbit mark on an ink tile (sign in). */
 export function Brand({ size = 56 }: { size?: number }) {
   return (
-    <View style={{ width: size, height: size, borderRadius: size * 0.29, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" }} accessibilityRole="image" accessibilityLabel="Orbit">
+    <View style={{ width: size, height: size, borderRadius: size * 0.29, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" }} accessibilityRole="image" accessibilityLabel="Orbit">
       <View style={{ width: size * 0.4, height: size * 0.4, borderRadius: size * 0.2, borderWidth: 3, borderColor: colors.accent }} />
     </View>
   );
 }
 
 export const type = StyleSheet.create({
-  h1: { fontFamily: fonts.bold, fontSize: 30, lineHeight: 36, letterSpacing: -0.45, color: colors.onShell },
-  h2: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 24, color: colors.ink },
-  title: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20, color: colors.ink },
-  link: { fontFamily: fonts.semibold, fontSize: 13, color: colors.link },
-  stat: { fontFamily: fonts.bold, fontSize: 20, color: colors.ink },
-  metric: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
-  tileLabel: { fontFamily: fonts.semibold, fontSize: 11, lineHeight: 14, color: colors.inkMuted },
+  h1: { fontFamily: fonts.medium, fontSize: 28, lineHeight: 34, letterSpacing: -0.5, color: colors.onShell },
+  h2: { fontFamily: fonts.medium, fontSize: 18, lineHeight: 24, color: colors.ink },
+  title: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 20, color: colors.ink },
+  // Section titles: 11px uppercase, wide tracking, muted.
+  sectionLabel: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 16, color: colors.inkMuted, ...labelCase },
+  link: { fontFamily: fonts.medium, fontSize: 12, color: colors.link, ...labelCase },
+  stat: { fontFamily: fonts.medium, fontSize: 20, color: colors.ink },
+  metric: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
+  // Tighter tracking than other labels: four tiles share a phone row, and "REMINDERS" must not break mid-word.
+  tileLabel: { fontFamily: fonts.medium, fontSize: 10, lineHeight: 14, color: colors.inkMuted, ...labelCase, letterSpacing: isArabic ? 0 : 0.5 },
   hint: { fontFamily: fonts.regular, fontSize: 11, color: colors.inkMuted },
-  body: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 22, color: colors.ink },
-  rowTitle: { fontFamily: fonts.semibold, fontSize: 15, lineHeight: 20, color: colors.ink },
-  rowSubtitle: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.inkMuted },
-  rowValue: { fontFamily: fonts.bold, fontSize: 14, color: colors.ink },
-  barLabel: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
-  barValue: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
-  axis: { fontFamily: fonts.semibold, fontSize: 10, color: colors.inkMuted },
-  badge: { fontFamily: fonts.bold, fontSize: 11 },
-  pill: { fontFamily: fonts.bold, fontSize: 12, color: colors.ink },
-  code: { fontFamily: "Menlo", fontSize: 12, color: colors.ink, backgroundColor: colors.surfaceInset, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, overflow: "hidden" },
-  shellMeta: { fontFamily: fonts.semibold, fontSize: 13, color: colors.onShellMuted },
-  shellMuted: { fontFamily: fonts.medium, fontSize: 13, lineHeight: 19, color: colors.onShellMuted },
-  shellLabel: { fontFamily: fonts.bold, fontSize: 12, letterSpacing: 0.7, textTransform: "uppercase", color: colors.onShellMuted }
+  body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 22, color: colors.ink },
+  rowTitle: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, color: colors.ink },
+  rowSubtitle: { fontFamily: fonts.regular, fontSize: 11, lineHeight: 16, color: colors.inkMuted },
+  rowValue: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+  barLabel: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+  barValue: { fontFamily: fonts.medium, fontSize: 13, color: colors.ink },
+  axis: { fontFamily: fonts.regular, fontSize: 10, color: colors.inkMuted, ...labelCase },
+  badge: { fontFamily: fonts.medium, fontSize: 10, ...labelCase },
+  pill: { fontFamily: fonts.medium, fontSize: 11, color: colors.ink, ...labelCase },
+  code: { fontFamily: fonts.regular, fontSize: 12, color: colors.ink, backgroundColor: colors.surfaceInset, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, overflow: "hidden" },
+  shellMeta: { fontFamily: fonts.regular, fontSize: 11, color: colors.onShellMuted, ...labelCase },
+  shellMuted: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 19, color: colors.onShellMuted },
+  shellLabel: { fontFamily: fonts.medium, fontSize: 11, color: colors.onShellMuted, ...labelCase }
 });
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.card, borderCurve: "continuous", boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08)", paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  card: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline, paddingTop: 14, paddingBottom: 4, gap: 8 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 24 },
   cardLink: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 32 },
-  hero: { flexDirection: "row", alignItems: "center", gap: 16, backgroundColor: colors.hero, borderColor: colors.heroEdge, borderWidth: 1, borderRadius: radius.card, borderCurve: "continuous", boxShadow: "inset 0 1px 0 rgba(233,247,207,0.12)", padding: 16 },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
+  hero: { flexDirection: "row", alignItems: "center", gap: 16, paddingVertical: 8 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline },
   rowMeta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
   iconTile: { borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
-  badge: { borderRadius: radius.chip, paddingHorizontal: 7, paddingVertical: 1 },
-  tile: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 10, paddingVertical: 10, gap: 2, minHeight: 64 },
-  tileDot: { position: "absolute", top: 8, end: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
+  badge: { borderRadius: radius.pill, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 1 },
+  tile: { flex: 1, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 8, paddingVertical: 10, gap: 4, minHeight: 64 },
+  tileDot: { position: "absolute", top: 8, end: 8, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
   ringHole: { position: "absolute", alignItems: "center", justifyContent: "center" },
   track: { width: "100%", borderRadius: radius.pill, backgroundColor: colors.surfaceInset, overflow: "hidden" },
-  check: { borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  moreButton: { width: 36, height: 36, borderRadius: radius.control, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
-  rowButton: { minHeight: 36, paddingHorizontal: 12, borderRadius: radius.control, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
-  rowButtonOutline: { borderWidth: 1, borderColor: colors.hairline },
-  empty: { alignItems: "center", gap: 8, paddingVertical: 16 }
+  check: { borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  moreButton: { width: 36, height: 36, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
+  rowButton: { minHeight: 34, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
+  empty: { alignItems: "center", gap: 8, paddingVertical: 16 },
+  exampleLink: { color: colors.accent, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: colors.hairline }
 });

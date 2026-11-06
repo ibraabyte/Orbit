@@ -1,6 +1,22 @@
+# Orbit Design System — Night + Rail
+
+> **2026-11-06:** the Expo app uses this ("Orbit Concept" 1a Night and 2b Rail from the design handoff). Live tokens are in `src/components/theme.ts`, parts in `src/components/drift.tsx`, `screen.tsx`, `overlays.tsx`, `tab-bar.tsx` and `swipe-to-done.tsx`; the Today rail logic is `src/lib/rail.ts`. Everything from "Dark Glass" down is older, kept for history.
+
+- **Ground:** flat near-black (`colors.shell`, `#0a0a0b`). Fixed; there is no light mode.
+- **One accent, Sand (`#e8c890`):** a line or text almost everywhere; filled only on the main button (the assistant button, the capture +). Solid sand takes black text (`accentInk`).
+- **Type:** JetBrains Mono for Latin and numbers, IBM Plex Sans Arabic for Arabic. Small labels are 10–11px uppercase with wide tracking (`labelCase`; Arabic has no case).
+- **No cards:** a section is a hairline on top, a small uppercase title and its rows (`Card` in `drift.tsx`). Tiles, inputs and the focus block get a hairline border, not a fill.
+- **Status is glyph + label, never colour alone:** urgent is a pale pill with black text; others are outlined.
+- **Real Liquid Glass stays on what floats:** tab capsule, back and header buttons, sheets, date picker, toast. Falls back to solid `glassSolid` on older iOS, Android and with Reduce Transparency.
+- **Tab bar:** a glass capsule with TODAY, the sand assistant button (mic) in the middle, and MORE. Uppercase labels; the open tab is sand with a short sand underline.
+- **Today = Rail:** a big 24-hour clock (sand colon), readiness (WHOOP recovery, else the next prayer) on the other side; then the day as a time line: prayers are ticks, timed things hang off their time, now is a sand line, the next thing is boxed with DONE/OPEN. Tap opens a thing, a sideways swipe completes a task. Passed tasks and money due sit under "Off the rail · overdue". Things more than 3 hours back fold into one "Earlier" row.
+- **iPad:** content sits in a centered column (`Screen`, max 760; `wide` screens 1180). From 900px wide, `Columns` puts two columns side by side (Today: the rail left, everything else right). Sheets, toast and the tab capsule are centered.
+- **Empty states:** one line saying what to do, and an example line that opens the assistant with it typed in.
+- **Contrast:** `src/lib/__tests__/theme.test.ts` checks AA for text pairs on the black ground. Add new pairs there.
+
 # Orbit Design System — Dark Glass
 
-> **2026-11-02:** the Expo app uses this. Live tokens are in `src/components/theme.ts`, parts in `src/components/drift.tsx`, `screen.tsx`, `overlays.tsx` and `tab-bar.tsx`. Everything from "Drift" down is the older look, kept for history.
+> **2026-11-02 to 2026-11-05:** the Expo app used this. Live tokens are in `src/components/theme.ts`, parts in `src/components/drift.tsx`, `screen.tsx`, `overlays.tsx` and `tab-bar.tsx`. Everything from "Drift" down is the older look, kept for history.
 
 - **Backdrop:** dark forest (`colors.shell`) with soft lime and sage light (`backdrop` in `theme.ts`). Fixed; there is no light mode.
 - **Real Liquid Glass only on what floats:** tab capsule, Capture button, back and header buttons, action sheet, date picker, toast. Use `Glass` from `drift.tsx`. It falls back to a solid surface on older iOS, on Android and with Reduce Transparency. Never put it inside `overflow: hidden`, and never on content cards.
