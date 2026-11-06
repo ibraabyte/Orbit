@@ -25,13 +25,25 @@ ALLOWED: list[tuple[str, re.Pattern[str]]] = [
         ("GET", r"status"),
         ("GET", r"auth/me"),
         ("GET", r"search"),
+        # Discover: the rows on the Movies & TV screen and their "see all" lists.
         ("GET", r"discover/trending"),
+        ("GET", r"discover/(movies|tv)(/upcoming)?"),
+        ("GET", r"discover/(movies|tv)/genre/\d+"),
+        ("GET", r"genres/(movie|tv)"),
+        # One title: details, its seasons and episodes, ratings, and what is like it.
+        ("GET", r"(movie|tv)/\d+"),
+        ("GET", r"(movie|tv)/\d+/(recommendations|similar)"),
+        ("GET", r"movie/\d+/ratings"),
+        ("GET", r"tv/\d+/season/\d+"),
+        ("GET", r"person/\d+(/combined_credits)?"),
+        # Requests. Seerr itself decides who may see, approve, retry or cancel which request.
         ("GET", r"request"),
         ("GET", r"request/count"),
         ("POST", r"request"),
-        ("GET", r"(movie|tv)/\d+"),
         ("POST", r"request/\d+/(approve|decline)"),
+        ("POST", r"request/\d+/retry"),
         ("DELETE", r"request/\d+"),
+        ("GET", r"user/\d+/quota"),
     ]
 ]
 

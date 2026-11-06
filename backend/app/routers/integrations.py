@@ -311,10 +311,11 @@ def seerr_proxy(path: str, request: Request, user_id: UserId, db: Db, body: Anno
         )
     except seerr.SeerrError as exc:
         raise _seerr_failure(exc) from exc
-    if code == 204 or data is None:
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
     if code >= 400:
         message = data.get("message") if isinstance(data, dict) else None
         detail = f"Seerr: {message}" if message else f"Seerr error {code}."
         return JSONResponse({"detail": detail}, status_code=code if code < 500 else status.HTTP_502_BAD_GATEWAY)
+    # An empty answer is only "done, nothing to send" when Seerr didn't fail (an empty 500 must not look like success).
+    if code == 204 or data is None:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     return JSONResponse(data, status_code=code)
