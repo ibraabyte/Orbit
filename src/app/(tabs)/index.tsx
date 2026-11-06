@@ -11,6 +11,7 @@ import { TaskRow } from "@/components/task-row";
 import { colors, fonts, labelCase, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useMorningBrief } from "@/hooks/use-morning-brief";
+import { useNow } from "@/hooks/use-now";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useReadiness } from "@/hooks/use-readiness";
 import { apiCompleteTask, apiUpdate } from "@/lib/api-actions";
@@ -40,23 +41,6 @@ type OptionalSection = (typeof optional)[number][0];
 
 const prayerName = (prayer: PrayerTime) => (isArabic ? prayer.label : prayerNamesEn[prayer.name]);
 const minutesUntil = (at: Date) => Math.max(0, Math.round((at.getTime() - Date.now()) / 60_000));
-
-// The clock ticks once a minute, on the minute.
-function useNow() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | undefined;
-    const start = setTimeout(() => {
-      setNow(new Date());
-      timer = setInterval(() => setNow(new Date()), 60_000);
-    }, 60_000 - (Date.now() % 60_000));
-    return () => {
-      clearTimeout(start);
-      if (timer) clearInterval(timer);
-    };
-  }, []);
-  return now;
-}
 
 // Today = the Rail: a big clock and readiness, the day as a time line (prayers as ticks, timed things on their time,
 // a sand line for now), then what fell off the rail (overdue tasks, money due), the brief and the capture bar.
