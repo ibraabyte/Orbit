@@ -7,6 +7,7 @@ import { backdrop, colors, fonts, labelCase, radius } from "@/components/theme";
 import { et } from "@/lib/exercises";
 import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
+import { contentWidth, showsSidebar } from "@/lib/sidebar";
 
 // Space the tab bar takes at the bottom of a tab screen.
 export const TAB_BAR_SPACE = 120;
@@ -16,9 +17,16 @@ export const CONTENT_MAX_WIDTH = 760;
 // A screen laid out in two columns (Today) may grow wider.
 const WIDE_MAX_WIDTH = 1180;
 
-/** True on an iPad-sized window, where a screen can show two columns side by side. */
+/** True on an iPad-sized window, where the sidebar replaces the tab bar. */
+export function useSidebar() {
+  const { width, height } = useWindowDimensions();
+  return showsSidebar(width, height);
+}
+
+/** True when the room beside the sidebar is wide enough to show two columns side by side. */
 export function useWide() {
-  return useWindowDimensions().width >= 900;
+  const { width, height } = useWindowDimensions();
+  return contentWidth(width, height) >= 900;
 }
 
 /** Two columns side by side on iPad; on a phone, left then right in one column, so the order stays the same. */
@@ -90,13 +98,16 @@ export function Screen({
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+  // Tab screens leave room for the floating tab bar; beside the iPad sidebar there is none.
+  const sidebar = useSidebar();
+  const bottom = header && !sidebar ? TAB_BAR_SPACE : 48;
   return (
     <View style={styles.shell}>
       {banner ? <View style={{ paddingTop: insets.top }}>{banner}</View> : null}
       <ScrollView
         style={styles.fill}
         contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={[styles.content, styles.column, wide && { maxWidth: WIDE_MAX_WIDTH }, { paddingTop: banner ? 8 : insets.top + 8, paddingBottom: header ? TAB_BAR_SPACE : 48 }]}
+        contentContainerStyle={[styles.content, styles.column, wide && { maxWidth: WIDE_MAX_WIDTH }, { paddingTop: banner ? 8 : insets.top + 8, paddingBottom: bottom }]}
         keyboardShouldPersistTaps="handled"
         refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.onShellMuted} /> : undefined}
       >

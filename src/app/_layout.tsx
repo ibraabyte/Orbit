@@ -17,6 +17,7 @@ import { Text, View } from "react-native";
 import { AppLock } from "@/components/app-lock";
 import { OverlayProvider } from "@/components/overlays";
 import { Loading } from "@/components/screen";
+import { SidebarLayout } from "@/components/sidebar";
 import { colors } from "@/components/theme";
 import { clearDashboardCache, DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
@@ -98,7 +99,9 @@ export default function RootLayout() {
       {session ? (
         <AppLock>
           <DashboardDataProvider key={session.userId} userId={session.userId}>
-            <OverlayProvider>{stack}</OverlayProvider>
+            <OverlayProvider>
+              <SidebarLayout>{stack}</SidebarLayout>
+            </OverlayProvider>
             {/* After the stack, so a notification tap that opened the app navigates once it's mounted. */}
             <ReminderNotifications />
             <SharedLinks />
