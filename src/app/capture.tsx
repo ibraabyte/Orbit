@@ -305,6 +305,16 @@ export default function Capture() {
         <Text style={type.shellMuted}>{t.assistantHint}</Text>
       ) : null}
 
+      {!answer && !text.trim() ? (
+        <Pressable onPress={() => router.push("/week")} accessibilityRole="link" style={styles.recent}>
+          <Icon name="calendar" size={13} color={colors.accentDeep} />
+          <Text style={styles.recentText} numberOfLines={1}>
+            {t.weekSummary}
+          </Text>
+          <Text style={type.shellMeta}>{t.weekFridayHint}</Text>
+        </Pressable>
+      ) : null}
+
       {!answer && !text.trim() && recent.length ? (
         <View style={{ gap: 6 }}>
           <Text style={type.shellMeta}>{t.recent}</Text>
