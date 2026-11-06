@@ -10,7 +10,7 @@ import { useOverlays } from "@/components/overlays";
 import { Button, Input, Loading, Screen } from "@/components/screen";
 import { colors, fonts, radius } from "@/components/theme";
 import { getApi } from "@/lib/backend";
-import { formatDate, t } from "@/lib/i18n";
+import { digits, formatDate, t } from "@/lib/i18n";
 import {
   clock,
   elapsedSeconds,
@@ -22,9 +22,11 @@ import {
   sessionLine,
   sessionTotals,
   setText,
+  shortSet,
   trainingApi,
   tt,
   volumeText,
+  amountText,
   type ExerciseHistory,
   type Session,
   type SessionExercise,
@@ -289,8 +291,8 @@ export default function Workout() {
           <StatGrid columns={3}>
             {[
               <StatTile key="time" label={tt.duration} value={duration} size={18} />,
-              <StatTile key="sets" label={tt.set} value={`${totals.done}/${totals.total}`} size={18} />,
-              <StatTile key="volume" label={tt.volume} value={volumeText(totals.volumeKg)} size={18} />
+              <StatTile key="sets" label={tt.sets} value={`${totals.done}/${totals.total}`} size={18} />,
+              <StatTile key="volume" label={`${tt.volume} · kg`} value={volumeText(totals.volumeKg, false)} size={18} />
             ]}
           </StatGrid>
           <Text style={type.rowSubtitle}>
@@ -377,7 +379,7 @@ function ExerciseCard({
       {bests?.heaviest || bests?.one_rep_max ? (
         <View style={styles.badges}>
           {bests.heaviest ? <Badge glyph="▲">{`${tt.records.heaviest} ${setText(bests.heaviest)}`}</Badge> : null}
-          {bests.one_rep_max ? <Badge>{`${tt.records.one_rep_max} ${Math.round(bests.one_rep_max.value)} ${bests.one_rep_max.unit}`}</Badge> : null}
+          {bests.one_rep_max ? <Badge>{`${tt.records.one_rep_max} ${amountText(Math.round(bests.one_rep_max.value), bests.one_rep_max.unit)}`}</Badge> : null}
         </View>
       ) : null}
 
@@ -395,8 +397,8 @@ function ExerciseCard({
           <SetRow
             key={row.id}
             row={row}
-            label={row.warmup ? tt.warmupShort : String(work)}
-            previous={previous ? setText(previous) : "–"}
+            label={row.warmup ? tt.warmupShort : digits(work)}
+            previous={previous ? shortSet(previous) : "–"}
             records={newRecords(row, bests ?? null)}
             onToggle={(values) => onToggle(row, values)}
             onSave={(changes) => onSave(row, changes)}

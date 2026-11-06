@@ -8,7 +8,7 @@ import { colors, radius } from "@/components/theme";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, injuryNote, label, type ExerciseDetail } from "@/lib/exercises";
 import { formatDate } from "@/lib/i18n";
-import { sessionLine, setText, trainingApi, tt, volumeText, type Best, type ExerciseHistory, type Session } from "@/lib/training";
+import { amountText, sessionLine, setText, trainingApi, tt, volumeText, type Best, type ExerciseHistory, type Session } from "@/lib/training";
 
 export default function ExerciseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -52,7 +52,7 @@ export default function ExerciseScreen() {
   const bests = history?.bests;
   const bestRows: [string, Best | null | undefined, (best: Best) => string][] = [
     [tt.heaviest, bests?.heaviest, setText],
-    [tt.oneRepMax, bests?.one_rep_max, (best) => `${Math.round(best.value)} ${best.unit}`],
+    [tt.oneRepMax, bests?.one_rep_max, (best) => amountText(Math.round(best.value), best.unit)],
     [tt.mostReps, bests?.most_reps, setText],
     [tt.bestVolume, bests?.best_volume, (best) => volumeText(best.value)]
   ];

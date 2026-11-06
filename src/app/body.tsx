@@ -8,8 +8,8 @@ import { BleedRow, Button, Input, Loading, Screen, Segments } from "@/components
 import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { getApi } from "@/lib/backend";
-import { formatDate, t } from "@/lib/i18n";
-import { bodyTrends, changeText, kindHistory, MEASUREMENT_KINDS, parseNumber, trainingApi, tt, unitsFor, type BodyMeasurement, type LengthUnit, type Trend, type WeightUnit } from "@/lib/training";
+import { digits, formatDate, t } from "@/lib/i18n";
+import { amountText, bodyTrends, changeText, kindHistory, MEASUREMENT_KINDS, parseNumber, spread, trainingApi, tt, unitsFor, type BodyMeasurement, type LengthUnit, type Trend, type WeightUnit } from "@/lib/training";
 import type { WeightLog } from "@/lib/types";
 
 type Kind = Trend["kind"];
@@ -135,6 +135,8 @@ export default function Body() {
   );
 }
 
+const trim1 = (value: number) => String(Math.round(value * 10) / 10);
+
 function TrendCard({ trend, open, onToggle, rows, onRemove }: { trend: Trend; open: boolean; onToggle: () => void; rows: { id: string; value: number; unit: string; at: string }[]; onRemove: (id: string) => void }) {
   const change = changeText(trend.change, trend.latest.unit);
   const toggle = (
@@ -148,17 +150,17 @@ function TrendCard({ trend, open, onToggle, rows, onRemove }: { trend: Trend; op
       <Pressable onPress={onToggle} style={{ flexDirection: "row", alignItems: "flex-end", gap: 12 }}>
         <View style={{ gap: 2, minWidth: 120 }}>
           <Text style={type.stat}>
-            {trend.latest.value} <Text style={type.rowSubtitle}>{trend.latest.unit}</Text>
+            {digits(trim1(trend.latest.value))} <Text style={type.rowSubtitle}>{trend.latest.unit}</Text>
           </Text>
           <Text style={type.rowSubtitle}>{change ? `${change} · ${tt.since(day(trend.firstAt))}` : day(trend.latest.at)}</Text>
         </View>
         {trend.points.length > 1 ? (
           <View style={{ flex: 1 }}>
-            <TrendBars values={trend.points} height={44} label={`${tt.kinds[trend.kind]}: ${trend.points.join(", ")}`} highlight={trend.points.length - 1} />
+            <TrendBars values={spread(trend.points)} height={44} label={`${tt.kinds[trend.kind]}: ${digits(trend.points.join(", "))}`} highlight={trend.points.length - 1} />
           </View>
         ) : null}
       </Pressable>
-      {open ? rows.map((row) => <ListRow key={row.id} title={`${row.value} ${row.unit}`} subtitle={day(row.at)} trailing={<MoreButton label={tt.deleteEntry} onPress={() => onRemove(row.id)} />} />) : null}
+      {open ? rows.map((row) => <ListRow key={row.id} title={amountText(row.value, row.unit)} subtitle={day(row.at)} trailing={<MoreButton label={tt.deleteEntry} onPress={() => onRemove(row.id)} />} />) : null}
     </Card>
   );
 }

@@ -6,7 +6,7 @@ import { useOverlays } from "@/components/overlays";
 import { Button, Loading, Screen } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { et } from "@/lib/exercises";
-import { formatDate, t } from "@/lib/i18n";
+import { digits, formatDate, t } from "@/lib/i18n";
 import { trainingApi, tt, volumeText, type SessionSummary } from "@/lib/training";
 
 const stamp = (iso: string) => formatDate(iso, { weekday: "short", day: "numeric", month: "short" });
@@ -79,7 +79,7 @@ export default function Training() {
               key={session.id}
               href={{ pathname: "/workout", params: { id: session.id } }}
               title={session.type}
-              subtitle={[stamp(session.logged_at), session.exercise_names.slice(0, 3).join(isList), session.exercise_names.length > 3 ? `+${session.exercise_names.length - 3}` : null].filter(Boolean).join(" · ")}
+              subtitle={[stamp(session.logged_at), session.exercise_names.slice(0, 3).join(isList), session.exercise_names.length > 3 ? `+${digits(session.exercise_names.length - 3)}` : null].filter(Boolean).join(" · ")}
               meta={session.volume_kg ? volumeText(session.volume_kg) : session.duration_minutes ? `${session.duration_minutes} ${t.min}` : undefined}
               trailing={live ? undefined : <RowButton outline icon="repeat" label={tt.repeat} disabled={busy} onPress={() => void begin(session.id)} />}
             />

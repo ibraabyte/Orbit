@@ -14,7 +14,9 @@ import {
   restText,
   sessionLine,
   sessionTotals,
+  spread,
   setText,
+  shortSet,
   trainingApi,
   unitsFor,
   volumeText,
@@ -87,6 +89,8 @@ describe("training", () => {
     expect(sessionLine([{ weight: 40, unit: "kg", reps: 10, warmup: true }, ...same])).toBe("2 × 8 · 60 kg");
     expect(sessionLine([...same, { weight: 65, unit: "kg", reps: 6, warmup: false }])).toBe("60×8, 60×8, 65×6");
     expect(sessionLine([{ weight: null, unit: "kg", reps: 15, warmup: false }])).toBe("1 × 15");
+    expect(shortSet({ weight: 72.5, reps: 6 })).toBe("72.5×6");
+    expect(shortSet({ weight: null, reps: 12 })).toBe("×12");
     expect(sessionLine([])).toBe("");
   });
 
@@ -127,6 +131,7 @@ describe("training", () => {
     expect(sessionTotals(session)).toEqual({ done: 3, total: 4, volumeKg: 727 });
     expect(volumeText(727)).toBe("727 kg");
     expect(volumeText(12_437)).toBe("12,440 kg");
+    expect(volumeText(1364, false)).toBe("1,360");
   });
 
   it("starts in the unit of the latest weigh-in", () => {
@@ -153,6 +158,14 @@ describe("training", () => {
     expect(changeText(-2.45, "kg")).toBe("−2.5 kg");
     expect(changeText(0, "%")).toBe("±0 %");
     expect(changeText(null, "cm")).toBeNull();
+  });
+
+  it("spreads trend bars so small changes show", () => {
+    const heights = spread([84.6, 83.5, 81.8]);
+    expect(heights[2]).toBeLessThan(heights[0] / 3);
+    expect(Math.min(...heights)).toBeGreaterThan(0);
+    expect(spread([80, 80])).toEqual([1, 1]);
+    expect(spread([])).toEqual([]);
   });
 
   it("lists one kind newest first", () => {
