@@ -57,20 +57,62 @@ class TagNamesIn(Input):
 # Library
 
 
+CaptureStatus = Literal["want", "done"]
+
+
+def category_field(default=...):
+    # A built-in category (video, post, book, movie, article, place, other) or one the user named.
+    return Field(default, min_length=1, max_length=40)
+
+
+def _trimmed(value: str | None) -> str | None:
+    return value.strip() if isinstance(value, str) else value
+
+
 class CaptureCreate(Tagged):
     type: Literal["link", "screenshot", "note"] = "link"
-    url: str | None = None
+    url: str | None = Field(default=None, max_length=2000)
     title: str = Field(min_length=1, max_length=280)
     note: str | None = None
     source: str | None = None
+    category: str = category_field("other")
+    status: CaptureStatus = "want"
+    image_url: str | None = Field(default=None, max_length=2000)
+    site_name: str | None = Field(default=None, max_length=120)
+    summary: str | None = Field(default=None, max_length=1000)
+
+    _trim = field_validator("category", mode="before")(_trimmed)
 
 
 class CaptureUpdate(Input):
     type: Literal["link", "screenshot", "note"] | None = None
-    url: str | None = None
+    url: str | None = Field(default=None, max_length=2000)
     title: str | None = Field(default=None, min_length=1, max_length=280)
     note: str | None = None
     source: str | None = None
+    category: str | None = category_field(None)
+    status: CaptureStatus | None = None
+    image_url: str | None = Field(default=None, max_length=2000)
+    site_name: str | None = Field(default=None, max_length=120)
+    summary: str | None = Field(default=None, max_length=1000)
+
+    _trim = field_validator("category", mode="before")(_trimmed)
+
+
+class CaptureSave(Input):
+    """A link shared into the saver: the server reads its title, picture and site, and guesses the category."""
+
+    url: str = Field(min_length=1, max_length=2000)
+    note: str | None = Field(default=None, max_length=2000)
+    category: str | None = category_field(None)
+    # The title the sharing app already knew (the iOS share sheet often sends one); used when the page gives none.
+    title: str | None = Field(default=None, max_length=280)
+
+    _trim = field_validator("category", "url", mode="before")(_trimmed)
+
+
+class CaptureSummaryIn(Input):
+    locale: Literal["en", "ar"] = "en"
 
 
 # Food
