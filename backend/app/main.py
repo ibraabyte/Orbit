@@ -24,6 +24,7 @@ from app.routers import (
     integrations,
     legal,
     profile,
+    saver,
     tasks,
     whoop,
 )
@@ -82,6 +83,7 @@ def create_app() -> FastAPI:
         admin.router,
         bank_sms.router,
         legal.router,
+        saver.router,
         *domains.ROUTERS,
         *exercises.ROUTERS,
     ):

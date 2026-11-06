@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, flip, Glass, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
 import { backdrop, colors, fonts, labelCase, radius } from "@/components/theme";
 import { et } from "@/lib/exercises";
+import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
 
 // Space the tab bar takes at the bottom of a tab screen.
@@ -42,7 +43,8 @@ export function Columns({ left, right }: { left: ReactNode; right: ReactNode }) 
 // other sections across the top, so a section only shows its own things.
 const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/tasks": { title: t.tasks, hint: "pay rent fri 5pm +home · pack; passport; charger" },
-  "/health": { title: t.health, hint: "slept 7h q4 · workout 40m run" },
+  "/health": { title: t.health, hint: "weight 82 · slept 7h q4 · workout 40m run" },
+  "/health-goals": { title: ht.goals },
   "/whoop": { title: t.whoop },
   "/food": { title: t.food, hint: "buy milk · plan dinner salmon @friday" },
   "/food-add": { title: t.addFood },
@@ -53,7 +55,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/investments": { title: t.investments },
   "/cards": { title: t.cards },
   "/obligations": { title: t.obligations },
-  "/library": { title: t.library, hint: "note idea for the weekend" },
+  "/library": { title: t.library },
   "/habits": { title: t.habits, hint: "habit read 20 min daily" },
   "/vehicles": { title: t.car },
   "/media": { title: t.movies },

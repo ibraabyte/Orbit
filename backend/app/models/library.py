@@ -15,8 +15,12 @@ class Capture(Owned, Base):
     __table_args__ = (
         CheckConstraint("type in ('link', 'screenshot', 'note')", name="type"),
         CheckConstraint("char_length(title) <= 280", name="title_length"),
+        CheckConstraint("char_length(category) between 1 and 40", name="category"),
+        CheckConstraint("status in ('want', 'done')", name="status"),
+        CheckConstraint("char_length(summary) <= 1000", name="summary_length"),
         UniqueConstraint("id", "user_id"),
         Index("captures_user_created_idx", "user_id", text("created_at desc")),
+        Index("captures_user_category_idx", "user_id", "category"),
     )
 
     type: Mapped[str] = mapped_column(Text, nullable=False, server_default="link")
@@ -24,6 +28,13 @@ class Capture(Owned, Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
     source: Mapped[str | None] = mapped_column(Text)
+    # The saver: "video", "post", "book", "movie", "article", "place", "other", or a name the user made up.
+    category: Mapped[str] = mapped_column(Text, nullable=False, server_default="other")
+    # "want" = still to see, "done" = seen.
+    status: Mapped[str] = mapped_column(Text, nullable=False, server_default="want")
+    image_url: Mapped[str | None] = mapped_column(Text)
+    site_name: Mapped[str | None] = mapped_column(Text)
+    summary: Mapped[str | None] = mapped_column(Text)
 
 
 class Attachment(Owned, Base):

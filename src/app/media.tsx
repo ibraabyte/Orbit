@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { router, useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Text, View } from "react-native";
 import { Badge, Card, EmptyState, ListRow, RowButton, type } from "@/components/drift";
@@ -46,7 +46,9 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   const { userId } = useDashboardData();
   const watchlist = useWatchlist(userId);
   const lists = groupWatchItems(watchlist.items);
-  const [query, setQuery] = useState("");
+  // Opened from a saved movie in the saver: start with its title searched.
+  const { q } = useLocalSearchParams<{ q?: string }>();
+  const [query, setQuery] = useState(q ?? "");
   const [results, setResults] = useState<SeerrResult[]>([]);
   const [searched, setSearched] = useState(false);
   const [pending, setPending] = useState<{ request: SeerrRequest; title: string | null }[]>([]);
@@ -69,7 +71,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   };
 
   useEffect(() => {
-    void load("");
+    void load(q ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps -- first load only; search runs on submit
   }, [client, seerr.isAdmin]);
 

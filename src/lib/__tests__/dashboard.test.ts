@@ -322,6 +322,11 @@ describe("dashboard summaries", () => {
           title: "Example",
           note: null,
           source: "example.com",
+          category: "other",
+          status: "want",
+          image_url: null,
+          site_name: null,
+          summary: null,
           created_at: now.toISOString()
         }
       ],
@@ -496,6 +501,11 @@ describe("dashboard summaries", () => {
           title: "Idea",
           note: null,
           source: null,
+          category: "other",
+          status: "want",
+          image_url: null,
+          site_name: null,
+          summary: null,
           created_at: now.toISOString()
         }
       ]

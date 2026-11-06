@@ -4,7 +4,7 @@ tasks and only clears their list_id.
 
 Downgrading drops the two new tables and tasks.list_id, so lists and checklists made since are lost; the tasks stay.
 
-Comes after 0012 (many AIs).
+Comes after 0013 (saver).
 """
 
 from collections.abc import Sequence
@@ -12,8 +12,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0013"
-down_revision: str | None = "0012"
+revision: str = "0014"
+down_revision: str | None = "0013"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
