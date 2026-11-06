@@ -32,11 +32,16 @@ const parents: Record<string, string> = {
   investments: "finance",
   cards: "finance",
   obligations: "finance",
-  task: "tasks"
+  task: "tasks",
+  // The Seerr pages under Movies & TV.
+  title: "media",
+  discover: "media",
+  requests: "media",
+  person: "media"
 };
 
 // Sheets that open over a screen; the item under them stays lit.
-const sheets = new Set(["capture", "title"]);
+const sheets = new Set(["capture"]);
 
 /** The sidebar key for a path: "index" for Today, "more", a section key, or undefined for a sheet or unknown path. */
 export function activeKey(path: string): string | undefined {

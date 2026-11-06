@@ -78,11 +78,10 @@ export default function RootLayout() {
       <Stack.Protected guard={Boolean(session)}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: "rgba(10,10,11,0.86)" } }} />
-        <Stack.Screen name="title" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: "rgba(10,10,11,0.86)" } }} />
       </Stack.Protected>
       {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
       <Stack.Protected guard={Boolean(session)}>
-        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "health-goals", "integrations", "library", "media", "settings", "tasks", "task/[id]", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries"].map((name) => (
+        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "health-goals", "integrations", "library", "media", "title", "discover", "requests", "person", "settings", "tasks", "task/[id]", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries"].map((name) => (
           <Stack.Screen key={name} name={name} />
         ))}
       </Stack.Protected>

@@ -35,7 +35,10 @@ describe("activeKey", () => {
 
   it("has no key for sheets, so the item underneath stays lit", () => {
     expect(activeKey("/capture")).toBeUndefined();
-    expect(activeKey("/title")).toBeUndefined();
+  });
+
+  it("lights Movies & TV for its title, list, request and person pages", () => {
+    for (const path of ["/title", "/discover", "/requests", "/person"]) expect(activeKey(path)).toBe("media");
   });
 });
 

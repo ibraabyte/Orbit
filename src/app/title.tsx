@@ -1,92 +1,374 @@
 import * as Haptics from "expo-haptics";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Image, ScrollView, Text, View } from "react-native";
-import { Badge, EmptyState, type } from "@/components/drift";
-import { Button } from "@/components/screen";
-import { colors, radius } from "@/components/theme";
+import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Badge, Card, CheckItem, EmptyState, flip, Glass, Icon, ListRow, RowButton, type } from "@/components/drift";
+import { useOverlays } from "@/components/overlays";
+import { CastCard, Chip, FactRows, openDiscover, Poster, PosterRail, StatusPill } from "@/components/seerr-parts";
+import { BleedRow, Button, CONTENT_MAX_WIDTH } from "@/components/screen";
+import { backdrop as ground, colors, fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
-import { t } from "@/lib/i18n";
-import { posterUrl, seerrTitle, type SeerrDetails, type SeerrMediaType } from "@/lib/seerr";
+import { formatDate, t } from "@/lib/i18n";
+import {
+  backdropUrl,
+  canRequest,
+  factLine,
+  factRows,
+  imdbUrl,
+  mediaBadge,
+  mt,
+  playUrl,
+  requestBadge,
+  seasonBadge,
+  seasonRows,
+  seerrName,
+  seerrPageUrl,
+  topCast,
+  trailerUrl,
+  type SeerrDetails,
+  type SeerrEpisode,
+  type SeerrMediaType,
+  type SeerrRatings,
+  type SeerrRequest,
+  type SeerrResult
+} from "@/lib/seerr";
 import type { WatchStatus } from "@/lib/types";
 import { watchDraftFromSeerr } from "@/lib/watchlist";
 
-// One movie or series from Seerr: poster, facts, story, and what you can do with it. Opened from Movies & TV.
+type Episodes = SeerrEpisode[] | "loading" | "failed";
+
+// One movie or series, like its page in Seerr: backdrop, poster, facts, request (by season for a series), trailer,
+// play, cast, seasons with episodes, and what's like it. Opened from anywhere in Movies & TV.
 export default function Title() {
   const params = useLocalSearchParams<{ kind: SeerrMediaType; id: string }>();
+  const kind: SeerrMediaType = params.kind === "tv" ? "tv" : "movie";
+  const tmdbId = Number(params.id);
+  const insets = useSafeAreaInsets();
   const seerr = useSeerr();
+  const client = seerr.client;
+  const { sheet } = useOverlays();
   const { userId } = useDashboardData();
   const watchlist = useWatchlist(userId);
   const [item, setItem] = useState<SeerrDetails | null>(null);
+  const [ratings, setRatings] = useState<SeerrRatings | null>(null);
+  const [recommended, setRecommended] = useState<SeerrResult[]>([]);
+  const [similar, setSimilar] = useState<SeerrResult[]>([]);
   const [failed, setFailed] = useState<string | null>(null);
-  const tmdbId = Number(params.id);
+  const [picking, setPicking] = useState<Set<number> | null>(null);
+  const [episodes, setEpisodes] = useState<Record<number, Episodes>>({});
+  const [openSeason, setOpenSeason] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    if (!seerr.client) return;
+    if (!client) return;
     try {
-      setItem(await seerr.client.details(params.kind, tmdbId));
+      setItem(await client.details(kind, tmdbId));
+      setFailed(null);
     } catch (error) {
       setFailed(error instanceof Error ? error.message : t.tryAgain);
     }
-  }, [seerr.client, params.kind, tmdbId]);
+  }, [client, kind, tmdbId]);
 
   useEffect(() => {
     void load();
-  }, [load]);
+    if (!client) return;
+    // Extras: each one can be missing without spoiling the page.
+    void client.recommendations(kind, tmdbId).then(setRecommended).catch(() => setRecommended([]));
+    void client.similar(kind, tmdbId).then(setSimilar).catch(() => setSimilar([]));
+    if (kind === "movie") void client.ratings(tmdbId).then(setRatings).catch(() => setRatings(null));
+  }, [load, client, kind, tmdbId]);
 
   const act = async (work: () => Promise<unknown>) => {
+    setBusy(true);
     try {
       await work();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPicking(null);
       await load();
     } catch (error) {
       Alert.alert("Seerr", error instanceof Error ? error.message : t.tryAgain);
+    } finally {
+      setBusy(false);
     }
   };
 
-  if (!item) return <View style={{ flex: 1, padding: 20 }}><EmptyState>{failed ?? (seerr.ready && !seerr.connected ? t.seerrConnect : `${t.loading}…`)}</EmptyState></View>;
+  const toggleSeason = async (seasonNumber: number) => {
+    if (openSeason === seasonNumber) return setOpenSeason(null);
+    setOpenSeason(seasonNumber);
+    if (!client || Array.isArray(episodes[seasonNumber])) return;
+    setEpisodes((before) => ({ ...before, [seasonNumber]: "loading" }));
+    try {
+      const season = await client.season(tmdbId, seasonNumber);
+      setEpisodes((before) => ({ ...before, [seasonNumber]: season.episodes ?? [] }));
+    } catch {
+      setEpisodes((before) => ({ ...before, [seasonNumber]: "failed" }));
+    }
+  };
 
-  const onList = watchlist.items.find((row) => row.tmdb_id === tmdbId && row.media_type === params.kind);
+  const back = (
+    <Glass interactive style={[styles.backButton, { top: insets.top + 8 }]}>
+      <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t.back} style={[styles.glassPress, flip]}>
+        <Icon name="chevron-left" size={22} color={colors.ink} />
+      </Pressable>
+    </Glass>
+  );
+
+  if (!item) {
+    return (
+      <View style={[styles.shell, { paddingTop: insets.top + 64, paddingHorizontal: 20 }]}>
+        <EmptyState>{failed ?? (seerr.ready && !seerr.connected ? t.seerrConnect : `${t.loading}…`)}</EmptyState>
+        {back}
+      </View>
+    );
+  }
+
+  const name = seerrName(item);
   const status = item.mediaInfo?.status;
-  const poster = posterUrl(item.posterPath, 342);
-  const facts = [
-    params.kind === "tv" ? t.series : t.movie,
-    item.runtime ? `${item.runtime} ${t.minutesShort}` : null,
-    item.numberOfSeasons ? `${item.numberOfSeasons} ${t.seasonsShort}` : null,
-    item.voteAverage ? `★ ${item.voteAverage.toFixed(1)}` : null
-  ].filter(Boolean);
-  const setStatus = (next: WatchStatus) => act(() => (onList ? watchlist.update(onList.id, { status: next }) : watchlist.save(watchDraftFromSeerr(item, next)!)));
+  const seasons = kind === "tv" ? seasonRows(item) : [];
+  const requestableSeasons = seasons.filter((season) => season.requestable).map((season) => season.seasonNumber);
+  const requestable = canRequest(item) && (kind === "movie" || requestableSeasons.length > 0 || !seasons.length);
+  const requests = item.mediaInfo?.requests ?? [];
+  const waiting = requests.filter((request) => request.status === 1);
+  const mine = waiting.find((request) => seerr.user && request.requestedBy?.id === seerr.user.id);
+  const backdrop = backdropUrl(item.backdropPath, 1280);
+  const trailer = trailerUrl(item.relatedVideos);
+  const play = playUrl(item.mediaInfo);
+  const page = seerrPageUrl(seerr.serverUrl, kind, tmdbId);
+  const imdb = imdbUrl(item);
+  const cast = topCast(item);
+  const facts = factRows(item, (day) => formatDate(day, { day: "numeric", month: "short", year: "numeric" }));
+  const onList = watchlist.items.find((row) => row.tmdb_id === tmdbId && row.media_type === kind);
   const listChoices: [WatchStatus, string][] = [["want", t.wantToWatch], ["watching", t.watching], ["done", t.watched]];
+  const setListStatus = (next: WatchStatus) => act(() => (onList ? watchlist.update(onList.id, { status: next }) : watchlist.save(watchDraftFromSeerr(item, next)!)));
+
+  const startRequest = () => {
+    if (kind === "movie" || !seasons.length) return void act(() => client!.request(kind, tmdbId));
+    setPicking(new Set(requestableSeasons));
+  };
+  const flipPick = (seasonNumber: number) =>
+    setPicking((before) => {
+      const next = new Set(before);
+      if (next.has(seasonNumber)) next.delete(seasonNumber);
+      else next.add(seasonNumber);
+      return next;
+    });
+
+  const open = (url: string) => void WebBrowser.openBrowserAsync(url).catch(() => Linking.openURL(url));
+  const links = [
+    trailer ? { label: `▶ ${mt.trailer}`, url: trailer } : null,
+    page ? { label: `${mt.openInSeerr} ↗`, url: page } : null,
+    imdb ? { label: `${mt.imdb} ↗`, url: imdb } : null
+  ].filter(Boolean) as { label: string; url: string }[];
+
+  const requestRow = (request: SeerrRequest) => (
+    <ListRow
+      key={request.id}
+      title={request.requestedBy?.displayName ?? mt.requestedBy}
+      badges={<StatusPill badge={requestBadge(request.status)} />}
+      subtitle={[request.seasons?.length ? mt.seasonsAsked(request.seasons.map((season) => season.seasonNumber).join("، ")) : null, formatDate(request.createdAt)].filter(Boolean).join(" · ")}
+      trailing={
+        <View style={{ gap: 6 }}>
+          <RowButton icon="check" label={mt.approve} disabled={busy} onPress={() => act(() => client!.approve(request.id))} />
+          <RowButton outline label={mt.decline} disabled={busy} onPress={() => act(() => client!.decline(request.id))} />
+        </View>
+      }
+    />
+  );
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 20, gap: 16 }}>
-      <View style={{ flexDirection: "row", gap: 16 }}>
-        {poster ? <Image source={{ uri: poster }} style={{ width: 110, height: 165, borderRadius: radius.chip }} accessibilityIgnoresInvertColors /> : null}
-        <View style={{ flex: 1, gap: 8, justifyContent: "center" }}>
-          <Text style={type.title}>{seerrTitle(item)}</Text>
-          <Text style={type.rowSubtitle}>{facts.join(" · ")}</Text>
-          {item.genres?.length ? <Text style={type.rowSubtitle}>{item.genres.map((genre) => genre.name).join("، ")}</Text> : null}
-          <View style={{ flexDirection: "row", gap: 6, flexWrap: "wrap" }}>
-            {status === 5 ? <Badge tone="success" glyph="✓">{t.available}</Badge> : null}
-            {status && status > 1 && status !== 5 ? <Badge glyph="◷">{t.requested}</Badge> : null}
-          </View>
+    <View style={styles.shell}>
+      <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 48 }}>
+        <View style={styles.backdrop}>
+          {backdrop ? <Image source={{ uri: backdrop }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors /> : null}
+          <View style={[StyleSheet.absoluteFill, styles.fade]} />
         </View>
-      </View>
-      {item.tagline ? <Text style={[type.rowSubtitle, { fontStyle: "italic" }]}>{item.tagline}</Text> : null}
-      {item.overview ? <Text style={{ color: colors.ink, lineHeight: 22 }}>{item.overview}</Text> : null}
-      {!status || status === 1 ? <Button variant="primary" title={t.request} onPress={() => act(() => seerr.client!.request(params.kind, tmdbId))} /> : null}
-      {watchlist.available ? (
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {listChoices.map(([value, label]) => (
-            <View key={value} style={{ flex: 1 }}>
-              <Button variant={onList?.status === value ? "dark" : "outline"} title={label} onPress={() => void setStatus(value)} />
+        <View style={styles.content}>
+          <View style={styles.head}>
+            <View style={styles.posterShadow}>
+              <Poster path={item.posterPath} title={name} width={116} />
             </View>
-          ))}
+            <View style={{ flex: 1, gap: 6, justifyContent: "flex-end" }}>
+              <Text style={styles.name} accessibilityRole="header">
+                {name}
+              </Text>
+              <Text style={type.rowSubtitle}>{factLine(item).join(" · ")}</Text>
+              <View style={styles.badges}>
+                <StatusPill badge={mediaBadge(status)} />
+                {mine ? <StatusPill badge={requestBadge(1)} /> : null}
+              </View>
+            </View>
+          </View>
+
+          {item.tagline ? <Text style={styles.tagline}>{item.tagline}</Text> : null}
+
+          <View style={{ gap: 8 }}>
+            {play ? <Button variant="primary" title={`▶ ${mt.play}`} onPress={() => void Linking.openURL(play).catch(() => open(play))} /> : null}
+            {requestable && !picking ? <Button variant={play ? "outline" : "primary"} disabled={busy || !client} title={kind === "tv" && status === 4 ? mt.requestMore : kind === "tv" && seasons.length ? mt.requestSeasons : mt.request} onPress={startRequest} /> : null}
+            {mine ? <Button variant="outline" disabled={busy} title={mt.cancelRequest} onPress={() => sheet({ title: mt.cancelRequestTitle, detail: name, options: [{ label: mt.cancelRequest, destructive: true, run: () => void act(() => client!.cancel(mine.id)) }] })} /> : null}
+          </View>
+
+          {links.length ? (
+            <View style={styles.links}>
+              {links.map((link) => (
+                <RowButton key={link.label} outline label={link.label} onPress={() => open(link.url)} />
+              ))}
+            </View>
+          ) : null}
+
+          {seerr.isAdmin && waiting.length ? <Card title={mt.awaiting}>{waiting.map(requestRow)}</Card> : null}
+
+          {kind === "tv" && seasons.length ? (
+            <Card title={mt.seasonsTitle}>
+              {picking ? <Text style={type.rowSubtitle}>{mt.pickSeasons}</Text> : null}
+              {seasons.map((season) => {
+                const shown = openSeason === season.seasonNumber;
+                const list = episodes[season.seasonNumber];
+                const badge = seasonBadge(season);
+                return (
+                  <View key={season.seasonNumber}>
+                    <ListRow
+                      leading={
+                        picking && season.requestable ? (
+                          <CheckItem checked={picking.has(season.seasonNumber)} onPress={() => flipPick(season.seasonNumber)} label={season.name ?? `${mt.season} ${season.seasonNumber}`} />
+                        ) : (
+                          <Poster path={season.posterPath} title={String(season.seasonNumber)} width={36} />
+                        )
+                      }
+                      title={season.name ?? `${mt.season} ${season.seasonNumber}`}
+                      badges={badge ? <StatusPill badge={badge} /> : undefined}
+                      subtitle={[season.episodeCount ? mt.episodes(season.episodeCount) : null, season.airDate?.slice(0, 4)].filter(Boolean).join(" · ")}
+                      onPress={() => (picking && season.requestable ? flipPick(season.seasonNumber) : void toggleSeason(season.seasonNumber))}
+                      trailing={picking ? undefined : <Icon name={shown ? "chevron-up" : "chevron-down"} size={16} color={colors.inkFaint} />}
+                    />
+                    {shown && !picking ? (
+                      <View style={styles.episodes}>
+                        {list === "loading" || list === undefined ? <Text style={type.rowSubtitle}>{`${t.loading}…`}</Text> : null}
+                        {list === "failed" ? <Text style={type.rowSubtitle}>{t.tryAgain}</Text> : null}
+                        {Array.isArray(list) && !list.length ? <Text style={type.rowSubtitle}>{mt.noEpisodes}</Text> : null}
+                        {Array.isArray(list)
+                          ? list.map((episode) => (
+                              <View key={episode.id} style={styles.episode}>
+                                <Text style={type.rowTitle}>
+                                  <Text style={styles.episodeNumber}>{`E${episode.episodeNumber}  `}</Text>
+                                  {episode.name}
+                                </Text>
+                                {episode.airDate ? <Text style={type.rowSubtitle}>{formatDate(episode.airDate, { day: "numeric", month: "short", year: "numeric" })}</Text> : null}
+                                {episode.overview ? (
+                                  <Text style={type.rowSubtitle} numberOfLines={3}>
+                                    {episode.overview}
+                                  </Text>
+                                ) : null}
+                              </View>
+                            ))
+                          : null}
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })}
+              {picking ? (
+                <View style={{ gap: 8, paddingTop: 8 }}>
+                  <Button variant="primary" disabled={busy || picking.size === 0} title={picking.size === requestableSeasons.length && picking.size > 1 ? `${mt.request} · ${mt.requestAll}` : mt.requestPicked(picking.size)} onPress={() => act(() => client!.request("tv", tmdbId, [...picking].sort((a, b) => a - b)))} />
+                  <Button variant="outline" title={t.cancel} onPress={() => setPicking(null)} />
+                </View>
+              ) : null}
+            </Card>
+          ) : null}
+
+          {item.overview ? (
+            <Card title={mt.overview}>
+              <Text style={type.body}>{item.overview}</Text>
+            </Card>
+          ) : null}
+
+          {item.voteAverage || ratings?.criticsScore || ratings?.audienceScore ? (
+            <Card title={mt.ratings}>
+              <View style={styles.ratings}>
+                {item.voteAverage ? <Rating label={mt.tmdb} value={`★ ${item.voteAverage.toFixed(1)}`} detail={item.voteCount ? mt.votes(item.voteCount) : undefined} /> : null}
+                {ratings?.criticsScore ? <Rating label={mt.critics} value={`${ratings.criticsScore}%`} detail={ratings.criticsRating} /> : null}
+                {ratings?.audienceScore ? <Rating label={mt.audience} value={`${ratings.audienceScore}%`} detail={ratings.audienceRating} /> : null}
+              </View>
+            </Card>
+          ) : null}
+
+          {item.genres?.length ? (
+            <BleedRow>
+              {item.genres.map((genre) => (
+                <Chip key={genre.id} label={genre.name} onPress={() => openDiscover({ row: "genre", kind, genreId: genre.id }, genre.name)} />
+              ))}
+            </BleedRow>
+          ) : null}
+
+          {facts.length ? (
+            <Card title={mt.details}>
+              <FactRows rows={facts} />
+            </Card>
+          ) : null}
+
+          {cast.length ? (
+            <Card title={mt.cast}>
+              <BleedRow>
+                {cast.map((person) => (
+                  <CastCard key={person.id} person={person} />
+                ))}
+              </BleedRow>
+            </Card>
+          ) : null}
+
+          {watchlist.available ? (
+            <Card title={mt.watchList}>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {listChoices.map(([value, label]) => (
+                  <View key={value} style={{ flex: 1 }}>
+                    <Button variant={onList?.status === value ? "dark" : "outline"} title={label} onPress={() => void setListStatus(value)} />
+                  </View>
+                ))}
+              </View>
+              {onList ? <Button variant="outline" title={t.remove} onPress={() => act(() => watchlist.remove(onList.id))} /> : null}
+            </Card>
+          ) : null}
+
+          <PosterRail title={mt.recommended} items={recommended} />
+          <PosterRail title={mt.similar} items={similar} />
         </View>
-      ) : null}
-      {onList ? <Button variant="outline" title={t.remove} onPress={() => act(() => watchlist.remove(onList.id))} /> : null}
-    </ScrollView>
+      </ScrollView>
+      {back}
+    </View>
   );
 }
+
+function Rating({ label, value, detail }: { label: string; value: string; detail?: string }) {
+  return (
+    <View style={styles.rating}>
+      <Text style={type.tileLabel}>{label}</Text>
+      <Text style={styles.ratingValue}>{value}</Text>
+      {detail ? <Badge>{detail}</Badge> : null}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  shell: { flex: 1, backgroundColor: colors.shell, experimental_backgroundImage: ground },
+  backdrop: { height: 260, backgroundColor: colors.surface },
+  // The picture fades into the ground, so the poster and name sit on it.
+  fade: { experimental_backgroundImage: `linear-gradient(180deg, transparent 0%, transparent 35%, ${colors.shell} 100%)` },
+  content: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center", paddingHorizontal: 20, gap: 14, marginTop: -120 },
+  head: { flexDirection: "row", gap: 16, alignItems: "flex-end" },
+  posterShadow: { shadowColor: colors.shell, shadowOpacity: 0.5, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
+  name: { fontFamily: fonts.medium, fontSize: 24, lineHeight: 30, letterSpacing: -0.4, color: colors.onShell },
+  tagline: { fontFamily: fonts.regular, fontStyle: "italic", fontSize: 13, lineHeight: 19, color: colors.inkMuted },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  links: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  episodes: { paddingStart: 48, paddingBottom: 8, gap: 12 },
+  episode: { gap: 3 },
+  episodeNumber: { fontFamily: fonts.medium, color: colors.accent },
+  ratings: { flexDirection: "row", gap: 10 },
+  rating: { flex: 1, gap: 4, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, padding: 10, alignItems: "flex-start" },
+  ratingValue: { fontFamily: fonts.medium, fontSize: 20, color: colors.ink },
+  backButton: { position: "absolute", start: 20, width: 44, height: 44, borderRadius: 22 },
+  glassPress: { flexGrow: 1, minHeight: 44, alignItems: "center", justifyContent: "center" }
+});

@@ -7,6 +7,7 @@ import { backdrop, colors, fonts, labelCase, radius } from "@/components/theme";
 import { et } from "@/lib/exercises";
 import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
+import { mt } from "@/lib/seerr";
 import { contentWidth, showsSidebar } from "@/lib/sidebar";
 
 // Space the tab bar takes at the bottom of a tab screen.
@@ -67,6 +68,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/habits": { title: t.habits, hint: "habit read 20 min daily" },
   "/vehicles": { title: t.car },
   "/media": { title: t.movies },
+  "/requests": { title: mt.requests },
   "/ask": { title: t.askOrbit },
   "/settings": { title: t.settings },
   "/exercises": { title: et.exercises },
@@ -82,6 +84,7 @@ export function openCapture(text?: string) {
 // On a wide screen (iPad) the content sits in a centered column, so cards and rows keep a readable width.
 export function Screen({
   header,
+  title,
   wide,
   stackAction,
   banner,
@@ -90,6 +93,7 @@ export function Screen({
   children
 }: {
   header?: ReactNode;
+  title?: string; // a stack screen whose title depends on what it shows (a genre, a person)
   wide?: boolean; // the screen uses Columns, so it may grow past the usual column width
   stackAction?: { label: string; onPress: () => void };
   banner?: ReactNode;
@@ -111,14 +115,14 @@ export function Screen({
         keyboardShouldPersistTaps="handled"
         refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.onShellMuted} /> : undefined}
       >
-        {header ?? <StackHeader action={stackAction} />}
+        {header ?? <StackHeader action={stackAction} title={title} />}
         {children}
       </ScrollView>
     </View>
   );
 }
 
-function StackHeader({ action }: { action?: { label: string; onPress: () => void } }) {
+function StackHeader({ action, title }: { action?: { label: string; onPress: () => void }; title?: string }) {
   const path = usePathname();
   // One exercise's page sits under the library.
   const meta = stackScreens[path] ?? (path.startsWith("/exercises/") ? { title: et.exercises } : path.startsWith("/task/") ? { title: t.task } : undefined);
@@ -131,7 +135,7 @@ function StackHeader({ action }: { action?: { label: string; onPress: () => void
           </Pressable>
         </Glass>
         <Text style={styles.stackTitle} accessibilityRole="header">
-          {meta?.title}
+          {title ?? meta?.title}
         </Text>
         {action ? (
           <Pressable onPress={action.onPress} accessibilityRole="button" style={styles.stackAction}>
