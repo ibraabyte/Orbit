@@ -23,8 +23,8 @@ export function WeekFactsGrid({ facts }: { facts: WeekFacts }) {
   if (facts.workouts || facts.workout_minutes)
     tiles.push(<StatTile key="workouts" label={t.weekWorkouts} value={formatNumber(facts.workouts)} unit={facts.workout_minutes ? t.weekMinutes.replace("{n}", formatNumber(facts.workout_minutes)) : undefined} />);
   if (facts.recovery_avg !== null) tiles.push(<StatTile key="recovery" label={t.weekRecovery} value={`${formatNumber(Math.round(facts.recovery_avg))}%`} />);
-  if (facts.sleep_hours_avg !== null) tiles.push(<StatTile key="sleep" label={t.weekSleep} value={digits(`${facts.sleep_hours_avg}h`)} />);
-  if (facts.calories_avg !== null) tiles.push(<StatTile key="calories" label={t.weekCalories} value={formatNumber(facts.calories_avg)} unit={t.kcal} />);
+  if (facts.sleep_hours_avg !== null) tiles.push(<StatTile key="sleep" label={t.weekSleep} value={digits(facts.sleep_hours_avg)} unit={t.weekHours} />);
+  if (facts.calories_avg !== null) tiles.push(<StatTile key="calories" label={t.weekCalories} value={formatNumber(facts.calories_avg)} />);
   for (const money of facts.spent) tiles.push(<StatTile key={`spent-${money.currency}`} label={t.weekSpent} value={formatMoney(money.total, money.currency)} href="/finance" />);
   if (facts.bills_next_week) tiles.push(<StatTile key="bills" label={t.weekBills} value={formatNumber(facts.bills_next_week)} href="/finance" />);
   if (facts.saved) tiles.push(<StatTile key="saved" label={t.weekSaved} value={formatNumber(facts.saved)} href="/library" />);
