@@ -10,9 +10,9 @@ from app.models.food import Food
 from app.models.health import GroceryItem, Meal, MealPlan, SleepLog, WeightLog, Workout
 from app.models.integrations import AiConnection, ServiceConnection
 from app.models.library import Attachment, Capture, PushSubscription, Tag, Tagging
-from app.models.life import Goal, GoalMilestone, Habit, HabitLog, JournalEntry, Person
+from app.models.life import Habit, HabitLog
 from app.models.profile import Profile
-from app.models.tasks import FocusSession, Reminder, Task, TaskList, TaskStep
+from app.models.tasks import Reminder, Task, TaskList, TaskStep
 from app.models.things import Vehicle, WatchItem
 from app.models.whoop import WhoopConnection, WhoopCycle, WhoopInsight, WhoopRecovery, WhoopSleep, WhoopWorkout
 
@@ -30,23 +30,18 @@ __all__ = [
     "ChatgptConnection",
     "Exercise",
     "Expense",
-    "FocusSession",
     "Food",
-    "Goal",
-    "GoalMilestone",
     "GroceryItem",
     "GymEquipment",
     "Habit",
     "HabitLog",
     "Injury",
     "Investment",
-    "JournalEntry",
     "Meal",
     "MealPlan",
     "MoneyAccount",
     "Obligation",
     "ObligationInstallment",
-    "Person",
     "Profile",
     "PushSubscription",
     "RefreshToken",

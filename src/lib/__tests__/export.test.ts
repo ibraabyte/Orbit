@@ -123,13 +123,10 @@ describe("full data export", () => {
     expect(summary.tasks).toBe(1);
     expect(summary.meal_plans).toBe(0);
     expect(summary.grocery_items).toBe(0);
-    expect(summary.people).toBe(0);
     expect(summary.sleep_logs).toBe(0);
-    expect(summary.focus_sessions).toBe(0);
     expect(summary.expenses).toBe(0);
     expect(summary.bills).toBe(0);
     expect(summary.budgets).toBe(0);
-    expect(summary.journal_entries).toBe(0);
   });
 
   it("serializes rows to spreadsheet-safe CSV", () => {

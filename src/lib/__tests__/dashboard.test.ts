@@ -12,7 +12,7 @@ import {
   todaysTasks,
   weeklySummary
 } from "@/lib/dashboard";
-import type { Bill, DashboardData, FocusSession, GroceryItem, Habit, HabitLog, Meal, MealPlan, Reminder, SleepLog, Task, Workout } from "@/lib/types";
+import type { Bill, DashboardData, GroceryItem, Habit, HabitLog, Meal, MealPlan, Reminder, SleepLog, Task, Workout } from "@/lib/types";
 
 const now = new Date("2026-07-01T12:00:00.000Z");
 
@@ -74,23 +74,6 @@ function workout(overrides: Partial<Workout>): Workout {
     calories: null,
     notes: null,
     logged_at: now.toISOString(),
-    created_at: now.toISOString(),
-    ...overrides
-  };
-}
-
-function focusSession(overrides: Partial<FocusSession>): FocusSession {
-  return {
-    id: crypto.randomUUID(),
-    user_id: "user-1",
-    task_id: null,
-    title: "Focus",
-    duration_minutes: 50,
-    started_at: now.toISOString(),
-    ended_at: "2026-07-01T12:50:00.000Z",
-    status: "completed",
-    energy: 4,
-    note: null,
     created_at: now.toISOString(),
     ...overrides
   };
@@ -206,22 +189,17 @@ function dashboardData(overrides: Partial<DashboardData> = {}): DashboardData {
     meals: [],
     mealPlans: [],
     groceryItems: [],
-    people: [],
     weightLogs: [],
     workouts: [],
     sleepLogs: [],
-    focusSessions: [],
     habits: [],
     habitLogs: [],
-    goals: [],
-    goalMilestones: [],
     budgets: [],
     cards: [],
     moneyAccounts: [],
     investments: [],
     obligations: [],
     obligationInstallments: [],
-    journalEntries: [],
     expenses: [],
     bills: [],
     ...overrides
@@ -336,7 +314,6 @@ describe("dashboard summaries", () => {
       meals: [meal({ calories: 650 })],
       mealPlans: [],
       groceryItems: [],
-      people: [],
       weightLogs: [
         {
           id: "weight-1",
@@ -348,7 +325,6 @@ describe("dashboard summaries", () => {
         }
       ],
       workouts: [workout({ duration_minutes: 45 })],
-      focusSessions: [focusSession({ duration_minutes: 50 })],
       sleepLogs: [
         {
           id: "sleep-1",
@@ -398,37 +374,12 @@ describe("dashboard summaries", () => {
           created_at: now.toISOString()
         }
       ],
-      goals: [
-        {
-          id: "goal-1",
-          user_id: "user-1",
-          title: "Goal",
-          notes: null,
-          status: "active",
-          target_at: null,
-          created_at: now.toISOString(),
-          updated_at: now.toISOString()
-        }
-      ],
-      goalMilestones: [],
       budgets: [],
       cards: [],
       moneyAccounts: [],
       investments: [],
       obligations: [],
       obligationInstallments: [],
-      journalEntries: [
-        {
-          id: "journal-1",
-          user_id: "user-1",
-          mood: "good",
-          title: null,
-          body: "Good day",
-          entry_date: "2026-07-01",
-          created_at: now.toISOString(),
-          updated_at: now.toISOString()
-        }
-      ]
     };
 
     expect(summarizeDashboard(data, now)).toMatchObject({
