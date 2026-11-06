@@ -1,7 +1,7 @@
 import { Link } from "expo-router";
 import { useState } from "react";
-import { Alert, Text } from "react-native";
-import { AuthPage, authStyles as styles, Field } from "@/components/auth-panel";
+import { Alert, Text, View } from "react-native";
+import { AuthHeader, AuthPage, authStyles as styles, Field } from "@/components/auth-panel";
 import { Button } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { t } from "@/lib/i18n";
@@ -32,12 +32,16 @@ export default function SignUp() {
 
   return (
     <AuthPage>
-      <Text style={styles.title}>{t.signUp}</Text>
+      <AuthHeader />
+      <View style={styles.section}>
+        <Text style={styles.sectionLabel}>{t.signUp}</Text>
+        <View style={styles.sectionLine} />
+      </View>
       <Field label={t.nameOpt} autoComplete="name" textContentType="name" value={name} onChangeText={setName} />
       <Field label={t.email} placeholder="you@example.com" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" value={email} onChangeText={setEmail} style={{ writingDirection: "ltr" }} />
       <Field label={`${t.password} (${MIN_PASSWORD_LENGTH}+)`} secureTextEntry autoComplete="new-password" textContentType="newPassword" value={password} onChangeText={setPassword} style={{ writingDirection: "ltr" }} />
       <Field label={t.confirm} error={mismatch} secureTextEntry autoComplete="new-password" textContentType="newPassword" value={confirm} onChangeText={setConfirm} onSubmitEditing={signUp} style={{ writingDirection: "ltr" }} />
-      <Button title={busy ? `${t.loading}…` : t.signUp} disabled={busy || !email || !password || !confirm} onPress={signUp} />
+      <Button variant="primary" title={busy ? `${t.loading}…` : t.signUp} disabled={busy || !email || !password || !confirm} onPress={signUp} />
       <Link href="/sign-in" style={styles.link}>
         {t.haveAccount} {t.signIn}
       </Link>
