@@ -1,5 +1,5 @@
 import Feather from "@expo/vector-icons/Feather";
-import { Link, type Href } from "expo-router";
+import { Link, router, type Href } from "expo-router";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import { createContext, useContext, useEffect, useState, type ComponentProps, type ReactNode } from "react";
 import { AccessibilityInfo, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
@@ -43,7 +43,7 @@ export function Glass({ tint, interactive, style, children }: { tint?: string; i
       </GlassView>
     );
   }
-  return <View style={[{ borderCurve: "continuous", backgroundColor: tint ?? colors.glassSolid }, style]}>{children}</View>;
+  return <View style={[{ borderCurve: "continuous", backgroundColor: colors.glassSolid }, style]}>{children}</View>;
 }
 
 // True inside a card, so shared pieces (empty states, text) pick the right colors.
@@ -385,7 +385,12 @@ export function EmptyState({ example, children, icon }: { example?: string; chil
     <View style={styles.empty}>
       {icon ? <IconTile name={icon} size={48} /> : null}
       {children ? <Text style={[onSurface ? type.rowSubtitle : type.shellMuted, { textAlign: "center" }]}>{children}</Text> : null}
-      {example ? <Text style={type.code}>{example}</Text> : null}
+      {example ? (
+        // The example is a starting line: tap it and the assistant opens with it typed in.
+        <Pressable onPress={() => router.push({ pathname: "/capture", params: { text: example } })} accessibilityRole="button" accessibilityLabel={example} hitSlop={8}>
+          <Text style={[type.code, styles.exampleLink]}>{example} ↗</Text>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -417,7 +422,8 @@ export const type = StyleSheet.create({
   link: { fontFamily: fonts.medium, fontSize: 12, color: colors.link, ...labelCase },
   stat: { fontFamily: fonts.medium, fontSize: 20, color: colors.ink },
   metric: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
-  tileLabel: { fontFamily: fonts.medium, fontSize: 10, lineHeight: 14, color: colors.inkMuted, ...labelCase },
+  // Tighter tracking than other labels: four tiles share a phone row, and "REMINDERS" must not break mid-word.
+  tileLabel: { fontFamily: fonts.medium, fontSize: 10, lineHeight: 14, color: colors.inkMuted, ...labelCase, letterSpacing: isArabic ? 0 : 0.5 },
   hint: { fontFamily: fonts.regular, fontSize: 11, color: colors.inkMuted },
   body: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 22, color: colors.ink },
   rowTitle: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 20, color: colors.ink },
@@ -443,12 +449,13 @@ const styles = StyleSheet.create({
   rowMeta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
   iconTile: { borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   badge: { borderRadius: radius.pill, borderWidth: 1, paddingHorizontal: 7, paddingVertical: 1 },
-  tile: { flex: 1, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 10, paddingVertical: 10, gap: 4, minHeight: 64 },
+  tile: { flex: 1, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 8, paddingVertical: 10, gap: 4, minHeight: 64 },
   tileDot: { position: "absolute", top: 8, end: 8, width: 6, height: 6, borderRadius: 3, backgroundColor: colors.accent },
   ringHole: { position: "absolute", alignItems: "center", justifyContent: "center" },
   track: { width: "100%", borderRadius: radius.pill, backgroundColor: colors.surfaceInset, overflow: "hidden" },
   check: { borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   moreButton: { width: 36, height: 36, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
   rowButton: { minHeight: 34, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
-  empty: { alignItems: "center", gap: 8, paddingVertical: 16 }
+  empty: { alignItems: "center", gap: 8, paddingVertical: 16 },
+  exampleLink: { color: colors.accent, borderWidth: StyleSheet.hairlineWidth * 2, borderColor: colors.hairline }
 });

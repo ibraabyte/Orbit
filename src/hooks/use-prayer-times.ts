@@ -1,8 +1,8 @@
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
-import { useEffect, useState } from "react";
-import { RIYADH, upcomingPrayers, type PrayerPlace, type PrayerTime } from "@/lib/prayer-times";
+import { useEffect, useMemo, useState } from "react";
+import { prayerTimesFor, RIYADH, upcomingPrayers, type PrayerPlace, type PrayerTime } from "@/lib/prayer-times";
 
 const PRAYER_ALERTS_KEY = "orbit.prayer-alerts";
 
@@ -62,5 +62,7 @@ export function usePrayerTimes() {
     return () => clearInterval(timer);
   }, [place]);
 
-  return { next: prayers[0], upcoming: prayers.slice(0, 5), all: prayers };
+  // All five of today, passed ones too (the Today rail draws them as ticks). Recomputed with the minute tick.
+  const today = useMemo(() => prayerTimesFor(place, new Date()), [place, prayers]);
+  return { next: prayers[0], upcoming: prayers.slice(0, 5), all: prayers, today };
 }
