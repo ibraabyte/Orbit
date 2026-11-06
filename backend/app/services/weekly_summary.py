@@ -44,6 +44,10 @@ def _midnight(day: date, zone: ZoneInfo) -> datetime:
     return datetime.combine(day, time.min, zone)
 
 
+def _day(moment: datetime, zone: ZoneInfo) -> str:
+    return moment.astimezone(zone).date().isoformat()
+
+
 def _avg(values: list[float]) -> float | None:
     return round(fmean(values), 1) if values else None
 
@@ -80,9 +84,7 @@ def week_data(db: Session, user_id: uuid.UUID, end: date) -> tuple[dict[str, Any
 
     workouts = list(db.scalars(select(Workout).where(Workout.user_id == user_id, Workout.logged_at >= start, Workout.logged_at < stop)))
     workout_minutes = sum(w.duration_minutes or 0 for w in workouts)
-    sleep = list(
-        db.scalars(select(SleepLog).where(SleepLog.user_id == user_id, SleepLog.sleep_date >= first, SleepLog.sleep_date <= end))
-    )
+    sleep = list(db.scalars(select(SleepLog).where(SleepLog.user_id == user_id, SleepLog.sleep_date >= first, SleepLog.sleep_date <= end)))
     whoop_days = whoop_analytics.load_summary(db, user_id, today=end, days=WEEK_DAYS)["daily"]
     recovery = _avg([row["recovery"] for row in whoop_days if row["recovery"] is not None])
     whoop_sleep = [row["sleep_hours"] for row in whoop_days if row["sleep_hours"] is not None]
@@ -96,9 +98,7 @@ def week_data(db: Session, user_id: uuid.UUID, end: date) -> tuple[dict[str, Any
     def spending(since: datetime, until: datetime) -> tuple[dict[str, Decimal], dict[tuple[str, str], Decimal]]:
         by_currency: dict[str, Decimal] = defaultdict(Decimal)
         by_category: dict[tuple[str, str], Decimal] = defaultdict(Decimal)
-        for expense in db.scalars(
-            select(Expense).where(Expense.user_id == user_id, Expense.spent_at >= since, Expense.spent_at < until)
-        ):
+        for expense in db.scalars(select(Expense).where(Expense.user_id == user_id, Expense.spent_at >= since, Expense.spent_at < until)):
             by_currency[expense.currency] += expense.amount
             by_category[(expense.category, expense.currency)] += expense.amount
         return by_currency, by_category
@@ -123,7 +123,9 @@ def week_data(db: Session, user_id: uuid.UUID, end: date) -> tuple[dict[str, Any
     ]
 
     links, links_total = capped(
-        select(Capture).where(Capture.user_id == user_id, Capture.created_at >= start, Capture.created_at < stop).order_by(Capture.created_at.desc())
+        select(Capture)
+        .where(Capture.user_id == user_id, Capture.created_at >= start, Capture.created_at < stop)
+        .order_by(Capture.created_at.desc())
     )
 
     facts = {
@@ -149,9 +151,7 @@ def week_data(db: Session, user_id: uuid.UUID, end: date) -> tuple[dict[str, Any
         "facts": facts,
         "done_tasks": [_cut(task.title) for task in done],
         "overdue_tasks": [{"title": _cut(task.title), "due": task.due_at.astimezone(zone).date().isoformat()} for task in late],
-        "next_week_tasks": [
-            {"title": _cut(task.title), "due": task.due_at.astimezone(zone).date().isoformat(), "priority": task.priority} for task in coming
-        ],
+        "next_week_tasks": [{"title": _cut(task.title), "due": _day(task.due_at, zone), "priority": task.priority} for task in coming],
         "workouts": [
             {"date": w.logged_at.astimezone(zone).date().isoformat(), "type": _cut(w.type), "minutes": w.duration_minutes} for w in workouts
         ][:LIST_LIMIT],
