@@ -20,10 +20,12 @@ const manage = [section("tasks", t.tasks, "check-square")];
 // Food, Exercises and WHOOP live inside Health now; they can still be pinned for one tap.
 const logs = [section("health", t.health, "activity"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "bookmark")];
 const insideHealth = [section("food", t.food, "coffee"), section("exercises", et.exercises, "zap"), section("whoop", t.whoop, "watch")];
+// Money places, investments, cards and installments live inside Finance; they can be pinned the same way.
+const insideFinance = [section("accounts", t.moneyPlaces, "briefcase"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
 const home = [section("vehicles", t.car, "truck"), section("media", t.movies, "film")];
 const system = [section("ask", t.askOrbit, "message-circle"), section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
 const groups: [string, Section[]][] = [[t.manageDay, manage], [t.lifeLogs, logs], [t.homeServices, home], [t.system, system]];
-const pinnable = [...manage, ...logs, ...insideHealth, ...home];
+const pinnable = [...manage, ...logs, ...insideHealth, ...insideFinance, ...home];
 
 const pinsKey = "orbit.more.pins";
 const defaultPins = ["tasks", "health", "finance", "vehicles"];

@@ -50,18 +50,36 @@ export function Glass({ tint, interactive, style, children }: { tint?: string; i
 const OnSurface = createContext(false);
 export const useOnSurface = () => useContext(OnSurface);
 
+/** A section that folds away: tap its header to show or hide it. `summary` stays in the header while it is closed. */
+export type Fold = { open: boolean; onToggle: () => void; summary?: string };
+
 /** A section on the black ground: a hairline on top, a small uppercase title, and an action at its end. No box. */
-export function Card({ title, action, children, style }: { title?: string; action?: ReactNode; children?: ReactNode; style?: ViewStyle }) {
+export function Card({ title, action, children, style, fold }: { title?: string; action?: ReactNode; children?: ReactNode; style?: ViewStyle; fold?: Fold }) {
+  const header = fold ? (
+    <Pressable
+      onPress={fold.onToggle}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: fold.open }}
+      accessibilityLabel={[title, fold.summary].filter(Boolean).join(", ")}
+      hitSlop={6}
+      style={({ pressed }) => [styles.cardHeader, styles.foldHeader, pressed && { opacity: 0.7 }]}
+    >
+      <Text style={[type.sectionLabel, { flex: 1 }]}>{title}</Text>
+      {action}
+      {fold.summary ? <Text style={type.barValue}>{fold.summary}</Text> : null}
+      <Icon name={fold.open ? "chevron-up" : "chevron-down"} size={16} color={colors.inkFaint} />
+    </Pressable>
+  ) : title || action ? (
+    <View style={styles.cardHeader}>
+      <Text style={[type.sectionLabel, { flex: 1 }]}>{title}</Text>
+      {action}
+    </View>
+  ) : null;
   return (
     <OnSurface.Provider value>
-      <View style={[styles.card, style]}>
-        {title || action ? (
-          <View style={styles.cardHeader}>
-            <Text style={[type.sectionLabel, { flex: 1 }]}>{title}</Text>
-            {action}
-          </View>
-        ) : null}
-        {children}
+      <View style={[styles.card, fold && !fold.open && { paddingBottom: 10 }, style]}>
+        {header}
+        {!fold || fold.open ? children : null}
       </View>
     </OnSurface.Provider>
   );
@@ -443,6 +461,8 @@ export const type = StyleSheet.create({
 const styles = StyleSheet.create({
   card: { borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline, paddingTop: 14, paddingBottom: 4, gap: 8 },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 24 },
+  // A folding header is a tap target, so it gets a finger's height.
+  foldHeader: { minHeight: 36 },
   cardLink: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 32 },
   hero: { flexDirection: "row", alignItems: "center", gap: 16, paddingVertical: 8 },
   row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline },

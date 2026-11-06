@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
-import { Badge, Card, EmptyState, ProgressBar, RowButton, type, type BadgeTone } from "@/components/drift";
+import { Badge, Card, EmptyState, ProgressBar, RowButton, type, type BadgeTone, type Fold } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Input } from "@/components/screen";
 import { colors } from "@/components/theme";
@@ -20,7 +20,7 @@ const states: Record<BudgetState, { tone: BadgeTone; glyph: string; label: strin
 type Editing = { category: FinanceCategory; currency: string; id?: string };
 
 // Limits for one month at a time: this month, the one before, and the one after (to prepare it).
-export function BudgetCard({ budgets, expenses, currency, refresh }: { budgets: Budget[]; expenses: Expense[]; currency: string; refresh: () => Promise<unknown> }) {
+export function BudgetCard({ budgets, expenses, currency, refresh, fold }: { budgets: Budget[]; expenses: Expense[]; currency: string; refresh: () => Promise<unknown>; fold?: Fold }) {
   const { sheet, toast } = useOverlays();
   const [offset, setOffset] = useState(0);
   const [editing, setEditing] = useState<Editing | null>(null);
@@ -80,7 +80,7 @@ export function BudgetCard({ budgets, expenses, currency, refresh }: { budgets: 
     sheet({ title: t.budgetPickCategory, options: free.map((category) => ({ label: t.financeCategoryNames[category], run: () => edit({ category, currency }) })) });
 
   return (
-    <Card title={t.budget}>
+    <Card title={t.budget} fold={fold}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
         <RowButton outline disabled={offset <= -1} icon={isArabic ? "chevron-right" : "chevron-left"} label={t.budgetPrevMonth} onPress={() => move(-1)} />
         <Text style={[type.title, { flex: 1, textAlign: "center" }]} accessibilityRole="header">
