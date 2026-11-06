@@ -106,7 +106,7 @@ export default function Exercises() {
       {!result ? (
         loading ? <Loading /> : <EmptyState>{error ?? et.couldNotLoad}</EmptyState>
       ) : (
-        <Card style={{ paddingVertical: 0, gap: 0, overflow: "hidden" }}>
+        <Card list>
           {!result.items.length ? <EmptyState>{et.noMatches}</EmptyState> : null}
           {result.items.map((exercise, index) => {
             const warning = injuryNote(exercise);

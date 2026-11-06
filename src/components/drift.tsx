@@ -53,8 +53,10 @@ export const useOnSurface = () => useContext(OnSurface);
 /** A section that folds away: tap its header to show or hide it. `summary` stays in the header while it is closed. */
 export type Fold = { open: boolean; onToggle: () => void; summary?: string };
 
-/** A card: a lifted surface with a hairline edge and round corners, a sentence-case title, and an action at its end. */
-export function Card({ title, action, children, style, fold }: { title?: string; action?: ReactNode; children?: ReactNode; style?: ViewStyle; fold?: Fold }) {
+/** A card: a lifted surface with a hairline edge and round corners, a sentence-case title, and an action at its end.
+ * `list` is a card that holds only divided rows (More, Settings): no inner padding top and bottom, so the rows
+ * reach its edges, and give the top row `first` so no line sits above it. */
+export function Card({ title, action, children, style, fold, list }: { title?: string; action?: ReactNode; children?: ReactNode; style?: ViewStyle; fold?: Fold; list?: boolean }) {
   const header = fold ? (
     <Pressable
       onPress={fold.onToggle}
@@ -77,7 +79,7 @@ export function Card({ title, action, children, style, fold }: { title?: string;
   ) : null;
   return (
     <OnSurface.Provider value>
-      <View style={[styles.card, fold && !fold.open && { paddingBottom: 10 }, style]}>
+      <View style={[styles.card, list && styles.listCard, fold && !fold.open && { paddingBottom: 10 }, style]}>
         {header}
         {!fold || fold.open ? children : null}
       </View>
@@ -453,13 +455,17 @@ export const type = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 8 },
+  // paddingVertical, not paddingTop/paddingBottom: in React Native the longhand always wins, so a screen's
+  // paddingVertical would be ignored.
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
+  // Rows only: they bring their own height, so no padding above the first or below the last.
+  listCard: { paddingVertical: 0, gap: 0, overflow: "hidden" },
   cardHeader: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 32 },
   // A folding header is a tap target, so it gets a finger's height.
   foldHeader: { minHeight: 36 },
   cardLink: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 32, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.accentLine },
   hero: { flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14, paddingHorizontal: 16, backgroundColor: colors.hero, borderWidth: 1, borderColor: colors.heroEdge, borderRadius: radius.card, borderCurve: "continuous" },
-  row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   rowMeta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
   iconTile: { borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
   badge: { borderRadius: radius.badge, borderWidth: 1, paddingHorizontal: 6, paddingVertical: 1 },
