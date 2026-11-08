@@ -44,6 +44,10 @@ ALLOWED: list[tuple[str, re.Pattern[str]]] = [
         ("POST", r"request/\d+/retry"),
         ("DELETE", r"request/\d+"),
         ("GET", r"user/\d+/quota"),
+        # Advanced request options: the Radarr/Sonarr servers Seerr sends to, and one server's quality profiles and
+        # folders. Seerr answers these without the servers' keys, and decides itself who may use them in a request.
+        ("GET", r"service/(radarr|sonarr)"),
+        ("GET", r"service/(radarr|sonarr)/\d+"),
     ]
 ]
 

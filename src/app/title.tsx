@@ -6,6 +6,7 @@ import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, CheckItem, EmptyState, flip, Glass, Icon, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
+import { RequestOptions, useRequestOptions } from "@/components/request-options";
 import { CastCard, Chip, FactRows, openDiscover, Poster, PosterRail, StatusPill } from "@/components/seerr-parts";
 import { BleedRow, Button, CONTENT_MAX_WIDTH } from "@/components/screen";
 import { backdrop as ground, colors, fonts, radius } from "@/components/theme";
@@ -16,6 +17,7 @@ import { digits, formatDate, t } from "@/lib/i18n";
 import {
   backdropUrl,
   canRequest,
+  DEFAULT_CHOICE,
   factLine,
   factRows,
   imdbUrl,
@@ -32,6 +34,7 @@ import {
   type SeerrDetails,
   type SeerrEpisode,
   type SeerrMediaType,
+  type RequestChoice,
   type SeerrRatings,
   type SeerrRequest,
   type SeerrResult
@@ -62,6 +65,10 @@ export default function Title() {
   const [episodes, setEpisodes] = useState<Record<number, Episodes>>({});
   const [openSeason, setOpenSeason] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
+  // A movie request being set up (quality picked) before it's sent. A series uses `picking` for the same.
+  const [composing, setComposing] = useState(false);
+  const [choice, setChoice] = useState<RequestChoice>(DEFAULT_CHOICE);
+  const options = useRequestOptions(client, kind, seerr.user);
 
   const load = useCallback(async () => {
     if (!client) return;
@@ -88,6 +95,7 @@ export default function Title() {
       await work();
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setPicking(null);
+      setComposing(false);
       await load();
     } catch (error) {
       Alert.alert("Seerr", error instanceof Error ? error.message : t.tryAgain);
@@ -128,9 +136,18 @@ export default function Title() {
 
   const name = seerrName(item);
   const status = item.mediaInfo?.status;
-  const seasons = kind === "tv" ? seasonRows(item) : [];
-  const requestableSeasons = seasons.filter((season) => season.requestable).map((season) => season.seasonNumber);
-  const requestable = canRequest(item) && (kind === "movie" || requestableSeasons.length > 0 || !seasons.length);
+  // Standard and 4K are asked for separately in Seerr, each with its own statuses.
+  const openFor = (is4k: boolean) => {
+    const rows = kind === "tv" ? seasonRows(item, is4k) : [];
+    const free = rows.filter((season) => season.requestable).map((season) => season.seasonNumber);
+    return { rows, free, ok: canRequest(item, is4k) && (kind === "movie" || free.length > 0 || !rows.length) };
+  };
+  const standard = openFor(false);
+  const fourK = options.offer4k ? openFor(true) : { rows: [], free: [], ok: false };
+  const current = choice.is4k && (picking || composing) ? fourK : standard;
+  const seasons = current.rows.length ? current.rows : standard.rows;
+  const requestableSeasons = current.free;
+  const requestable = standard.ok || fourK.ok;
   const requests = item.mediaInfo?.requests ?? [];
   const waiting = requests.filter((request) => request.status === 1);
   const mine = waiting.find((request) => seerr.user && request.requestedBy?.id === seerr.user.id);
@@ -145,10 +162,24 @@ export default function Title() {
   const listChoices: [WatchStatus, string][] = [["want", t.wantToWatch], ["watching", t.watching], ["done", t.watched]];
   const setListStatus = (next: WatchStatus) => act(() => (onList ? watchlist.update(onList.id, { status: next }) : watchlist.save(watchDraftFromSeerr(item, next)!)));
 
+  // Sent with the picked quality; without options it's one tap, like before.
+  const send = (seasonList: number[] | "all") => act(() => client!.request(kind, tmdbId, seasonList, choice, options.advanced));
   const startRequest = () => {
-    if (kind === "movie" || !seasons.length) return void act(() => client!.request(kind, tmdbId));
-    setPicking(new Set(requestableSeasons));
+    const first: RequestChoice = { ...DEFAULT_CHOICE, is4k: !standard.ok && fourK.ok };
+    setChoice(first);
+    const from = first.is4k ? fourK : standard;
+    if (kind === "movie" || !from.rows.length) {
+      if (!options.hasOptions) return void act(() => client!.request(kind, tmdbId, "all", first, false));
+      return setComposing(true);
+    }
+    setPicking(new Set(from.free));
   };
+  const changeChoice = (next: RequestChoice) => {
+    // Switching between standard and 4K changes which seasons are still free to ask for.
+    if (picking && next.is4k !== choice.is4k) setPicking(new Set((next.is4k ? fourK : standard).free));
+    setChoice(next);
+  };
+  const optionsPanel = options.hasOptions ? <RequestOptions options={options} choice={choice} onChange={changeChoice} allowStandard={standard.ok} allow4k={fourK.ok} /> : null;
   const flipPick = (seasonNumber: number) =>
     setPicking((before) => {
       const next = new Set(before);
@@ -207,7 +238,7 @@ export default function Title() {
 
           <View style={{ gap: 8 }}>
             {play ? <Button variant="primary" title={`▶ ${mt.play}`} onPress={() => void Linking.openURL(play).catch(() => open(play))} /> : null}
-            {requestable && !picking ? <Button variant={play ? "outline" : "primary"} disabled={busy || !client} title={kind === "tv" && status === 4 ? mt.requestMore : kind === "tv" && seasons.length ? mt.requestSeasons : mt.request} onPress={startRequest} /> : null}
+            {requestable && !picking && !composing ? <Button variant={play ? "outline" : "primary"} disabled={busy || !client} title={!standard.ok ? mt.request4k : kind === "tv" && status === 4 ? mt.requestMore : kind === "tv" && seasons.length ? mt.requestSeasons : mt.request} onPress={startRequest} /> : null}
             {mine ? <Button variant="outline" disabled={busy} title={mt.cancelRequest} onPress={() => sheet({ title: mt.cancelRequestTitle, detail: name, options: [{ label: mt.cancelRequest, destructive: true, run: () => void act(() => client!.cancel(mine.id)) }] })} /> : null}
           </View>
 
@@ -217,6 +248,16 @@ export default function Title() {
                 <RowButton key={link.label} outline label={link.label} onPress={() => open(link.url)} />
               ))}
             </View>
+          ) : null}
+
+          {composing ? (
+            <Card title={mt.requestOptions}>
+              {optionsPanel}
+              <View style={{ gap: 8, paddingTop: 4 }}>
+                <Button variant="primary" disabled={busy} title={choice.is4k ? mt.request4k : mt.request} onPress={() => send("all")} />
+                <Button variant="outline" title={t.cancel} onPress={() => setComposing(false)} />
+              </View>
+            </Card>
           ) : null}
 
           {seerr.isAdmin && waiting.length ? <Card title={mt.awaiting}>{waiting.map(requestRow)}</Card> : null}
@@ -270,9 +311,10 @@ export default function Title() {
                   </View>
                 );
               })}
+              {picking && optionsPanel ? <View style={styles.pickOptions}>{optionsPanel}</View> : null}
               {picking ? (
                 <View style={{ gap: 8, paddingTop: 8 }}>
-                  <Button variant="primary" disabled={busy || picking.size === 0} title={picking.size === requestableSeasons.length && picking.size > 1 ? `${mt.request} · ${mt.requestAll}` : mt.requestPicked(picking.size)} onPress={() => act(() => client!.request("tv", tmdbId, [...picking].sort((a, b) => a - b)))} />
+                  <Button variant="primary" disabled={busy || picking.size === 0} title={`${picking.size === requestableSeasons.length && picking.size > 1 ? `${mt.request} · ${mt.requestAll}` : mt.requestPicked(picking.size)}${choice.is4k ? ` · ${mt.fourK}` : ""}`} onPress={() => send([...picking].sort((a, b) => a - b))} />
                   <Button variant="outline" title={t.cancel} onPress={() => setPicking(null)} />
                 </View>
               ) : null}
@@ -361,6 +403,7 @@ const styles = StyleSheet.create({
   tagline: { fontFamily: fonts.regular, fontStyle: "italic", fontSize: 13, lineHeight: 19, color: colors.inkMuted },
   badges: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   links: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  pickOptions: { paddingTop: 12, marginTop: 4, borderTopWidth: 1, borderTopColor: colors.hairline },
   episodes: { paddingStart: 48, paddingBottom: 8, gap: 12 },
   episode: { gap: 3 },
   episodeNumber: { fontFamily: fonts.medium, color: colors.accent },
