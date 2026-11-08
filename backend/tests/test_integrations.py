@@ -174,6 +174,10 @@ def test_proxy_passes_on_the_detail_and_request_calls(client: TestClient, auth: 
         ("GET", "person/31/combined_credits"),
         ("POST", "request/3/retry"),
         ("GET", "user/1/quota"),
+        ("GET", "service/radarr"),
+        ("GET", "service/sonarr"),
+        ("GET", "service/radarr/0"),
+        ("GET", "service/sonarr/2"),
     ]:
         before = len(fake_seerr)
         response = client.request(method, f"/integrations/seerr/api/{path}", headers=auth)
@@ -200,6 +204,10 @@ def test_proxy_still_refuses_near_misses(client: TestClient, auth: dict, fake_se
         ("DELETE", "movie/7"),
         ("POST", "request/3/pending"),
         ("GET", "genres/person"),
+        ("GET", "service/lidarr"),
+        ("GET", "service/radarr/0/test"),
+        ("POST", "service/radarr"),
+        ("GET", "settings/radarr"),
     ]:
         assert client.request(method, f"/integrations/seerr/api/{path}", headers=auth).status_code in (404, 405), path
     assert len(fake_seerr) == before

@@ -35,7 +35,9 @@ export type SeerrMediaInfo = {
   id?: number;
   tmdbId?: number;
   status: MediaStatus;
-  seasons?: { seasonNumber: number; status: MediaStatus }[];
+  // The same for the 4K copy, when Seerr has a 4K Radarr/Sonarr.
+  status4k?: MediaStatus;
+  seasons?: { seasonNumber: number; status: MediaStatus; status4k?: MediaStatus }[];
   requests?: SeerrRequest[];
   // Where to play it: Jellyfin/Emby (Jellyseerr) or Plex (Overseerr).
   mediaUrl?: string | null;
@@ -116,6 +118,19 @@ export type SeerrUser = { id: number; displayName?: string; permissions: number 
 // Seerr's permission bits.
 const ADMIN = 2;
 const MANAGE_REQUESTS = 16;
+const REQUEST_4K = 1024;
+const REQUEST_4K_MOVIE = 2048;
+const REQUEST_4K_TV = 4096;
+const REQUEST_ADVANCED = 8192;
+
+// A Radarr (movies) or Sonarr (series) server set up in Seerr, and one server's quality profiles and folders.
+// Seerr sends these without the servers' own addresses or keys.
+export type SeerrService = { id: number; name: string; is4k: boolean; isDefault: boolean; activeProfileId?: number; activeDirectory?: string };
+export type SeerrServiceDetails = { server: SeerrService; profiles: { id: number; name: string }[]; rootFolders: { id: number; path: string; freeSpace?: number }[] };
+
+// What the person picked before sending a request. null = let Seerr use the server's default.
+export type RequestChoice = { is4k: boolean; serverId: number | null; profileId: number | null; rootFolder: string | null };
+export const DEFAULT_CHOICE: RequestChoice = { is4k: false, serverId: null, profileId: null, rootFolder: null };
 
 export const REQUEST_FILTERS = ["all", "pending", "processing", "available", "failed"] as const;
 export type RequestFilter = (typeof REQUEST_FILTERS)[number];
@@ -132,6 +147,41 @@ export function normalizeSeerrUrl(url: string) {
 
 export function canManageRequests(user: Pick<SeerrUser, "permissions">) {
   return (user.permissions & (ADMIN | MANAGE_REQUESTS)) !== 0;
+}
+
+// Same rule as Seerr's own request window: quality profile, server and folder are for admins, request managers, and
+// people given "Advanced requests". Everyone else gets the server's default (Seerr would ignore the rest anyway).
+export function canRequestAdvanced(user: Pick<SeerrUser, "permissions"> | null) {
+  return user ? (user.permissions & (ADMIN | MANAGE_REQUESTS | REQUEST_ADVANCED)) !== 0 : false;
+}
+
+export function canRequest4k(user: Pick<SeerrUser, "permissions"> | null, kind: SeerrMediaType) {
+  return user ? (user.permissions & (ADMIN | REQUEST_4K | (kind === "tv" ? REQUEST_4K_TV : REQUEST_4K_MOVIE))) !== 0 : false;
+}
+
+// The servers for standard or 4K requests, Seerr's default one first.
+export function servicesFor(services: SeerrService[], is4k: boolean) {
+  return services.filter((service) => Boolean(service.is4k) === is4k).sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
+}
+
+// The server a request goes to: the one picked if it fits, else Seerr's default for that kind.
+export function chosenService(services: SeerrService[], choice: Pick<RequestChoice, "is4k" | "serverId">) {
+  const list = servicesFor(services, choice.is4k);
+  return list.find((service) => service.id === choice.serverId) ?? list[0] ?? null;
+}
+
+// The body of POST /request. Only what was picked is sent, so Seerr fills in its own defaults for the rest
+// (and its anime profile for anime series).
+export function requestBody(kind: SeerrMediaType, tmdbId: number, seasons: number[] | "all", choice: RequestChoice = DEFAULT_CHOICE, advanced = false) {
+  const body: Record<string, unknown> = { mediaType: kind, mediaId: tmdbId };
+  if (kind === "tv") body.seasons = seasons;
+  if (choice.is4k) body.is4k = true;
+  if (advanced && (choice.serverId !== null || choice.profileId !== null || choice.rootFolder !== null)) {
+    if (choice.serverId !== null) body.serverId = choice.serverId;
+    if (choice.profileId !== null) body.profileId = choice.profileId;
+    if (choice.rootFolder !== null) body.rootFolder = choice.rootFolder;
+  }
+  return body;
 }
 
 export function seerrName(item: Pick<SeerrResult, "title" | "name">) {
@@ -192,8 +242,8 @@ export function requestBadge(status: RequestStatus): StatusBadge {
 }
 
 // A title can be asked for when the server has nothing yet (or only part of a series).
-export function canRequest(item: Pick<SeerrResult, "mediaType" | "mediaInfo">) {
-  const status = item.mediaInfo?.status;
+export function canRequest(item: Pick<SeerrResult, "mediaType" | "mediaInfo">, is4k = false) {
+  const status = is4k ? item.mediaInfo?.status4k : item.mediaInfo?.status;
   return !status || status === 1 || status === 6 || status === 7 || (item.mediaType === "tv" && status === 4);
 }
 
@@ -201,11 +251,13 @@ export type SeasonRow = SeerrSeason & { status: MediaStatus | undefined; request
 
 // The series' seasons (specials last are left out, like Seerr does), each with what the server has and whether an
 // open request already covers it.
-export function seasonRows(details: Pick<SeerrDetails, "seasons" | "mediaInfo">): SeasonRow[] {
-  const onServer = new Map((details.mediaInfo?.seasons ?? []).map((season) => [season.seasonNumber, season.status]));
+// With is4k, the same for the 4K copy (its own statuses and its own requests).
+export function seasonRows(details: Pick<SeerrDetails, "seasons" | "mediaInfo">, is4k = false): SeasonRow[] {
+  const onServer = new Map((details.mediaInfo?.seasons ?? []).map((season) => [season.seasonNumber, is4k ? season.status4k : season.status]));
   const asked = new Set<number>();
   for (const request of details.mediaInfo?.requests ?? []) {
     if (request.status === 3 || request.status === 4) continue; // declined or failed: free to ask again
+    if (Boolean(request.is4k) !== is4k) continue;
     for (const season of request.seasons ?? []) asked.add(season.seasonNumber);
   }
   return (details.seasons ?? [])
@@ -361,8 +413,12 @@ export function createSeerrClient(call: SeerrCall) {
     pendingCount: () => call<SeerrCounts>("GET", "request/count").then((body) => body.pending),
     quota: (userId: number) => call<SeerrQuota>("GET", `user/${userId}/quota`),
     // A movie, or a series: every season ("all", Seerr skips ones already on the server) or the ones picked.
-    request: (mediaType: SeerrMediaType, tmdbId: number, seasons: number[] | "all" = "all") =>
-      call<SeerrRequest>("POST", "request", mediaType === "tv" ? { mediaType, mediaId: tmdbId, seasons } : { mediaType, mediaId: tmdbId }),
+    // With a choice: 4K, and (for people allowed advanced requests) the server, quality profile and folder.
+    request: (mediaType: SeerrMediaType, tmdbId: number, seasons: number[] | "all" = "all", choice: RequestChoice = DEFAULT_CHOICE, advanced = false) =>
+      call<SeerrRequest>("POST", "request", requestBody(mediaType, tmdbId, seasons, choice, advanced)),
+    // Movies go to Radarr, series to Sonarr.
+    services: (mediaType: SeerrMediaType) => call<SeerrService[]>("GET", `service/${mediaType === "tv" ? "sonarr" : "radarr"}`),
+    service: (mediaType: SeerrMediaType, serverId: number) => call<SeerrServiceDetails>("GET", `service/${mediaType === "tv" ? "sonarr" : "radarr"}/${serverId}`),
     // Requests carry only a TMDB id; this fetches the name and poster to show with them.
     details: (mediaType: SeerrMediaType, tmdbId: number) => call<SeerrDetails>("GET", `${mediaType}/${tmdbId}`).then((item) => ({ ...item, mediaType })),
     season: (tmdbId: number, seasonNumber: number) => call<SeerrSeason & { episodes?: SeerrEpisode[] }>("GET", `tv/${tmdbId}/season/${seasonNumber}`),
@@ -411,6 +467,15 @@ const en = {
   requestAll: "All seasons",
   requestPicked: (count: number) => (count === 1 ? "Request 1 season" : `Request ${digits(count)} seasons`),
   pickSeasons: "Pick the seasons to ask for.",
+  quality: "Quality",
+  standard: "Standard",
+  request4k: "Request in 4K",
+  profile: "Quality profile",
+  server: "Server",
+  folder: "Folder",
+  serverDefault: (name: string) => `Default · ${name}`,
+  defaultOnly: "Seerr will use the server's default quality.",
+  optionsFailed: "Couldn't load the quality options. The request will use the default.",
   requestedOk: "Requested",
   cancelRequest: "Cancel my request",
   cancelRequestTitle: "Cancel this request?",
@@ -480,6 +545,15 @@ const ar: typeof en = {
   requestAll: "كل المواسم",
   requestPicked: (count: number) => (count === 1 ? "اطلب موسمًا واحدًا" : `اطلب ${digits(count)} مواسم`),
   pickSeasons: "اختر المواسم اللي تبيها.",
+  quality: "الجودة",
+  standard: "عادية",
+  request4k: "اطلب بجودة 4K",
+  profile: "ملف الجودة",
+  server: "الخادم",
+  folder: "المجلد",
+  serverDefault: (name: string) => `الافتراضي · ${name}`,
+  defaultOnly: "بيستخدم Seerr الجودة الافتراضية للخادم.",
+  optionsFailed: "ما قدرنا نجيب خيارات الجودة. الطلب بيروح بالافتراضي.",
   requestedOk: "انطلب",
   cancelRequest: "ألغِ طلبي",
   cancelRequestTitle: "تلغي هذا الطلب؟",
