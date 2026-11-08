@@ -124,7 +124,7 @@ export function RequestOptions({
           {loaded.rootFolders
             .filter((folder) => folder.path !== defaultFolder)
             .map((folder) => (
-              <Chip key={folder.id} label={folder.path} selected={choice.rootFolder === folder.path} onPress={() => onChange({ ...choice, serverId: server?.id ?? null, rootFolder: folder.path })} />
+              <Chip key={folder.id} label={`\u2068${folder.path}\u2069`} selected={choice.rootFolder === folder.path} onPress={() => onChange({ ...choice, serverId: server?.id ?? null, rootFolder: folder.path })} />
             ))}
         </Group>
       ) : null}

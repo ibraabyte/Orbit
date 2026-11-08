@@ -251,7 +251,7 @@ export default function Title() {
           ) : null}
 
           {composing ? (
-            <Card title={mt.quality}>
+            <Card title={mt.requestOptions}>
               {optionsPanel}
               <View style={{ gap: 8, paddingTop: 4 }}>
                 <Button variant="primary" disabled={busy} title={choice.is4k ? mt.request4k : mt.request} onPress={() => send("all")} />
