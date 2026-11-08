@@ -122,7 +122,7 @@ export default function Investments() {
             />
           );
         })}
-        {!data.investments.length && !adding ? <EmptyState>{t.investEmpty}</EmptyState> : null}
+        {!data.investments.length && !adding ? <EmptyState icon="trending-up">{t.investEmpty}</EmptyState> : null}
         {adding ? (
           <View style={{ gap: 8 }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />

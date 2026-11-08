@@ -1,10 +1,12 @@
 import Feather from "@expo/vector-icons/Feather";
 import { Link, router, type Href } from "expo-router";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
-import { createContext, useContext, useEffect, useState, type ComponentProps, type ReactNode } from "react";
-import { AccessibilityInfo, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { createContext, useContext, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import * as Haptics from "expo-haptics";
+import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
+import { FadeIn, usePop } from "@/components/motion";
 import { colors, fonts, labelCase, radius } from "@/components/theme";
-import { digits, isArabic } from "@/lib/i18n";
+import { digits, formatNumber, isArabic, t } from "@/lib/i18n";
 import { barHeights, ringRotations } from "@/lib/ring";
 
 // Refined's building blocks. Icons are Feather. Layout flips by itself in RTL; only
@@ -81,7 +83,7 @@ export function Card({ title, action, children, style, fold, list }: { title?: s
     <OnSurface.Provider value>
       <View style={[styles.card, list && styles.listCard, fold && !fold.open && { paddingBottom: 10 }, style]}>
         {header}
-        {!fold || fold.open ? children : null}
+        {!fold ? children : fold.open ? <FadeIn style={styles.foldBody}>{children}</FadeIn> : null}
       </View>
     </OnSurface.Provider>
   );
@@ -370,13 +372,43 @@ export function TrendBars({ values, labels, height = 80, label, color = colors.a
   );
 }
 
-/** Round check with a 2px pale ring; checked fills pale with a dark mark. The mark (a shape) shows the state, not only the color. */
-export function CheckItem({ checked, onPress, label, size = 28, ring = colors.ink }: { checked: boolean; onPress: () => void; label: string; size?: number; ring?: string }) {
+/** Round check with a 2px pale ring; checked fills pale with a dark mark. The mark (a shape) shows the state, not only the color.
+ * Ticking it fills it at once with a small pop and a tap of haptics, then runs onPress a moment later, so the tick is seen
+ * before the row moves away. */
+export function CheckItem({ checked, onPress, label, size = 28, ring = colors.ink }: { checked: boolean; onPress: () => void | Promise<unknown>; label: string; size?: number; ring?: string }) {
+  const [ticking, setTicking] = useState(false);
+  const { scale, pop } = usePop();
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (timer.current) clearTimeout(timer.current);
+  }, []);
+  const shown = checked || ticking;
+  const press = () => {
+    if (timer.current) return;
+    pop();
+    void Haptics.selectionAsync().catch(() => undefined);
+    if (checked) return void onPress();
+    setTicking(true);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      // If the row is still here once the work is done (it failed, or it stays ticked), the fill follows `checked` again.
+      void Promise.resolve(onPress())
+        .catch(() => undefined)
+        .finally(() => setTicking(false));
+    }, 180);
+  };
   return (
-    <Pressable onPress={onPress} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={label} hitSlop={8} style={[styles.check, { width: size, height: size, borderRadius: size / 2, borderColor: ring }, checked && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
-      {checked ? <Icon name="check" size={size / 2} color={colors.urgentInk} /> : null}
+    <Pressable onPress={press} accessibilityRole="checkbox" accessibilityState={{ checked: shown }} accessibilityLabel={label} hitSlop={8}>
+      <Animated.View style={[styles.check, { width: size, height: size, borderRadius: size / 2, borderColor: ring, transform: [{ scale }] }, shown && { backgroundColor: colors.ink, borderColor: colors.ink }]}>
+        {shown ? <Icon name="check" size={size / 2} color={colors.urgentInk} /> : null}
+      </Animated.View>
     </Pressable>
   );
+}
+
+/** The small count beside a card's title ("3"). Sand when it counts something late. */
+export function CountBadge({ value, alert }: { value: number; alert?: boolean }) {
+  return <Text style={[styles.count, alert && { color: colors.accent, backgroundColor: colors.accentTint }]}>{formatNumber(value)}</Text>;
 }
 
 /** The ⋯ button that opens a row's action sheet. */
@@ -399,20 +431,23 @@ export function RowButton({ label, onPress, outline, icon, disabled }: { label?:
   );
 }
 
-/** Teaches a section by example: "Nothing here yet. Try: `pay rent fri 5pm !high`". */
-export function EmptyState({ example, children, icon }: { example?: string; children?: string; icon?: IconName }) {
+/** An empty section: an icon, one line saying what goes here, and a way to add the first one. `action` is the add button;
+ * with only an `example`, the button opens the assistant empty and the example under it opens it with that line typed in. */
+export function EmptyState({ example, children, icon, action }: { example?: string; children?: string; icon?: IconName; action?: { label: string; onPress: () => void } | false }) {
   const onSurface = useOnSurface();
+  const add = action === false ? null : (action ?? (example ? { label: t.add, onPress: () => router.push("/capture") } : null));
   return (
-    <View style={styles.empty}>
-      {icon ? <IconTile name={icon} size={48} /> : null}
+    <FadeIn style={styles.empty}>
+      {icon ? <IconTile name={icon} size={44} /> : null}
       {children ? <Text style={[onSurface ? type.rowSubtitle : type.shellMuted, { textAlign: "center" }]}>{children}</Text> : null}
+      {add ? <RowButton icon="plus" label={add.label} onPress={add.onPress} /> : null}
       {example ? (
         // The example is a starting line: tap it and the assistant opens with it typed in.
         <Pressable onPress={() => router.push({ pathname: "/capture", params: { text: example } })} accessibilityRole="button" accessibilityLabel={example} hitSlop={8}>
           <Text style={[type.code, styles.exampleLink]}>{example} ↗</Text>
         </Pressable>
       ) : null}
-    </View>
+    </FadeIn>
   );
 }
 
@@ -476,6 +511,8 @@ const styles = StyleSheet.create({
   check: { borderWidth: 2, alignItems: "center", justifyContent: "center" },
   moreButton: { width: 40, height: 40, borderRadius: radius.pill, borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", alignItems: "center", justifyContent: "center" },
   rowButton: { minHeight: 36, paddingHorizontal: 12, borderRadius: radius.control, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
-  empty: { alignItems: "center", gap: 8, paddingVertical: 16 },
+  empty: { alignItems: "center", gap: 10, paddingVertical: 16 },
+  foldBody: { gap: 8 },
+  count: { fontFamily: fonts.semibold, fontSize: 11, color: colors.inkMuted, backgroundColor: colors.surfaceInset, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.badge, overflow: "hidden" },
   exampleLink: { color: colors.accent }
 });

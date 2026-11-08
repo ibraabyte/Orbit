@@ -77,7 +77,7 @@ export default function Accounts() {
             />
           )
         )}
-        {!accounts.length && !adding ? <EmptyState>{t.moneyEmpty}</EmptyState> : null}
+        {!accounts.length && !adding ? <EmptyState icon="briefcase">{t.moneyEmpty}</EmptyState> : null}
         {adding ? (
           <View style={{ gap: 8 }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />

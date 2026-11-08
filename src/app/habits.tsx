@@ -11,7 +11,9 @@ export default function Habits() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      {!data.habits.length ? <EmptyState example="habit read 20 min daily">{t.emptyEx}</EmptyState> : null}
+      {!data.habits.length ? <Card>
+          <EmptyState icon="repeat" example="habit read 20 min daily">{t.emptyEx}</EmptyState>
+        </Card> : null}
       {data.habits.map((habit) => {
         const progress = habitProgress(habit, data.habitLogs);
         const momentum = habitMomentum(habit, data.habitLogs);

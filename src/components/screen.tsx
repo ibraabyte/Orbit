@@ -3,6 +3,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View, type TextInputProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, flip, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
+import { useReduceMotion } from "@/components/motion";
 import { backdrop, colors, fonts, radius } from "@/components/theme";
 import { et } from "@/lib/exercises";
 import { ht } from "@/lib/health-hub";
@@ -322,16 +323,37 @@ export function SearchBar(props: TextInputProps) {
   );
 }
 
-/** The Trail logo in sand, turning head-first. */
+/** The Trail logo in sand, turning head-first: it fades in (a quick load never flashes it), then turns a full circle,
+ * easing in and out so each turn breathes. With Reduce Motion it only glows softly in place. */
 export function Loading() {
+  const reduce = useReduceMotion();
   const turn = useRef(new Animated.Value(0)).current;
+  const shown = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    const loop = Animated.loop(Animated.timing(turn, { toValue: 1, duration: 1100, easing: Easing.linear, useNativeDriver: true }));
+    const appear = Animated.timing(shown, { toValue: 1, duration: 260, delay: 120, useNativeDriver: true });
+    const loop = reduce
+      ? Animated.loop(
+          Animated.sequence([
+            Animated.timing(turn, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+            Animated.timing(turn, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.quad), useNativeDriver: true })
+          ])
+        )
+      : Animated.loop(Animated.timing(turn, { toValue: 1, duration: 1300, easing: Easing.inOut(Easing.cubic), useNativeDriver: true }));
+    appear.start();
     loop.start();
-    return () => loop.stop();
-  }, [turn]);
-  const rotate = turn.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
-  return <Animated.View accessibilityRole="progressbar" accessibilityLabel={t.loading} style={{ alignSelf: "center", transform: [{ rotate }] }}><Image source={require("../../assets/brand/night/symbol-sand-1024.png")} style={{ width: 32, height: 32 }} /></Animated.View>;
+    return () => {
+      appear.stop();
+      loop.stop();
+    };
+  }, [turn, shown, reduce]);
+  const motion = reduce
+    ? { opacity: Animated.multiply(shown, turn.interpolate({ inputRange: [0, 1], outputRange: [0.45, 1] })) }
+    : { opacity: shown, transform: [{ rotate: turn.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] }) }] };
+  return (
+    <Animated.View accessibilityRole="progressbar" accessibilityLabel={t.loading} style={[{ alignSelf: "center" }, motion]}>
+      <Image source={require("../../assets/brand/night/symbol-sand-1024.png")} style={{ width: 32, height: 32 }} />
+    </Animated.View>
+  );
 }
 
 export const ui = StyleSheet.create({

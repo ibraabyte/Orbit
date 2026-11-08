@@ -1,6 +1,7 @@
-import type { ReactNode } from "react";
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
+import { useEffect, useRef, type ReactNode } from "react";
+import { Animated, Easing, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { type } from "@/components/drift";
+import { useReduceMotion } from "@/components/motion";
 import { colors, fonts, radius } from "@/components/theme";
 
 // Auth fills the screen with the card colour. On iPad the form keeps a phone width, centered.
@@ -15,18 +16,33 @@ export function AuthPage({ children }: { children: ReactNode }) {
 }
 
 // The Refined header: the sand Trail mark on a dark tile, the name, and what this page does (Sign in, Create account).
+// On open the tile settles in and the mark turns a quarter into place, then the words fade up. Once, and not with Reduce Motion.
 export function AuthHeader({ subtitle }: { subtitle: string }) {
+  const reduce = useReduceMotion();
+  const mark = useRef(new Animated.Value(0)).current;
+  const words = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const run = Animated.sequence([
+      Animated.timing(mark, { toValue: 1, duration: 520, easing: Easing.out(Easing.back(1.4)), useNativeDriver: true }),
+      Animated.timing(words, { toValue: 1, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true })
+    ]);
+    run.start();
+    return () => run.stop();
+  }, [mark, words]);
+  const tile = reduce ? null : { opacity: mark.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }), transform: [{ scale: mark.interpolate({ inputRange: [0, 1], outputRange: [0.86, 1] }) }] };
+  const turn = reduce ? null : { transform: [{ rotate: mark.interpolate({ inputRange: [0, 1], outputRange: ["-90deg", "0deg"] }) }] };
+  const lift = reduce ? null : { opacity: words, transform: [{ translateY: words.interpolate({ inputRange: [0, 1], outputRange: [6, 0] }) }] };
   return (
     <View style={styles.header}>
-      <View style={styles.markTile} accessibilityRole="image" accessibilityLabel="Orbit">
-        <Image source={require("../../assets/brand/night/symbol-sand-1024.png")} style={styles.mark} />
-      </View>
-      <View>
+      <Animated.View style={[styles.markTile, tile]} accessibilityRole="image" accessibilityLabel="Orbit">
+        <Animated.Image source={require("../../assets/brand/night/symbol-sand-1024.png")} style={[styles.mark, turn]} />
+      </Animated.View>
+      <Animated.View style={lift}>
         <Text style={styles.wordmark} accessibilityRole="header">
           Orbit
         </Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
-      </View>
+      </Animated.View>
     </View>
   );
 }

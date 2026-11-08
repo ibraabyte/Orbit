@@ -103,7 +103,7 @@ export default function Obligations() {
         );
       })}
       <Card title={adding ? t.addObligation : undefined}>
-        {!plans.length && !adding ? <EmptyState>{t.obligationsEmpty}</EmptyState> : null}
+        {!plans.length && !adding ? <EmptyState icon="calendar">{t.obligationsEmpty}</EmptyState> : null}
         {adding ? (
           <View style={{ gap: 8 }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />

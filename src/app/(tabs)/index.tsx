@@ -2,7 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Badge, Card, CardLink, Chevron, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
+import { Badge, Card, CardLink, Chevron, CountBadge, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { MorningBriefCard } from "@/components/morning-brief-card";
 import { WeeklySummaryCard } from "@/components/weekly-summary";
 import { useOverlays } from "@/components/overlays";
@@ -49,7 +49,8 @@ const minutesUntil = (at: Date) => Math.max(0, Math.round((at.getTime() - Date.n
 
 // Today in Refined: the date and title, the next prayer on a sand-edged card, then cards: the brief, the digest,
 // quick numbers, what needs attention (overdue tasks, money due), what is next today (timed things still ahead), and
-// health. Readiness (WHOOP recovery) is one of the quick numbers.
+// health. Readiness (WHOOP recovery) is one of the quick numbers. A card with nothing in it stays away, so the screen
+// only holds what has something to say; when nothing needs doing, one small "all clear" card says so.
 export default function Today() {
   const { data, loading, error, refresh, act } = useDashboardData();
   const { next: prayer, today: prayersToday } = usePrayerTimes();
@@ -164,14 +165,15 @@ export default function Today() {
     return <View key={entry.id}>{taskId && !focus ? <SwipeToDone onDone={() => void complete(taskId)}>{row}</SwipeToDone> : row}</View>;
   };
 
-  const attentionCard = (
+  const attentionCard = attentionCount ? (
     <Card title={t.attention} action={<CardLink href="/tasks" label={t.tasks} />}>
-      {overdue.map((task) => (
-        <TaskRow key={task.id} task={task} />
+      {overdue.map((task, index) => (
+        <TaskRow key={task.id} task={task} first={index === 0} />
       ))}
-      {money.map((item) => (
+      {money.map((item, index) => (
         <ListRow
           key={item.id}
+          first={!overdue.length && index === 0}
           title={item.title}
           badges={item.state === "overdue" ? <Badge tone="urgent" glyph="!">{t.overdue}</Badge> : item.state === "today" ? <Badge tone="accent" glyph="•">{t.dueToday}</Badge> : <Badge glyph="○">{t.dueTomorrow}</Badge>}
           subtitle={item.kind === "installment" ? t.installment : item.card ? `${t.chargedTo} ${cardLabel(item.card)}` : null}
@@ -179,33 +181,39 @@ export default function Today() {
           trailing={<RowButton label={t.markPaid} onPress={() => void pay(item)} />}
         />
       ))}
-      {!attentionCount ? <EmptyState example="call mom tomorrow 9am">{`✓ ${t.emptyEx}`}</EmptyState> : null}
-    </Card>
-  );
-
-  const nextCard = show("upnext") ? (
-    <Card title={t.nextUp} action={upNext.length ? <Text style={styles.count}>{formatNumber(upNext.length)}</Text> : undefined}>
-      {upNext.length ? <View style={styles.nextList}>{upNext.map(renderNext)}</View> : <EmptyState example={isArabic ? "ذكرني أتصل بأمي ٩ الليل" : "call mom 9pm"}>{t.railEmpty}</EmptyState>}
     </Card>
   ) : null;
 
-  const digestCard = show("digest") ? (
-    <Card title={t.digest} action={<Text style={styles.count}>{formatNumber(digest.length)}</Text>}>
-      {digest.length ? (
-        digest.map((item) => (
+  const nextCard =
+    show("upnext") && upNext.length ? (
+      <Card title={t.nextUp} action={<CountBadge value={upNext.length} />}>
+        <View>{upNext.map(renderNext)}</View>
+      </Card>
+    ) : null;
+
+  // Nothing late and nothing timed for the rest of the day: one quiet card instead of two empty ones.
+  const clearCard =
+    !attentionCard && !nextCard ? (
+      <Card>
+        <EmptyState icon="check" example={isArabic ? "ذكرني أتصل بأمي ٩ الليل" : "call mom 9pm"}>{`${t.allClear} · ${t.allClearBody}`}</EmptyState>
+      </Card>
+    ) : null;
+
+  const digestCard =
+    show("digest") && digest.length ? (
+      <Card title={t.digest} action={<CountBadge value={digest.length} />}>
+        {digest.map((item, index) => (
           <ListRow
             key={item.id}
+            first={index === 0}
             href={appHref(item.href)}
             leading={<IconTile name={digestIcon(item.tone)} size={28} tone={item.tone === "danger" ? "urgent" : item.tone === "warning" ? "accent" : "neutral"} />}
             title={item.title}
             subtitle={item.detail}
           />
-        ))
-      ) : (
-        <EmptyState example="call mom tomorrow 9am">{t.emptyEx}</EmptyState>
-      )}
-    </Card>
-  ) : null;
+        ))}
+      </Card>
+    ) : null;
 
   const quickTiles = show("quick") ? (
     <StatGrid columns={3}>
@@ -220,7 +228,9 @@ export default function Today() {
     </StatGrid>
   ) : null;
 
-  const healthCard = show("health") ? (
+  // Health shows once something is logged today (food, a workout, sleep); before that it would be a row of zeros.
+  const healthLogged = summary.todayCalories > 0 || summary.todayWorkoutMinutes > 0 || summary.todaySleepMinutes > 0;
+  const healthCard = show("health") && healthLogged ? (
     <Card title={t.healthToday} action={<CardLink href="/health" label={t.health} />}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
         <RingGauge value={calorieShare} label={calorieTarget ? `${Math.round(calorieShare * 100)}%` : "–"} />
@@ -257,6 +267,7 @@ export default function Today() {
           <>
             {attentionCard}
             {nextCard}
+            {clearCard}
             {healthCard}
           </>
         }
@@ -275,8 +286,6 @@ const styles = StyleSheet.create({
   heroMark: { width: 40, height: 40, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: "rgba(232,200,144,0.1)", alignItems: "center", justifyContent: "center" },
   heroValue: { fontFamily: fonts.semibold, fontSize: 18, lineHeight: 24, color: colors.ink },
   heroIn: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent },
-  count: { fontFamily: fonts.semibold, fontSize: 11, color: colors.inkMuted, backgroundColor: colors.surfaceInset, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.badge, overflow: "hidden" },
-  nextList: { borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   nextRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.surfaceInset, backgroundColor: colors.surface },
   nextTime: { width: 52, fontFamily: fonts.semibold, fontSize: 12, color: colors.inkMuted, writingDirection: "ltr" }
 });

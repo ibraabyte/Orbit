@@ -108,7 +108,7 @@ export function BudgetCard({ budgets, expenses, currency, refresh, fold }: { bud
           </Pressable>
         );
       })}
-      {!rows.length && !editing ? <EmptyState>{t.budgetEmpty}</EmptyState> : null}
+      {!rows.length && !editing ? <EmptyState icon="pie-chart">{t.budgetEmpty}</EmptyState> : null}
       {copyable.length ? <Button variant="outline" title={t.budgetCopy} disabled={busy} onPress={copy} /> : null}
       {editing ? (
         <View style={{ gap: 8 }}>

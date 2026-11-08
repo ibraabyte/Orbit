@@ -1,11 +1,10 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Chip, Chips } from "@/components/chips";
-import { Card, EmptyState, RowButton, StatGrid, StatTile, type } from "@/components/drift";
+import { Card, CountBadge, EmptyState, RowButton, StatGrid, StatTile } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Input, openCapture, Screen } from "@/components/screen";
 import { TaskRow } from "@/components/task-row";
-import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useTaskActions } from "@/hooks/use-task-actions";
 import { formatNumber, isArabic, t } from "@/lib/i18n";
@@ -92,7 +91,7 @@ export default function Tasks() {
       </StatGrid>
 
       {groups.map(({ group, tasks }) => (
-        <Card key={group} title={t.dayGroups[group]} action={<Text style={[styles.count, group === "overdue" && { color: colors.accent }]}>{formatNumber(tasks.length)}</Text>}>
+        <Card key={group} title={t.dayGroups[group]} action={<CountBadge value={tasks.length} alert={group === "overdue"} />}>
           {tasks.map((task, index) => (
             <TaskRow key={task.id} task={task} first={index === 0} showPriority showList={active === "all"} grouped timeOnly={group === "today" || group === "tomorrow"} />
           ))}
@@ -101,7 +100,7 @@ export default function Tasks() {
 
       {!groups.length ? (
         <Card>
-          <EmptyState icon="check-circle" example={active === "all" ? (isArabic ? "مهمة ادفع الإيجار الخميس +البيت" : "pay rent fri 5pm +home") : undefined}>
+          <EmptyState icon="check-circle" example={active === "all" ? (isArabic ? "مهمة ادفع الإيجار الخميس +البيت" : "pay rent fri 5pm +home") : undefined} action={{ label: t.add, onPress: () => openCapture() }}>
             {active === "all" ? t.tasksEmpty : t.listEmpty}
           </EmptyState>
         </Card>
@@ -111,6 +110,5 @@ export default function Tasks() {
 }
 
 const styles = StyleSheet.create({
-  naming: { flexDirection: "row", alignItems: "center", gap: 8 },
-  count: { ...type.sectionLabel, color: colors.inkMuted }
+  naming: { flexDirection: "row", alignItems: "center", gap: 8 }
 });
