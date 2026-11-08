@@ -13,7 +13,7 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useVoice } from "@/hooks/use-voice";
 import { apiQuickAdd } from "@/lib/api-actions";
 import { askGate, serverDetail } from "@/lib/ask";
-import { ACT_HISTORY_TURNS, ACT_TEXT_MAX, actBody, actionRows, applyActions, instantDraft, kindName, opName, type ActReply, type ActTurn } from "@/lib/assistant";
+import { ACT_HISTORY_TURNS, ACT_TEXT_MAX, actBody, actionRows, applyActions, editableField, fieldName, instantDraft, kindName, mealTotal, opName, withEdit, type ActReply, type ActTurn } from "@/lib/assistant";
 import { getApi } from "@/lib/backend";
 import { captureStarters, digits, formatDate, isArabic, t } from "@/lib/i18n";
 import type { QuickAddDraft } from "@/lib/quick-add";
@@ -60,6 +60,8 @@ export default function Capture() {
   const [history, setHistory] = useState<ActTurn[]>([]);
   const [answer, setAnswer] = useState<ActReply | null>(null);
   const [skipped, setSkipped] = useState<Set<number>>(new Set());
+  // What the person is typing into a change's number, by the change's place in the list.
+  const [typed, setTyped] = useState<Record<number, string>>({});
   const [accepted, setAccepted] = useState<string | null | undefined>(undefined);
   const [voiceLang, setVoiceLang] = useState<VoiceLang>(defaultVoiceLang(isArabic));
   const beforeVoice = useRef("");
@@ -72,6 +74,18 @@ export default function Capture() {
   const parsed = instant ?? fallback;
   const gate = provider === null ? "no-ai" : askGate(provider, accepted);
   const chosen = answer ? answer.actions.filter((_, index) => !skipped.has(index)) : [];
+  const total = mealTotal(chosen);
+  const estimated = chosen.some((action) => action.kind === "meal" && action.op === "create" && action.fields.food_id == null);
+
+  const edit = (index: number, value: string) => {
+    setTyped((current) => ({ ...current, [index]: value }));
+    const number = Number(value.replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660)).replace(/[٫,]/g, "."));
+    const action = answer?.actions[index];
+    if (!action || !value.trim() || !Number.isFinite(number) || number < 0) return;
+    // A saved food needs more than 0 servings; the route would refuse it.
+    if (editableField(action) === "servings" && number <= 0) return;
+    setAnswer((current) => current && { ...current, actions: current.actions.map((action, at) => (at === index ? withEdit(action, number) : action)) });
+  };
 
   useEffect(() => {
     AsyncStorage.getItem(recentKey)
@@ -115,6 +129,7 @@ export default function Capture() {
       setHistory((turns) => [...turns, { role: "user" as const, content: line }, { role: "assistant" as const, content: reply.reply }].slice(-ACT_HISTORY_TURNS));
       setAnswer(reply);
       setSkipped(new Set());
+      setTyped({});
       setText("");
     } catch (error) {
       setFailure(`${t.assistantFailed} ${serverDetail(error, isArabic)}`.trim());
@@ -135,6 +150,7 @@ export default function Capture() {
     // Keep only what failed, so trying again never saves a change twice.
     setAnswer({ reply: t.assistantSomeFailed, actions: result.failed.map((item) => item.action) });
     setSkipped(new Set());
+    setTyped({});
     setFailure(result.failed.map((item) => `${item.action.label}: ${isArabic ? t.tryAgain : item.message}`).join("\n"));
   }
 
@@ -196,7 +212,26 @@ export default function Capture() {
                   </Pressable>
                 </View>
                 <Text style={[type.barValue, styles.auto]}>{action.label}</Text>
-                {actionRows(action, isArabic).map(([key, value]) => (
+                {(() => {
+                  const key = editableField(action);
+                  if (!key || off) return null;
+                  return (
+                    <View style={styles.field}>
+                      <Text style={[type.rowSubtitle, { fontSize: 13, alignSelf: "center" }]}>{fieldName(key, isArabic)}</Text>
+                      <TextInput
+                        style={styles.number}
+                        value={typed[index] ?? digits(String(action.fields[key] ?? ""))}
+                        onChangeText={(value) => edit(index, value)}
+                        keyboardType="decimal-pad"
+                        selectTextOnFocus
+                        accessibilityLabel={fieldName(key, isArabic)}
+                        selectionColor={colors.accentDeep}
+                        editable={!busy}
+                      />
+                    </View>
+                  );
+                })()}
+                {actionRows(action, isArabic, off ? null : editableField(action)).map(([key, value]) => (
                   <View key={key} style={styles.field}>
                     <Text style={[type.rowSubtitle, { fontSize: 13 }]}>{key}</Text>
                     <Text style={[type.barValue, { flexShrink: 1, fontSize: 13, textAlign: "right" }]}>{value}</Text>
@@ -205,6 +240,15 @@ export default function Capture() {
               </View>
             );
           })}
+          {total ? (
+            <View style={[styles.field, styles.total]}>
+              <Text style={[type.title, { fontSize: 14 }]}>{t.assistantTotal}</Text>
+              <Text style={[type.barValue, { fontSize: 14 }]}>
+                {digits(`${total.calories.toLocaleString(isArabic ? "ar-SA-u-nu-latn" : "en-US")} ${t.kcal}`)}
+              </Text>
+            </View>
+          ) : null}
+          {estimated ? <Text style={[type.rowSubtitle, { fontSize: 12 }]}>{t.assistantEstimate}</Text> : null}
           {answer.actions.length ? (
             <Button
               title={busy ? t.assistantThinking : chosen.length === 1 ? t.assistantConfirmOne : t.assistantConfirm.replace("{n}", digits(chosen.length))}
@@ -349,6 +393,8 @@ const styles = StyleSheet.create({
   mic: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceInset, borderWidth: 1, borderColor: colors.hairline },
   chipOn: { backgroundColor: colors.urgent },
   action: { gap: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },
+  total: { paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },
+  number: { width: 96, minHeight: 36, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, textAlign: "center" },
   note: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
   input: { flex: 1, maxHeight: 140, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top", writingDirection: "auto", minHeight: 52, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, backgroundColor: colors.field, fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },

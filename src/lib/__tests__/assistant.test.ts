@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ACT_HISTORY_TURNS, ACT_TEXT_MAX, ACT_TURN_MAX, actBody, actionRequest, actionRows, applyActions, instantDraft, kindName, opName, type ProposedAction } from "@/lib/assistant";
+import { ACT_HISTORY_TURNS, ACT_TEXT_MAX, ACT_TURN_MAX, actBody, actionRequest, actionRows, applyActions, editableField, instantDraft, kindName, mealTotal, opName, withEdit, type ProposedAction } from "@/lib/assistant";
 
 const ID = "0f8fad5b-d9cb-469f-a165-70867728950e";
 const action = (overrides: Partial<ProposedAction> = {}): ProposedAction => ({ op: "create", kind: "expense", id: null, label: "Lunch", fields: { merchant: "Lunch", amount: 45 }, ...overrides });
@@ -66,6 +66,12 @@ describe("what skips the AI", () => {
     // A guessed kind that falls back to a task is a guess, so the assistant decides.
     expect(instantDraft("غداء", opts)).toBeNull();
   });
+
+  it("sends food with no calories said to the assistant, so it is estimated instead of saved as 0", () => {
+    expect(instantDraft("أكلت كبسة دجاج وبيبسي", opts)).toBeNull();
+    expect(instantDraft("ate a shawarma", opts)).toBeNull();
+    expect(instantDraft("أكلت سلطة 300 سعرة", opts)?.draft).toMatchObject({ kind: "meal", calories: 300 });
+  });
 });
 
 describe("what goes to the server", () => {
@@ -98,5 +104,43 @@ describe("what the person checks", () => {
       ["Checklist", "Passport · Charger"]
     ]);
     expect(actionRequest(action({ kind: "task_list", fields: { name: "Work" } }))).toEqual({ method: "POST", path: "/task-lists", body: { name: "Work" } });
+  });
+});
+
+describe("food told in words", () => {
+  const FOOD = "6ba7b810-9dad-41d1-80b4-00c04fd430c8";
+  const saved = action({ kind: "meal", label: "Home kabsa", fields: { name: "Home kabsa", food_id: FOOD, servings: 1.5, calories: 975, protein_g: 48, carbs_g: 120.8, meal_type: "lunch", logged_at: "2026-11-08T13:00:00+03:00" } });
+  const guess = action({ kind: "meal", label: "Pepsi · 1 can", fields: { name: "Pepsi · 1 can", calories: 150, carbs_g: 41, protein_g: 0, logged_at: "2026-11-08T13:00:00+03:00" } });
+
+  it("logs a saved food through its own route and an estimate as a plain meal", () => {
+    expect(actionRequest(saved)).toEqual({ method: "POST", path: `/foods/${FOOD}/log`, body: { servings: 1.5, meal_type: "lunch", logged_at: "2026-11-08T13:00:00+03:00" } });
+    expect(actionRequest(guess)).toEqual({ method: "POST", path: "/meals", body: guess.fields });
+    expect(actionRequest(action({ kind: "meal", fields: { ...saved.fields, food_id: "../users" } }))).toBeNull();
+    // The food's id is never shown.
+    expect(actionRows(saved, false).map(([key]) => key)).not.toContain("food_id");
+  });
+
+  it("lets the person fix the number before confirming, with the rest following", () => {
+    expect(editableField(saved)).toBe("servings");
+    expect(editableField(guess)).toBe("calories");
+    expect(editableField(action())).toBe("amount");
+    expect(editableField(action({ op: "delete", id: ID }))).toBeNull();
+    expect(withEdit(saved, 3).fields).toMatchObject({ servings: 3, calories: 1950, protein_g: 96, carbs_g: 241.6 });
+    expect(withEdit(guess, 300).fields).toMatchObject({ calories: 300, carbs_g: 82, protein_g: 0 });
+    expect(withEdit(action(), 60).fields.amount).toBe(60);
+    expect(withEdit(guess, Number.NaN)).toBe(guess);
+  });
+
+  it("adds up the meals being confirmed", () => {
+    expect(mealTotal([saved, guess, action()])).toEqual({ calories: 1125, protein_g: 48, carbs_g: 161.8, fat_g: 0 });
+    expect(mealTotal([action()])).toBeNull();
+  });
+});
+
+describe("a meal as the person reads it", () => {
+  it("names the meal in their language and doesn't repeat the heading", () => {
+    const meal = action({ kind: "meal", label: "Dates · 3", fields: { name: "Dates · 3", calories: 70, meal_type: "snack" } });
+    expect(actionRows(meal, true)).toEqual([["السعرات", "70"], ["الوجبة", "سناك"]]);
+    expect(actionRows(meal, false, "calories")).toEqual([["Meal", "Snack"]]);
   });
 });
