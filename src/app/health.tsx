@@ -117,7 +117,7 @@ export default function Health() {
         {weights.length ? (
           weights.map(({ log, delta }) => <ListRow key={log.id} title={`${log.weight} ${log.unit}`} subtitle={stamp(log.logged_at)} meta={deltaText(delta) ?? undefined} />)
         ) : (
-          <EmptyState example={ht.weightExample}>{ht.noWeight}</EmptyState>
+          <EmptyState icon="trending-down" example={ht.weightExample}>{ht.noWeight}</EmptyState>
         )}
       </Card>
 
@@ -137,8 +137,8 @@ export default function Health() {
         ))}
         {!manualSleep.length && !manualWorkouts.length ? (
           <View style={{ flexDirection: "row", justifyContent: "center", gap: 16 }}>
-            <EmptyState example={ht.sleepExample} />
-            <EmptyState example={ht.workoutExample} />
+            <EmptyState example={ht.sleepExample} action={false} />
+            <EmptyState example={ht.workoutExample} action={false} />
           </View>
         ) : null}
       </Card>

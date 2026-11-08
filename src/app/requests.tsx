@@ -1,5 +1,5 @@
 import * as Haptics from "expo-haptics";
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { EmptyState, ListRow, RowButton, type } from "@/components/drift";
@@ -139,7 +139,7 @@ export default function Requests() {
           );
         })}
       </View>
-      {!items.length ? <EmptyState>{loading || !seerr.ready ? `${t.loading}…` : mt.requestsEmpty}</EmptyState> : null}
+      {!items.length ? <EmptyState icon={loading || !seerr.ready ? undefined : "film"} action={loading || !seerr.ready ? undefined : { label: t.movies, onPress: () => router.push("/media") }}>{loading || !seerr.ready ? `${t.loading}…` : mt.requestsEmpty}</EmptyState> : null}
       {pages.page > 0 && pages.page < pages.pages ? <Button variant="outline" title={loading ? `${t.loading}…` : mt.loadMore} disabled={loading} onPress={() => load(pages.page + 1)} /> : null}
     </Screen>
   );

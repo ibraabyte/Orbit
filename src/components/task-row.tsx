@@ -54,7 +54,7 @@ export function TaskRow({ task, showPriority, showList, grouped, timeOnly, first
     <ListRow
       first={first}
       onPress={open}
-      leading={<CheckItem checked={false} label={`${t.complete}: ${task.title}`} onPress={() => void actions.complete(task)} />}
+      leading={<CheckItem checked={false} label={`${t.complete}: ${task.title}`} onPress={() => actions.complete(task)} />}
       title={task.title}
       subtitle={subtitle}
       badges={
