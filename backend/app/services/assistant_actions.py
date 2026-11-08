@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from app import models as m
 from app.schemas import domains as s
+from app.schemas import food as food_schemas
 from app.schemas.tasks import ReminderCreate, ReminderUpdate, TaskCreate, TaskListCreate, TaskListUpdate, TaskUpdate
 from app.services.agent import Call, Tool
 
@@ -30,7 +31,7 @@ MAX_ACTIONS = 12
 TEXT_MAX = 120
 FIND_LIMIT = 10
 # Fields the assistant never sets: bookkeeping the app or the server fills in.
-HIDDEN = {"reminder_sent_at", "sent_at", "food_id", "servings", "meal_plan_id", "color", "poster_path", "position"}
+HIDDEN = {"reminder_sent_at", "sent_at", "meal_plan_id", "color", "poster_path", "position"}
 
 
 @dataclass(frozen=True)
@@ -68,8 +69,12 @@ def _kinds() -> dict[str, Kind]:
              (m.Bill.status != "paid",), {"card_id": "card"}),
         Kind("budget", "a monthly spending limit for one category (month is the first day of the month)", m.Budget, s.BudgetCreate,
              s.BudgetUpdate, "category", ("month", "amount", "currency"), 24, m.Budget.month.desc()),
-        Kind("meal", "food eaten (the food log)", m.Meal, s.MealCreate, s.MealUpdate, "name", ("calories", "meal_type", "logged_at"),
-             20, m.Meal.logged_at.desc()),
+        Kind("meal", "food eaten (the food log). To log a saved food, set food_id (a food ref) and servings; leave food_id out "
+             "for an estimate", m.Meal, s.MealCreate, s.MealUpdate, "name", ("calories", "meal_type", "logged_at"),
+             20, m.Meal.logged_at.desc(), (), {"food_id": "food"}),
+        Kind("food", "a saved food, with its numbers for one serving (the user's own, like a home kabsa). Only create one "
+             "when the user asks to save a food", m.Food, food_schemas.FoodCreate, food_schemas.FoodUpdate, "name",
+             ("serving_label", "calories"), 30, m.Food.last_used_at.desc().nulls_last()),
         Kind("grocery", "something to buy (the shopping list)", m.GroceryItem, s.GroceryItemCreate, s.GroceryItemUpdate, "name",
              ("quantity", "category"), 30, m.GroceryItem.created_at.desc(), (m.GroceryItem.status == "needed",)),
         Kind("workout", "a workout done", m.Workout, s.WorkoutCreate, s.WorkoutUpdate, "type",
@@ -220,7 +225,7 @@ def _owned(kind: Kind, user_id: uuid.UUID, *conditions: ColumnElement[bool]):
 def recent_items(run: Run) -> dict[str, list[dict[str, Any]]]:
     """Each kind's recent or open items. Kinds others point at (cards, habits, lists, tasks) come first, so their refs exist."""
     items: dict[str, list[dict[str, Any]]] = {}
-    first = ("card", "habit", "task_list", "task")
+    first = ("card", "habit", "task_list", "task", "food")
     for name in (*first, *[n for n in KINDS if n not in first]):
         kind = KINDS[name]
         rows = run.db.scalars(_owned(kind, run.user_id).order_by(kind.order, kind.model.id).limit(kind.recent)).all()
@@ -302,6 +307,11 @@ def _prepare(run: Run, kind: Kind, fields: dict[str, Any], creating: bool) -> di
             if isinstance(item, str):
                 return f"{name}: {item}"
             values[name] = str(item.id)
+    if creating and kind.name == "meal" and values.get("food_id") is not None:
+        filled = _from_saved_food(run, values)
+        if isinstance(filled, str):
+            return filled
+        values = filled
     if creating:
         now = datetime.now(run.zone).isoformat(timespec="minutes")
         schema_fields = kind.create.model_fields
@@ -311,6 +321,34 @@ def _prepare(run: Run, kind: Kind, fields: dict[str, Any], creating: bool) -> di
         if "currency" in schema_fields and not values.get("currency"):
             values["currency"] = run.currency
     return values
+
+
+def _from_saved_food(run: Run, values: dict[str, Any]) -> dict[str, Any] | str:
+    """A meal of a saved food takes the food's own numbers times the servings, never the AI's guess."""
+    food = run.db.scalar(select(m.Food).where(m.Food.id == uuid.UUID(values["food_id"]), m.Food.user_id == run.user_id))
+    if food is None:
+        return "food_id: that food is not one of the user's saved foods."
+    try:
+        given = values.get("servings")
+        servings = Decimal(1 if given is None else str(given))
+        if not 0 < servings <= 50:
+            return "servings: must be more than 0 and at most 50."
+    except ArithmeticError:
+        return "servings: must be a number."
+
+    def times(value: Decimal | None) -> float | None:
+        return None if value is None else float((value * servings).quantize(Decimal("0.1")))
+
+    name = f"{food.name} ({food.brand})" if food.brand else food.name
+    return {
+        **values,
+        "name": name[:220],
+        "servings": float(servings),
+        "calories": int((food.calories * servings).to_integral_value()),
+        "protein_g": times(food.protein_g),
+        "carbs_g": times(food.carbs_g),
+        "fat_g": times(food.fat_g),
+    }
 
 
 def _with_zone(run: Run, schema: type[BaseModel], values: dict[str, Any]) -> dict[str, Any]:
