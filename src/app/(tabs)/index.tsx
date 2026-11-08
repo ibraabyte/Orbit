@@ -6,7 +6,7 @@ import { Badge, Card, CardLink, Chevron, CountBadge, EmptyState, Hero, Icon, Ico
 import { MorningBriefCard } from "@/components/morning-brief-card";
 import { WeeklySummaryCard } from "@/components/weekly-summary";
 import { useOverlays } from "@/components/overlays";
-import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, Skeleton, TabHeader } from "@/components/screen";
+import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, Skeleton, TabHeader, useWide } from "@/components/screen";
 import { SwipeToDone } from "@/components/swipe-to-done";
 import { TaskRow } from "@/components/task-row";
 import { colors, fonts, radius } from "@/components/theme";
@@ -57,6 +57,8 @@ export default function Today() {
   const readiness = useReadiness();
   const { sheet, toast } = useOverlays();
   const now = useNow();
+  // iPad, two columns: the quick numbers move to the top of the right column, so both columns end at about the same height.
+  const wide = useWide();
   const [hidden, setHidden] = useState<OptionalSection[]>([]);
   const show = (section: OptionalSection) => !hidden.includes(section);
   // Not asked until the saved choice of hidden sections is read, so a hidden brief is never fetched.
@@ -260,11 +262,12 @@ export default function Today() {
             {show("brief") ? <MorningBriefCard state={brief.state} data={data} retry={() => void brief.refresh()} /> : null}
             {friday && show("week") ? <WeeklySummaryCard state={week.state} retry={() => void week.refresh()} /> : null}
             {digestCard}
-            {quickTiles}
+            {wide ? null : quickTiles}
           </>
         }
         right={
           <>
+            {wide ? quickTiles : null}
             {attentionCard}
             {nextCard}
             {clearCard}
