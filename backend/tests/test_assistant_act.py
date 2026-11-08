@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Expense, Profile, Task, User
+from app.models import Expense, Meal, Profile, Task, User
 from app.services import whoop_ai
 from tests.conftest import bearer, sign_up
 
@@ -227,3 +227,67 @@ def test_a_task_goes_in_a_list_with_its_checklist(client: TestClient, ready: dic
     assert [s["title"] for s in client.get("/task-steps", headers=ready).json()] == ["Draft", "Check numbers"]
     assert client.post("/tasks", json=second["fields"], headers=ready).status_code == 201
     assert [row["name"] for row in client.get("/task-lists", headers=ready).json()] == ["Work", "Home"]
+
+
+def test_eating_something_is_logged_by_text_with_no_photo(client: TestClient, ready: dict, db: Session, script: Script):
+    kabsa = client.post(
+        "/foods",
+        json={"name": "Home kabsa", "serving_label": "1 plate", "calories": 650, "protein_g": 32, "carbs_g": 80.5, "fat_g": 21},
+        headers=ready,
+    ).json()
+    script.append(
+        {
+            "tool_calls": [
+                # A saved food: the AI's own calorie guess is ignored and the food's numbers are used.
+                call("propose_create", kind="meal", fields={"food_id": "food-1", "servings": 1.5, "calories": 99, "meal_type": "lunch"}),
+                # Not saved: the AI's estimate, with the portion in the name.
+                call(
+                    "propose_create",
+                    kind="meal",
+                    fields={"name": "Pepsi · 1 can", "calories": 150, "carbs_g": 41, "protein_g": 0, "fat_g": 0, "meal_type": "lunch"},
+                ),
+            ]
+        }
+    )
+    script.append({"content": "جهزت الكبسة والبيبسي، أكدهم."})
+    body = act(client, ready, "أكلت كبسة البيت صحن ونص وبيبسي").json()
+    # The AI sees the saved food by ref with its numbers, never its id; and it is told how to log food.
+    prompt = script.seen[0]["messages"][1]["content"]
+    assert '"ref":"food-1","name":"Home kabsa"' in prompt and kabsa["id"] not in json.dumps(script.seen[0])
+    assert "no photo" in script.seen[0]["messages"][0]["content"]
+    saved, drink = body["actions"]
+    assert saved["label"] == "Home kabsa"
+    assert saved["fields"]["food_id"] == kabsa["id"] and saved["fields"]["servings"] == 1.5
+    assert saved["fields"]["calories"] == 975 and saved["fields"]["carbs_g"] == 120.8 and saved["fields"]["protein_g"] == 48
+    assert saved["fields"]["logged_at"].endswith("+03:00")
+    assert drink["label"] == "Pepsi · 1 can" and drink["fields"]["calories"] == 150 and "food_id" not in drink["fields"]
+    assert db.scalar(select(func.count()).select_from(Meal)) == 0
+
+    # The app logs the saved food through its own route and the estimate as a plain meal.
+    logged = client.post(
+        f"/foods/{kabsa['id']}/log", json={k: saved["fields"][k] for k in ("servings", "meal_type", "logged_at")}, headers=ready
+    )
+    assert logged.status_code == 201 and logged.json()["calories"] == 975
+    assert client.post("/meals", json=drink["fields"], headers=ready).status_code == 201
+
+
+def test_a_food_that_isnt_the_users_or_a_bad_serving_goes_back_to_the_ai(client: TestClient, ready: dict, script: Script):
+    other = bearer(sign_up(client, email="other@example.com"))
+    client.post("/foods", json={"name": "Their dates", "calories": 20}, headers=other)
+    client.post("/foods", json={"name": "Dates", "calories": 23}, headers=ready)
+    script.append(
+        {
+            "tool_calls": [
+                call("find_items", kind="food", text="dates"),
+                call("propose_create", kind="meal", fields={"food_id": "food-1", "servings": 0}),
+                call("propose_create", kind="meal", fields={"food_id": "food-1", "servings": "lots"}),
+                call("propose_create", kind="meal", fields={"food_id": "food-9"}),
+            ]
+        }
+    )
+    body = act(client, ready, "أكلت تمر").json()
+    found, zero, words, unknown = tool_results(script.seen[1])
+    assert [item["name"] for item in found["items"]] == ["Dates"]
+    assert "servings" in zero["error"] and "servings" in words["error"] and "Unknown ref" in unknown["error"]
+    assert body["actions"] == []
+    assert "Their dates" not in json.dumps(script.seen, ensure_ascii=False)
