@@ -136,3 +136,11 @@ describe("food told in words", () => {
     expect(mealTotal([action()])).toBeNull();
   });
 });
+
+describe("a meal as the person reads it", () => {
+  it("names the meal in their language and doesn't repeat the heading", () => {
+    const meal = action({ kind: "meal", label: "Dates · 3", fields: { name: "Dates · 3", calories: 70, meal_type: "snack" } });
+    expect(actionRows(meal, true)).toEqual([["السعرات", "70"], ["الوجبة", "سناك"]]);
+    expect(actionRows(meal, false, "calories")).toEqual([["Meal", "Snack"]]);
+  });
+});

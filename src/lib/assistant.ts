@@ -172,6 +172,11 @@ const FIELD_NAMES: Record<string, [string, string]> = {
 // Ids are shown as the item they point at (the action's label) or not at all.
 const HIDDEN_FIELDS = new Set(["habit_id", "task_id", "card_id", "list_id", "food_id", "tags"]);
 
+const MEAL_TYPES: Record<string, [string, string]> = {
+  breakfast: ["Breakfast", "فطور"], lunch: ["Lunch", "غداء"], dinner: ["Dinner", "عشاء"], snack: ["Snack", "سناك"], other: ["Other", "أخرى"]
+};
+const mealTypeName = (value: string, arabic: boolean) => (MEAL_TYPES[value] ?? [value, value])[arabic ? 1 : 0];
+
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -195,8 +200,9 @@ function formatValue(value: unknown, locale: string): string {
 export function actionRows(action: ProposedAction, arabic: boolean, skip?: string | null): [string, string][] {
   const locale = arabic ? "ar-SA-u-nu-latn" : "en-US";
   return Object.entries(action.fields)
-    .filter(([key]) => !HIDDEN_FIELDS.has(key) && key !== skip)
-    .map(([key, value]) => [(FIELD_NAMES[key] ?? [key, key])[arabic ? 1 : 0], formatValue(value, locale)]);
+    // The item's name is already its heading.
+    .filter(([key, value]) => !HIDDEN_FIELDS.has(key) && key !== skip && !(key === "name" && value === action.label))
+    .map(([key, value]) => [(FIELD_NAMES[key] ?? [key, key])[arabic ? 1 : 0], key === "meal_type" && typeof value === "string" ? mealTypeName(value, arabic) : formatValue(value, locale)]);
 }
 
 export const fieldName = (key: string, arabic: boolean) => (FIELD_NAMES[key] ?? [key, key])[arabic ? 1 : 0];

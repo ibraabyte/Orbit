@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: colors.urgent },
   action: { gap: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },
   total: { paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },
-  number: { minWidth: 84, minHeight: 36, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, textAlign: "center" },
+  number: { width: 96, minHeight: 36, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, textAlign: "center" },
   note: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
   input: { flex: 1, maxHeight: 140, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top", writingDirection: "auto", minHeight: 52, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, backgroundColor: colors.field, fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
