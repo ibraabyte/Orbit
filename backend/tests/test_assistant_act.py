@@ -231,7 +231,8 @@ def test_a_task_goes_in_a_list_with_its_checklist(client: TestClient, ready: dic
 
 def test_eating_something_is_logged_by_text_with_no_photo(client: TestClient, ready: dict, db: Session, script: Script):
     kabsa = client.post(
-        "/foods", json={"name": "Home kabsa", "serving_label": "1 plate", "calories": 650, "protein_g": 32, "carbs_g": 80.5, "fat_g": 21},
+        "/foods",
+        json={"name": "Home kabsa", "serving_label": "1 plate", "calories": 650, "protein_g": 32, "carbs_g": 80.5, "fat_g": 21},
         headers=ready,
     ).json()
     script.append(
@@ -263,7 +264,9 @@ def test_eating_something_is_logged_by_text_with_no_photo(client: TestClient, re
     assert db.scalar(select(func.count()).select_from(Meal)) == 0
 
     # The app logs the saved food through its own route and the estimate as a plain meal.
-    logged = client.post(f"/foods/{kabsa['id']}/log", json={k: saved["fields"][k] for k in ("servings", "meal_type", "logged_at")}, headers=ready)
+    logged = client.post(
+        f"/foods/{kabsa['id']}/log", json={k: saved["fields"][k] for k in ("servings", "meal_type", "logged_at")}, headers=ready
+    )
     assert logged.status_code == 201 and logged.json()["calories"] == 975
     assert client.post("/meals", json=drink["fields"], headers=ready).status_code == 201
 

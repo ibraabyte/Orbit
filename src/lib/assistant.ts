@@ -35,7 +35,8 @@ export const KIND_PATHS: Record<string, string> = {
   note: "/captures",
   money_account: "/money-accounts",
   investment: "/investments",
-  card: "/cards"
+  card: "/cards",
+  food: "/foods"
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -46,6 +47,13 @@ export type ActionRequest = { method: "POST" | "PATCH" | "DELETE"; path: string;
 export function actionRequest(action: ProposedAction): ActionRequest | null {
   const base = KIND_PATHS[action.kind];
   if (!base || !action.fields || typeof action.fields !== "object") return null;
+  if (action.op === "create" && action.id === null && action.kind === "meal" && action.fields.food_id != null) {
+    // A saved food is logged through its own route, which takes the numbers from the food and marks it used.
+    const food = action.fields.food_id;
+    if (typeof food !== "string" || !UUID.test(food)) return null;
+    const { servings, meal_type, logged_at } = action.fields;
+    return { method: "POST", path: `/foods/${food}/log`, body: { servings: servings ?? 1, meal_type: meal_type ?? null, logged_at } };
+  }
   if (action.op === "create") return action.id === null ? { method: "POST", path: base, body: action.fields } : null;
   if (!action.id || !UUID.test(action.id)) return null;
   if (action.op === "update") return Object.keys(action.fields).length ? { method: "PATCH", path: `${base}/${action.id}`, body: action.fields } : null;
@@ -87,7 +95,46 @@ export function instantDraft(input: string, options: { defaultCurrency?: string;
   if (!inferredKind) return null;
   const parsed = parseNatural(text, options);
   // parseNatural falls back to a plain task when the guessed kind doesn't fit; that is a guess, so the AI decides.
-  return parsed.validation.ok && parsed.command === command ? parsed : null;
+  if (!parsed.validation.ok || parsed.command !== command) return null;
+  // "أكلت كبسة" with no calories said: the AI splits it into foods and estimates them, so it isn't saved as 0.
+  if (parsed.draft.kind === "meal" && !parsed.draft.calories) return null;
+  return parsed;
+}
+
+// The one number the person can fix on a proposed change before confirming: a meal's calories (or its servings, for a
+// saved food), an expense's amount, a workout's minutes. Other kinds are confirmed or skipped as they are.
+export function editableField(action: ProposedAction): string | null {
+  if (action.op !== "create") return null;
+  if (action.kind === "meal") return action.fields.food_id != null ? "servings" : "calories";
+  if (action.kind === "expense") return "amount";
+  if (action.kind === "workout") return "duration_minutes";
+  return null;
+}
+
+const NUTRIENTS = ["protein_g", "carbs_g", "fat_g"] as const;
+const round1 = (value: number) => Math.round(value * 10) / 10;
+
+// The change with that number set. A meal's protein, carbs and fat follow its calories (or servings) in proportion,
+// so the totals shown stay consistent; a saved food's log route works its own numbers out again anyway.
+export function withEdit(action: ProposedAction, value: number): ProposedAction {
+  const key = editableField(action);
+  if (!key || !Number.isFinite(value) || value < 0) return action;
+  const fields: Record<string, unknown> = { ...action.fields, [key]: key === "calories" || key === "duration_minutes" ? Math.round(value) : value };
+  if (action.kind === "meal") {
+    const before = Number(action.fields[key]) || 0;
+    const ratio = before > 0 ? value / before : 0;
+    if (key === "servings") fields.calories = Math.round((Number(action.fields.calories) || 0) * ratio);
+    for (const nutrient of NUTRIENTS) if (typeof action.fields[nutrient] === "number") fields[nutrient] = round1((action.fields[nutrient] as number) * ratio);
+  }
+  return { ...action, fields };
+}
+
+// What the meals being confirmed add up to, for the line under them; null when no meal is among them.
+export function mealTotal(actions: ProposedAction[]) {
+  const meals = actions.filter((action) => action.op === "create" && action.kind === "meal");
+  if (!meals.length) return null;
+  const sum = (key: string) => round1(meals.reduce((total, meal) => total + (Number(meal.fields[key]) || 0), 0));
+  return { calories: Math.round(sum("calories")), protein_g: sum("protein_g"), carbs_g: sum("carbs_g"), fat_g: sum("fat_g") };
 }
 
 export const actBody = (text: string, history: ActTurn[], locale: "en" | "ar") => ({
@@ -102,7 +149,7 @@ const KIND_NAMES: Record<string, [string, string]> = {
   budget: ["Budget", "ميزانية"], meal: ["Meal", "وجبة"], grocery: ["Grocery", "مشتريات"], workout: ["Workout", "تمرين"],
   sleep: ["Sleep", "نوم"], weight: ["Weight", "وزن"], habit: ["Habit", "عادة"], habit_log: ["Habit done", "إنجاز عادة"],
   note: ["Note", "ملاحظة"], money_account: ["Money place", "مكان فلوس"],
-  investment: ["Investment", "استثمار"], card: ["Card", "بطاقة"]
+  investment: ["Investment", "استثمار"], card: ["Card", "بطاقة"], food: ["Saved food", "أكلة محفوظة"]
 };
 const OP_NAMES: Record<ActionOp, [string, string]> = { create: ["Add", "إضافة"], update: ["Change", "تعديل"], delete: ["Delete", "حذف"], complete: ["Done", "إنجاز"] };
 
@@ -119,10 +166,11 @@ const FIELD_NAMES: Record<string, [string, string]> = {
   relationship: ["Relationship", "العلاقة"], next_follow_up_at: ["Next follow-up", "المتابعة القادمة"], balance: ["Balance", "الرصيد"],
   invested: ["Invested", "المستثمر"], current_value: ["Value now", "القيمة الحالية"], kind: ["Type", "النوع"], last4: ["Last 4", "آخر 4"],
   meal_type: ["Meal", "الوجبة"], frequency: ["How often", "كم مرة"], target_count: ["Target", "الهدف"], type: ["Type", "النوع"], url: ["Link", "الرابط"],
-  list_name: ["List", "القائمة"], steps: ["Checklist", "الخطوات"], autopay: ["Autopay", "دفع تلقائي"], network: ["Network", "الشبكة"], protein_g: ["Protein g", "بروتين غ"], carbs_g: ["Carbs g", "كارب غ"], fat_g: ["Fat g", "دهون غ"]
+  list_name: ["List", "القائمة"], steps: ["Checklist", "الخطوات"], autopay: ["Autopay", "دفع تلقائي"], network: ["Network", "الشبكة"], protein_g: ["Protein g", "بروتين غ"], carbs_g: ["Carbs g", "كارب غ"], fat_g: ["Fat g", "دهون غ"],
+  servings: ["Servings", "الحصص"], serving_label: ["Serving", "الحصة"], serving_grams: ["Grams per serving", "غرام للحصة"], brand: ["Brand", "الماركة"], barcode: ["Barcode", "الباركود"]
 };
 // Ids are shown as the item they point at (the action's label) or not at all.
-const HIDDEN_FIELDS = new Set(["habit_id", "task_id", "card_id", "list_id", "tags"]);
+const HIDDEN_FIELDS = new Set(["habit_id", "task_id", "card_id", "list_id", "food_id", "tags"]);
 
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -144,9 +192,11 @@ function formatValue(value: unknown, locale: string): string {
 }
 
 // The fields of a proposed change as [name, value] rows, read straight from what would be sent (never the AI's words).
-export function actionRows(action: ProposedAction, arabic: boolean): [string, string][] {
+export function actionRows(action: ProposedAction, arabic: boolean, skip?: string | null): [string, string][] {
   const locale = arabic ? "ar-SA-u-nu-latn" : "en-US";
   return Object.entries(action.fields)
-    .filter(([key]) => !HIDDEN_FIELDS.has(key))
+    .filter(([key]) => !HIDDEN_FIELDS.has(key) && key !== skip)
     .map(([key, value]) => [(FIELD_NAMES[key] ?? [key, key])[arabic ? 1 : 0], formatValue(value, locale)]);
 }
+
+export const fieldName = (key: string, arabic: boolean) => (FIELD_NAMES[key] ?? [key, key])[arabic ? 1 : 0];
