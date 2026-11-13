@@ -13,6 +13,7 @@ import { colors, fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useMorningBrief } from "@/hooks/use-morning-brief";
 import { useNow } from "@/hooks/use-now";
+import { usePlanToday } from "@/hooks/use-plan-today";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useReadiness } from "@/hooks/use-readiness";
 import { useSections } from "@/hooks/use-sections";
@@ -29,6 +30,7 @@ import { foodSummary } from "@/lib/food";
 import { formatClock24, formatDate, formatIn, formatNumber, isArabic, t } from "@/lib/i18n";
 import { prayerNamesEn, type PrayerTime } from "@/lib/prayer-times";
 import { buildRail, type RailEntry } from "@/lib/rail";
+import { dayMuscles, pt, recoveryLine } from "@/lib/plan";
 import { formatSleepDuration } from "@/lib/sleep";
 import { cardLabel, moneyDueSoon, type MoneyDue } from "@/lib/wealth";
 import { isFriday } from "@/lib/weekly-summary";
@@ -42,6 +44,7 @@ const optional = [
   ["digest", t.digest],
   ["quick", t.quick],
   ["upnext", t.nextUp],
+  ["workout", pt.todayWorkout],
   ["health", t.healthToday]
 ] as const;
 type OptionalSection = (typeof optional)[number][0];
@@ -71,6 +74,8 @@ export default function Today() {
   // The weekly summary is a Friday card; on other days it is one tap away in the assistant.
   const friday = isFriday(now);
   const week = useWeeklySummary(choicesRead && show("week") && friday);
+  // Today's workout from the plan, while Exercises is on and the card isn't hidden.
+  const planToday = usePlanToday(choicesRead && show("workout") && on("exercises"));
 
   useEffect(() => {
     AsyncStorage.getItem(hiddenKey)
@@ -102,7 +107,7 @@ export default function Today() {
   const customize = () =>
     sheet({
       title: t.customize,
-      options: optional.filter(([id]) => (id === "money" ? on("finance") : id === "health" ? on("health") : true)).map(([id, label]) => ({
+      options: optional.filter(([id]) => (id === "money" ? on("finance") : id === "health" ? on("health") : id === "workout" ? on("exercises") : true)).map(([id, label]) => ({
         label: `${show(id) ? "●" : "○"} ${label}`,
         run: () => {
           const next = show(id) ? [...hidden, id] : hidden.filter((item) => item !== id);
@@ -126,6 +131,7 @@ export default function Today() {
   const reload = () => {
     void brief.refresh();
     void readiness.refresh();
+    void planToday.refresh();
     if (friday) void week.refresh();
     return refresh();
   };
@@ -237,6 +243,22 @@ export default function Today() {
     </StatGrid>
   ) : null;
 
+  // The plan's workout for today until it's done; a rest day or no plan shows nothing.
+  const workoutDay = show("workout") && on("exercises") ? planToday.day : null;
+  const workoutCard =
+    workoutDay && workoutDay.status !== "done" ? (
+      <Card title={pt.todayWorkout} action={<CardLink href="/plan" label={pt.plan} />}>
+        <ListRow
+          first
+          href="/plan"
+          leading={<IconTile name="activity" tone={workoutDay.adjustment === "rest" ? "urgent" : "accent"} />}
+          title={pt.kinds[workoutDay.kind]}
+          badges={workoutDay.status === "started" ? <Badge tone="accent" glyph="●">{pt.status.started}</Badge> : undefined}
+          subtitle={[dayMuscles(workoutDay), recoveryLine(workoutDay)].filter(Boolean).join(" · ")}
+        />
+      </Card>
+    ) : null;
+
   // Health shows once something is logged today (food, a workout, sleep); before that it would be a row of zeros.
   // With Food off, the card keeps workouts and sleep and drops the calorie ring.
   const foodOn = on("food");
@@ -282,6 +304,7 @@ export default function Today() {
             {attentionCard}
             {nextCard}
             {clearCard}
+            {workoutCard}
             {healthCard}
           </>
         }

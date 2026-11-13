@@ -15,6 +15,7 @@ import type { SectionKey } from "@/lib/app-sections";
 import { getApi } from "@/lib/backend";
 import { digits, formatDate, t } from "@/lib/i18n";
 import { notificationAllowed } from "@/lib/notification-prefs";
+import { alternativeLabel, planApi, pt } from "@/lib/plan";
 import {
   clock,
   elapsedSeconds,
@@ -217,11 +218,39 @@ export default function Workout() {
       options: REST_CHOICES.map((seconds) => ({ label: `${seconds === exercise.rest_seconds ? "●" : "○"} ${restText(seconds)}`, run: () => void updateExercise(exercise, { rest_seconds: seconds }) }))
     });
 
+  // The machine is busy: the same muscle with other equipment from your gym. Only before a set is ticked.
+  const canSwap = (exercise: SessionExercise) => Boolean(session?.in_progress && exercise.exercise_id && !exercise.sets.some((row) => row.done));
+  const swapExercise = async (exercise: SessionExercise) => {
+    try {
+      const options = await planApi.sessionAlternatives(getApi(), exercise.id);
+      if (!options.length) return toast(pt.noAlternatives);
+      sheet({
+        title: `${pt.swapTitle} ${exercise.name}`,
+        detail: pt.swapDetail,
+        options: options.map((option) => ({
+          label: alternativeLabel(option),
+          run: () =>
+            void planApi
+              .sessionSwap(getApi(), exercise.id, option.id)
+              .then((next) => {
+                setHistories(({ [exercise.id]: _old, ...rest }) => rest);
+                setSession(next);
+                toast(pt.swapped);
+              })
+              .catch(failed)
+        }))
+      });
+    } catch (swapError) {
+      failed(swapError);
+    }
+  };
+
   const exerciseActions = (exercise: SessionExercise) =>
     sheet({
       title: exercise.name,
       options: [
         { label: `${tt.rest}: ${restText(exercise.rest_seconds)}`, run: () => setTimeout(() => pickRest(exercise), 250) },
+        ...(canSwap(exercise) ? [{ label: pt.swap, run: () => setTimeout(() => void swapExercise(exercise), 250) }] : []),
         ...(exercise.exercise_id ? [{ label: tt.openExercise, run: () => router.push(`/exercises/${encodeURIComponent(exercise.exercise_id ?? "")}`) }] : []),
         {
           label: tt.removeExercise,
@@ -317,6 +346,7 @@ export default function Workout() {
             onAddSet={() => void addSet(exercise)}
             onRest={() => pickRest(exercise)}
             onActions={() => exerciseActions(exercise)}
+            onSwap={canSwap(exercise) ? () => void swapExercise(exercise) : undefined}
           />
         ))}
 
@@ -356,7 +386,8 @@ function ExerciseCard({
   onSetActions,
   onAddSet,
   onRest,
-  onActions
+  onActions,
+  onSwap
 }: {
   exercise: SessionExercise;
   history: ExerciseHistory | null;
@@ -366,6 +397,7 @@ function ExerciseCard({
   onAddSet: () => void;
   onRest: () => void;
   onActions: () => void;
+  onSwap?: () => void;
 }) {
   const last = history?.sessions[0] ?? null;
   const bests = history?.bests;
@@ -379,6 +411,7 @@ function ExerciseCard({
           <Text style={type.cardTitle}>{exercise.name}</Text>
           <Text style={type.rowSubtitle}>{last ? `${tt.lastTime}: ${sessionLine(last.sets)}` : history ? tt.firstTime : " "}</Text>
         </View>
+        {onSwap ? <RowButton outline icon="repeat" label={pt.swap} onPress={onSwap} /> : null}
         <MoreButton label={exercise.name} onPress={onActions} />
       </View>
       {bests?.heaviest || bests?.one_rep_max ? (
