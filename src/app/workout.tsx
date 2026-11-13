@@ -411,7 +411,7 @@ function ExerciseCard({
           <Text style={type.cardTitle}>{exercise.name}</Text>
           <Text style={type.rowSubtitle}>{last ? `${tt.lastTime}: ${sessionLine(last.sets)}` : history ? tt.firstTime : " "}</Text>
         </View>
-        {onSwap ? <RowButton outline icon="repeat" label={pt.swap} onPress={onSwap} /> : null}
+        {onSwap ? <RowButton outline label={pt.swap} onPress={onSwap} /> : null}
         <MoreButton label={exercise.name} onPress={onActions} />
       </View>
       {bests?.heaviest || bests?.one_rep_max ? (

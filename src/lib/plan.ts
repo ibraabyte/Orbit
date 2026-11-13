@@ -113,6 +113,15 @@ export function setsChange(entry: Pick<PlannedExercise, "sets" | "base_sets">) {
   return ltr(change > 0 ? `+${change}` : `−${Math.abs(change)}`);
 }
 
+/** The badge on a planned exercise: "4 × 6–10", or "3 × 6–10 (−1)" when recovery changed it. One left-to-right run in
+ * Arabic text, so the brackets and the sign stay where they belong. */
+export function setsBadge(entry: Pick<PlannedExercise, "sets" | "base_sets" | "reps_low" | "reps_high">) {
+  const reps = entry.reps_low === entry.reps_high ? `${entry.reps_low}` : `${entry.reps_low}–${entry.reps_high}`;
+  const change = entry.sets - entry.base_sets;
+  const note = change ? ` (${change > 0 ? "+" : "−"}${Math.abs(change)})` : "";
+  return ltr(`${entry.sets} × ${reps}${note}`);
+}
+
 /** The muscles a day works, in order, without repeats: "Chest · Shoulders · Triceps". */
 export function dayMuscles(day: Pick<PlannedDay, "exercises">, max = 3) {
   const muscles = [...new Set(day.exercises.map((entry) => entry.muscle))];

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { addDays, alternativeLabel, dayLabel, dayMuscles, defaultWeekdays, planApi, recoveryLine, setsChange, setsText, splitFor, todayOf, weekdayOf, type PlannedDay } from "@/lib/plan";
+import { addDays, alternativeLabel, dayLabel, dayMuscles, defaultWeekdays, planApi, recoveryLine, setsBadge, setsChange, setsText, splitFor, todayOf, weekdayOf, type PlannedDay } from "@/lib/plan";
 
 function day(overrides: Partial<PlannedDay> = {}): PlannedDay {
   return {
@@ -49,6 +49,12 @@ describe("text", () => {
   it("writes sets and the rep range", () => {
     expect(setsText({ sets: 4, reps_low: 6, reps_high: 10 })).toBe("4 × 6–10");
     expect(setsText({ sets: 3, reps_low: 12, reps_high: 12 })).toBe("3 × 12");
+  });
+
+  it("puts the change in the badge", () => {
+    expect(setsBadge({ sets: 3, base_sets: 4, reps_low: 6, reps_high: 10 })).toBe("3 × 6–10 (−1)");
+    expect(setsBadge({ sets: 5, base_sets: 4, reps_low: 8, reps_high: 8 })).toBe("5 × 8 (+1)");
+    expect(setsBadge({ sets: 4, base_sets: 4, reps_low: 6, reps_high: 10 })).toBe("4 × 6–10");
   });
 
   it("shows what recovery changed", () => {

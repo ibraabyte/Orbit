@@ -9,7 +9,7 @@ import { colors } from "@/components/theme";
 import { getApi } from "@/lib/backend";
 import { isArabic } from "@/lib/i18n";
 import { label } from "@/lib/exercises";
-import { alternativeLabel, dayLabel, planApi, pt, recoveryLine, setsChange, setsText, type PlannedDay, type PlannedExercise } from "@/lib/plan";
+import { alternativeLabel, dayLabel, planApi, pt, recoveryLine, setsBadge, setsChange, type PlannedDay, type PlannedExercise } from "@/lib/plan";
 import { restText } from "@/lib/training";
 
 const errorText = (error: unknown) => (error instanceof Error ? error.message : String(error));
@@ -98,12 +98,12 @@ export function PlanDayCard({ day, today, onChange }: { day: PlannedDay; today: 
             subtitle={[label(entry.muscle), restText(entry.rest_seconds)].join(" · ")}
             badges={
               <>
-                <Badge tone={change ? "accent" : "neutral"}>{change ? `${setsText(entry)} (${change})` : setsText(entry)}</Badge>
+                <Badge tone={change ? "accent" : "neutral"}>{setsBadge(entry)}</Badge>
                 {entry.swapped_from ? <Badge glyph="⇄">{pt.swappedBadge}</Badge> : null}
               </>
             }
             onPress={entry.exercise_id ? () => router.push(`/exercises/${encodeURIComponent(entry.exercise_id ?? "")}`) : undefined}
-            trailing={open ? <RowButton outline icon="repeat" label={pt.swap} disabled={busy} onPress={() => void swap(entry)} /> : undefined}
+            trailing={open ? <RowButton outline label={pt.swap} disabled={busy} onPress={() => void swap(entry)} /> : undefined}
           />
         );
       })}
