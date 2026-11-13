@@ -7,11 +7,12 @@ import { ChatgptConnectForm } from "@/components/chatgpt-connect-form";
 import { Badge, Card, EmptyState, Icon, IconTile, ListRow, toneToBadge, type } from "@/components/drift";
 import { Button, Loading, Screen, Segments } from "@/components/screen";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
+import { VoiceConnectForm } from "@/components/voice-connect-form";
 import { colors } from "@/components/theme";
 import { useSeerr } from "@/hooks/use-seerr";
 import { getApi } from "@/lib/backend";
 import { t } from "@/lib/i18n";
-import { AI_CHOICE_NAMES, aiChoicesOf, aiState, integrationsApi, seerrState, whoopState, type AiChoice, type IntegrationsOverview } from "@/lib/integrations";
+import { AI_CHOICE_NAMES, aiChoicesOf, aiState, integrationsApi, seerrState, VOICE_PROVIDER_NAMES, voiceOff, voiceState, whoopState, type AiChoice, type IntegrationsOverview } from "@/lib/integrations";
 
 // Every connection, set up here by you for your account only. No server settings to touch.
 export default function Integrations() {
@@ -57,6 +58,18 @@ export default function Integrations() {
     Alert.alert("Disconnect Seerr?", "Orbit forgets the address and key. Your watch list stays.", [
       { text: "Disconnect", style: "destructive", onPress: () => void seerr.disconnect().then(load) },
       { text: "Cancel", style: "cancel" }
+    ]);
+
+  const voice = overview.voice ?? voiceOff;
+  const voiceNow = voiceState(overview.voice);
+  const removeVoice = () =>
+    Alert.alert(t.voiceRemove, t.voiceRemoveBody, [
+      {
+        text: t.aiRemove,
+        style: "destructive",
+        onPress: () => void integrationsApi.disconnectVoice(getApi()).then(load).catch((actionError: unknown) => Alert.alert(t.voiceModel, actionError instanceof Error ? actionError.message : t.tryAgain))
+      },
+      { text: t.cancel, style: "cancel" }
     ]);
 
   const ais = aiChoicesOf(overview);
@@ -177,6 +190,34 @@ export default function Integrations() {
           </>
         )}
       </Card>
+
+      {overview.voice ? (
+        <Card title={t.voiceModel} action={<Badge tone={toneToBadge(voiceNow.tone)}>{voiceNow.label}</Badge>}>
+          <Text style={type.rowSubtitle}>{t.voiceIntro}</Text>
+          {voice.connected && voice.provider ? (
+            <ListRow
+              leading={<IconTile name="mic" />}
+              title={VOICE_PROVIDER_NAMES[voice.provider]}
+              subtitle={voice.model ?? undefined}
+              trailing={
+                <Pressable onPress={removeVoice} accessibilityRole="button" accessibilityLabel={t.voiceRemove} hitSlop={6}>
+                  <Icon name="x" size={16} color={colors.inkMuted} />
+                </Pressable>
+              }
+            />
+          ) : (
+            <ListRow leading={<IconTile name="smartphone" />} title={voiceNow.label} subtitle={voiceNow.detail} />
+          )}
+          <VoiceConnectForm
+            key={`${voice.provider}-${voice.model}`}
+            status={voice}
+            connect={async (input) => {
+              await integrationsApi.connectVoice(getApi(), input);
+              await load();
+            }}
+          />
+        </Card>
+      ) : null}
     </Screen>
   );
 }

@@ -1,7 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { AiPicker } from "@/components/ai-picker";
 import { Icon, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
@@ -11,6 +11,7 @@ import { useAiChoices } from "@/hooks/use-ai-choices";
 import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSections } from "@/hooks/use-sections";
+import { cloudVoiceAvailable, useCloudVoice } from "@/hooks/use-cloud-voice";
 import { useVoice } from "@/hooks/use-voice";
 import { apiQuickAdd } from "@/lib/api-actions";
 import { kindHidden, st } from "@/lib/app-sections";
@@ -19,10 +20,10 @@ import { ACT_HISTORY_TURNS, ACT_TEXT_MAX, actBody, actionRows, applyActions, edi
 import { getApi } from "@/lib/backend";
 import { captureStarterKinds, captureStarters, digits, formatDate, isArabic, t } from "@/lib/i18n";
 import type { QuickAddDraft } from "@/lib/quick-add";
-import { aiName, aiQuery } from "@/lib/integrations";
+import { aiName, aiQuery, integrationsApi, VOICE_PROVIDER_NAMES, type VoiceStatus } from "@/lib/integrations";
 import { isNoAiError } from "@/lib/morning-brief";
 import { parseNatural } from "@/lib/quick-add-input";
-import { defaultVoiceLang, withSpoken, type VoiceLang } from "@/lib/voice";
+import { defaultVoiceLang, voiceConsented, voiceConsentKey, withSpoken, type VoiceLang } from "@/lib/voice";
 
 const recentKey = "orbit.quick-add.recent";
 
@@ -68,6 +69,12 @@ export default function Capture() {
   const [voiceLang, setVoiceLang] = useState<VoiceLang>(defaultVoiceLang(isArabic));
   const beforeVoice = useRef("");
   const voice = useVoice((spoken) => setText(withSpoken(beforeVoice.current, spoken)));
+  // The user's own voice model, when they added one in Integrations; else the phone's speech to text above.
+  const cloud = useCloudVoice((spoken) => setText(withSpoken(beforeVoice.current, spoken)));
+  const [voiceModel, setVoiceModel] = useState<VoiceStatus | null>(null);
+  const [voiceConsent, setVoiceConsent] = useState<string | null>(null);
+  const listening = voice.listening || cloud.recording;
+  const voiceError = cloud.error ?? voice.error;
   const options = { defaultWeightUnit: data.profile?.weight_unit ?? "kg", defaultCurrency: data.expenses[0]?.currency ?? data.bills[0]?.currency ?? "SAR" };
   const provider = ai.choices ? aiName(ai.choices, ai.current) : null;
   const instant = !forceAi && !answer ? instantDraft(text, options) : null;
@@ -98,6 +105,14 @@ export default function Capture() {
       .then((saved) => setRecent(saved ? JSON.parse(saved) : []))
       .catch(() => undefined);
     void loadAskConsent(userId).then(setAccepted);
+    AsyncStorage.getItem(voiceConsentKey(userId))
+      .then(setVoiceConsent)
+      .catch(() => setVoiceConsent(null));
+    // An older server, or no network: the phone's own speech to text, as before.
+    integrationsApi
+      .voice(getApi())
+      .then(setVoiceModel)
+      .catch(() => setVoiceModel(null));
   }, [userId]);
 
   const remember = (line: string) =>
@@ -173,9 +188,28 @@ export default function Capture() {
 
   const submit = () => (instant || fallback ? quickAdd() : askAssistant());
   const toggleVoice = () => {
+    if (cloud.recording) return void cloud.stop();
     if (voice.listening) return voice.stop();
+    if (cloud.transcribing) return;
     beforeVoice.current = text;
-    void voice.start(voiceLang);
+    voice.clearError();
+    cloud.clearError();
+    const provider = cloudVoiceAvailable && voiceModel?.connected ? voiceModel.provider : null;
+    if (!provider) return void voice.start(voiceLang);
+    if (voiceConsented(voiceConsent, provider)) return void cloud.start(voiceLang);
+    // The recording leaves the phone, so ask once per provider. Saying no uses the phone this time and asks again next time.
+    const name = VOICE_PROVIDER_NAMES[provider];
+    Alert.alert(t.voiceConsentTitle.replace("{provider}", name), t.voiceConsentBody.replaceAll("{provider}", name), [
+      { text: t.voiceConsentPhone, style: "cancel", onPress: () => void voice.start(voiceLang) },
+      {
+        text: t.voiceConsentAgree,
+        onPress: () => {
+          setVoiceConsent(provider);
+          void AsyncStorage.setItem(voiceConsentKey(userId), provider).catch(() => undefined);
+          void cloud.start(voiceLang);
+        }
+      }
+    ]);
   };
   const startOver = () => {
     setAnswer(null);
@@ -282,10 +316,10 @@ export default function Capture() {
           submitBehavior="blurAndSubmit"
           onSubmitEditing={() => void submit()}
           returnKeyType="send"
-          editable={!busy && !voice.listening}
+          editable={!busy && !listening && !cloud.transcribing}
         />
-        <Pressable onPress={toggleVoice} accessibilityRole="button" accessibilityLabel={voice.listening ? t.micStop : t.micStart} style={[styles.mic, voice.listening && { backgroundColor: colors.accent }]}>
-          <Icon name={voice.listening ? "square" : "mic"} size={20} color={voice.listening ? colors.accentInk : colors.ink} />
+        <Pressable onPress={toggleVoice} disabled={cloud.transcribing} accessibilityRole="button" accessibilityLabel={listening ? t.micStop : t.micStart} style={[styles.mic, listening && { backgroundColor: colors.accent }, cloud.transcribing && { opacity: 0.5 }]}>
+          <Icon name={listening ? "square" : cloud.transcribing ? "loader" : "mic"} size={20} color={listening ? colors.accentInk : colors.ink} />
         </Pressable>
       </View>
       <View style={styles.chips}>
@@ -296,8 +330,10 @@ export default function Capture() {
           </Pressable>
         ))}
         {voice.listening ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micListening}</Text> : null}
+        {cloud.recording ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micRecording}</Text> : null}
+        {cloud.transcribing ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micTranscribing}</Text> : null}
       </View>
-      {voice.error ? <Text style={[type.shellMuted, { color: colors.dangerOnShell }]}>{voice.error}</Text> : null}
+      {voiceError ? <Text style={[type.shellMuted, { color: colors.dangerOnShell }]}>{voiceError}</Text> : null}
 
       {!answer && !text.trim() ? (
         <View style={styles.chips}>
