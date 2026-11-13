@@ -4,6 +4,8 @@ import { Text, View } from "react-native";
 import { Card, CardLink, EmptyState, GoalBar, IconTile, ListRow, StatGrid, StatTile, type, type IconName } from "@/components/drift";
 import { Columns, Screen } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useSections } from "@/hooks/use-sections";
+import { pathHidden } from "@/lib/app-sections";
 import { getApi, hasServer } from "@/lib/backend";
 import { et, exercisesApi } from "@/lib/exercises";
 import { foodApi, targetPercent, type FoodDay } from "@/lib/food-log";
@@ -22,6 +24,9 @@ type Live = { day: FoodDay | null; whoop: WhoopStatus | null; summary: WhoopSumm
 // and what you logged by hand. Each part keeps its own screen; this one gathers them.
 export default function Health() {
   const { data, loading, refresh } = useDashboardData();
+  // Food, exercises and WHOOP can each be switched off in Settings → Sections; they leave this hub too.
+  const { on, hidden } = useSections();
+  const foodOn = on("food");
   const [live, setLive] = useState<Live>({ day: null, whoop: null, summary: null, injuries: null, active: false });
 
   const loadLive = useCallback(async () => {
@@ -61,7 +66,7 @@ export default function Health() {
   });
 
   const { day, whoop, summary } = live;
-  const whoopOn = Boolean(whoop?.connected && summary?.has_data);
+  const whoopOn = on("whoop") && Boolean(whoop?.connected && summary?.has_data);
   const eaten = day?.totals.calories ?? health.todayCalories;
   const calorieTarget = day?.targets.calories ?? health.calorieTarget;
   const protein = day?.totals.protein_g ?? health.todayMacros.protein;
@@ -70,7 +75,7 @@ export default function Health() {
   const workoutMinutes = whoopOn && summary ? Math.max(whoopWeekMinutes(summary.daily), health.workoutMinutes) : health.workoutMinutes;
   const sleepText = whoopOn && summary?.latest.sleep_hours ? formatHours(summary.latest.sleep_hours.value) : health.sleepNights ? formatSleepDuration(health.sleepAverageMinutes) : "–";
 
-  const sections: { href: Href; icon: IconName; title: string; subtitle: string; meta?: string }[] = [
+  const allSections: { href: Href; icon: IconName; title: string; subtitle: string; meta?: string }[] = [
     { href: "/food", icon: "coffee", title: t.food, subtitle: ht.foodDetail, meta: eaten ? `${eaten} ${t.kcal}` : undefined },
     { href: "/training", icon: "bar-chart-2", title: tt.workouts, subtitle: tt.workoutsDetail, meta: live.active ? tt.inProgress : undefined },
     { href: "/exercises", icon: "zap", title: et.exercises, subtitle: ht.exercisesDetail },
@@ -79,6 +84,7 @@ export default function Health() {
     { href: "/body", icon: "maximize", title: tt.measurements, subtitle: tt.measurementsDetail },
     { href: "/whoop", icon: "watch", title: t.whoop, subtitle: ht.whoopDetail, meta: whoop?.connected ? (recovery === null ? undefined : `${Math.round(recovery)}%`) : whoop?.configured ? ht.whoopConnect : undefined }
   ];
+  const sections = allSections.filter((section) => !pathHidden(String(section.href), hidden));
 
   const weights = weightHistory(data.weightLogs);
   const manualSleep = data.sleepLogs.slice(0, 3);
@@ -90,30 +96,30 @@ export default function Health() {
       <Card title={ht.todayLabel}>
         <StatGrid columns={2}>
           {[
-            <StatTile key="eaten" href="/food" label={ht.eaten} value={eaten} unit={calorieTarget ? `/ ${calorieTarget} ${t.kcal}` : t.kcal} size={18} />,
-            whoopOn ? (
-              <StatTile key="recovery" href="/whoop" label={ht.readiness} value={recovery === null ? "–" : `${Math.round(recovery)}%`} size={18} />
-            ) : (
-              <StatTile key="weight" label={t.weight} value={health.latestWeight ?? "–"} unit={deltaText(health.weightDelta) ?? health.weightUnit ?? undefined} size={18} />
-            ),
+            ...(foodOn ? [<StatTile key="eaten" href="/food" label={ht.eaten} value={eaten} unit={calorieTarget ? `/ ${calorieTarget} ${t.kcal}` : t.kcal} size={18} />] : []),
+            ...(whoopOn ? [<StatTile key="recovery" href="/whoop" label={ht.readiness} value={recovery === null ? "–" : `${Math.round(recovery)}%`} size={18} />] : []),
+            // Weight fills the place of whichever of the two is missing.
+            ...(!foodOn || !whoopOn ? [<StatTile key="weight" label={t.weight} value={health.latestWeight ?? "–"} unit={deltaText(health.weightDelta) ?? health.weightUnit ?? undefined} size={18} />] : []),
             <StatTile key="sleep" href={whoopOn ? "/whoop" : undefined} label={whoopOn ? ht.sleepLast : t.avgSleep} value={sleepText} size={18} />,
             <StatTile key="workouts" label={ht.workoutsWeek} value={workoutMinutes} unit={`/ ${health.workoutTarget} ${t.min}`} size={18} />
           ]}
         </StatGrid>
-        {proteinTarget ? <GoalBar label={t.protein} value={`${Math.round(protein)} g`} goal={`${proteinTarget} g`} percent={targetPercent(protein, proteinTarget)} /> : null}
+        {foodOn && proteinTarget ? <GoalBar label={t.protein} value={`${Math.round(protein)} g`} goal={`${proteinTarget} g`} percent={targetPercent(protein, proteinTarget)} /> : null}
       </Card>
 
+      {sections.length ? (
       <Card title={ht.inHealth}>
         {sections.map((section, index) => (
           <ListRow key={String(section.href)} first={index === 0} href={section.href} leading={<IconTile name={section.icon} />} title={section.title} subtitle={section.subtitle} meta={section.meta} />
         ))}
       </Card>
+      ) : null}
     </>
   );
 
   const right = (
     <>
-      <Card title={ht.body} action={<CardLink href="/body" label={tt.measurements} />}>
+      <Card title={ht.body} action={on("exercises") ? <CardLink href="/body" label={tt.measurements} /> : undefined}>
         {weights.length ? (
           weights.map(({ log, delta }) => <ListRow key={log.id} title={`${log.weight} ${log.unit}`} subtitle={stamp(log.logged_at)} meta={deltaText(delta) ?? undefined} />)
         ) : (

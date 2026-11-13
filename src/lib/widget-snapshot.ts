@@ -1,3 +1,4 @@
+import { eventHidden, hiddenSections } from "@/lib/app-sections";
 import { buildCalendarEvents, type CalendarEvent, type CalendarEventKind } from "@/lib/calendar";
 import { openTasks } from "@/lib/dashboard";
 import { isPastDue } from "@/lib/dates";
@@ -74,9 +75,11 @@ export const signedOutWidget = (copy: WidgetCopy, at = new Date()) => noData(cop
 /** Timed things that can go on the widget: open tasks, scheduled reminders, meals, workouts, bills. */
 export function plannedThings(data: DashboardData): Planned[] {
   const open = { ...data, tasks: openTasks(data.tasks), reminders: data.reminders.filter((reminder) => reminder.status === "scheduled") };
+  // Sections switched off in Settings stay off the widget too.
+  const hidden = hiddenSections(data.profile);
   return (
     buildCalendarEvents(open)
-      .filter((event) => onRail.has(event.kind))
+      .filter((event) => onRail.has(event.kind) && !eventHidden(event.kind, hidden))
       // A task's own reminder would put it on the rail twice.
       .filter((event) => !event.id.startsWith("task-reminder-"))
       .map((event) => ({ at: new Date(event.at), event }))

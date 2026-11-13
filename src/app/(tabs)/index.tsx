@@ -15,9 +15,11 @@ import { useMorningBrief } from "@/hooks/use-morning-brief";
 import { useNow } from "@/hooks/use-now";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useReadiness } from "@/hooks/use-readiness";
+import { useSections } from "@/hooks/use-sections";
 import { useWeeklySummary } from "@/hooks/use-weekly-summary";
 import { apiCompleteTask, apiUpdate } from "@/lib/api-actions";
 import { appHref } from "@/lib/app-href";
+import { eventHidden, pathHidden } from "@/lib/app-sections";
 import { getApi } from "@/lib/backend";
 import { buildCalendarDays } from "@/lib/calendar";
 import { buildDailyBrief, openTasks, summarizeDashboard } from "@/lib/dashboard";
@@ -61,6 +63,8 @@ export default function Today() {
   const wide = useWide();
   const [hidden, setHidden] = useState<OptionalSection[]>([]);
   const show = (section: OptionalSection) => !hidden.includes(section);
+  // Sections switched off in Settings leave Today too (their data is kept).
+  const { on, hidden: sectionsOff } = useSections();
   // Not asked until the saved choice of hidden sections is read, so a hidden brief is never fetched.
   const [choicesRead, setChoicesRead] = useState(false);
   const brief = useMorningBrief(choicesRead && show("brief"));
@@ -75,9 +79,12 @@ export default function Today() {
       .finally(() => setChoicesRead(true));
   }, []);
 
-  const rail = useMemo(() => buildRail(buildCalendarDays(data, 1, now)[0]?.events ?? [], prayersToday, now), [data, prayersToday, now]);
+  const rail = useMemo(
+    () => buildRail((buildCalendarDays(data, 1, now)[0]?.events ?? []).filter((event) => !eventHidden(event.kind, sectionsOff)), prayersToday, now),
+    [data, prayersToday, now, sectionsOff]
+  );
   const summary = useMemo(() => summarizeDashboard(data), [data]);
-  const digest = useMemo(() => buildDailyBrief(data).slice(0, 5), [data]);
+  const digest = useMemo(() => buildDailyBrief(data).filter((item) => !pathHidden(item.href, sectionsOff)).slice(0, 5), [data, sectionsOff]);
   const food = useMemo(() => foodSummary(data), [data]);
   const moneyDue = useMemo(() => moneyDueSoon(data), [data]);
   // Everything whose time has passed, today's too: Next up only shows what is still ahead.
@@ -87,7 +94,7 @@ export default function Today() {
   const calorieTarget = data.profile?.daily_calorie_target ?? null;
   const calorieShare = calorieTarget ? Math.min(1, summary.todayCalories / calorieTarget) : 0;
   const hasData = data.profile !== null || data.tasks.length > 0;
-  const money = show("money") ? moneyDue : [];
+  const money = show("money") && on("finance") ? moneyDue : [];
   const attentionCount = overdue.length + money.length;
   // What is still ahead today (not prayers: the next one has its own card).
   const upNext = rail.entries.filter((entry): entry is Extract<RailEntry, { kind: "event" }> => entry.kind === "event" && !entry.past).slice(0, 8);
@@ -95,7 +102,7 @@ export default function Today() {
   const customize = () =>
     sheet({
       title: t.customize,
-      options: optional.map(([id, label]) => ({
+      options: optional.filter(([id]) => (id === "money" ? on("finance") : id === "health" ? on("health") : true)).map(([id, label]) => ({
         label: `${show(id) ? "●" : "○"} ${label}`,
         run: () => {
           const next = show(id) ? [...hidden, id] : hidden.filter((item) => item !== id);
@@ -222,24 +229,28 @@ export default function Today() {
       {[
         <StatTile key="tasks" href="/tasks" label={t.openTasks} value={summary.openTaskCount} alert={summary.overdueTaskCount > 0} />,
         <StatTile key="reminders" href="/tasks" label={t.dueReminders} value={summary.dueReminderCount} alert={summary.dueReminderCount > 0} />,
-        ...(readiness.value !== null ? [<StatTile key="readiness" href="/whoop" label={t.readiness} value={formatNumber(readiness.value)} color={colors.accentDeep} />] : []),
-        <StatTile key="meals" href="/food" label={t.mealsPlanned} value={food.todayPlannedMeals} />,
-        <StatTile key="spent" href="/finance" label={t.spentToday} value={formatMoney(summary.todaySpending, currency)} />,
-        <StatTile key="habits" href="/habits" label={t.habitsDone} value={`${summary.completedHabitCount}/${summary.activeHabitCount}`} />
+        ...(readiness.value !== null && on("whoop") ? [<StatTile key="readiness" href="/whoop" label={t.readiness} value={formatNumber(readiness.value)} color={colors.accentDeep} />] : []),
+        ...(on("food") ? [<StatTile key="meals" href="/food" label={t.mealsPlanned} value={food.todayPlannedMeals} />] : []),
+        ...(on("finance") ? [<StatTile key="spent" href="/finance" label={t.spentToday} value={formatMoney(summary.todaySpending, currency)} />] : []),
+        ...(on("habits") ? [<StatTile key="habits" href="/habits" label={t.habitsDone} value={`${summary.completedHabitCount}/${summary.activeHabitCount}`} />] : [])
       ]}
     </StatGrid>
   ) : null;
 
   // Health shows once something is logged today (food, a workout, sleep); before that it would be a row of zeros.
-  const healthLogged = summary.todayCalories > 0 || summary.todayWorkoutMinutes > 0 || summary.todaySleepMinutes > 0;
-  const healthCard = show("health") && healthLogged ? (
+  // With Food off, the card keeps workouts and sleep and drops the calorie ring.
+  const foodOn = on("food");
+  const healthLogged = (foodOn && summary.todayCalories > 0) || summary.todayWorkoutMinutes > 0 || summary.todaySleepMinutes > 0;
+  const healthCard = show("health") && on("health") && healthLogged ? (
     <Card title={t.healthToday} action={<CardLink href="/health" label={t.health} />}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
-        <RingGauge value={calorieShare} label={calorieTarget ? `${Math.round(calorieShare * 100)}%` : "–"} />
+        {foodOn ? <RingGauge value={calorieShare} label={calorieTarget ? `${Math.round(calorieShare * 100)}%` : "–"} /> : null}
         <View style={{ flex: 1, flexDirection: "row", gap: 8 }}>
-          <View style={{ flex: 1 }}>
-            <Metric label={t.calories} value={summary.todayCalories} unit={calorieTarget ? `/ ${calorieTarget}` : undefined} />
-          </View>
+          {foodOn ? (
+            <View style={{ flex: 1 }}>
+              <Metric label={t.calories} value={summary.todayCalories} unit={calorieTarget ? `/ ${calorieTarget}` : undefined} />
+            </View>
+          ) : null}
           <View style={{ flex: 1 }}>
             <Metric label={t.workouts} value={summary.todayWorkoutMinutes} unit={t.min} />
           </View>

@@ -50,19 +50,19 @@ CONTEXT_SECTIONS = {
     "saved": "library",
 }
 
-# The weekly facts each section owns; a hidden one is sent as empty, so its numbers aren't shown or summed up.
-FACT_SECTIONS = {
-    "workouts": "health",
-    "workout_minutes": "health",
-    "workout_target": "health",
-    "sleep_hours_avg": "health",
-    "recovery_avg": "whoop",
-    "calories_avg": "food",
-    "calorie_target": "food",
-    "spent": "finance",
-    "spent_last_week": "finance",
-    "bills_next_week": "finance",
-    "saved": "library",
+# The weekly facts each section owns, and what a hidden one is sent as, so its numbers are neither shown nor summed up.
+FACT_SECTIONS: dict[str, tuple[str, Any]] = {
+    "workouts": ("health", 0),
+    "workout_minutes": ("health", 0),
+    "workout_target": ("health", None),
+    "sleep_hours_avg": ("health", None),
+    "recovery_avg": ("whoop", None),
+    "calories_avg": ("food", None),
+    "calorie_target": ("food", None),
+    "spent": ("finance", []),
+    "spent_last_week": ("finance", []),
+    "bills_next_week": ("finance", 0),
+    "saved": ("library", 0),
 }
 
 
@@ -92,8 +92,11 @@ def drop_hidden(data: dict[str, Any], hidden: frozenset[str]) -> dict[str, Any]:
 
 
 def blank_facts(facts: dict[str, Any], hidden: frozenset[str]) -> dict[str, Any]:
-    empty: dict[type, Any] = {list: [], int: 0}
-    return {key: (empty.get(type(value)) if FACT_SECTIONS.get(key) in hidden else value) for key, value in facts.items()}
+    out = dict(facts)
+    for key, (section, blank) in FACT_SECTIONS.items():
+        if section in hidden and key in out:
+            out[key] = blank
+    return out
 
 
 def kind_on(kind: str, hidden: frozenset[str]) -> bool:

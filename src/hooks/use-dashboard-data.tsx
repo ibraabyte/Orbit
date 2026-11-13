@@ -103,7 +103,10 @@ function useDashboardDataSource(userId: string) {
     [refresh]
   );
 
-  return { userId, data, loading, error, refresh, act };
+  // Show a change at once, before the server answers (the caller puts it back if saving fails).
+  const updateLocal = useCallback((change: (current: DashboardData) => DashboardData) => setData(change), []);
+
+  return { userId, data, loading, error, refresh, act, updateLocal };
 }
 
 const DashboardDataContext = createContext<ReturnType<typeof useDashboardDataSource> | null>(null);

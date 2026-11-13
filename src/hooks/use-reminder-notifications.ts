@@ -7,6 +7,7 @@ import { useMorningNotifications } from "@/hooks/use-morning-brief";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { useWidgetSync } from "@/hooks/use-widget-sync";
+import { sectionOn } from "@/lib/app-sections";
 import { billRenewalAlerts, formatMoney } from "@/lib/finance";
 import { buildLocalReminderSchedule } from "@/lib/reminder-notifications";
 import { vehicleAlerts } from "@/lib/vehicles";
@@ -33,11 +34,13 @@ export function useReminderNotifications() {
         scheduled.filter((item) => /^(reminder|task|bill|installment|vehicle)-/.test(item.identifier)).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
       );
       // iOS keeps 64 pending alarms: 32 reminders + 8 bill + 4 installment + 4 car heads-ups + 10 prayers + 4 mornings = 62.
+      // A section switched off in Settings goes quiet: its alarms were just cleared and are not put back.
+      const financeOn = sectionOn(data.profile, "finance");
       const items = [
         ...buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 32 }),
-        ...billRenewalAlerts(data.bills).slice(0, 8),
-        ...installmentAlerts({ obligations: data.obligations, obligationInstallments: data.obligationInstallments }, new Date(), formatMoney).slice(0, 4),
-        ...vehicleAlerts(vehicles).slice(0, 4)
+        ...(financeOn ? billRenewalAlerts(data.bills).slice(0, 8) : []),
+        ...(financeOn ? installmentAlerts({ obligations: data.obligations, obligationInstallments: data.obligationInstallments }, new Date(), formatMoney).slice(0, 4) : []),
+        ...(sectionOn(data.profile, "vehicles") ? vehicleAlerts(vehicles).slice(0, 4) : [])
       ];
       for (const item of items) {
         // A newer load took over; stop so a deleted reminder isn't put back.
@@ -52,7 +55,7 @@ export function useReminderNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [data.reminders, data.tasks, data.bills, data.obligations, data.obligationInstallments, vehicles]);
+  }, [data.reminders, data.tasks, data.bills, data.obligations, data.obligationInstallments, data.profile, vehicles]);
 
   useEffect(() => {
     function open(response: Notifications.NotificationResponse | null) {

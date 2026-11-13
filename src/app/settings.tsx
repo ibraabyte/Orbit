@@ -8,9 +8,11 @@ import { useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useSections } from "@/hooks/use-sections";
 import { clearAskConsent, loadAskConsent } from "@/hooks/use-ask-consent";
 import { loadMorningSettings, saveMorningSettings } from "@/hooks/use-morning-brief";
 import { arePrayerAlertsEnabled, setPrayerAlertsEnabled } from "@/hooks/use-prayer-times";
+import { st } from "@/lib/app-sections";
 import { getApi, signOut } from "@/lib/backend";
 import { currentNumerals, formatClock, saveNumerals, t, toggleLanguage } from "@/lib/i18n";
 import { adminApi, type ServerSettings } from "@/lib/integrations";
@@ -42,6 +44,7 @@ export default function Settings() {
   // Only the server's admin (the first account) sees the Server card.
   const [server, setServer] = useState<ServerSettings | null>(null);
   const name = data.profile?.display_name ?? "Orbit";
+  const { saved: sectionsOff } = useSections();
 
   useEffect(() => {
     void isAppLockEnabled().then(setLock);
@@ -120,6 +123,9 @@ export default function Settings() {
       <Card style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}>
         <Avatar name={name} size={48} dark />
         <Text style={[type.title, { flex: 1, fontSize: 16 }]}>{name}</Text>
+      </Card>
+      <Card list>
+        <ListRow first leading={<IconTile name="layers" />} title={st.sections} meta={st.sectionsCount(sectionsOff.length)} href="/sections" chevron />
       </Card>
       <Card list>
         <Setting first label={t.faceId}>

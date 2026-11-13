@@ -113,5 +113,9 @@ def test_the_weekly_summary_leaves_out_hidden_numbers(client: TestClient, auth: 
     hide(client, auth, "finance")
     facts = client.post("/assistant/week/facts", json=body, headers=auth).json()
     assert facts["spent"] == [] and facts["bills_next_week"] == 0 and facts["tasks_done"] == 0
+    hide(client, auth, "health")
+    facts = client.post("/assistant/week/facts", json=body, headers=auth).json()
+    assert facts["calories_avg"] is None and facts["workout_target"] is None and facts["workouts"] == 0 and facts["spent"] != []
+    hide(client, auth, "finance")
     _, context = assistant_router._week(db, user_id(db), date(2026, 11, 6))
     assert "top_spending" not in context and context["facts"]["spent"] == [] and "Cafe Noor" not in json.dumps(context)

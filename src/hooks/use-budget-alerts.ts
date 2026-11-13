@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { useEffect } from "react";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { sectionOn } from "@/lib/app-sections";
 import { budgetProgress, formatMoney, monthKey, newBudgetAlerts } from "@/lib/finance";
 import { t } from "@/lib/i18n";
 
@@ -29,7 +30,8 @@ export function useBudgetAlerts() {
     let stale = false;
     queue = queue.then(async () => {
       try {
-        if (stale) return;
+        // Finance switched off in Settings: no budget alerts (nothing is remembered, so they can come back later).
+        if (stale || !sectionOn(data.profile, "finance")) return;
         const { alerts, fired } = newBudgetAlerts(budgetProgress(data.budgets, data.expenses, monthKey(new Date())), await readFired(userId));
         if (!alerts.length) return;
         const { granted } = await Notifications.requestPermissionsAsync();
@@ -55,5 +57,5 @@ export function useBudgetAlerts() {
     return () => {
       stale = true;
     };
-  }, [userId, data.budgets, data.expenses]);
+  }, [userId, data.budgets, data.expenses, data.profile]);
 }
