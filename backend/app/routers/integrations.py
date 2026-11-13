@@ -3,9 +3,12 @@
 GET /integrations is the overview the Integrations screen shows. Seerr: the user saves their server's address and
 API key once (PUT), the key is kept encrypted, and the app then goes through /integrations/seerr/api/... so the key
 never has to live on the phone. AI: the user picks a provider and saves their own key the same way. WHOOP connects
-with its own OAuth flow in app/routers/whoop.py.
+with its own OAuth flow in app/routers/whoop.py. Voice: an optional speech-to-text model with the user's own key;
+the assistant's mic recordings go through /integrations/voice/transcribe and only the text comes back.
 """
 
+import base64
+import binascii
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
@@ -17,11 +20,11 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.deps import Db, UserId
-from app.models import AiConnection, Profile, ServiceConnection, User, WhoopConnection
-from app.models.integrations import AI_CHOICES, AI_PROVIDERS
+from app.models import AiConnection, Profile, ServiceConnection, User, VoiceConnection, WhoopConnection
+from app.models.integrations import AI_CHOICES, AI_PROVIDERS, VOICE_PROVIDERS
 from app.routers.chatgpt import ChatgptStatus
 from app.security import decrypt_secret, encrypt_secret
-from app.services import chatgpt_auth, seerr, whoop_ai, whoop_api
+from app.services import chatgpt_auth, seerr, voice_stt, whoop_ai, whoop_api
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -68,6 +71,37 @@ class AiChoices(BaseModel):
     server_key: bool
 
 
+class VoiceStatus(BaseModel):
+    # connected: recordings go to this model. Not connected: the phone turns speech into text itself.
+    connected: bool
+    provider: str | None = None
+    model: str | None = None
+    connected_at: datetime | None = None
+
+
+class VoiceConnect(BaseModel):
+    provider: Literal[VOICE_PROVIDERS]  # type: ignore[valid-type]
+    # Empty: the provider's usual speech-to-text model (voice_stt.DEFAULT_MODELS).
+    model: str | None = Field(default=None, max_length=200)
+    # Left out to keep the saved key, when changing only the model (same provider only).
+    api_key: str | None = Field(default=None, min_length=8, max_length=500)
+
+
+# About a minute of speech is well under this; the providers take up to 25 MB.
+MAX_AUDIO_BYTES = 10_000_000
+
+
+class TranscribeIn(BaseModel):
+    # The recording, base64. Never kept.
+    audio: str = Field(min_length=100, max_length=14_000_000)
+    media_type: Literal[tuple(voice_stt.MEDIA_TYPES)] = "audio/m4a"  # type: ignore[valid-type]
+    language: Literal["ar", "en"] | None = None
+
+
+class TranscribeOut(BaseModel):
+    text: str
+
+
 class Overview(BaseModel):
     whoop: WhoopOverview
     seerr: SeerrStatus
@@ -75,6 +109,7 @@ class Overview(BaseModel):
     ai: AiStatus
     ais: AiChoices
     chatgpt: ChatgptStatus
+    voice: VoiceStatus
 
 
 class AiDefault(BaseModel):
@@ -176,6 +211,7 @@ def overview(user_id: UserId, db: Db):
         ai=_ai_status(db, user_id),
         ais=_ai_choices(db, user_id),
         chatgpt=ChatgptStatus(status=chatgpt_auth.connection_status(db, user_id)),
+        voice=_voice_status(db.get(VoiceConnection, user_id)),
     )
 
 
@@ -249,6 +285,81 @@ def disconnect_one_ai(provider: Literal[AI_PROVIDERS], user_id: UserId, db: Db):
     db.execute(delete(AiConnection).where(AiConnection.user_id == user_id, AiConnection.provider == provider))
     db.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+def _voice_status(row: VoiceConnection | None) -> VoiceStatus:
+    if row is None:
+        return VoiceStatus(connected=False)
+    return VoiceStatus(connected=True, provider=row.provider, model=row.model, connected_at=row.created_at)
+
+
+def _voice_failure(exc: voice_stt.VoiceUnavailable) -> HTTPException:
+    # Never 401: the app would take that as "your Orbit session ended".
+    if isinstance(exc, voice_stt.VoiceKeyRejected):
+        return HTTPException(status.HTTP_409_CONFLICT, str(exc))
+    if isinstance(exc, voice_stt.VoiceModelRejected):
+        return HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc))
+    return HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc))
+
+
+@router.get("/voice", response_model=VoiceStatus)
+def voice_status(user_id: UserId, db: Db):
+    return _voice_status(db.get(VoiceConnection, user_id))
+
+
+@router.put("/voice", response_model=VoiceStatus)
+def connect_voice(body: VoiceConnect, user_id: UserId, db: Db):
+    """Checks the key and model with the provider (with a second of silence), then saves them for this user only.
+    One voice model per user: saving another provider replaces the first."""
+    row = db.get(VoiceConnection, user_id)
+    model = voice_stt.model_or_default(body.provider, body.model)
+    new_key = (body.api_key or "").strip()
+    # A saved key only stands in for its own provider: never send one company's key to another.
+    api_key = new_key or (decrypt_secret(row.api_key) if row and row.provider == body.provider else None)
+    if not api_key:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Enter your API key.")
+    if new_key or row is None or row.model != model:
+        try:
+            voice_stt.check_access(voice_stt.VoiceAccess(body.provider, model, api_key))
+        except voice_stt.VoiceUnavailable as exc:
+            raise _voice_failure(exc) from exc
+    if row is None:
+        row = VoiceConnection(user_id=user_id, provider=body.provider, model=model, api_key="")
+        db.add(row)
+    row.provider = body.provider
+    row.model = model
+    row.api_key = encrypt_secret(api_key)
+    db.commit()
+    db.refresh(row)
+    return _voice_status(row)
+
+
+@router.delete("/voice", status_code=status.HTTP_204_NO_CONTENT)
+def disconnect_voice(user_id: UserId, db: Db):
+    """Forgets the voice model and its key. The mic goes back to turning speech into text on the phone."""
+    db.execute(delete(VoiceConnection).where(VoiceConnection.user_id == user_id))
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/voice/transcribe", response_model=TranscribeOut)
+def transcribe(body: TranscribeIn, user_id: UserId, db: Db):
+    """A recording from the assistant's mic in, its words out, through this user's own voice model. Nothing is kept."""
+    row = db.get(VoiceConnection, user_id)
+    api_key = decrypt_secret(row.api_key) if row else None
+    if row is None or api_key is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Add a voice model in Integrations first.")
+    try:
+        audio = base64.b64decode(body.audio, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "That recording couldn't be read. Try again.") from exc
+    if len(audio) > MAX_AUDIO_BYTES:
+        raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "That recording is too long. Try a shorter one.")
+    try:
+        text = voice_stt.transcribe(voice_stt.VoiceAccess(row.provider, row.model, api_key), audio, body.media_type, body.language)
+    except voice_stt.VoiceUnavailable as exc:
+        raise _voice_failure(exc) from exc
+    return TranscribeOut(text=text)
 
 
 @router.get("/seerr", response_model=SeerrStatus)
