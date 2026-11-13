@@ -29,7 +29,7 @@ from app.models import (
     Workout,
 )
 from app.schemas.tasks import Input
-from app.services import agent, assistant, assistant_actions, weekly_summary, whoop_ai, whoop_analytics
+from app.services import agent, assistant, assistant_actions, sections, weekly_summary, whoop_ai, whoop_analytics
 
 router = APIRouter(prefix="/assistant", tags=["assistant"])
 
@@ -198,7 +198,7 @@ def _json(value: Any) -> str:
 @router.post("/brief", response_model=BriefReply)
 def brief(body: BriefRequest, user_id: UserId, db: Db, ai: AiPick = None):
     access = _connected_ai(db, user_id, ai)
-    summary = brief_context(db, user_id, body.date)
+    summary = sections.drop_hidden(brief_context(db, user_id, body.date), sections.hidden_for(db, user_id))
     prompt = f"Write my brief in {LANGUAGES[body.locale]}. My day:\n{_json(summary)}"
     return {"text": limit_words(_complete(access, BRIEF_SYSTEM, prompt), BRIEF_WORDS)}
 
@@ -457,7 +457,7 @@ def ask_context(db: Db, user_id: uuid.UUID, today: date) -> dict[str, Any]:
 @router.post("/ask", response_model=BriefReply)
 def ask(body: AskRequest, user_id: UserId, db: Db, ai: AiPick = None):
     access = _connected_ai(db, user_id, ai)
-    data = ask_context(db, user_id, local_today(_zone(db, user_id)))
+    data = sections.drop_hidden(ask_context(db, user_id, local_today(_zone(db, user_id))), sections.hidden_for(db, user_id))
     # The earlier turns and the data go in as JSON, so nothing in them can pose as a new turn or a system line.
     history = [turn.model_dump() for turn in body.history]
     prompt = (
@@ -532,7 +532,9 @@ class ActReply(Input):
 @router.post("/act", response_model=ActReply)
 def act(body: ActRequest, user_id: UserId, db: Db, ai: AiPick = None):
     access = _connected_ai(db, user_id, ai)
-    run = assistant_actions.Run(db, user_id, _zone(db, user_id), assistant_actions.default_currency(db, user_id))
+    run = assistant_actions.Run(
+        db, user_id, _zone(db, user_id), assistant_actions.default_currency(db, user_id), hidden=sections.hidden_for(db, user_id)
+    )
     data = assistant_actions.context(run)
     history = [turn.model_dump() for turn in body.history]
     prompt = (
@@ -540,7 +542,7 @@ def act(body: ActRequest, user_id: UserId, db: Db, ai: AiPick = None):
         f"The conversation so far, oldest first:\n{_json(history)}\nWhat I want:\n{body.text}"
     )
     try:
-        reply = agent.run(access, ACT_SYSTEM, prompt, assistant_actions.tools(), lambda call: assistant_actions.handle(run, call))
+        reply = agent.run(access, ACT_SYSTEM, prompt, assistant_actions.tools(run.hidden), lambda call: assistant_actions.handle(run, call))
     except whoop_ai.InsightUnavailable as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
     # Only this request's reads happened; roll back so nothing the AI touched could ever be written.
@@ -605,13 +607,23 @@ class WeekReply(Input):
 
 @router.post("/week/facts", response_model=WeekFacts)
 def week_facts(body: WeekRequest, user_id: UserId, db: Db):
-    return weekly_summary.week_data(db, user_id, body.end)[0]
+    return _week(db, user_id, body.end)[0]
+
+
+def _week(db: Db, user_id: uuid.UUID, end: date) -> tuple[dict[str, Any], dict[str, Any]]:
+    """The week's facts and the AI's context, without the sections the user switched off."""
+    facts, context = weekly_summary.week_data(db, user_id, end)
+    hidden = sections.hidden_for(db, user_id)
+    if not hidden:
+        return facts, context
+    facts = sections.blank_facts(facts, hidden)
+    return facts, {**sections.drop_hidden(context, hidden), "facts": facts}
 
 
 @router.post("/week", response_model=WeekReply)
 def week(body: WeekRequest, user_id: UserId, db: Db, ai: AiPick = None):
     access = _connected_ai(db, user_id, ai)
-    facts, context = weekly_summary.week_data(db, user_id, body.end)
+    facts, context = _week(db, user_id, body.end)
     prompt = f"Write my weekly summary in {LANGUAGES[body.locale]}. My week:\n{_json(context)}"
     summary, plan = weekly_summary.parse_reply(_complete(access, WEEK_SYSTEM, prompt))
     return {"facts": facts, "summary": summary, "plan": plan}

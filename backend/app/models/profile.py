@@ -26,6 +26,11 @@ DASHBOARD_MODULES = (
     "journal",
 )
 
+# The parts of the app the user can switch off in Settings → Sections. Food, exercises and WHOOP live inside health, so
+# switching health off hides them too (app/services/sections.py). Tasks are always on. Nothing is deleted: a hidden
+# section's data stays and comes back when it is switched on again.
+SECTIONS = ("health", "food", "exercises", "whoop", "finance", "habits", "library", "vehicles", "media")
+
 _ai_sql = ", ".join(f"'{p}'" for p in AI_CHOICES)
 _modules_sql = "array[" + ", ".join(f"'{m}'" for m in DASHBOARD_MODULES) + "]::text[]"
 
@@ -61,6 +66,9 @@ class Profile(Base):
     daily_fat_target: Mapped[int | None] = mapped_column(Integer)
     weekly_workout_minutes_target: Mapped[int] = mapped_column(Integer, nullable=False, server_default="150")
     dashboard_modules: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default=text(_modules_sql))
+    # Sections switched off, from SECTIONS; empty means everything is shown. Checked by the schema, not the database, so a
+    # new section needs no migration.
+    hidden_sections: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default=text("'{}'::text[]"))
     # The AI used when the app doesn't pick one: a provider in ai_connections, or "chatgpt". Null: the first connected.
     ai_default: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = created_at()
