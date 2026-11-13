@@ -34,6 +34,9 @@ TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("workout_exercises", m.WorkoutExercise, m.WorkoutExercise.created_at),
     ("workout_sets", m.WorkoutSet, m.WorkoutSet.created_at),
     ("body_measurements", m.BodyMeasurement, m.BodyMeasurement.measured_at),
+    ("training_plans", m.TrainingPlan, m.TrainingPlan.created_at),
+    ("planned_workouts", m.PlannedWorkout, m.PlannedWorkout.plan_date),
+    ("planned_exercises", m.PlannedExercise, m.PlannedExercise.created_at),
     ("sleep_logs", m.SleepLog, m.SleepLog.sleep_date),
     ("expenses", m.Expense, m.Expense.spent_at),
     ("bills", m.Bill, m.Bill.due_at),
@@ -70,6 +73,6 @@ def export(user_id: UserId, db: Db) -> dict[str, list[dict[str, Any]]]:
     profile = db.get(m.Profile, user_id)
     data = {"profiles": _rows(m.Profile, [profile] if profile else [], "profiles")}
     for table, model, sort in TABLES:
-        rows = db.scalars(select(model).where(model.user_id == user_id).order_by(sort, model.id))
+        rows = db.scalars(select(model).where(model.user_id == user_id).order_by(sort, *model.__table__.primary_key.columns))
         data[table] = _rows(model, rows, table)
     return data

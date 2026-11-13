@@ -23,6 +23,7 @@ from app.routers import (
     food,
     integrations,
     legal,
+    plan,
     profile,
     saver,
     tasks,
@@ -88,6 +89,7 @@ def create_app() -> FastAPI:
         *domains.ROUTERS,
         *exercises.ROUTERS,
         *training.ROUTERS,
+        *plan.ROUTERS,
     ):
         app.include_router(router)
     return app
