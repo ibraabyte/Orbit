@@ -13,10 +13,12 @@ describe("hidden sections", () => {
     expect(sectionOn(undefined, "food")).toBe(true);
   });
 
-  it("switching health off hides food, exercises and WHOOP too", () => {
-    expect([...hiddenSections(profile(["health"]))].sort()).toEqual(["exercises", "food", "health", "whoop"]);
+  it("switching health off hides food, exercises, WHOOP and medications too", () => {
+    expect([...hiddenSections(profile(["health"]))].sort()).toEqual(["exercises", "food", "health", "medications", "whoop"]);
     expect(sectionOn(profile(["health"]), "finance")).toBe(true);
     expect(parentOf("food")).toBe("health");
+    expect(parentOf("medications")).toBe("health");
+    expect(sectionOfPath("/medication-edit?id=1")).toBe("medications");
     expect(parentOf("finance")).toBeNull();
   });
 

@@ -8,11 +8,11 @@ import type { Profile } from "@/lib/types";
 // The choice lives on the profile (hidden_sections), so the iPhone and the iPad share it; the server also leaves a hidden
 // section out of what the AI sees (backend/app/services/sections.py, same names).
 
-export const SECTION_KEYS = ["health", "food", "exercises", "whoop", "finance", "habits", "library", "vehicles", "media"] as const;
+export const SECTION_KEYS = ["health", "food", "exercises", "whoop", "medications", "finance", "habits", "library", "vehicles", "media"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 /** Switching health off hides what lives inside it. */
-export const INSIDE: Partial<Record<SectionKey, SectionKey[]>> = { health: ["food", "exercises", "whoop"] };
+export const INSIDE: Partial<Record<SectionKey, SectionKey[]>> = { health: ["food", "exercises", "whoop", "medications"] };
 export const parentOf = (key: SectionKey): SectionKey | null => (Object.keys(INSIDE) as SectionKey[]).find((parent) => INSIDE[parent]!.includes(key)) ?? null;
 
 const isKey = (value: unknown): value is SectionKey => typeof value === "string" && (SECTION_KEYS as readonly string[]).includes(value);
@@ -53,6 +53,8 @@ const SCREENS: Record<string, SectionKey> = {
   "plan-setup": "exercises",
   body: "exercises",
   whoop: "whoop",
+  medications: "medications",
+  "medication-edit": "medications",
   finance: "finance",
   accounts: "finance",
   investments: "finance",
@@ -129,12 +131,13 @@ const en = {
   insideHealth: "Inside Health",
   offWithHealth: "Off with Health",
   alwaysOn: "Tasks and reminders are always on.",
-  names: { health: "Health", food: "Food", exercises: "Exercises & gym", whoop: "WHOOP", finance: "Finance", habits: "Habits", library: "Saver", vehicles: "Car", media: "Movies & TV" } as Record<SectionKey, string>,
+  names: { health: "Health", food: "Food", exercises: "Exercises & gym", whoop: "WHOOP", medications: "Medications", finance: "Finance", habits: "Habits", library: "Saver", vehicles: "Car", media: "Movies & TV" } as Record<SectionKey, string>,
   details: {
     health: "Body, sleep, goals and everything below",
     food: "Calories, meals, groceries",
     exercises: "Workouts, sets, injuries, body measurements",
     whoop: "Recovery, sleep and strain",
+    medications: "Doses, reminders and stock",
     finance: "Spending, bills, budgets, accounts, cards",
     habits: "Daily and weekly habits",
     library: "Saved links and notes",
@@ -154,12 +157,13 @@ const ar: typeof en = {
   insideHealth: "داخل الصحة",
   offWithHealth: "مقفول مع الصحة",
   alwaysOn: "المهام والتذكيرات شغالة دايم.",
-  names: { health: "الصحة", food: "الأكل", exercises: "التمارين والنادي", whoop: "WHOOP", finance: "المالية", habits: "العادات", library: "الحافظة", vehicles: "السيارة", media: "الأفلام والمسلسلات" },
+  names: { health: "الصحة", food: "الأكل", exercises: "التمارين والنادي", whoop: "WHOOP", medications: "الأدوية", finance: "المالية", habits: "العادات", library: "الحافظة", vehicles: "السيارة", media: "الأفلام والمسلسلات" },
   details: {
     health: "الجسم والنوم والأهداف وكل اللي تحتها",
     food: "السعرات والوجبات والمشتريات",
     exercises: "التمارين والجولات والإصابات وقياسات الجسم",
     whoop: "الاستشفاء والنوم والإجهاد",
+    medications: "الجرعات والتذكير والمخزون",
     finance: "المصاريف والفواتير والميزانية والحسابات والبطاقات",
     habits: "العادات اليومية والأسبوعية",
     library: "الروابط والملاحظات المحفوظة",

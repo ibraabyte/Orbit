@@ -398,6 +398,42 @@ export type WatchItem = {
   updated_at: string;
 };
 
+export type MedicationSchedule = "daily" | "weekdays" | "interval";
+
+// A medicine and when to take it (backend/app/models/medications.py). times are the phone's wall clock ("08:00");
+// weekdays count Monday 0 … Sunday 6. stock, per_dose and low_stock_at are in the same unit (pills, doses).
+export type Medication = {
+  id: string;
+  user_id: string;
+  name: string;
+  dose: string | null;
+  schedule: MedicationSchedule;
+  times: string[];
+  weekdays: number[];
+  every_hours: number | null;
+  starts_on: string;
+  ends_on: string | null;
+  paused: boolean;
+  stock: number | null;
+  per_dose: number;
+  low_stock_at: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+// One answered dose. A dose whose moment passed with no row is a missed one.
+export type MedicationDose = {
+  id: string;
+  user_id: string;
+  medication_id: string;
+  scheduled_at: string;
+  status: "taken" | "skipped";
+  taken_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
 export type DashboardData = {
   profile: Profile | null;
   tasks: Task[];
@@ -416,6 +452,8 @@ export type DashboardData = {
   sleepLogs: SleepLog[];
   habits: Habit[];
   habitLogs: HabitLog[];
+  medications: Medication[];
+  medicationDoses: MedicationDose[];
   expenses: Expense[];
   bills: Bill[];
   budgets: Budget[];

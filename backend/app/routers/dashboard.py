@@ -35,6 +35,9 @@ LISTS: list[tuple[str, type[m.Base], Any, int]] = [
     ("workouts", m.Workout, m.Workout.logged_at.desc(), 50),
     ("sleepLogs", m.SleepLog, m.SleepLog.sleep_date.desc(), 90),
     ("habits", m.Habit, m.Habit.created_at.desc(), 60),
+    ("medications", m.Medication, m.Medication.created_at.asc(), 100),
+    # The last few weeks of answered doses: enough for the log and for knowing which of today's are done.
+    ("medicationDoses", m.MedicationDose, m.MedicationDose.scheduled_at.desc(), 600),
     ("habitLogs", m.HabitLog, m.HabitLog.logged_at.desc(), 240),
     # ponytail: budgets add up these rows on the phone, so a very heavy spender (over 1000 expenses) is undercounted;
     # the upgrade is a server-side month total per category.

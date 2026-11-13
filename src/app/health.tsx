@@ -13,6 +13,7 @@ import { buildHealthSnapshot } from "@/lib/health";
 import { deltaText, goalFields, ht, weightHistory, whoopWeekMinutes } from "@/lib/health-hub";
 import { formatDate, t } from "@/lib/i18n";
 import { formatSleepDuration } from "@/lib/sleep";
+import { dosesOnDay, isLow, rx } from "@/lib/medications";
 import { pt } from "@/lib/plan";
 import { trainingApi, tt } from "@/lib/training";
 import { formatHours, whoopApi, type WhoopStatus, type WhoopSummary } from "@/lib/whoop";
@@ -76,6 +77,10 @@ export default function Health() {
   const workoutMinutes = whoopOn && summary ? Math.max(whoopWeekMinutes(summary.daily), health.workoutMinutes) : health.workoutMinutes;
   const sleepText = whoopOn && summary?.latest.sleep_hours ? formatHours(summary.latest.sleep_hours.value) : health.sleepNights ? formatSleepDuration(health.sleepAverageMinutes) : "–";
 
+  // Doses still open today, or a medicine running low.
+  const openDoses = dosesOnDay(data.medications, data.medicationDoses, new Date()).filter((entry) => !entry.dose).length;
+  const medsMeta = data.medications.some(isLow) ? rx.low : openDoses ? `${openDoses}` : undefined;
+
   const allSections: { href: Href; icon: IconName; title: string; subtitle: string; meta?: string }[] = [
     { href: "/food", icon: "coffee", title: t.food, subtitle: ht.foodDetail, meta: eaten ? `${eaten} ${t.kcal}` : undefined },
     { href: "/plan", icon: "calendar", title: pt.plan, subtitle: pt.planDetail },
@@ -84,6 +89,7 @@ export default function Health() {
     { href: "/gym", icon: "home", title: et.gym, subtitle: ht.gymDetail },
     { href: "/injuries", icon: "alert-circle", title: et.injuries, subtitle: ht.injuriesDetail, meta: live.injuries ? ht.activeInjuries(live.injuries) : undefined },
     { href: "/body", icon: "maximize", title: tt.measurements, subtitle: tt.measurementsDetail },
+    { href: "/medications", icon: "plus-square", title: rx.medications, subtitle: rx.medicationsDetail, meta: medsMeta },
     { href: "/whoop", icon: "watch", title: t.whoop, subtitle: ht.whoopDetail, meta: whoop?.connected ? (recovery === null ? undefined : `${Math.round(recovery)}%`) : whoop?.configured ? ht.whoopConnect : undefined }
   ];
   const sections = allSections.filter((section) => !pathHidden(String(section.href), hidden));

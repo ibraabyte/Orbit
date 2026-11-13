@@ -194,6 +194,8 @@ function dashboardData(overrides: Partial<DashboardData> = {}): DashboardData {
     sleepLogs: [],
     habits: [],
     habitLogs: [],
+    medications: [],
+    medicationDoses: [],
     budgets: [],
     cards: [],
     moneyAccounts: [],
@@ -380,6 +382,8 @@ describe("dashboard summaries", () => {
       investments: [],
       obligations: [],
       obligationInstallments: [],
+      medications: [],
+      medicationDoses: [],
     };
 
     expect(summarizeDashboard(data, now)).toMatchObject({

@@ -12,7 +12,7 @@ from app.models import Profile
 from app.models.profile import SECTIONS
 
 # Switching health off also hides what lives inside it.
-INSIDE = {"health": ("food", "exercises", "whoop")}
+INSIDE = {"health": ("food", "exercises", "whoop", "medications")}
 
 # The assistant's kinds, by the section they belong to. Kinds not listed (tasks, reminders) are always on.
 KIND_SECTIONS = {

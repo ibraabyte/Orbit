@@ -37,6 +37,8 @@ TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("training_plans", m.TrainingPlan, m.TrainingPlan.created_at),
     ("planned_workouts", m.PlannedWorkout, m.PlannedWorkout.plan_date),
     ("planned_exercises", m.PlannedExercise, m.PlannedExercise.created_at),
+    ("medications", m.Medication, m.Medication.created_at),
+    ("medication_doses", m.MedicationDose, m.MedicationDose.scheduled_at),
     ("sleep_logs", m.SleepLog, m.SleepLog.sleep_date),
     ("expenses", m.Expense, m.Expense.spent_at),
     ("bills", m.Bill, m.Bill.due_at),

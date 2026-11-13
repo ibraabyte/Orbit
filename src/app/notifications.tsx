@@ -10,6 +10,7 @@ import { loadNotificationPrefs, saveNotificationPrefs } from "@/hooks/use-notifi
 import { useSections } from "@/hooks/use-sections";
 import { st, type SectionKey } from "@/lib/app-sections";
 import { digits, formatClock, isArabic, t } from "@/lib/i18n";
+import { rx } from "@/lib/medications";
 import { MORNING_DEFAULT, type MorningSettings } from "@/lib/morning-brief";
 import { NOTIFICATION_DEFAULT, NOTIFICATION_SECTION, PRAYER_NAMES, type NotificationKind, type NotificationPrefs } from "@/lib/notification-prefs";
 import { prayerNamesAr, prayerNamesEn } from "@/lib/prayer-times";
@@ -122,6 +123,10 @@ export default function NotificationsScreen() {
             </Setting>
           </Pressable>
         ) : null}
+      </Card>
+      <Card title={rx.medications} list>
+        {toggle("medications", rx.notifDoses, rx.notifDosesDetail, true)}
+        {toggle("medStock", rx.notifStock, rx.notifStockDetail)}
       </Card>
       <Card title={t.notifGroupMoney} list>
         {toggle("bills", t.notifBills, t.notifDayBefore, true)}

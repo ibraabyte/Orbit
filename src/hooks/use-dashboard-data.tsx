@@ -23,6 +23,8 @@ export const emptyData: DashboardData = {
   sleepLogs: [],
   habits: [],
   habitLogs: [],
+  medications: [],
+  medicationDoses: [],
   expenses: [],
   bills: [],
   budgets: [],

@@ -9,6 +9,7 @@ import { et } from "@/lib/exercises";
 import { financeSummary } from "@/lib/finance";
 import { foodSummary } from "@/lib/food";
 import { t } from "@/lib/i18n";
+import { dosesOnDay, rx } from "@/lib/medications";
 
 // The sections listed on More, and in the iPad sidebar.
 export type Section = { key: string; href: Href; label: string; icon: IconName };
@@ -17,7 +18,7 @@ const section = (key: string, label: string, icon: IconName): Section => ({ key,
 export const manage = [section("tasks", t.tasks, "check-square")];
 // Food, Exercises and WHOOP live inside Health now; they can still be pinned for one tap.
 export const logs = [section("health", t.health, "activity"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "bookmark")];
-export const insideHealth = [section("food", t.food, "coffee"), section("exercises", et.exercises, "zap"), section("whoop", t.whoop, "watch")];
+export const insideHealth = [section("food", t.food, "coffee"), section("exercises", et.exercises, "zap"), section("whoop", t.whoop, "watch"), section("medications", rx.medications, "plus-square")];
 // Money places, investments, cards and installments live inside Finance; they can be pinned the same way.
 export const insideFinance = [section("accounts", t.moneyPlaces, "briefcase"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
 export const home = [section("vehicles", t.car, "truck"), section("media", t.movies, "film")];
@@ -43,6 +44,8 @@ export function useSectionCounts(): Record<string, number> {
   return {
     tasks: openTasks(data.tasks).length,
     food: foodSummary(data).neededGroceries.length,
-    finance: financeSummary(data).overdueBills.length
+    finance: financeSummary(data).overdueBills.length,
+    // Doses due now or missed today, still unanswered.
+    medications: dosesOnDay(data.medications, data.medicationDoses, new Date()).filter((entry) => entry.state === "due" || entry.state === "missed").length
   };
 }

@@ -45,7 +45,7 @@ def test_hiding_never_touches_the_sections_data(client: TestClient, auth: dict, 
 
 
 def test_health_switched_off_hides_what_lives_inside_it():
-    assert sections.expand(["health"]) == {"health", "food", "exercises", "whoop"}
+    assert sections.expand(["health"]) == {"health", "food", "exercises", "whoop", "medications"}
     assert sections.expand(["food", "nonsense"]) == {"food"}
     assert sections.kind_on("task", sections.expand(["health", "finance", "habits", "library"]))
     assert not sections.kind_on("meal", sections.expand(["health"]))

@@ -107,6 +107,8 @@ const baseData: DashboardData = {
   investments: [],
   obligations: [],
   obligationInstallments: [],
+  medications: [],
+  medicationDoses: [],
 };
 
 describe("insights", () => {

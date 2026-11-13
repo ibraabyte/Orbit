@@ -11,6 +11,7 @@ from app.models.health import GroceryItem, Meal, MealPlan, SleepLog, WeightLog, 
 from app.models.integrations import AiConnection, ServiceConnection, VoiceConnection
 from app.models.library import Attachment, Capture, PushSubscription, Tag, Tagging
 from app.models.life import Habit, HabitLog
+from app.models.medications import Medication, MedicationDose
 from app.models.plan import PlannedExercise, PlannedWorkout, TrainingPlan
 from app.models.profile import Profile
 from app.models.tasks import Reminder, Task, TaskList, TaskStep
@@ -42,6 +43,8 @@ __all__ = [
     "Investment",
     "Meal",
     "MealPlan",
+    "Medication",
+    "MedicationDose",
     "MoneyAccount",
     "Obligation",
     "ObligationInstallment",
