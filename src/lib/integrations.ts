@@ -24,6 +24,16 @@ export type AiChoice = { provider: AiChoiceName; model: string | null; instructi
 // choices: in the order the server falls back through. default: used when the app doesn't pick. server_key: the admin's own key stands in.
 export type AiChoices = { choices: AiChoice[]; default: AiChoiceName | null; server_key: boolean };
 
+// The optional voice model for the assistant's mic. Not connected: the phone turns speech into text itself.
+export const VOICE_PROVIDERS = ["openai", "groq", "elevenlabs"] as const;
+export type VoiceProvider = (typeof VOICE_PROVIDERS)[number];
+export const VOICE_PROVIDER_NAMES: Record<VoiceProvider, string> = { openai: "OpenAI", groq: "Groq", elevenlabs: "ElevenLabs" };
+// What the server uses when the model is left empty (backend/app/services/voice_stt.py DEFAULT_MODELS).
+export const VOICE_DEFAULT_MODELS: Record<VoiceProvider, string> = { openai: "gpt-4o-transcribe", groq: "whisper-large-v3", elevenlabs: "scribe_v1" };
+export type VoiceStatus = { connected: boolean; provider: VoiceProvider | null; model: string | null; connected_at: string | null };
+export type VoiceConnectInput = { provider: VoiceProvider; model: string; apiKey: string };
+export const voiceOff: VoiceStatus = { connected: false, provider: null, model: null, connected_at: null };
+
 export type IntegrationsOverview = {
   whoop: { configured: boolean; connected: boolean; last_synced_at: string | null; last_sync_error: string | null };
   seerr: SeerrStatus;
@@ -31,6 +41,8 @@ export type IntegrationsOverview = {
   // Missing from servers older than "more than one AI".
   ais?: AiChoices;
   chatgpt: ChatgptStatus;
+  // Missing from servers older than the voice model.
+  voice?: VoiceStatus;
 };
 
 // The AIs as the overview lists them; an older server's single AI is turned into the same shape.
@@ -79,8 +91,24 @@ export const integrationsApi = {
   chatgpt: (api: ChatgptApi) => api.get<ChatgptStatus>("/integrations/chatgpt"),
   startChatgpt: (api: ChatgptApi) => api.post<ChatgptStart>("/integrations/chatgpt/start"),
   finishChatgpt: (api: ChatgptApi, callbackUrl: string) => api.post<ChatgptStatus>("/integrations/chatgpt/finish", { callback_url: callbackUrl.trim() }),
-  disconnectChatgpt: (api: ChatgptApi) => api.delete("/integrations/chatgpt")
+  disconnectChatgpt: (api: ChatgptApi) => api.delete("/integrations/chatgpt"),
+  voice: (api: Api) => api.get<VoiceStatus>("/integrations/voice"),
+  connectVoice: (api: Api, { provider, model, apiKey }: VoiceConnectInput) =>
+    // No api_key means "keep the saved one" (same provider only).
+    api.put<VoiceStatus>("/integrations/voice", { provider, model: model.trim() || null, ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}) }),
+  disconnectVoice: (api: Api) => api.delete("/integrations/voice"),
+  transcribe: (api: Pick<ApiClient, "post">, audio: string, mediaType: string, language: "ar" | "en") =>
+    api.post<{ text: string }>("/integrations/voice/transcribe", { audio, media_type: mediaType, language })
 };
+
+// A saved key only stands in for its own provider; the model can be left empty.
+export const voiceFormReady = (form: Pick<VoiceConnectInput, "provider" | "apiKey">, savedProvider: VoiceProvider | null) =>
+  Boolean(form.apiKey.trim()) || form.provider === savedProvider;
+
+export function voiceState(voice: VoiceStatus | undefined): IntegrationState {
+  if (voice?.connected && voice.provider) return { label: t.voiceOn, tone: "success", detail: `${VOICE_PROVIDER_NAMES[voice.provider]} · ${voice.model}` };
+  return { label: t.voiceOff, tone: "neutral", detail: t.voiceOffDetail };
+}
 
 // Only Claude has a default model. A saved key only stands in for its own provider.
 export function aiFormReady(form: Pick<AiConnectInput, "provider" | "model" | "apiKey">, savedProvider: AiProvider | null): boolean {
