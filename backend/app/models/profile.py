@@ -29,7 +29,7 @@ DASHBOARD_MODULES = (
 # The parts of the app the user can switch off in Settings → Sections. Food, exercises and WHOOP live inside health, so
 # switching health off hides them too (app/services/sections.py). Tasks are always on. Nothing is deleted: a hidden
 # section's data stays and comes back when it is switched on again.
-SECTIONS = ("health", "food", "exercises", "whoop", "finance", "habits", "library", "vehicles", "media")
+SECTIONS = ("health", "food", "exercises", "whoop", "medications", "finance", "habits", "library", "vehicles", "media")
 
 _ai_sql = ", ".join(f"'{p}'" for p in AI_CHOICES)
 _modules_sql = "array[" + ", ".join(f"'{m}'" for m in DASHBOARD_MODULES) + "]::text[]"
