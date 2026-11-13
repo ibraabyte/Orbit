@@ -1,3 +1,4 @@
+import { NINE_AM, type AlertTime } from "@/lib/finance";
 import type { Vehicle } from "@/lib/types";
 
 export type VehicleDueKind = "registration" | "insurance" | "inspection" | "oil";
@@ -41,13 +42,13 @@ export function oilChangeDueByDistance(vehicle: Vehicle, marginKm = 500) {
 }
 
 // Phone alarms at 9:00, 14 days before each renewal and on the day itself.
-export function vehicleAlerts(vehicles: Vehicle[], now = new Date()) {
+export function vehicleAlerts(vehicles: Vehicle[], now = new Date(), time: AlertTime = NINE_AM) {
   return vehicleDues(vehicles, now)
     .flatMap((due) =>
       [14, 0].map((before) => {
         const at = localDay(due.date);
         at.setDate(at.getDate() - before);
-        at.setHours(9, 0, 0, 0);
+        at.setHours(time.hour, time.minute, 0, 0);
         return {
           id: `vehicle-${due.vehicle.id}-${due.kind}-${before}`,
           title: before ? `${due.label} in ${before} days` : `${due.label} is due today`,

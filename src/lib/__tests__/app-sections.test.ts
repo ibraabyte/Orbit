@@ -75,3 +75,18 @@ describe("what a hidden section covers", () => {
     for (const kind of captureStarterKinds) expect(kindHidden(kind, everything)).toBe(true);
   });
 });
+
+describe("alerts of a hidden section", () => {
+  it("go quiet with their section, and come back with it", async () => {
+    const { NOTIFICATION_DEFAULT, notificationAllowed } = await import("@/lib/notification-prefs");
+    const by = (hidden: string[]) => (key: string) => sectionOn(profile(hidden), key as (typeof SECTION_KEYS)[number]);
+    expect(notificationAllowed(NOTIFICATION_DEFAULT, "bills", by(["finance"]))).toBe(false);
+    expect(notificationAllowed(NOTIFICATION_DEFAULT, "budget", by(["finance"]))).toBe(false);
+    expect(notificationAllowed(NOTIFICATION_DEFAULT, "car", by(["vehicles"]))).toBe(false);
+    // The rest timer belongs to exercises, which Health switched off takes with it.
+    expect(notificationAllowed(NOTIFICATION_DEFAULT, "rest", by(["health"]))).toBe(false);
+    expect(notificationAllowed(NOTIFICATION_DEFAULT, "prayer", by([...SECTION_KEYS]))).toBe(true);
+    expect(notificationAllowed(NOTIFICATION_DEFAULT, "reminders", by([...SECTION_KEYS]))).toBe(true);
+    expect(notificationAllowed(NOTIFICATION_DEFAULT, "bills", by([]))).toBe(true);
+  });
+});

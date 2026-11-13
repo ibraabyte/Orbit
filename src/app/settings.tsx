@@ -1,3 +1,4 @@
+import { Link } from "expo-router";
 import * as Updates from "expo-updates";
 import { useEffect, useState } from "react";
 import { Alert, DevSettings, Pressable, Switch, Text, View } from "react-native";
@@ -10,13 +11,10 @@ import { colors } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSections } from "@/hooks/use-sections";
 import { clearAskConsent, loadAskConsent } from "@/hooks/use-ask-consent";
-import { loadMorningSettings, saveMorningSettings } from "@/hooks/use-morning-brief";
-import { arePrayerAlertsEnabled, setPrayerAlertsEnabled } from "@/hooks/use-prayer-times";
 import { st } from "@/lib/app-sections";
 import { getApi, signOut } from "@/lib/backend";
-import { currentNumerals, formatClock, saveNumerals, t, toggleLanguage } from "@/lib/i18n";
+import { currentNumerals, saveNumerals, t, toggleLanguage } from "@/lib/i18n";
 import { adminApi, type ServerSettings } from "@/lib/integrations";
-import { MORNING_DEFAULT, type MorningSettings } from "@/lib/morning-brief";
 import type { Numerals } from "@/lib/numerals";
 
 // A row in the settings card. The top row (first) has no line above it.
@@ -36,8 +34,6 @@ export default function Settings() {
   const { data, userId } = useDashboardData();
   const { sheet, toast } = useOverlays();
   const [lock, setLock] = useState(true);
-  const [prayers, setPrayers] = useState(true);
-  const [morning, setMorning] = useState<MorningSettings>(MORNING_DEFAULT);
   const [numerals, setNumerals] = useState<Numerals>(currentNumerals);
   // The AI the person agreed to send their data to for Ask Orbit; null when not agreed.
   const [askConsent, setAskConsent] = useState<string | null>(null);
@@ -48,8 +44,6 @@ export default function Settings() {
 
   useEffect(() => {
     void isAppLockEnabled().then(setLock);
-    void arePrayerAlertsEnabled().then(setPrayers);
-    void loadMorningSettings().then(setMorning);
     void loadAskConsent(userId).then(setAskConsent);
     void (async () => {
       const api = getApi();
@@ -78,25 +72,6 @@ export default function Settings() {
       Alert.alert(t.changeFailed, t.tryAgain);
     }
   };
-
-  // Shown only once saved, so a change that failed never looks like it worked.
-  const changeMorning = async (next: MorningSettings) => {
-    try {
-      await saveMorningSettings(next);
-      setMorning(next);
-    } catch {
-      Alert.alert(t.changeFailed, t.tryAgain);
-    }
-  };
-  const clockAt = (hour: number, minute: number) => formatClock(new Date(2000, 0, 1, hour, minute));
-  const pickMorningTime = () =>
-    sheet({
-      title: t.morningAlertTime,
-      options: Array.from({ length: 12 }, (_, index) => ({ hour: 5 + Math.floor(index / 2), minute: (index % 2) * 30 })).map(({ hour, minute }) => ({
-        label: `${morning.hour === hour && morning.minute === minute ? "● " : "○ "}${clockAt(hour, minute)}`,
-        run: () => void changeMorning({ ...morning, hour, minute })
-      }))
-    });
 
   // Every screen already drawn holds its digits, so the app reloads to redraw them all. No reload (web): ask for a restart.
   const changeNumerals = (next: Numerals) => {
@@ -139,28 +114,13 @@ export default function Settings() {
             }}
           />
         </Setting>
-        <Setting label={t.prayerAlerts} detail={t.prayerSource}>
-          <Switch
-            accessibilityLabel={t.prayerAlerts}
-            trackColor={track} thumbColor={colors.ink}
-            value={prayers}
-            onValueChange={(next) => {
-              setPrayers(next);
-              void setPrayerAlertsEnabled(next);
-            }}
-          />
-        </Setting>
-        <Setting label={t.morningAlert} detail={t.morningAlertDetail}>
-          <Switch accessibilityLabel={t.morningAlert} trackColor={track} thumbColor={colors.ink} value={morning.enabled} onValueChange={(next) => void changeMorning({ ...morning, enabled: next })} />
-        </Setting>
-        {morning.enabled ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={`${t.morningAlertTime}, ${clockAt(morning.hour, morning.minute)}`} onPress={pickMorningTime}>
-            <Setting label={t.morningAlertTime}>
-              <Text style={type.rowSubtitle}>{clockAt(morning.hour, morning.minute)}</Text>
+        <Link href="/notifications" asChild>
+          <Pressable accessibilityRole="link">
+            <Setting label={t.notifications} detail={t.notificationsDetail}>
               <Chevron />
             </Setting>
           </Pressable>
-        ) : null}
+        </Link>
         {askConsent ? (
           <Setting label={t.askShare} detail={t.askShareDetail.replace("{provider}", askConsent)}>
             <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />

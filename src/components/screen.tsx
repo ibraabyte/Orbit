@@ -73,6 +73,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/requests": { title: mt.requests },
   "/ask": { title: t.askOrbit },
   "/settings": { title: t.settings },
+  "/notifications": { title: t.notifications },
   "/integrations": { title: t.integrations },
   "/exercises": { title: et.exercises },
   "/gym": { title: et.gym },

@@ -141,7 +141,8 @@ const en = {
   offTitle: "This section is off",
   offBody: "You switched it off in Settings. Its data is kept.",
   turnOn: "Switch it on",
-  kindOff: "That part of Orbit is switched off. Switch it on in Settings → Sections to add it."
+  kindOff: "That part of Orbit is switched off. Switch it on in Settings → Sections to add it.",
+  quietWithSection: (name: string) => `Quiet while ${name} is off in Sections`
 };
 const ar: typeof en = {
   sections: "الأقسام",
@@ -165,6 +166,7 @@ const ar: typeof en = {
   offTitle: "هذا القسم مقفول",
   offBody: "قفلته من الإعدادات. بياناته محفوظة.",
   turnOn: "افتحه",
-  kindOff: "هذا الجزء من Orbit مقفول. افتحه من الإعدادات ← الأقسام عشان تضيفه."
+  kindOff: "هذا الجزء من Orbit مقفول. افتحه من الإعدادات ← الأقسام عشان تضيفه.",
+  quietWithSection: (name: string) => `ساكت لأن ${name} مقفول من الأقسام`
 };
 export const st = isArabic ? ar : en;

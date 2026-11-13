@@ -2,9 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { useEffect } from "react";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
-import { sectionOn } from "@/lib/app-sections";
+import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
+import { sectionOn, type SectionKey } from "@/lib/app-sections";
 import { budgetProgress, formatMoney, monthKey, newBudgetAlerts } from "@/lib/finance";
 import { t } from "@/lib/i18n";
+import { notificationAllowed } from "@/lib/notification-prefs";
 
 // What already went out, per user, so an alert never repeats (not on reload, not after a restart).
 // Sent at once rather than scheduled: nothing pending for the reminder hook's cancel filter or sign-out to remove.
@@ -25,13 +27,17 @@ let queue: Promise<unknown> = Promise.resolve();
 // When dashboard data loads: one local notification per month, category and threshold (80%, 100%).
 export function useBudgetAlerts() {
   const { userId, data } = useDashboardData();
+  const prefs = useNotificationPrefs();
+  // Off in Notifications, or Finance switched off in Settings → Sections: no budget alerts.
+  const allowed = prefs ? notificationAllowed(prefs, "budget", (key) => sectionOn(data.profile, key as SectionKey)) : null;
 
   useEffect(() => {
+    // Off (or not loaded yet): nothing is sent or remembered, so switching it back on later still warns about this month.
+    if (!allowed) return;
     let stale = false;
     queue = queue.then(async () => {
       try {
-        // Finance switched off in Settings: no budget alerts (nothing is remembered, so they can come back later).
-        if (stale || !sectionOn(data.profile, "finance")) return;
+        if (stale) return;
         const { alerts, fired } = newBudgetAlerts(budgetProgress(data.budgets, data.expenses, monthKey(new Date())), await readFired(userId));
         if (!alerts.length) return;
         const { granted } = await Notifications.requestPermissionsAsync();
@@ -57,5 +63,5 @@ export function useBudgetAlerts() {
     return () => {
       stale = true;
     };
-  }, [userId, data.budgets, data.expenses, data.profile]);
+  }, [allowed, userId, data.budgets, data.expenses]);
 }
