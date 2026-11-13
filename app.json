@@ -100,6 +100,14 @@
         }
       ],
       [
+        "expo-audio",
+        {
+          "microphonePermission": "Orbit uses the microphone only when you tap the mic button, so you can tell the assistant what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك، عشان تقول للمساعد وش يضيف أو يعدّل.",
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      [
         "expo-speech-recognition",
         {
           "microphonePermission": "Orbit uses the microphone only when you tap the mic button, so you can tell the assistant what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك، عشان تقول للمساعد وش يضيف أو يعدّل.",
