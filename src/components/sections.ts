@@ -1,6 +1,9 @@
 import type { Href } from "expo-router";
 import type { IconName } from "@/components/drift";
+import { useMemo } from "react";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useSections } from "@/hooks/use-sections";
+import { pathHidden } from "@/lib/app-sections";
 import { openTasks } from "@/lib/dashboard";
 import { et } from "@/lib/exercises";
 import { financeSummary } from "@/lib/finance";
@@ -21,6 +24,18 @@ export const home = [section("vehicles", t.car, "truck"), section("media", t.mov
 export const system = [section("ask", t.askOrbit, "message-circle"), section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
 export const groups: [string, Section[]][] = [[t.manageDay, manage], [t.lifeLogs, logs], [t.homeServices, home], [t.system, system]];
 export const pinnable = [...manage, ...logs, ...insideHealth, ...insideFinance, ...home];
+
+/** More's groups and pins without the sections switched off in Settings (a group left empty goes too). */
+export function useVisibleSections() {
+  const { hidden } = useSections();
+  return useMemo(() => {
+    const shown = (items: Section[]) => items.filter((item) => !pathHidden(`/${item.key}`, hidden));
+    return {
+      groups: groups.map(([label, items]) => [label, shown(items)] as [string, Section[]]).filter(([, items]) => items.length > 0),
+      pinnable: shown(pinnable)
+    };
+  }, [hidden]);
+}
 
 /** Live counts: a number on a section means something there is waiting for you. */
 export function useSectionCounts(): Record<string, number> {

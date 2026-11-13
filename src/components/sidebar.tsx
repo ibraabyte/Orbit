@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Glass, Icon, type, type IconName } from "@/components/drift";
 import { openCapture, useSidebar } from "@/components/screen";
-import { groups, useSectionCounts } from "@/components/sections";
+import { useSectionCounts, useVisibleSections } from "@/components/sections";
 import { colors, fonts, radius } from "@/components/theme";
 import { formatNumber, t } from "@/lib/i18n";
 import { activeKey, SIDEBAR_WIDTH, sidebarSteps } from "@/lib/sidebar";
@@ -35,6 +35,7 @@ function Sidebar() {
   const insets = useSafeAreaInsets();
   const path = usePathname();
   const counts = useSectionCounts();
+  const { groups } = useVisibleSections();
   // While a sheet (the assistant) is open, the item under it stays lit.
   const lastKey = useRef("index");
   const key = activeKey(path);

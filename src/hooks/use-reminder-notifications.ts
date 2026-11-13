@@ -8,6 +8,7 @@ import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { useWidgetSync } from "@/hooks/use-widget-sync";
+import { sectionOn, type SectionKey } from "@/lib/app-sections";
 import { billRenewalAlerts, formatMoney } from "@/lib/finance";
 import { notificationAllowed } from "@/lib/notification-prefs";
 import { buildLocalReminderSchedule } from "@/lib/reminder-notifications";
@@ -39,7 +40,8 @@ export function useReminderNotifications() {
       );
       // iOS keeps 64 pending alarms: 32 reminders + 8 bill + 4 installment + 4 car heads-ups + 10 prayers + 4 mornings = 62.
       // Each kind only when it is on in Notifications.
-      const on = (kind: Parameters<typeof notificationAllowed>[1]) => notificationAllowed(prefs, kind);
+      // A section switched off in Settings → Sections is quiet too: its alarms were just cleared and are not put back.
+      const on = (kind: Parameters<typeof notificationAllowed>[1]) => notificationAllowed(prefs, kind, (key) => sectionOn(data.profile, key as SectionKey));
       const now = new Date();
       const items = [
         ...(on("reminders") ? buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 32 }) : []),
@@ -60,7 +62,7 @@ export function useReminderNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [prefs, data.reminders, data.tasks, data.bills, data.obligations, data.obligationInstallments, vehicles]);
+  }, [prefs, data.profile, data.reminders, data.tasks, data.bills, data.obligations, data.obligationInstallments, vehicles]);
 
   useEffect(() => {
     function open(response: Notifications.NotificationResponse | null) {

@@ -3,6 +3,7 @@ import * as Notifications from "expo-notifications";
 import { useEffect } from "react";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
+import { sectionOn, type SectionKey } from "@/lib/app-sections";
 import { budgetProgress, formatMoney, monthKey, newBudgetAlerts } from "@/lib/finance";
 import { t } from "@/lib/i18n";
 import { notificationAllowed } from "@/lib/notification-prefs";
@@ -27,7 +28,8 @@ let queue: Promise<unknown> = Promise.resolve();
 export function useBudgetAlerts() {
   const { userId, data } = useDashboardData();
   const prefs = useNotificationPrefs();
-  const allowed = prefs ? notificationAllowed(prefs, "budget") : null;
+  // Off in Notifications, or Finance switched off in Settings → Sections: no budget alerts.
+  const allowed = prefs ? notificationAllowed(prefs, "budget", (key) => sectionOn(data.profile, key as SectionKey)) : null;
 
   useEffect(() => {
     // Off (or not loaded yet): nothing is sent or remembered, so switching it back on later still warns about this month.

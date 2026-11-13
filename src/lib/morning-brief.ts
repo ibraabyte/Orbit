@@ -1,3 +1,4 @@
+import { sectionOn } from "@/lib/app-sections";
 import { ApiError } from "@/lib/api";
 import { overdueTasks, scheduledReminders, todaysTasks } from "@/lib/dashboard";
 import { isToday } from "@/lib/dates";
@@ -83,7 +84,8 @@ export function morningLines(data: DashboardData, at: Date, labels: MorningLabel
   const late = overdueTasks(data.tasks, at).sort(byDue);
   const reminders = scheduledReminders(data.reminders, data.tasks).filter((reminder) => isToday(reminder.remind_at, at)).length;
   // A bill is dated at noon, so a one-day window ends at midnight and holds exactly that day's bills.
-  const bills = overdueBills(data.bills, at).length + upcomingBills(data.bills, 1, at).length;
+  // Finance switched off in Settings: its bills are left out of the morning line too.
+  const bills = sectionOn(data.profile, "finance") ? overdueBills(data.bills, at).length + upcomingBills(data.bills, 1, at).length : 0;
   const first = due[0] ?? late[0];
   return [
     due.length ? labels.tasks.replace("{n}", digits(due.length)) : null,

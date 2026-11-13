@@ -8,19 +8,23 @@ import { colors, radius } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
 import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useSections } from "@/hooks/use-sections";
+import type { SectionKey } from "@/lib/app-sections";
 import { activeProvider, askBody, askGate, ASK_QUESTION_MAX, cleanQuestion, exchanges, historyFor, serverDetail, type ChatItem } from "@/lib/ask";
 import { getApi } from "@/lib/backend";
 import { isArabic, t } from "@/lib/i18n";
 import { aiQuery } from "@/lib/integrations";
 import { isNoAiError } from "@/lib/morning-brief";
 
-const suggestions = [t.askQ1, t.askQ2, t.askQ3, t.askQ4];
+// Each starter question and the section it asks about (null: always on); a switched-off one is not offered.
+const suggestions: [string, SectionKey | null][] = [[t.askQ1, "finance"], [t.askQ2, "finance"], [t.askQ3, null], [t.askQ4, "health"]];
 
 // Ask questions about your own data. The server builds the data and asks your connected AI; the chat lives in memory only.
 // Nothing is sent until you agree, once, to sending your data to the AI that is connected now.
 export default function Ask() {
   const { userId } = useDashboardData();
   const ai = useAiChoices("ask");
+  const { on } = useSections();
   // undefined: not read yet. null: no AI connected / not agreed.
   const provider = ai.overview ? activeProvider(ai.overview, ai.current) : ai.error ? null : undefined;
   const [accepted, setAccepted] = useState<string | null | undefined>(undefined);
@@ -146,7 +150,7 @@ export default function Ask() {
             <Card title={t.askSuggested}>
               <Text style={type.rowSubtitle}>{t.askIntro}</Text>
               <View style={styles.chips}>
-                {suggestions.map((question) => (
+                {suggestions.filter(([, section]) => !section || on(section)).map(([question]) => (
                   <Pressable key={question} accessibilityRole="button" disabled={sending} onPress={() => send(question)} style={styles.chip}>
                     <Text style={type.pill}>{question}</Text>
                   </Pressable>

@@ -139,6 +139,8 @@ export const t = isArabic ? ar : en;
 
 // Tap to start a line with the right word; the parser does the rest.
 export const captureStarters = isArabic ? ["أكلت ", "صرفت ", "نمت ", "تمرين ", "وزني ", "اشتري ", "ملاحظة "] : ["ate ", "spent ", "slept ", "workout ", "weight ", "buy ", "note "];
+// What each starter adds, in the same order, so a switched-off section's starter can be left out.
+export const captureStarterKinds = ["meal", "expense", "sleep", "workout", "weight", "grocery", "capture"] as const;
 
 // Gregorian in both languages. Digits follow the numerals setting, not the language.
 const locale = isArabic ? "ar-SA-u-ca-gregory" : "en-GB";

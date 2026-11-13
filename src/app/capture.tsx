@@ -10,12 +10,14 @@ import { colors, fonts, radius } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
 import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useSections } from "@/hooks/use-sections";
 import { useVoice } from "@/hooks/use-voice";
 import { apiQuickAdd } from "@/lib/api-actions";
+import { kindHidden, st } from "@/lib/app-sections";
 import { askGate, serverDetail } from "@/lib/ask";
 import { ACT_HISTORY_TURNS, ACT_TEXT_MAX, actBody, actionRows, applyActions, editableField, fieldName, instantDraft, kindName, mealTotal, opName, withEdit, type ActReply, type ActTurn } from "@/lib/assistant";
 import { getApi } from "@/lib/backend";
-import { captureStarters, digits, formatDate, isArabic, t } from "@/lib/i18n";
+import { captureStarterKinds, captureStarters, digits, formatDate, isArabic, t } from "@/lib/i18n";
 import type { QuickAddDraft } from "@/lib/quick-add";
 import { aiName, aiQuery } from "@/lib/integrations";
 import { isNoAiError } from "@/lib/morning-brief";
@@ -72,6 +74,10 @@ export default function Capture() {
   // No AI connected: the old quick add, where anything else becomes a task.
   const fallback = !provider && !instant && text.trim() ? parseNatural(text, options) : null;
   const parsed = instant ?? fallback;
+  // A switched-off section takes nothing new: the line is not saved, and the assistant is told the same by the server.
+  const { hidden } = useSections();
+  const parsedOff = parsed ? kindHidden(parsed.draft.kind, hidden) : false;
+  const starters = captureStarters.filter((_, index) => !kindHidden(captureStarterKinds[index], hidden));
   const gate = provider === null ? "no-ai" : askGate(provider, accepted);
   const chosen = answer ? answer.actions.filter((_, index) => !skipped.has(index)) : [];
   const total = mealTotal(chosen);
@@ -105,6 +111,7 @@ export default function Capture() {
 
   async function quickAdd() {
     if (!parsed?.validation.ok || busy) return;
+    if (parsedOff) return setFailure(st.kindOff);
     setBusy(true);
     setFailure(null);
     try {
@@ -294,7 +301,7 @@ export default function Capture() {
 
       {!answer && !text.trim() ? (
         <View style={styles.chips}>
-          {captureStarters.map((word) => (
+          {starters.map((word) => (
             <Pressable key={word} onPress={() => setText(word)} accessibilityRole="button" style={styles.chip}>
               <Text style={type.barLabel}>{word.trim()}</Text>
             </Pressable>

@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Card, IconTile, ListRow, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { GroupHeader, HeaderButton, Screen, TabHeader } from "@/components/screen";
-import { groups, pinnable, useSectionCounts } from "@/components/sections";
+import { useSectionCounts, useVisibleSections } from "@/components/sections";
 import { colors, fonts, radius } from "@/components/theme";
 import { digits, t, toggleLanguage } from "@/lib/i18n";
 
@@ -24,6 +24,8 @@ export default function More() {
   }, []);
 
   const counts = useSectionCounts();
+  // A switched-off section leaves the lists and the pins; its pin comes back when it is switched on again.
+  const { groups, pinnable } = useVisibleSections();
 
   const editPins = () =>
     sheet({

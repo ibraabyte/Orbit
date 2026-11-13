@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import { AppLock } from "@/components/app-lock";
 import { OverlayProvider } from "@/components/overlays";
+import { SectionOffCover } from "@/components/section-off";
 import { Loading } from "@/components/screen";
 import { SidebarLayout } from "@/components/sidebar";
 import { colors } from "@/components/theme";
@@ -81,7 +82,7 @@ export default function RootLayout() {
       </Stack.Protected>
       {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
       <Stack.Protected guard={Boolean(session)}>
-        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "health-goals", "integrations", "library", "notifications", "media", "title", "discover", "requests", "person", "settings", "tasks", "task/[id]", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries", "week", "training", "workout", "workout-pick", "body"].map((name) => (
+        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "health-goals", "integrations", "library", "notifications", "media", "title", "discover", "requests", "person", "sections", "settings", "tasks", "task/[id]", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries", "week", "training", "workout", "workout-pick", "body"].map((name) => (
           <Stack.Screen key={name} name={name} />
         ))}
       </Stack.Protected>
@@ -99,7 +100,13 @@ export default function RootLayout() {
         <AppLock>
           <DashboardDataProvider key={session.userId} userId={session.userId}>
             <OverlayProvider>
-              <SidebarLayout>{stack}</SidebarLayout>
+              <SidebarLayout>
+                <View style={{ flex: 1 }}>
+                  {stack}
+                  {/* A switched-off section reached by an old link, widget or alert: say so instead of showing it. */}
+                  <SectionOffCover />
+                </View>
+              </SidebarLayout>
             </OverlayProvider>
             {/* After the stack, so a notification tap that opened the app navigates once it's mounted. */}
             <ReminderNotifications />

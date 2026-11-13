@@ -40,6 +40,8 @@ export type Profile = {
   daily_fat_target: number | null;
   weekly_workout_minutes_target: number;
   dashboard_modules: DashboardWidgetId[] | null;
+  // Sections switched off in Settings (src/lib/app-sections.ts). Missing from an old cached copy, so read it with care.
+  hidden_sections?: string[] | null;
   created_at: string;
 };
 

@@ -25,6 +25,7 @@ from app import models as m
 from app.schemas import domains as s
 from app.schemas import food as food_schemas
 from app.schemas.tasks import ReminderCreate, ReminderUpdate, TaskCreate, TaskListCreate, TaskListUpdate, TaskUpdate
+from app.services import sections
 from app.services.agent import Call, Tool
 
 MAX_ACTIONS = 12
@@ -161,6 +162,8 @@ class Run:
     items: dict[str, Item] = field(default_factory=dict)
     by_id: dict[uuid.UUID, str] = field(default_factory=dict)
     actions: list[dict[str, Any]] = field(default_factory=list)
+    # Sections switched off in Settings: their kinds are neither shown to the AI nor changed by it.
+    hidden: frozenset[str] = frozenset()
 
     def ref(self, kind: str, row: Any) -> str:
         if row.id in self.by_id:
@@ -227,6 +230,8 @@ def recent_items(run: Run) -> dict[str, list[dict[str, Any]]]:
     items: dict[str, list[dict[str, Any]]] = {}
     first = ("card", "habit", "task_list", "task", "food")
     for name in (*first, *[n for n in KINDS if n not in first]):
+        if not sections.kind_on(name, run.hidden):
+            continue
         kind = KINDS[name]
         rows = run.db.scalars(_owned(kind, run.user_id).order_by(kind.order, kind.model.id).limit(kind.recent)).all()
         if rows:
@@ -245,8 +250,8 @@ def default_currency(db: Session, user_id: uuid.UUID) -> str:
 # The tools
 
 
-def tools() -> list[Tool]:
-    kind = {"type": "string", "enum": KIND_NAMES}
+def tools(hidden: frozenset[str] = frozenset()) -> list[Tool]:
+    kind = {"type": "string", "enum": [name for name in KIND_NAMES if sections.kind_on(name, hidden)]}
     ref = {"type": "string", "description": "A ref from the items list or from find_items, like task-3."}
     fields = {"type": "object", "description": "The item's fields, named as in the kinds list."}
     return [
@@ -388,6 +393,8 @@ def handle(run: Run, call: Call) -> str:
     kind = KINDS.get(args.get("kind")) if isinstance(args.get("kind"), str) else None
     if kind is None:
         return _result(error=f"kind must be one of: {', '.join(KIND_NAMES)}.")
+    if not sections.kind_on(kind.name, run.hidden):
+        return _result(error=f"The user switched off the part of Orbit that holds {kind.name} items. Say so; don't change them.")
 
     if call.name == "find_items":
         text = str(args.get("text") or "").strip()[:100]

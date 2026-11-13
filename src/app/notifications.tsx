@@ -7,9 +7,11 @@ import { Button, Screen } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { loadMorningSettings, saveMorningSettings } from "@/hooks/use-morning-brief";
 import { loadNotificationPrefs, saveNotificationPrefs } from "@/hooks/use-notification-prefs";
+import { useSections } from "@/hooks/use-sections";
+import { st, type SectionKey } from "@/lib/app-sections";
 import { digits, formatClock, isArabic, t } from "@/lib/i18n";
 import { MORNING_DEFAULT, type MorningSettings } from "@/lib/morning-brief";
-import { NOTIFICATION_DEFAULT, PRAYER_NAMES, type NotificationKind, type NotificationPrefs } from "@/lib/notification-prefs";
+import { NOTIFICATION_DEFAULT, NOTIFICATION_SECTION, PRAYER_NAMES, type NotificationKind, type NotificationPrefs } from "@/lib/notification-prefs";
 import { prayerNamesAr, prayerNamesEn } from "@/lib/prayer-times";
 
 // A row in a card. The top row (first) has no line above it; inset rows sit under the switch they belong to.
@@ -31,6 +33,7 @@ const prayerName = isArabic ? prayerNamesAr : prayerNamesEn;
 
 export default function NotificationsScreen() {
   const { sheet } = useOverlays();
+  const sections = useSections();
   const [prefs, setPrefs] = useState<NotificationPrefs>(NOTIFICATION_DEFAULT);
   const [morning, setMorning] = useState<MorningSettings>(MORNING_DEFAULT);
   // The phone's own switch for Orbit: when it is off, nothing here can arrive.
@@ -60,11 +63,16 @@ export default function NotificationsScreen() {
     }
   };
 
-  const toggle = (kind: NotificationKind, label: string, detail?: string, first?: boolean) => (
-    <Setting first={first} label={label} detail={detail}>
-      <Switch accessibilityLabel={label} trackColor={track} thumbColor={colors.ink} value={prefs.kinds[kind]} onValueChange={(on) => void change({ ...prefs, kinds: { ...prefs.kinds, [kind]: on } })} />
-    </Setting>
-  );
+  // A kind whose section is switched off in Settings → Sections is quiet whatever its switch says, so it shows off and locked.
+  const toggle = (kind: NotificationKind, label: string, detail?: string, first?: boolean) => {
+    const section = NOTIFICATION_SECTION[kind] as SectionKey | null;
+    const quiet = section !== null && !sections.on(section);
+    return (
+      <Setting first={first} label={label} detail={quiet ? st.quietWithSection(st.names[section!]) : detail}>
+        <Switch accessibilityLabel={label} trackColor={track} thumbColor={colors.ink} value={quiet ? false : prefs.kinds[kind]} disabled={quiet} onValueChange={(on) => void change({ ...prefs, kinds: { ...prefs.kinds, [kind]: on } })} />
+      </Setting>
+    );
+  };
 
   const pickMorningTime = () =>
     sheet({
