@@ -6,7 +6,7 @@ changed or removed.
 
 Downgrading drops the two tables, so the medicines and their log are lost.
 
-Comes after 0018 (workout plan).
+Comes after 0019 (voice connections).
 """
 
 from collections.abc import Sequence
@@ -15,8 +15,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0019"
-down_revision: str | None = "0018"
+revision: str = "0020"
+down_revision: str | None = "0019"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
