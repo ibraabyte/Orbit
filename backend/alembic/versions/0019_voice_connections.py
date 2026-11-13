@@ -5,7 +5,7 @@ model and the user's own key, encrypted. It is a new, empty table; no existing r
 
 Downgrading drops the table, so saved voice models are forgotten and the mic goes back to on-phone speech to text.
 
-Comes after 0017 (hidden sections).
+Comes after 0018 (workout plan).
 """
 
 from collections.abc import Sequence
@@ -13,8 +13,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0018"
-down_revision: str | None = "0017"
+revision: str = "0019"
+down_revision: str | None = "0018"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
