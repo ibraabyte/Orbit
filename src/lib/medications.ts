@@ -467,7 +467,7 @@ const ar: typeof en = {
   name: "الاسم",
   namePh: "مثلًا فيتامين د",
   dose: "الجرعة",
-  dosePh: "مثلًا 500 mg، حبة وحدة",
+  dosePh: "مثلًا حبة وحدة، أو ٥٠٠ ملغ",
   when: "متى",
   schedules: { daily: "كل يوم", weekdays: "أيام محددة", interval: "كل كم ساعة" },
   times: "الأوقات",
