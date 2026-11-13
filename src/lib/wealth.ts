@@ -1,4 +1,4 @@
-import { addMonths, billDay, monthlyCommitments } from "@/lib/finance";
+import { addMonths, billDay, monthlyCommitments, NINE_AM, type AlertTime } from "@/lib/finance";
 import { digits } from "@/lib/i18n";
 import { localDateKey } from "@/lib/insights";
 import type { Bill, DashboardData, Investment, MoneyAccount, Obligation, ObligationInstallment, PaymentCard } from "@/lib/types";
@@ -232,7 +232,7 @@ export function moneyDueSoon(data: Pick<DashboardData, "bills" | "cards" | "obli
 export type MoneyAlert = { id: string; title: string; body: string; at: Date; url: string };
 
 /** A heads-up at 9:00 the day before each unpaid installment. */
-export function installmentAlerts(data: Pick<DashboardData, "obligations" | "obligationInstallments">, now = new Date(), formatAmount: (amount: number, currency: string) => string = (a, c) => `${a} ${c}`): MoneyAlert[] {
+export function installmentAlerts(data: Pick<DashboardData, "obligations" | "obligationInstallments">, now = new Date(), formatAmount: (amount: number, currency: string) => string = (a, c) => `${a} ${c}`, time: AlertTime = NINE_AM): MoneyAlert[] {
   const names = new Map(data.obligations.map((row) => [row.id, row]));
   return data.obligationInstallments
     .flatMap((installment) => {
@@ -240,7 +240,7 @@ export function installmentAlerts(data: Pick<DashboardData, "obligations" | "obl
       if (!obligation || installment.paid_at) return [];
       const at = day(installment.due_on);
       at.setDate(at.getDate() - 1);
-      at.setHours(9, 0, 0, 0);
+      at.setHours(time.hour, time.minute, 0, 0);
       return [
         {
           id: `installment-${installment.id}-${installment.due_on}`,

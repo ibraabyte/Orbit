@@ -1,20 +1,10 @@
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
-import * as SecureStore from "expo-secure-store";
 import { useEffect, useMemo, useState } from "react";
+import { loadNotificationPrefs, onNotificationPrefs } from "@/hooks/use-notification-prefs";
 import { formatClock } from "@/lib/i18n";
+import { notificationAllowed, type NotificationPrefs } from "@/lib/notification-prefs";
 import { prayerTimesFor, RIYADH, upcomingPrayers, type PrayerPlace, type PrayerTime } from "@/lib/prayer-times";
-
-const PRAYER_ALERTS_KEY = "orbit.prayer-alerts";
-
-export async function arePrayerAlertsEnabled() {
-  return (await SecureStore.getItemAsync(PRAYER_ALERTS_KEY)) !== "off";
-}
-
-export async function setPrayerAlertsEnabled(enabled: boolean) {
-  await SecureStore.setItemAsync(PRAYER_ALERTS_KEY, enabled ? "on" : "off");
-  await schedulePrayerAlerts();
-}
 
 // Uses the phone's rough location once; falls back to Riyadh if location is off.
 async function currentPlace(): Promise<PrayerPlace> {
@@ -28,14 +18,16 @@ async function currentPlace(): Promise<PrayerPlace> {
   }
 }
 
-async function schedulePrayerAlerts(place?: PrayerPlace) {
+// Rewritten whole each time: on load and whenever a prayer switch changes in Notifications.
+async function schedulePrayerAlerts(place: PrayerPlace, prefs?: NotificationPrefs) {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   await Promise.all(scheduled.filter((item) => item.identifier.startsWith("prayer-")).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier)));
-  if (!(await arePrayerAlertsEnabled())) return;
+  const choice = prefs ?? (await loadNotificationPrefs());
+  if (!notificationAllowed(choice, "prayer")) return;
   const { granted } = await Notifications.getPermissionsAsync();
   if (!granted) return;
-  // Two days ahead; reopening the app tops it up.
-  for (const prayer of upcomingPrayers(place ?? (await currentPlace()), new Date(), 2)) {
+  // Two days ahead; reopening the app tops it up. Only the prayers left on.
+  for (const prayer of upcomingPrayers(place, new Date(), 2).filter((item) => choice.prayers[item.name])) {
     await Notifications.scheduleNotificationAsync({
       identifier: `prayer-${prayer.name}-${prayer.at.toISOString()}`,
       content: { title: `حان وقت صلاة ${prayer.label}`, body: formatClock(prayer.at) },
@@ -53,9 +45,12 @@ export function usePrayerTimes() {
     void currentPlace().then((found) => {
       setPlace(found);
       setPrayers(upcomingPrayers(found));
-      void schedulePrayerAlerts(found);
+      void schedulePrayerAlerts(found).catch(() => undefined);
     });
   }, []);
+
+  // A change in Notifications reschedules at once, for the place already found.
+  useEffect(() => onNotificationPrefs((prefs) => void schedulePrayerAlerts(place, prefs).catch(() => undefined)), [place]);
 
   // Drop prayers as they pass.
   useEffect(() => {

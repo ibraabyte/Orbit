@@ -190,13 +190,17 @@ export function subscriptionMonthlyTotal(bills: Bill[]) {
 export type BillAlert = { id: string; title: string; body: string; at: Date; url: string };
 
 // A heads-up `daysBefore` a bill is due (the day before by default), at 9:00 local, so a renewal can still be cancelled.
-export function billRenewalAlerts(bills: Bill[], now = new Date(), daysBefore = 1): BillAlert[] {
+// The hour heads-ups go out on the day; 9:00 unless Notifications says otherwise.
+export type AlertTime = { hour: number; minute: number };
+export const NINE_AM: AlertTime = { hour: 9, minute: 0 };
+
+export function billRenewalAlerts(bills: Bill[], now = new Date(), daysBefore = 1, time: AlertTime = NINE_AM): BillAlert[] {
   return bills
     .filter((bill) => bill.status === "active")
     .map((bill) => {
       const at = billDate(bill.due_at);
       at.setDate(at.getDate() - daysBefore);
-      at.setHours(9, 0, 0, 0);
+      at.setHours(time.hour, time.minute, 0, 0);
       const renews = bill.category === "subscriptions" || bill.autopay;
       const when = daysBefore === 1 ? "tomorrow" : `in ${daysBefore} days`;
       return {

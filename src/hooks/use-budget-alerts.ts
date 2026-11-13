@@ -2,8 +2,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { useEffect } from "react";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
 import { budgetProgress, formatMoney, monthKey, newBudgetAlerts } from "@/lib/finance";
 import { t } from "@/lib/i18n";
+import { notificationAllowed } from "@/lib/notification-prefs";
 
 // What already went out, per user, so an alert never repeats (not on reload, not after a restart).
 // Sent at once rather than scheduled: nothing pending for the reminder hook's cancel filter or sign-out to remove.
@@ -24,8 +26,12 @@ let queue: Promise<unknown> = Promise.resolve();
 // When dashboard data loads: one local notification per month, category and threshold (80%, 100%).
 export function useBudgetAlerts() {
   const { userId, data } = useDashboardData();
+  const prefs = useNotificationPrefs();
+  const allowed = prefs ? notificationAllowed(prefs, "budget") : null;
 
   useEffect(() => {
+    // Off (or not loaded yet): nothing is sent or remembered, so switching it back on later still warns about this month.
+    if (!allowed) return;
     let stale = false;
     queue = queue.then(async () => {
       try {
@@ -55,5 +61,5 @@ export function useBudgetAlerts() {
     return () => {
       stale = true;
     };
-  }, [userId, data.budgets, data.expenses]);
+  }, [allowed, userId, data.budgets, data.expenses]);
 }

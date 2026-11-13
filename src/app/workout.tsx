@@ -9,8 +9,10 @@ import { ExerciseThumb } from "@/components/exercise-ui";
 import { useOverlays } from "@/components/overlays";
 import { Button, Input, Loading, Screen } from "@/components/screen";
 import { colors, fonts, radius } from "@/components/theme";
+import { loadNotificationPrefs } from "@/hooks/use-notification-prefs";
 import { getApi } from "@/lib/backend";
 import { digits, formatDate, t } from "@/lib/i18n";
+import { notificationAllowed } from "@/lib/notification-prefs";
 import {
   clock,
   elapsedSeconds,
@@ -120,7 +122,7 @@ export default function Workout() {
     if (Platform.OS === "web") return;
     try {
       const { granted } = await Notifications.getPermissionsAsync();
-      if (!granted) return;
+      if (!granted || !notificationAllowed(await loadNotificationPrefs(), "rest")) return;
       const notification = await Notifications.scheduleNotificationAsync({
         content: { title: tt.restTimer, body: `${exercise.name} · ${tt.restDone}`, data: { url: `/workout?id=${id}` } },
         trigger: { type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL, seconds: exercise.rest_seconds }

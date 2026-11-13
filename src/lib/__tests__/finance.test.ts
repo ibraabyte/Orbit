@@ -128,6 +128,12 @@ describe("subscriptions", () => {
     expect(alerts[1].title).toBe("Rent is due in 3 days");
   });
 
+  it("goes out at the heads-up time picked in Notifications", () => {
+    const alerts = billRenewalAlerts([icloud], now, 1, { hour: 20, minute: 0 });
+    expect(alerts[0].at.getHours()).toBe(20);
+    expect(alerts[0].at.getDate()).toBe(16);
+  });
+
   it("alerts the day before by default", () => {
     const alerts = billRenewalAlerts([netflix, icloud, paused, rent], now);
     // iCloud renews on Jul 17, so its heads-up is Jul 16 at 9:00, still ahead on Jul 15.
