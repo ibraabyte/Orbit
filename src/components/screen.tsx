@@ -10,6 +10,7 @@ import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
 import { mt } from "@/lib/seerr";
 import { contentWidth, showsSidebar } from "@/lib/sidebar";
+import { rx } from "@/lib/medications";
 import { pt } from "@/lib/plan";
 import { tt } from "@/lib/training";
 
@@ -85,7 +86,8 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/body": { title: tt.measurements },
   "/plan": { title: pt.plan },
   "/plan-day": { title: pt.plan },
-  "/plan-setup": { title: pt.edit }
+  "/plan-setup": { title: pt.edit },
+  "/medications": { title: rx.medications }
 };
 
 export function openCapture(text?: string) {

@@ -10,6 +10,7 @@ const ICONS: Record<SectionKey, IconName> = {
   food: "coffee",
   exercises: "zap",
   whoop: "watch",
+  medications: "plus-square",
   finance: "credit-card",
   habits: "repeat",
   library: "bookmark",

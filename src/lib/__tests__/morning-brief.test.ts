@@ -20,7 +20,7 @@ const now = new Date("2026-11-03T01:00:00.000Z"); // 04:00 local on 3 Nov
 
 const empty = {
   profile: null, tasks: [], taskLists: [], taskSteps: [], reminders: [], captures: [], attachments: [], tags: [], taggings: [], meals: [], mealPlans: [], groceryItems: [],
-  weightLogs: [], workouts: [], sleepLogs: [], habits: [], habitLogs: [],
+  weightLogs: [], workouts: [], sleepLogs: [], habits: [], habitLogs: [], medications: [], medicationDoses: [],
   expenses: [], bills: [], budgets: [], cards: [], moneyAccounts: [], investments: [], obligations: [], obligationInstallments: []
 } satisfies DashboardData;
 

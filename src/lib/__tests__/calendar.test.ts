@@ -121,6 +121,8 @@ const data: DashboardData = {
   ],
   habits: [],
   habitLogs: [],
+  medications: [],
+  medicationDoses: [],
   budgets: [],
   cards: [],
   moneyAccounts: [],

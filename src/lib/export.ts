@@ -26,6 +26,8 @@ export const EXPORT_TABLES = [
   { name: "training_plans", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "planned_workouts", ownerColumn: "user_id", orderColumn: "plan_date", ascending: true },
   { name: "planned_exercises", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
+  { name: "medications", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
+  { name: "medication_doses", ownerColumn: "user_id", orderColumn: "scheduled_at", ascending: true },
   { name: "sleep_logs", ownerColumn: "user_id", orderColumn: "sleep_date", ascending: true },
   { name: "expenses", ownerColumn: "user_id", orderColumn: "spent_at", ascending: true },
   { name: "bills", ownerColumn: "user_id", orderColumn: "due_at", ascending: true },

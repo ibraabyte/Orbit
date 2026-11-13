@@ -34,6 +34,8 @@ const parents: Record<string, string> = {
   "plan-setup": "health",
   body: "health",
   whoop: "health",
+  medications: "health",
+  "medication-edit": "health",
   "health-goals": "health",
   accounts: "finance",
   investments: "finance",
