@@ -7,6 +7,7 @@ import { Button, Loading, Screen } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { et } from "@/lib/exercises";
 import { digits, formatDate, t } from "@/lib/i18n";
+import { pt } from "@/lib/plan";
 import { trainingApi, tt, volumeText, type SessionSummary } from "@/lib/training";
 
 const stamp = (iso: string) => formatDate(iso, { weekday: "short", day: "numeric", month: "short" });
@@ -54,6 +55,9 @@ export default function Training() {
 
   return (
     <Screen refreshing={loading && Boolean(sessions)} onRefresh={() => void load()}>
+      <Card>
+        <ListRow first href="/plan" leading={<IconTile name="calendar" tone="accent" />} title={pt.plan} subtitle={pt.planDetail} />
+      </Card>
       {live ? (
         <Card>
           <ListRow
