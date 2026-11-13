@@ -11,6 +11,7 @@ from app.models.health import GroceryItem, Meal, MealPlan, SleepLog, WeightLog, 
 from app.models.integrations import AiConnection, ServiceConnection
 from app.models.library import Attachment, Capture, PushSubscription, Tag, Tagging
 from app.models.life import Habit, HabitLog
+from app.models.plan import PlannedExercise, PlannedWorkout, TrainingPlan
 from app.models.profile import Profile
 from app.models.tasks import Reminder, Task, TaskList, TaskStep
 from app.models.things import Vehicle, WatchItem
@@ -44,6 +45,8 @@ __all__ = [
     "MoneyAccount",
     "Obligation",
     "ObligationInstallment",
+    "PlannedExercise",
+    "PlannedWorkout",
     "Profile",
     "PushSubscription",
     "RefreshToken",
@@ -56,6 +59,7 @@ __all__ = [
     "Task",
     "TaskList",
     "TaskStep",
+    "TrainingPlan",
     "User",
     "Vehicle",
     "WatchItem",

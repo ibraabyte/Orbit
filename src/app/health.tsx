@@ -13,6 +13,7 @@ import { buildHealthSnapshot } from "@/lib/health";
 import { deltaText, goalFields, ht, weightHistory, whoopWeekMinutes } from "@/lib/health-hub";
 import { formatDate, t } from "@/lib/i18n";
 import { formatSleepDuration } from "@/lib/sleep";
+import { pt } from "@/lib/plan";
 import { trainingApi, tt } from "@/lib/training";
 import { formatHours, whoopApi, type WhoopStatus, type WhoopSummary } from "@/lib/whoop";
 
@@ -77,6 +78,7 @@ export default function Health() {
 
   const allSections: { href: Href; icon: IconName; title: string; subtitle: string; meta?: string }[] = [
     { href: "/food", icon: "coffee", title: t.food, subtitle: ht.foodDetail, meta: eaten ? `${eaten} ${t.kcal}` : undefined },
+    { href: "/plan", icon: "calendar", title: pt.plan, subtitle: pt.planDetail },
     { href: "/training", icon: "bar-chart-2", title: tt.workouts, subtitle: tt.workoutsDetail, meta: live.active ? tt.inProgress : undefined },
     { href: "/exercises", icon: "zap", title: et.exercises, subtitle: ht.exercisesDetail },
     { href: "/gym", icon: "home", title: et.gym, subtitle: ht.gymDetail },

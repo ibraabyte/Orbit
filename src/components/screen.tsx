@@ -10,6 +10,7 @@ import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
 import { mt } from "@/lib/seerr";
 import { contentWidth, showsSidebar } from "@/lib/sidebar";
+import { pt } from "@/lib/plan";
 import { tt } from "@/lib/training";
 
 // Space the tab bar takes at the bottom of a tab screen.
@@ -81,7 +82,10 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/training": { title: tt.workouts },
   "/workout": { title: tt.workout },
   "/workout-pick": { title: tt.pickExercise },
-  "/body": { title: tt.measurements }
+  "/body": { title: tt.measurements },
+  "/plan": { title: pt.plan },
+  "/plan-day": { title: pt.plan },
+  "/plan-setup": { title: pt.edit }
 };
 
 export function openCapture(text?: string) {

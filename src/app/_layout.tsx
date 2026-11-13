@@ -82,7 +82,7 @@ export default function RootLayout() {
       </Stack.Protected>
       {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
       <Stack.Protected guard={Boolean(session)}>
-        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "health-goals", "integrations", "library", "notifications", "media", "title", "discover", "requests", "person", "sections", "settings", "tasks", "task/[id]", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries", "week", "training", "workout", "workout-pick", "body"].map((name) => (
+        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "health-goals", "integrations", "library", "notifications", "media", "title", "discover", "requests", "person", "sections", "settings", "tasks", "task/[id]", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries", "week", "training", "workout", "workout-pick", "body", "plan", "plan-day", "plan-setup"].map((name) => (
           <Stack.Screen key={name} name={name} />
         ))}
       </Stack.Protected>
