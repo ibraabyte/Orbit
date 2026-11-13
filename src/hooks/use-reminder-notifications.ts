@@ -4,10 +4,12 @@ import { useEffect } from "react";
 import { useBudgetAlerts } from "@/hooks/use-budget-alerts";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useMorningNotifications } from "@/hooks/use-morning-brief";
+import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { useWidgetSync } from "@/hooks/use-widget-sync";
 import { billRenewalAlerts, formatMoney } from "@/lib/finance";
+import { notificationAllowed } from "@/lib/notification-prefs";
 import { buildLocalReminderSchedule } from "@/lib/reminder-notifications";
 import { vehicleAlerts } from "@/lib/vehicles";
 import { installmentAlerts } from "@/lib/wealth";
@@ -21,8 +23,11 @@ Notifications.setNotificationHandler({
 export function useReminderNotifications() {
   const { userId, data } = useDashboardData();
   const { vehicles } = useVehicles(userId);
+  const prefs = useNotificationPrefs();
 
   useEffect(() => {
+    // Before the saved choice loads, scheduling would undo a switch that is off.
+    if (!prefs) return;
     let cancelled = false;
     void (async () => {
       const { granted } = await Notifications.requestPermissionsAsync();
@@ -33,11 +38,14 @@ export function useReminderNotifications() {
         scheduled.filter((item) => /^(reminder|task|bill|installment|vehicle)-/.test(item.identifier)).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
       );
       // iOS keeps 64 pending alarms: 32 reminders + 8 bill + 4 installment + 4 car heads-ups + 10 prayers + 4 mornings = 62.
+      // Each kind only when it is on in Notifications.
+      const on = (kind: Parameters<typeof notificationAllowed>[1]) => notificationAllowed(prefs, kind);
+      const now = new Date();
       const items = [
-        ...buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 32 }),
-        ...billRenewalAlerts(data.bills).slice(0, 8),
-        ...installmentAlerts({ obligations: data.obligations, obligationInstallments: data.obligationInstallments }, new Date(), formatMoney).slice(0, 4),
-        ...vehicleAlerts(vehicles).slice(0, 4)
+        ...(on("reminders") ? buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 32 }) : []),
+        ...(on("bills") ? billRenewalAlerts(data.bills, now, 1, prefs.headsUp).slice(0, 8) : []),
+        ...(on("installments") ? installmentAlerts({ obligations: data.obligations, obligationInstallments: data.obligationInstallments }, now, formatMoney, prefs.headsUp).slice(0, 4) : []),
+        ...(on("car") ? vehicleAlerts(vehicles, now, prefs.headsUp).slice(0, 4) : [])
       ];
       for (const item of items) {
         // A newer load took over; stop so a deleted reminder isn't put back.
@@ -52,7 +60,7 @@ export function useReminderNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [data.reminders, data.tasks, data.bills, data.obligations, data.obligationInstallments, vehicles]);
+  }, [prefs, data.reminders, data.tasks, data.bills, data.obligations, data.obligationInstallments, vehicles]);
 
   useEffect(() => {
     function open(response: Notifications.NotificationResponse | null) {
