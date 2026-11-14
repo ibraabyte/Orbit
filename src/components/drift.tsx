@@ -561,59 +561,7 @@ export const type = StyleSheet.create({
   shellLabel: { fontFamily: fonts.semibold, fontSize: textSize.caption1, color: colors.onShellMuted, ...labelCase }
 });
 
-/** Bento: More and Settings are cards in a two-up grid. A tile is an icon (with an optional control at its end),
- * a title and a short line. With href it is a link, with onPress a button; `wide` takes the whole row. An odd last
- * tile stretches to fill its row. */
-export function BentoGrid({ children }: { children: ReactNode }) {
-  return <View style={styles.bentoGrid}>{children}</View>;
-}
-
-export function BentoTile({ icon, title, detail, href, onPress, trailing, wide, alert, label }: { icon: IconName; title: string; detail?: string | null; href?: Href; onPress?: () => void; trailing?: ReactNode; wide?: boolean; alert?: boolean; label?: string }) {
-  const body = (
-    <>
-      <View style={styles.bentoTop}>
-        <Icon name={icon} size={18} color={colors.link} />
-        {trailing ?? null}
-      </View>
-      <Text style={styles.bentoTitle} numberOfLines={1}>
-        {title}
-      </Text>
-      {detail ? (
-        <Text style={[styles.bentoDetail, alert && { color: colors.link }]} numberOfLines={2}>
-          {detail}
-        </Text>
-      ) : null}
-    </>
-  );
-  // Link's Slot refuses a style array, so it is flattened.
-  const style = StyleSheet.flatten([styles.bento, wide && styles.bentoWide]);
-  const a11y = label ?? (detail ? `${title}, ${detail}` : title);
-  if (href) {
-    return (
-      <Link href={href} asChild>
-        <Pressable accessibilityRole="link" accessibilityLabel={a11y} style={style}>
-          {body}
-        </Pressable>
-      </Link>
-    );
-  }
-  if (onPress) {
-    return (
-      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y} style={({ pressed }) => [style, pressed && { opacity: 0.7 }]}>
-        {body}
-      </Pressable>
-    );
-  }
-  return <View style={style}>{body}</View>;
-}
-
 const styles = StyleSheet.create({
-  bentoGrid: { flexDirection: "row", flexWrap: "wrap", gap: space.md },
-  bento: { flexGrow: 1, flexBasis: "40%", minWidth: 0, minHeight: 104, gap: space.sm, padding: space.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous" },
-  bentoWide: { flexBasis: "100%" },
-  bentoTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 24 },
-  bentoTitle: { fontFamily: fonts.semibold, fontSize: textSize.subheadline, color: colors.ink },
-  bentoDetail: { fontFamily: fonts.regular, fontSize: textSize.caption1, lineHeight: lineHeights.caption1, color: colors.inkMuted },
   // paddingVertical, not paddingTop/paddingBottom: in React Native the longhand always wins, so a screen's
   // paddingVertical would be ignored.
   card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.sm },

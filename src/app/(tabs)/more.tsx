@@ -1,7 +1,7 @@
 import { Link, router, type Href } from "expo-router";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { BentoGrid, BentoTile, Card, Icon, IconTile, ListRow, RingGauge } from "@/components/drift";
+import { Card, Icon, IconTile, ListRow, RingGauge } from "@/components/drift";
 import { GroupHeader, HeaderButton, Screen, TabHeader } from "@/components/screen";
 import { insideFinance, insideHealth, mt, useSectionStatus, useVisibleSections, type Section } from "@/components/sections";
 import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
@@ -105,7 +105,7 @@ export default function More() {
   ) : null;
 
   const side = [healthCard, financeCard].filter(Boolean);
-  // Every other section, in three groups, each card with its live line.
+  // Every other section, in three grouped lists, each row with its live line (a sand icon when it needs a look).
   const rest = shown.filter((item) => !big.includes(item.key) && item.key !== "ask" && item.key !== "settings");
   const inside = (list: Section[]) => rest.filter((item) => list.some((other) => other.key === item.key));
   const tileGroups: [string, Section[]][] = [
@@ -173,11 +173,18 @@ export default function More() {
             items.length ? (
               <View key={label} style={{ gap: space.sm }}>
                 <GroupHeader label={label} />
-                <BentoGrid>
-                  {items.map((item) => (
-                    <BentoTile key={item.key} icon={item.icon} title={item.label} detail={status[item.key]?.caption} alert={status[item.key]?.alert} href={item.href} />
+                <Card list>
+                  {items.map((item, index) => (
+                    <ListRow
+                      key={item.key}
+                      first={index === 0}
+                      leading={<IconTile name={item.icon} tone={status[item.key]?.alert ? "accent" : "neutral"} />}
+                      title={item.label}
+                      subtitle={status[item.key]?.caption}
+                      href={item.href}
+                    />
                   ))}
-                </BentoGrid>
+                </Card>
               </View>
             ) : null
           )}
