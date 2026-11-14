@@ -9,7 +9,7 @@ import Feather from "@expo/vector-icons/Feather";
 import Constants, { ExecutionEnvironment } from "expo-constants";
 import { useFonts } from "expo-font";
 import * as Notifications from "expo-notifications";
-import { router, Stack, usePathname } from "expo-router";
+import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, usePathname } from "expo-router";
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
@@ -18,9 +18,9 @@ import { Appearance, AppState, DevSettings, Text, View } from "react-native";
 import { AppLock } from "@/components/app-lock";
 import { OverlayProvider } from "@/components/overlays";
 import { SectionOffCover } from "@/components/section-off";
-import { Loading } from "@/components/screen";
+import { Loading, stackTitle } from "@/components/screen";
 import { SidebarLayout } from "@/components/sidebar";
-import { colors, scheme, space } from "@/components/theme";
+import { colors, fonts, scheme, space, usePalette, useScheme } from "@/components/theme";
 import { clearDashboardCache, DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { clearWidget } from "@/hooks/use-widget-sync";
@@ -33,8 +33,39 @@ const shareDisabled = Constants.executionEnvironment === ExecutionEnvironment.St
 // A widget tap can open Capture from closed; Today must be underneath for it to close back to.
 export const unstable_settings = { anchor: "(tabs)" };
 
+// Stack screens use the native header: the system back button and swipe, the title from src/components/screen.tsx.
+// On iOS it floats over the content (Liquid Glass on iOS 26, which the screen's ScrollView insets under); Android has a
+// solid bar in the ground colour.
+const nativeHeader = {
+  headerShown: true,
+  headerTransparent: process.env.EXPO_OS === "ios",
+  headerShadowVisible: false,
+  headerLargeTitleShadowVisible: false,
+  headerStyle: process.env.EXPO_OS === "ios" ? undefined : { backgroundColor: colors.shell },
+  headerLargeStyle: { backgroundColor: "transparent" },
+  headerTintColor: colors.link,
+  headerTitleStyle: { fontFamily: fonts.semibold, color: colors.onShell },
+  headerLargeTitleStyle: { fontFamily: fonts.bold, color: colors.onShell },
+  headerBackButtonDisplayMode: "minimal"
+} as const;
+
+// Sections opened from More get a large title that shrinks into the bar as you scroll. Screens one step further in
+// (one task, a form, a picker) keep the small title.
+const sectionScreens = ["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "habits", "health", "integrations", "library", "notifications", "media", "discover", "requests", "sections", "settings", "tasks", "vehicles", "whoop", "exercises/index", "gym", "injuries", "week", "training", "body", "plan", "medications"];
+const detailScreens = ["food-add", "food-photo", "food-scan", "health-goals", "person", "task/[id]", "exercises/[id]", "workout", "workout-pick", "plan-day", "plan-setup", "medication-edit"];
+// Screens with a search field under the large title. It is set here so the header has it from the first frame (added
+// later by the screen, the content would be laid out for a header without it); the screen fills in what it does.
+const searchScreens = ["library", "media", "exercises/index"];
+const headerSearch = { placement: "stacked", hideWhenScrolling: false } as const;
+const routePath = (name: string) => "/" + name.replace(/\/?index$/, "");
+
 export default function RootLayout() {
   const [session, setSession] = useState<AppSession | null | undefined>(undefined);
+  // The native header and back button read light or dark from the navigation theme, so it follows the phone's setting.
+  const palette = usePalette();
+  const dark = useScheme() === "dark";
+  const base = dark ? DarkTheme : DefaultTheme;
+  const theme = { ...base, dark, colors: { ...base.colors, primary: palette.link, background: palette.shell, card: palette.shell, text: palette.onShell, border: palette.hairline } };
   // If a font fails to load, carry on with the system font rather than a blank screen.
   const [fontsLoaded, fontError] = useFonts({
     JetBrainsMono_400Regular,
@@ -90,22 +121,29 @@ export default function RootLayout() {
   }
 
   const stack = (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.shell } }}>
-      <Stack.Protected guard={Boolean(session)}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.sheet } }} />
-      </Stack.Protected>
-      {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
-      <Stack.Protected guard={Boolean(session)}>
-        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "health-goals", "integrations", "library", "notifications", "media", "title", "discover", "requests", "person", "sections", "settings", "tasks", "task/[id]", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries", "week", "training", "workout", "workout-pick", "body", "plan", "plan-day", "plan-setup", "medications", "medication-edit"].map((name) => (
-          <Stack.Screen key={name} name={name} />
-        ))}
-      </Stack.Protected>
-      <Stack.Protected guard={!session}>
-        <Stack.Screen name="sign-in" />
-        <Stack.Screen name="sign-up" />
-      </Stack.Protected>
-    </Stack>
+    <ThemeProvider value={theme}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.shell } }}>
+        <Stack.Protected guard={Boolean(session)}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.sheet } }} />
+        </Stack.Protected>
+        {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
+        <Stack.Protected guard={Boolean(session)}>
+          {sectionScreens.map((name) => (
+            <Stack.Screen key={name} name={name} options={{ ...nativeHeader, headerLargeTitleEnabled: true, title: stackTitle(routePath(name)) ?? "", ...(searchScreens.includes(name) && { headerSearchBarOptions: headerSearch }) }} />
+          ))}
+          {detailScreens.map((name) => (
+            <Stack.Screen key={name} name={name} options={{ ...nativeHeader, title: stackTitle(routePath(name)) ?? "" }} />
+          ))}
+          {/* A film or show: the header sits clear over the backdrop, with only the back button. */}
+          <Stack.Screen name="title" options={{ ...nativeHeader, headerTransparent: true, title: "" }} />
+        </Stack.Protected>
+        <Stack.Protected guard={!session}>
+          <Stack.Screen name="sign-in" />
+          <Stack.Screen name="sign-up" />
+        </Stack.Protected>
+      </Stack>
+    </ThemeProvider>
   );
 
   return (

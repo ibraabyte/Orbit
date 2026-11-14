@@ -6,7 +6,7 @@ import { Card, EmptyState, ListRow, RowButton, StatGrid, StatTile, type } from "
 import { useOverlays } from "@/components/overlays";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
 import { Chip, openDiscover, openTitle, Poster, PosterGrid, PosterRail, SeeAll } from "@/components/seerr-parts";
-import { BleedRow, Button, Screen, SearchBar } from "@/components/screen";
+import { BleedRow, Button, Screen } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -137,17 +137,20 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   );
 
   return (
-    <Screen refreshing={loading} onRefresh={() => (search ? runSearch(search.text) : loadDiscover())}>
-      {seerr.error ? <EmptyState>{seerr.error}</EmptyState> : null}
-      <SearchBar
-        placeholder={t.searchMedia}
-        value={query}
-        onChangeText={(text) => {
+    <Screen
+      refreshing={loading}
+      onRefresh={() => (search ? runSearch(search.text) : loadDiscover())}
+      search={{
+        placeholder: t.searchMedia,
+        value: query,
+        onChangeText: (text) => {
           setQuery(text);
           if (!text.trim()) setSearch(null);
-        }}
-        onSubmitEditing={() => runSearch(query)}
-      />
+        },
+        onSubmit: (text) => runSearch(text)
+      }}
+    >
+      {seerr.error ? <EmptyState>{seerr.error}</EmptyState> : null}
       {search ? (
         <Card title={t.results}>
           {search.results.length ? <PosterGrid items={search.results} /> : <EmptyState>{loading ? `${t.loading}…` : mt.nothingFound}</EmptyState>}

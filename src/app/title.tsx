@@ -1,10 +1,10 @@
 import * as Haptics from "expo-haptics";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useCallback, useEffect, useState } from "react";
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Card, CheckItem, EmptyState, flip, Glass, Icon, ListRow, RowButton, type } from "@/components/drift";
+import { Card, CheckItem, EmptyState, Icon, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { RequestOptions, useRequestOptions } from "@/components/request-options";
 import { CastCard, Chip, FactRows, openDiscover, Poster, PosterRail, StatusPill } from "@/components/seerr-parts";
@@ -118,19 +118,10 @@ export default function Title() {
     }
   };
 
-  const back = (
-    <Glass interactive style={[styles.backButton, { top: insets.top + 8 }]}>
-      <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t.back} style={[styles.glassPress, flip]}>
-        <Icon name="chevron-left" size={22} color={colors.ink} />
-      </Pressable>
-    </Glass>
-  );
-
   if (!item) {
     return (
       <View style={[styles.shell, { paddingTop: insets.top + 64, paddingHorizontal: space.xl }]}>
         <EmptyState>{failed ?? (seerr.ready && !seerr.connected ? t.seerrConnect : `${t.loading}…`)}</EmptyState>
-        {back}
       </View>
     );
   }
@@ -378,7 +369,6 @@ export default function Title() {
           <PosterRail title={mt.similar} items={similar} />
         </View>
       </ScrollView>
-      {back}
     </View>
   );
 }
@@ -413,6 +403,4 @@ const styles = StyleSheet.create({
   ratings: { flexDirection: "row", gap: space.md },
   rating: { flex: 1, gap: space.xs, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, padding: space.md, alignItems: "flex-start" },
   ratingValue: { fontFamily: fonts.medium, fontSize: textSize.title3, color: colors.ink },
-  backButton: { position: "absolute", start: space.xl, width: 44, height: 44, borderRadius: radius.pill },
-  glassPress: { flexGrow: 1, minHeight: 44, alignItems: "center", justifyContent: "center" }
 });

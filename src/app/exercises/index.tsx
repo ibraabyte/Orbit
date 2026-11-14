@@ -4,7 +4,7 @@ import { Text, View } from "react-native";
 import { Badge, Card, EmptyState, ListRow, type } from "@/components/drift";
 import { Chip, ExerciseThumb } from "@/components/exercise-ui";
 import { useOverlays } from "@/components/overlays";
-import { BleedRow, Button, Loading, Screen, SearchBar } from "@/components/screen";
+import { BleedRow, Button, Loading, Screen } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, exerciseSubtitle, GYM_EQUIPMENT, hiddenNote, injuryNote, label, MUSCLES, NO_EQUIPMENT, type ExerciseSearch, type GymEquipment, type Muscle } from "@/lib/exercises";
 import { space, textSize } from "@/components/theme";
@@ -76,8 +76,7 @@ export default function Exercises() {
   const gymEmpty = onlyMyGym && gym !== null && gym.equipment.length === 0;
 
   return (
-    <Screen refreshing={loading && !result} onRefresh={() => void load(0)}>
-      <SearchBar placeholder={et.searchExercises} value={query} onChangeText={setQuery} autoCorrect={false} />
+    <Screen refreshing={loading && !result} onRefresh={() => void load(0)} search={{ placeholder: et.searchExercises, value: query, onChangeText: setQuery }}>
       <BleedRow>
         <Chip label={et.onlyMyGym} icon="home" on={onlyMyGym} onPress={() => setOnlyMyGym(!onlyMyGym)} />
         <Chip label={equipment ? label(equipment) : et.equipment} icon="tool" on={Boolean(equipment)} onPress={pickEquipment} />

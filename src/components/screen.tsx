@@ -1,10 +1,11 @@
-import { router, usePathname } from "expo-router";
-import { useEffect, useRef, type ReactNode } from "react";
+import { router, Stack, usePathname } from "expo-router";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import type { SearchBarCommands } from "react-native-screens";
 import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View, type TextInputProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Card, flip, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
+import { Card, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
 import { useReduceMotion } from "@/components/motion";
-import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
+import { colors, fonts, radius, space, textSize, usePalette, type Palette } from "@/components/theme";
 import { et } from "@/lib/exercises";
 import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
@@ -94,13 +95,20 @@ export function openCapture(text?: string) {
   router.push({ pathname: "/capture", params: text ? { text } : {} });
 }
 
-// The black ground behind everything. Tab screens pass header; stack screens get theirs from the route.
-// On a wide screen (iPad) the content sits in a centered column, so cards and rows keep a readable width.
+/** The title a stack route shows in its native header, from its path ("/tasks"). */
+export function stackTitle(path: string) {
+  return stackScreens[path]?.title ?? (path.startsWith("/exercises/") ? et.exercises : path.startsWith("/task/") ? t.task : undefined);
+}
+
+// The black ground behind everything. Tab screens pass header; stack screens get the native header (title from the
+// route, set in src/app/_layout.tsx) and their capture hint at the top. On a wide screen (iPad) the content sits in a
+// centered column, so cards and rows keep a readable width.
 export function Screen({
   header,
   title,
   wide,
   stackAction,
+  search,
   banner,
   refreshing,
   onRefresh,
@@ -110,56 +118,114 @@ export function Screen({
   title?: string; // a stack screen whose title depends on what it shows (a genre, a person)
   wide?: boolean; // the screen uses Columns, so it may grow past the usual column width
   stackAction?: { label: string; onPress: () => void };
+  search?: ScreenSearch; // a native search field in the header, under the large title
   banner?: ReactNode;
   refreshing?: boolean;
   onRefresh?: () => void;
   children: ReactNode;
 }) {
   const insets = useSafeAreaInsets();
+  const path = usePathname();
+  const palette = usePalette();
+  // On a stack screen the spinner only answers a pull. Shown for a load the screen starts itself, iOS shifts the content
+  // under the large title and leaves a gap; that load shows its own loading state instead. Tab screens are unchanged.
+  const [pulled, setPulled] = useState(false);
+  useEffect(() => {
+    if (!refreshing) setPulled(false);
+  }, [refreshing]);
+  const searchBar = useRef<SearchBarCommands>(null);
+  // The header field keeps its own text; a query that arrives with the screen (a link) is written into it once.
+  const initialQuery = useRef(search?.value);
+  useEffect(() => {
+    if (initialQuery.current) searchBar.current?.setText(initialQuery.current);
+  }, []);
   // Tab screens leave room for the floating tab bar; beside the iPad sidebar there is none.
   const sidebar = useSidebar();
-  const bottom = header && !sidebar ? TAB_BAR_SPACE : 48;
+  const stack = !header;
+  const bottom = header && !sidebar ? TAB_BAR_SPACE : space.huge;
+  const hint = stack ? stackScreens[path]?.hint : undefined;
+  // The ScrollView comes first, so the native large title collapses as it scrolls; on iOS it insets itself under the
+  // header and above the home indicator.
+  const scroll = (
+    <ScrollView
+      style={styles.shell}
+      contentInsetAdjustmentBehavior={stack ? "automatic" : "never"}
+      contentContainerStyle={[styles.content, styles.column, wide && { maxWidth: WIDE_MAX_WIDTH }, { paddingTop: stack || banner ? space.sm : insets.top + space.sm, paddingBottom: bottom }]}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={(pulled || !stack) && Boolean(refreshing)}
+            onRefresh={() => {
+              setPulled(true);
+              onRefresh();
+            }}
+            tintColor={colors.onShellMuted}
+          />
+        ) : undefined
+      }
+    >
+      {header}
+      {hint ? <CaptureHint hint={hint} /> : null}
+      {children}
+    </ScrollView>
+  );
+  if (stack) {
+    return (
+      <>
+        {scroll}
+        <Stack.Screen
+          options={{
+            ...(title !== undefined && { title }),
+            ...headerAction(stackAction, palette),
+            ...(search && {
+              headerSearchBarOptions: {
+                ref: searchBar,
+                placeholder: search.placeholder,
+                placement: "stacked",
+                hideWhenScrolling: false, // the same as set in src/app/_layout.tsx
+                autoCapitalize: "none",
+                tintColor: palette.link,
+                textColor: palette.ink,
+                onChangeText: (event) => search.onChangeText(event.nativeEvent.text),
+                onSearchButtonPress: (event) => search.onSubmit?.(event.nativeEvent.text),
+                onCancelButtonPress: () => search.onChangeText("")
+              }
+            })
+          }}
+        />
+      </>
+    );
+  }
   return (
     <View style={styles.shell}>
       {banner ? <View style={{ paddingTop: insets.top }}>{banner}</View> : null}
-      <ScrollView
-        style={styles.fill}
-        contentInsetAdjustmentBehavior="never"
-        contentContainerStyle={[styles.content, styles.column, wide && { maxWidth: WIDE_MAX_WIDTH }, { paddingTop: banner ? 8 : insets.top + 8, paddingBottom: bottom }]}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.onShellMuted} /> : undefined}
-      >
-        {header ?? <StackHeader action={stackAction} title={title} />}
-        {children}
-      </ScrollView>
+      {scroll}
     </View>
   );
 }
 
-function StackHeader({ action, title }: { action?: { label: string; onPress: () => void }; title?: string }) {
-  const path = usePathname();
-  // One exercise's page sits under the library.
-  const meta = stackScreens[path] ?? (path.startsWith("/exercises/") ? { title: et.exercises } : path.startsWith("/task/") ? { title: t.task } : undefined);
-  return (
-    <View style={{ gap: space.md }}>
-      <View style={styles.stackBar}>
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t.back} style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}>
-          <View style={flip}>
-            <Icon name="chevron-left" size={22} color={colors.ink} />
-          </View>
-        </Pressable>
-        <Text style={styles.stackTitle} accessibilityRole="header">
-          {title ?? meta?.title}
-        </Text>
-        {action ? (
-          <Pressable onPress={action.onPress} accessibilityRole="button" style={styles.stackAction}>
-            <Text style={[type.pill, { fontFamily: fonts.semibold, color: colors.accentInk }]}>{action.label}</Text>
-          </Pressable>
-        ) : null}
-      </View>
-      {meta?.hint ? <CaptureHint hint={meta.hint} /> : null}
-    </View>
-  );
+type ScreenSearch = { placeholder: string; value: string; onChangeText: (text: string) => void; onSubmit?: (text: string) => void };
+
+// A stack screen's one action (Save, Finish): a native bar button in sand on iOS, a sand pill on Android. Bar button
+// colours must be plain strings (a dynamic colour is dropped), so they come from the current palette. (A filled
+// "prominent" button ignores the label colour, which leaves white text on light sand in dark mode.)
+function headerAction(action: { label: string; onPress: () => void } | undefined, palette: Palette) {
+  if (!action) return { unstable_headerRightItems: () => [], headerRight: undefined };
+  if (process.env.EXPO_OS === "ios") {
+    return {
+      unstable_headerRightItems: () => [
+        { type: "button" as const, label: action.label, onPress: action.onPress, tintColor: palette.link, labelStyle: { fontFamily: fonts.semibold } }
+      ]
+    };
+  }
+  return {
+    headerRight: () => (
+      <Pressable onPress={action.onPress} accessibilityRole="button" style={({ pressed }) => [styles.stackAction, pressed && { opacity: 0.8 }]}>
+        <Text style={[type.pill, { fontFamily: fonts.semibold, color: colors.accentInk }]}>{action.label}</Text>
+      </Pressable>
+    )
+  };
 }
 
 /** Dashed bar with the sand + and an example line for this section; opens Capture. */
@@ -375,7 +441,6 @@ const buttonStyles = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
   shell: { flex: 1, backgroundColor: colors.shell },
   content: { paddingHorizontal: space.xl, gap: space.lg },
   column: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
@@ -384,10 +449,7 @@ const styles = StyleSheet.create({
   groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, minHeight: 20, paddingHorizontal: space.xs },
   tabHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.md, paddingTop: space.xs, paddingBottom: space.xxs },
   headerButton: { minHeight: 44, minWidth: 44, paddingHorizontal: space.md, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.sm, borderRadius: radius.tile, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
-  stackBar: { flexDirection: "row", alignItems: "center", gap: space.sm },
-  backButton: { width: 44, height: 44, borderRadius: radius.tile, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-  stackTitle: { flex: 1, fontFamily: fonts.semibold, fontSize: textSize.title1, lineHeight: lineHeights.title1, letterSpacing: -0.4, color: colors.onShell },
-  stackAction: { minHeight: 40, paddingHorizontal: space.md, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  stackAction: { minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   bleed: { marginHorizontal: -space.xl, flexGrow: 0 },
   bleedContent: { paddingHorizontal: space.xl, gap: space.sm },
   hint: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.md, borderWidth: 1, borderStyle: "dashed", borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },

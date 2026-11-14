@@ -6,7 +6,7 @@ import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import { Card, EmptyState, Icon, type } from "@/components/drift";
 import { Chip } from "@/components/exercise-ui";
 import { useOverlays, type SheetOption } from "@/components/overlays";
-import { BleedRow, Button, ErrorState, Input, Loading, Screen, SearchBar, Segments } from "@/components/screen";
+import { BleedRow, Button, ErrorState, Input, Loading, Screen, Segments } from "@/components/screen";
 import { colors, radius, space } from "@/components/theme";
 import { ApiError } from "@/lib/api";
 import { getApi } from "@/lib/backend";
@@ -205,7 +205,7 @@ export default function Saver() {
   };
 
   return (
-    <Screen refreshing={loading && items !== null} onRefresh={load}>
+    <Screen refreshing={loading && items !== null} onRefresh={load} search={{ placeholder: st.search, value: query, onChangeText: setQuery }}>
       <View style={styles.saveRow}>
         <Input
           value={link}
@@ -238,7 +238,6 @@ export default function Saver() {
       ) : null}
 
       <Segments options={STATUS_FILTERS} value={status} onChange={setStatus} labels={st.statuses} small />
-      <SearchBar placeholder={st.search} value={query} onChangeText={setQuery} />
 
       {error && !items ? <ErrorState detail={error} onRetry={() => void load()} /> : null}
       {!items && !error ? <Loading /> : null}
