@@ -4,7 +4,7 @@ import { Alert, DevSettings, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
 import { resyncWidget } from "@/hooks/use-widget-sync";
 import { Avatar, BentoGrid, BentoTile, Card, type } from "@/components/drift";
-import { useOverlays } from "@/components/overlays";
+import { ChoiceMenu, useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
 import { colors, space, textSize } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -18,7 +18,7 @@ import type { Numerals } from "@/lib/numerals";
 
 export default function Settings() {
   const { data, userId } = useDashboardData();
-  const { sheet, toast } = useOverlays();
+  const { toast } = useOverlays();
   const [lock, setLock] = useState(true);
   const [numerals, setNumerals] = useState<Numerals>(currentNumerals);
   // The AI the person agreed to send their data to for Ask Orbit; null when not agreed.
@@ -68,14 +68,7 @@ export default function Settings() {
     Updates.reloadAsync().catch(() => toast(t.restartForNumerals));
   };
   const numeralsLabel = { arab: t.numeralsArab, latn: t.numeralsLatn };
-  const pickNumerals = () =>
-    sheet({
-      title: t.numerals,
-      options: (["arab", "latn"] as const).map((choice) => ({
-        label: `${choice === numerals ? "● " : "○ "}${numeralsLabel[choice]}`,
-        run: () => changeNumerals(choice)
-      }))
-    });
+  const numeralChoices = (["arab", "latn"] as const).map((choice) => ({ label: numeralsLabel[choice], selected: choice === numerals, run: () => changeNumerals(choice) }));
 
   const track = { true: colors.accent, false: colors.hairline };
 
@@ -113,7 +106,9 @@ export default function Settings() {
             if (message) toast(message);
           }}
         />
-        <BentoTile icon="hash" title={t.numerals} detail={numeralsLabel[numerals]} label={`${t.numerals}, ${numeralsLabel[numerals]}`} onPress={pickNumerals} />
+        <ChoiceMenu fill title={t.numerals} choices={numeralChoices} style={{ flexGrow: 1, flexBasis: "40%", minWidth: 0 }}>
+          <BentoTile icon="hash" title={t.numerals} detail={numeralsLabel[numerals]} label={`${t.numerals}, ${numeralsLabel[numerals]}`} onPress={() => undefined} />
+        </ChoiceMenu>
         <BentoTile icon="link" title={t.integrations} detail={t.integrationsDetail} href="/integrations" />
         {askConsent ? (
           <View style={{ flexBasis: "100%" }}>

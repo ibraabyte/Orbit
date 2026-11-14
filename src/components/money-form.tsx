@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Text, View } from "react-native";
 import { RowButton, type } from "@/components/drift";
-import { useOverlays } from "@/components/overlays";
+import { ChoiceMenu } from "@/components/overlays";
 import { Button, Input } from "@/components/screen";
 import { t } from "@/lib/i18n";
 import { parseMoneyInput } from "@/lib/wealth";
@@ -66,13 +66,14 @@ export function FieldLabel({ children }: { children: string }) {
   return <Text style={type.rowSubtitle}>{children}</Text>;
 }
 
-/** Picks one of many options from a sheet; the button shows the current choice. */
+/** Picks one of many options from a menu on the button; the button shows the current choice. */
 export function ChoiceButton<T extends string>({ title, value, options, labels, onChange }: { title: string; value: T; options: readonly T[]; labels: Record<T, string>; onChange: (next: T) => void }) {
-  const { sheet } = useOverlays();
   return (
     <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
       <Text style={[type.rowSubtitle, { flex: 1 }]}>{title}</Text>
-      <RowButton outline label={labels[value]} onPress={() => sheet({ title, options: options.map((option) => ({ label: `${option === value ? "● " : ""}${labels[option]}`, run: () => onChange(option) })) })} />
+      <ChoiceMenu title={title} choices={options.map((option) => ({ label: labels[option], selected: option === value, run: () => onChange(option) }))}>
+        <RowButton outline label={labels[value]} onPress={() => undefined} />
+      </ChoiceMenu>
     </View>
   );
 }

@@ -6,7 +6,7 @@ import { Badge, Card, CardLink, Chevron, CountBadge, EmptyState, Hero, Icon, Ico
 import { DoseRow } from "@/components/medication-ui";
 import { MorningBriefCard } from "@/components/morning-brief-card";
 import { WeeklySummaryCard } from "@/components/weekly-summary";
-import { useOverlays } from "@/components/overlays";
+import { ChoiceMenu, useOverlays } from "@/components/overlays";
 import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, Skeleton, TabHeader } from "@/components/screen";
 import { SwipeToDone } from "@/components/swipe-to-done";
 import { TaskRow } from "@/components/task-row";
@@ -63,7 +63,7 @@ export default function Today() {
   const { data, loading, error, refresh, act } = useDashboardData();
   const { next: prayer, today: prayersToday } = usePrayerTimes();
   const readiness = useReadiness();
-  const { sheet, toast } = useOverlays();
+  const { toast } = useOverlays();
   const now = useNow();
   const [hidden, setHidden] = useState<OptionalSection[]>([]);
   const show = (section: OptionalSection) => !hidden.includes(section);
@@ -109,18 +109,17 @@ export default function Today() {
   // What is still ahead today (not prayers: the next one has its own card).
   const upNext = rail.entries.filter((entry): entry is Extract<RailEntry, { kind: "event" }> => entry.kind === "event" && !entry.past).slice(0, 8);
 
-  const customize = () =>
-    sheet({
-      title: t.customize,
-      options: optional.filter(([id]) => (id === "money" ? on("finance") : id === "health" ? on("health") : id === "workout" ? on("exercises") : id === "meds" ? on("medications") : true)).map(([id, label]) => ({
-        label: `${show(id) ? "●" : "○"} ${label}`,
+  const cardChoices = optional
+    .filter(([id]) => (id === "money" ? on("finance") : id === "health" ? on("health") : id === "workout" ? on("exercises") : id === "meds" ? on("medications") : true))
+    .map(([id, label]) => ({
+        label,
+        selected: show(id),
         run: () => {
           const next = show(id) ? [...hidden, id] : hidden.filter((item) => item !== id);
           setHidden(next);
           void AsyncStorage.setItem(hiddenKey, JSON.stringify(next)).catch(() => undefined);
         }
-      }))
-    });
+      }));
 
   // Paid: an installment is ticked off; a repeating bill moves to its next date, a one-off one is marked paid.
   const pay = (item: MoneyDue) => {
@@ -141,7 +140,11 @@ export default function Today() {
     return refresh();
   };
 
-  const header = <TabHeader kicker={formatDate(now, { weekday: "long", day: "numeric", month: "short" })} title={t.today} action={<HeaderButton icon="sliders" label={t.customize} onPress={customize} />} />;
+  const header = <TabHeader kicker={formatDate(now, { weekday: "long", day: "numeric", month: "short" })} title={t.today} action={
+        <ChoiceMenu title={t.customize} choices={cardChoices} multiple>
+          <HeaderButton icon="sliders" label={t.customize} onPress={() => undefined} />
+        </ChoiceMenu>
+      } />;
 
   if (!hasData) {
     return (

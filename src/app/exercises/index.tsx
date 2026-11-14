@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { Badge, Card, EmptyState, ListRow, type } from "@/components/drift";
 import { Chip, ExerciseThumb } from "@/components/exercise-ui";
-import { useOverlays } from "@/components/overlays";
+import { ChoiceMenu } from "@/components/overlays";
 import { BleedRow, Button, Loading, Screen } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, exerciseSubtitle, GYM_EQUIPMENT, hiddenNote, injuryNote, label, MUSCLES, NO_EQUIPMENT, type ExerciseSearch, type GymEquipment, type Muscle } from "@/lib/exercises";
@@ -12,7 +12,6 @@ import { space, textSize } from "@/components/theme";
 // Search the exercise library. "Only my gym" keeps what your gym's equipment allows; active injuries hide
 // exercises that mainly work the injured area unless you ask to see them.
 export default function Exercises() {
-  const { sheet } = useOverlays();
   const [query, setQuery] = useState("");
   const [muscle, setMuscle] = useState<Muscle | null>(null);
   const [equipment, setEquipment] = useState<string | null>(null);
@@ -63,14 +62,7 @@ export default function Exercises() {
     return () => clearTimeout(timer);
   }, [load, query]);
 
-  const pickEquipment = () =>
-    sheet({
-      title: et.equipment,
-      options: [null, NO_EQUIPMENT, ...GYM_EQUIPMENT].map((item) => ({
-        label: `${equipment === item ? "●" : "○"} ${item ? label(item) : et.anyEquipment}`,
-        run: () => setEquipment(item)
-      }))
-    });
+  const equipmentChoices = [null, NO_EQUIPMENT, ...GYM_EQUIPMENT].map((item) => ({ label: item ? label(item) : et.anyEquipment, selected: equipment === item, run: () => setEquipment(item) }));
 
   const note = result ? hiddenNote(result) : null;
   const gymEmpty = onlyMyGym && gym !== null && gym.equipment.length === 0;
@@ -79,7 +71,9 @@ export default function Exercises() {
     <Screen refreshing={loading && !result} onRefresh={() => void load(0)} search={{ placeholder: et.searchExercises, value: query, onChangeText: setQuery }}>
       <BleedRow>
         <Chip label={et.onlyMyGym} icon="home" on={onlyMyGym} onPress={() => setOnlyMyGym(!onlyMyGym)} />
-        <Chip label={equipment ? label(equipment) : et.equipment} icon="tool" on={Boolean(equipment)} onPress={pickEquipment} />
+        <ChoiceMenu title={et.equipment} choices={equipmentChoices}>
+          <Chip label={equipment ? label(equipment) : et.equipment} icon="tool" on={Boolean(equipment)} onPress={() => undefined} />
+        </ChoiceMenu>
         <Chip label={et.showInjured} icon="alert-triangle" on={includeInjured} onPress={() => setIncludeInjured(!includeInjured)} />
       </BleedRow>
       <BleedRow>

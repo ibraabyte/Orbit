@@ -1,8 +1,8 @@
 import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
-import { Alert, Linking, Platform, Pressable, Switch, Text, View } from "react-native";
+import { Alert, Linking, Platform, Switch, Text, View } from "react-native";
 import { Card, Chevron, type } from "@/components/drift";
-import { useOverlays } from "@/components/overlays";
+import { ChoiceMenu } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
 import { colors, space } from "@/components/theme";
 import { loadMorningSettings, saveMorningSettings } from "@/hooks/use-morning-brief";
@@ -33,7 +33,6 @@ const clockAt = (hour: number, minute: number) => formatClock(new Date(2000, 0, 
 const prayerName = isArabic ? prayerNamesAr : prayerNamesEn;
 
 export default function NotificationsScreen() {
-  const { sheet } = useOverlays();
   const sections = useSections();
   const [prefs, setPrefs] = useState<NotificationPrefs>(NOTIFICATION_DEFAULT);
   const [morning, setMorning] = useState<MorningSettings>(MORNING_DEFAULT);
@@ -75,22 +74,16 @@ export default function NotificationsScreen() {
     );
   };
 
-  const pickMorningTime = () =>
-    sheet({
-      title: t.morningAlertTime,
-      options: Array.from({ length: 12 }, (_, index) => ({ hour: 5 + Math.floor(index / 2), minute: (index % 2) * 30 })).map(({ hour, minute }) => ({
-        label: `${morning.hour === hour && morning.minute === minute ? "● " : "○ "}${clockAt(hour, minute)}`,
-        run: () => void changeMorning({ ...morning, hour, minute })
-      }))
-    });
-  const pickHeadsUpTime = () =>
-    sheet({
-      title: t.notifHeadsUpTime,
-      options: Array.from({ length: 15 }, (_, index) => 7 + index).map((hour) => ({
-        label: `${prefs.headsUp.hour === hour && prefs.headsUp.minute === 0 ? "● " : "○ "}${clockAt(hour, 0)}`,
-        run: () => void change({ ...prefs, headsUp: { hour, minute: 0 } })
-      }))
-    });
+  const morningTimes = Array.from({ length: 12 }, (_, index) => ({ hour: 5 + Math.floor(index / 2), minute: (index % 2) * 30 })).map(({ hour, minute }) => ({
+    label: clockAt(hour, minute),
+    selected: morning.hour === hour && morning.minute === minute,
+    run: () => void changeMorning({ ...morning, hour, minute })
+  }));
+  const headsUpTimes = Array.from({ length: 15 }, (_, index) => 7 + index).map((hour) => ({
+    label: clockAt(hour, 0),
+    selected: prefs.headsUp.hour === hour && prefs.headsUp.minute === 0,
+    run: () => void change({ ...prefs, headsUp: { hour, minute: 0 } })
+  }));
 
   const moneyOn = prefs.kinds.bills || prefs.kinds.installments || prefs.kinds.car;
 
@@ -116,12 +109,14 @@ export default function NotificationsScreen() {
           <Switch accessibilityLabel={t.morningAlert} trackColor={track} value={morning.enabled} onValueChange={(on) => void changeMorning({ ...morning, enabled: on })} />
         </Setting>
         {morning.enabled ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={`${t.morningAlertTime}, ${clockAt(morning.hour, morning.minute)}`} onPress={pickMorningTime}>
-            <Setting inset label={t.morningAlertTime}>
-              <Text style={type.rowSubtitle}>{clockAt(morning.hour, morning.minute)}</Text>
-              <Chevron />
-            </Setting>
-          </Pressable>
+          <ChoiceMenu fill title={t.morningAlertTime} choices={morningTimes}>
+            <View accessible accessibilityRole="button" accessibilityLabel={`${t.morningAlertTime}, ${clockAt(morning.hour, morning.minute)}`}>
+              <Setting inset label={t.morningAlertTime}>
+                <Text style={type.rowSubtitle}>{clockAt(morning.hour, morning.minute)}</Text>
+                <Chevron />
+              </Setting>
+            </View>
+          </ChoiceMenu>
         ) : null}
       </Card>
       <Card title={rx.medications} list>
@@ -133,12 +128,14 @@ export default function NotificationsScreen() {
         {toggle("installments", t.notifInstallments, t.notifDayBefore)}
         {toggle("car", t.notifCar, t.notifCarDetail)}
         {moneyOn ? (
-          <Pressable accessibilityRole="button" accessibilityLabel={`${t.notifHeadsUpTime}, ${clockAt(prefs.headsUp.hour, prefs.headsUp.minute)}`} onPress={pickHeadsUpTime}>
-            <Setting label={t.notifHeadsUpTime} detail={t.notifHeadsUpDetail}>
-              <Text style={type.rowSubtitle}>{clockAt(prefs.headsUp.hour, prefs.headsUp.minute)}</Text>
-              <Chevron />
-            </Setting>
-          </Pressable>
+          <ChoiceMenu fill title={t.notifHeadsUpTime} choices={headsUpTimes}>
+            <View accessible accessibilityRole="button" accessibilityLabel={`${t.notifHeadsUpTime}, ${clockAt(prefs.headsUp.hour, prefs.headsUp.minute)}`}>
+              <Setting label={t.notifHeadsUpTime} detail={t.notifHeadsUpDetail}>
+                <Text style={type.rowSubtitle}>{clockAt(prefs.headsUp.hour, prefs.headsUp.minute)}</Text>
+                <Chevron />
+              </Setting>
+            </View>
+          </ChoiceMenu>
         ) : null}
         {toggle("budget", t.notifBudget, t.notifBudgetDetail)}
       </Card>

@@ -1,9 +1,10 @@
 import * as Haptics from "expo-haptics";
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { DateTimePicker } from "@expo/ui/community/datetime-picker";
-import { ActionSheetIOS, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { MenuView } from "@expo/ui/community/menu";
+import { ActionSheetIOS, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from "react-native";
 import { Glass, Icon, type } from "@/components/drift";
-import { colors, fonts, radius, scrim, shadow, space, textSize, usePalette } from "@/components/theme";
+import { colors, fonts, radius, scrim, shadow, space, textSize, usePalette, useScheme } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
 // One action sheet, one date picker and one toast for the whole app, replacing alerts and typed dates. The sheet and the
@@ -116,6 +117,40 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
         </View>
       ) : null}
     </OverlayContext.Provider>
+  );
+}
+
+export type Choice = { label: string; selected: boolean; run: () => void };
+
+/** A native menu on the control it belongs to (a pull-down on iOS, a Material dropdown on Android), with a check on the
+ * current choice. One choice by default: picking the current one again does nothing. multiple: each item toggles.
+ * fill: the control takes the full width of its slot (a row, a grid tile); the menu's host otherwise sizes it to its
+ * content, so the slot is measured and its size handed to the control. */
+export function ChoiceMenu({ title, choices, multiple, fill, style, children }: { title?: string; choices: Choice[]; multiple?: boolean; fill?: boolean; style?: StyleProp<ViewStyle>; children: ReactNode }) {
+  const scheme = useScheme();
+  const [slot, setSlot] = useState<{ width: number; height: number } | null>(null);
+  const menu = (
+    <MenuView
+      title={title}
+      colorScheme={scheme}
+      style={fill ? undefined : style}
+      actions={choices.map((choice, index) => ({ id: String(index), title: choice.label, state: choice.selected ? "on" : "off" }))}
+      onPressAction={({ nativeEvent }) => {
+        const choice = choices[Number(nativeEvent.event)];
+        if (choice && (multiple || !choice.selected)) choice.run();
+      }}
+    >
+      {/* The menu opens on the tap; the control inside only shows what it is. */}
+      <View pointerEvents="none" style={fill && slot ? { width: slot.width, minHeight: slot.height } : undefined}>
+        {children}
+      </View>
+    </MenuView>
+  );
+  if (!fill) return menu;
+  return (
+    <View style={style} onLayout={({ nativeEvent }) => setSlot((current) => (current?.width === nativeEvent.layout.width ? current : { width: nativeEvent.layout.width, height: nativeEvent.layout.height }))}>
+      {menu}
+    </View>
   );
 }
 
