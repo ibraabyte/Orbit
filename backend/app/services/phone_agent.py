@@ -292,6 +292,7 @@ async def talk(twilio: Twilio, stream_sid: str, ai: Realtime, setup: dict[str, A
         await asyncio.sleep(GOODBYE_SECONDS)
         await end()
 
+    timers: list[asyncio.Task] = []
     await ai.send(json.dumps(setup))
     # The agent speaks first: it introduces itself as soon as someone answers.
     await ai.send(json.dumps({"type": "response.create"}))
@@ -360,7 +361,7 @@ async def talk(twilio: Twilio, stream_sid: str, ai: Realtime, setup: dict[str, A
                     )
                 )
                 await ai.send(json.dumps({"type": "response.create"}))
-                asyncio.create_task(end_later())
+                timers.append(asyncio.create_task(end_later()))
             elif kind == "response.done" and state["ending"]:
                 # The goodbye is the first response after finish_call that isn't the function call itself. Twilio
                 # sends this mark back once the audio before it has played; then Orbit hangs up.
@@ -383,7 +384,7 @@ async def talk(twilio: Twilio, stream_sid: str, ai: Realtime, setup: dict[str, A
         if not listening.done():
             await end()
     finally:
-        for task in tasks:
+        for task in tasks + timers:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
     return result

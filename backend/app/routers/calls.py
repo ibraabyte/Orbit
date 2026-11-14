@@ -265,8 +265,12 @@ def delete_call(call_id: uuid.UUID, user_id: UserId, db: Db):
 
 
 def _stream_url(request: Request) -> str:
+    # Behind Coolify's proxy the forwarded scheme is https, so this is wss://.
     url = str(request.url_for("call_stream"))
-    return "wss://" + url.removeprefix("https://") if url.startswith("https://") else "ws://" + url.removeprefix("http://")
+    for plain, secure in (("http://", "ws://"), ("https://", "wss://")):
+        if url.startswith(plain):
+            return secure + url.removeprefix(plain)
+    return url
 
 
 def _hash(key: str) -> str:
