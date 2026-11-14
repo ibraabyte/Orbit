@@ -1,3 +1,4 @@
+import * as SecureStore from "expo-secure-store";
 import { Appearance, DynamicColorIOS, useColorScheme, type OpaqueColorValue } from "react-native";
 import { isArabic } from "@/lib/i18n";
 
@@ -99,7 +100,34 @@ export const day: Palette = {
   dangerOnShell: "#b3402e"
 };
 
-// The phone's setting at launch. Expo Go and builds report it because app.json says "automatic".
+// The user's pick in Settings: follow the phone, or always light or dark. Read synchronously and applied before
+// `scheme` below, so the first frame already has it. Locked keychain or web: follow the phone.
+export type AppearanceChoice = "system" | "light" | "dark";
+const APPEARANCE_KEY = "orbit.appearance";
+function savedAppearance(): AppearanceChoice {
+  try {
+    const saved = SecureStore.getItem(APPEARANCE_KEY);
+    return saved === "light" || saved === "dark" ? saved : "system";
+  } catch {
+    return "system";
+  }
+}
+let appearance = savedAppearance();
+if (appearance !== "system") Appearance.setColorScheme(appearance);
+export const currentAppearance = () => appearance;
+
+/** Applies and saves the pick. iOS colours follow at once; Android reloads (see src/app/_layout.tsx). */
+export function setAppearance(next: AppearanceChoice) {
+  appearance = next;
+  Appearance.setColorScheme(next === "system" ? "unspecified" : next);
+  try {
+    SecureStore.setItem(APPEARANCE_KEY, next);
+  } catch {
+    // Nowhere to keep it (web preview): it lasts until the app closes.
+  }
+}
+
+// The setting at launch (the pick above, else the phone's). Expo Go and builds report it because app.json says "automatic".
 export const scheme: "light" | "dark" = Appearance.getColorScheme() === "light" ? "light" : "dark";
 
 /** A colour from the theme: a plain string, or on iOS a native dynamic colour. Never build strings from it. */

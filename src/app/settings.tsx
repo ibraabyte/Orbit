@@ -6,7 +6,7 @@ import { resyncWidget } from "@/hooks/use-widget-sync";
 import { Avatar, Card, IconTile, ListRow, type } from "@/components/drift";
 import { ChoiceMenu, useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
-import { colors, space, textSize } from "@/components/theme";
+import { colors, currentAppearance, setAppearance, space, textSize, type AppearanceChoice } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSections } from "@/hooks/use-sections";
 import { clearAskConsent, loadAskConsent } from "@/hooks/use-ask-consent";
@@ -67,6 +67,9 @@ export default function Settings() {
     if (__DEV__ && typeof DevSettings.reload === "function") return DevSettings.reload();
     Updates.reloadAsync().catch(() => toast(t.restartForNumerals));
   };
+  const [look, setLook] = useState<AppearanceChoice>(currentAppearance);
+  const lookLabel = { system: t.appearanceSystem, light: t.appearanceLight, dark: t.appearanceDark };
+  const lookChoices = (["system", "light", "dark"] as const).map((choice) => ({ label: lookLabel[choice], selected: choice === look, run: () => (setAppearance(choice), setLook(choice)) }));
   const numeralsLabel = { arab: t.numeralsArab, latn: t.numeralsLatn };
   const numeralChoices = (["arab", "latn"] as const).map((choice) => ({ label: numeralsLabel[choice], selected: choice === numerals, run: () => changeNumerals(choice) }));
 
@@ -111,6 +114,9 @@ export default function Settings() {
             if (message) toast(message);
           }}
         />
+        <ChoiceMenu fill title={t.appearance} choices={lookChoices}>
+          <ListRow leading={<IconTile name="moon" />} title={t.appearance} meta={lookLabel[look]} chevron />
+        </ChoiceMenu>
         <ChoiceMenu fill title={t.numerals} choices={numeralChoices}>
           <ListRow leading={<IconTile name="hash" />} title={t.numerals} meta={numeralsLabel[numerals]} chevron />
         </ChoiceMenu>
