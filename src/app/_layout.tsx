@@ -25,6 +25,7 @@ import { clearDashboardCache, DashboardDataProvider } from "@/hooks/use-dashboar
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { clearWidget } from "@/hooks/use-widget-sync";
 import { hasServer, watchSession, type AppSession } from "@/lib/backend";
+import { t } from "@/lib/i18n";
 
 const configured = hasServer();
 // Sharing into Orbit needs the native share extension, which Expo Go doesn't have.
@@ -52,7 +53,16 @@ const nativeHeader = {
 // Sections opened from More get a large title that shrinks into the bar as you scroll. Screens one step further in
 // (one task, a form, a picker) keep the small title.
 const sectionScreens = ["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "habits", "health", "integrations", "library", "notifications", "media", "discover", "requests", "sections", "settings", "tasks", "vehicles", "whoop", "exercises/index", "gym", "injuries", "week", "training", "body", "plan", "medications"];
-const detailScreens = ["food-add", "food-photo", "food-scan", "health-goals", "person", "task/[id]", "exercises/[id]", "workout", "workout-pick", "plan-day", "plan-setup", "medication-edit"];
+const detailScreens = ["health-goals", "person", "task/[id]", "exercises/[id]", "workout", "plan-day"];
+// Self-contained tasks (add a food, pick an exercise, edit a medication) open as a sheet over what you were doing, with
+// Cancel in its header and swipe-down to close; on Android they push as before.
+const sheetScreens = ["food-add", "food-photo", "food-scan", "workout-pick", "plan-setup", "medication-edit"];
+const sheetHeader = {
+  presentation: "modal",
+  ...(process.env.EXPO_OS === "ios" && {
+    unstable_headerLeftItems: () => [{ type: "button" as const, label: t.cancel, onPress: () => router.back() }]
+  })
+} as const;
 // Screens with a search field under the large title. It is set here so the header has it from the first frame (added
 // later by the screen, the content would be laid out for a header without it); the screen fills in what it does.
 const searchScreens = ["library", "media", "exercises/index"];
@@ -134,6 +144,9 @@ export default function RootLayout() {
           ))}
           {detailScreens.map((name) => (
             <Stack.Screen key={name} name={name} options={{ ...nativeHeader, title: stackTitle(routePath(name)) ?? "" }} />
+          ))}
+          {sheetScreens.map((name) => (
+            <Stack.Screen key={name} name={name} options={{ ...nativeHeader, ...sheetHeader, title: stackTitle(routePath(name)) ?? "" }} />
           ))}
           {/* A film or show: the header sits clear over the backdrop, with only the back button. */}
           <Stack.Screen name="title" options={{ ...nativeHeader, headerTransparent: true, title: "" }} />
