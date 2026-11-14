@@ -5,6 +5,7 @@ import { useOverlays } from "@/components/overlays";
 import { Button, Loading, Screen } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, GYM_EQUIPMENT, label, NO_EQUIPMENT, orderedGym, toggleItem, type GymItem } from "@/lib/exercises";
+import { space } from "@/components/theme";
 
 // Your gym's equipment. Exercise search's "Only my gym" uses this list.
 export default function Gym() {
@@ -59,7 +60,7 @@ export default function Gym() {
 
   return (
     <Screen refreshing={loading} onRefresh={load} stackAction={changed && !saving ? { label: et.saveGym, onPress: () => void save() } : undefined}>
-      <Text style={[type.shellMuted, { paddingHorizontal: 4 }]}>{et.gymHint}</Text>
+      <Text style={[type.shellMuted, { paddingHorizontal: space.xs }]}>{et.gymHint}</Text>
       <Card title={et.gym} action={<Text style={type.rowSubtitle}>{et.gymCount(picked.length)}</Text>}>
         <ListRow title={label(NO_EQUIPMENT)} trailing={<CheckItem checked onPress={() => undefined} label={label(NO_EQUIPMENT)} />} />
         {GYM_EQUIPMENT.map((item) => {

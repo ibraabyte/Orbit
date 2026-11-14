@@ -4,7 +4,7 @@ import { Badge, Card, EmptyState, Hero, ListRow, RowButton, type } from "@/compo
 import { AmountEditor, AmountField, ChoiceButton, FieldLabel, FormButtons } from "@/components/money-form";
 import { useOverlays } from "@/components/overlays";
 import { Input, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
@@ -46,7 +46,7 @@ export default function Accounts() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      <Hero style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+      <Hero style={{ flexDirection: "column", alignItems: "flex-start", gap: space.xs }}>
         <Text style={[type.tileLabel, { color: colors.accentMuted }]}>{t.totalMoney}</Text>
         <Text style={[type.h1, { color: colors.heroInk }]}>{formatMoney(moneyTotal(accounts, currency), currency)}</Text>
       </Hero>
@@ -79,7 +79,7 @@ export default function Accounts() {
         )}
         {!accounts.length && !adding ? <EmptyState icon="briefcase">{t.moneyEmpty}</EmptyState> : null}
         {adding ? (
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: space.sm }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />
             <ChoiceButton title={t.kindLabel} value={kind} options={kinds} labels={t.accountKinds} onChange={setKind} />
             <FieldLabel>{t.balance}</FieldLabel>

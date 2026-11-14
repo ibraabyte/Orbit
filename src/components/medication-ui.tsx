@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import { Badge, RowButton, type, type BadgeTone } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
-import { colors, fonts } from "@/components/theme";
+import { colors, fonts, space, textSize } from "@/components/theme";
 import { useDoseActions } from "@/hooks/use-medications";
 import { formatClock24 } from "@/lib/i18n";
 import { rx, type DoseState, type ScheduledDose } from "@/lib/medications";
@@ -29,7 +29,7 @@ export function DoseRow({ entry, first }: { entry: ScheduledDose; first?: boolea
   return (
     <View style={[styles.row, first && { borderTopWidth: 0 }]}>
       <Text style={[styles.time, state === "due" && { color: colors.link }, state === "missed" && { color: colors.dangerOnShell }]}>{formatClock24(entry.at)}</Text>
-      <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+      <View style={{ flex: 1, minWidth: 0, gap: space.xs }}>
         <Text style={[type.rowTitle, !open && { color: colors.inkMuted }]} numberOfLines={2}>
           {medication.name}
         </Text>
@@ -47,7 +47,7 @@ export function DoseRow({ entry, first }: { entry: ScheduledDose; first?: boolea
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 56, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
-  time: { width: 48, fontFamily: fonts.semibold, fontSize: 12, color: colors.inkMuted, writingDirection: "ltr" },
-  meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 }
+  row: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 56, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
+  time: { width: 48, fontFamily: fonts.semibold, fontSize: textSize.caption1, color: colors.inkMuted, writingDirection: "ltr" },
+  meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.sm }
 });

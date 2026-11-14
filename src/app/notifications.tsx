@@ -4,7 +4,7 @@ import { Alert, Linking, Platform, Pressable, Switch, Text, View } from "react-n
 import { Card, Chevron, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { loadMorningSettings, saveMorningSettings } from "@/hooks/use-morning-brief";
 import { loadNotificationPrefs, saveNotificationPrefs } from "@/hooks/use-notification-prefs";
 import { useSections } from "@/hooks/use-sections";
@@ -18,8 +18,8 @@ import { prayerNamesAr, prayerNamesEn } from "@/lib/prayer-times";
 // A row in a card. The top row (first) has no line above it; inset rows sit under the switch they belong to.
 function Setting({ label, detail, first, inset, children }: { label: string; detail?: string; first?: boolean; inset?: boolean; children: React.ReactNode }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: inset ? 44 : 52, paddingVertical: inset ? 6 : 10, paddingStart: inset ? 16 : 0, borderTopWidth: first ? 0 : 1, borderTopColor: colors.surfaceInset }}>
-      <View style={{ flex: 1, gap: 2 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: space.md, minHeight: inset ? 44 : 52, paddingVertical: inset ? 6 : 10, paddingStart: inset ? 16 : 0, borderTopWidth: first ? 0 : 1, borderTopColor: colors.surfaceInset }}>
+      <View style={{ flex: 1, gap: space.xxs }}>
         <Text style={inset ? type.rowSubtitle : type.rowTitle}>{label}</Text>
         {detail ? <Text style={type.rowSubtitle}>{digits(detail)}</Text> : null}
       </View>
@@ -97,7 +97,7 @@ export default function NotificationsScreen() {
   return (
     <Screen>
       {systemOff ? (
-        <Card style={{ gap: 12 }}>
+        <Card style={{ gap: space.md }}>
           <Text style={type.rowTitle}>{t.notifSystemOff}</Text>
           <Button variant="outline" title={t.notifOpenSettings} onPress={() => void Linking.openSettings()} />
         </Card>

@@ -7,7 +7,7 @@ import { Card, EmptyState, Icon, type } from "@/components/drift";
 import { Chip } from "@/components/exercise-ui";
 import { useOverlays, type SheetOption } from "@/components/overlays";
 import { BleedRow, Button, ErrorState, Input, Loading, Screen, SearchBar, Segments } from "@/components/screen";
-import { colors, radius } from "@/components/theme";
+import { colors, radius, space } from "@/components/theme";
 import { ApiError } from "@/lib/api";
 import { getApi } from "@/lib/backend";
 import { digits, isArabic } from "@/lib/i18n";
@@ -289,13 +289,13 @@ function SavedRow({ item, busy, onPress, onMore, onToggle }: { item: Capture; bu
 }
 
 const styles = StyleSheet.create({
-  saveRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  row: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
+  saveRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  row: { flexDirection: "row", alignItems: "flex-start", gap: space.md, paddingVertical: space.md, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   thumb: { width: 64, height: 64, borderRadius: radius.control, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
   thumbEmpty: { alignItems: "center", justifyContent: "center" },
-  body: { flex: 1, gap: 3 },
-  side: { alignItems: "center", gap: 10 },
-  check: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: colors.inkFaint, alignItems: "center", justifyContent: "center" },
+  body: { flex: 1, gap: space.xs },
+  side: { alignItems: "center", gap: space.md },
+  check: { width: 26, height: 26, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.inkFaint, alignItems: "center", justifyContent: "center" },
   // Night: sand is a line here, never a fill (only the main button is filled).
   checkOn: { borderColor: colors.accent },
   more: { width: 26, height: 26, alignItems: "center", justifyContent: "center" }

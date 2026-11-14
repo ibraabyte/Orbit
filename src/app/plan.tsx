@@ -8,6 +8,7 @@ import { Button, Loading, Screen } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { t } from "@/lib/i18n";
 import { addDays, dayLabel, dayMuscles, planApi, pt, todayOf, type PlannedDay, type Week } from "@/lib/plan";
+import { space } from "@/components/theme";
 
 // The automatic plan: today's workout fitted to recovery, then the rest of the week. With no plan yet, a way to set one up.
 export default function PlanScreen() {
@@ -115,7 +116,7 @@ export default function PlanScreen() {
         })}
       </Card>
 
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: space.sm }}>
         <Button variant="outline" title={pt.edit} onPress={() => router.push("/plan-setup")} />
         <Text style={[type.shellMuted, { textAlign: "center" }]} onPress={stop} accessibilityRole="button">
           {pt.stop}

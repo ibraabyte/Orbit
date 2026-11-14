@@ -15,6 +15,7 @@ import {
   type SeerrServiceDetails,
   type SeerrUser
 } from "@/lib/seerr";
+import { space } from "@/components/theme";
 
 type Loaded<T> = T | "loading" | "failed";
 
@@ -91,7 +92,7 @@ export function RequestOptions({
   const failed = options.services === "failed" || found === "failed";
 
   return (
-    <View style={{ gap: 12 }}>
+    <View style={{ gap: space.md }}>
       {options.offer4k ? (
         <Group label={mt.quality}>
           {allowStandard ? <Chip label={mt.standard} selected={!choice.is4k} onPress={() => onChange({ is4k: false, serverId: null, profileId: null, rootFolder: null })} /> : null}
@@ -138,9 +139,9 @@ export function RequestOptions({
 
 function Group({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: space.sm }}>
       <Text style={type.tileLabel}>{label}</Text>
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>{children}</View>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>{children}</View>
     </View>
   );
 }

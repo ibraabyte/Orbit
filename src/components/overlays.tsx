@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { flip, Glass, Icon, type } from "@/components/drift";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, scrim, shadow, space, textSize } from "@/components/theme";
 import { formatDate, t } from "@/lib/i18n";
 
 // One action sheet, one date picker and one toast for the whole app, replacing alerts and typed dates.
@@ -151,7 +151,7 @@ function DatePicker({ title, initial, onPick }: { title: string; initial: Date; 
           const on = key === selected;
           return (
             <Pressable key={key} onPress={() => onPick(key)} accessibilityRole="button" accessibilityLabel={formatDate(date, { dateStyle: "long" })} accessibilityState={{ selected: on }} style={[styles.pickerCell, styles.pickerDay, on && { backgroundColor: colors.accent }, !on && key === today && { backgroundColor: colors.surfaceInset }]}>
-              <Text style={{ fontFamily: on ? fonts.bold : fonts.medium, fontSize: 14, color: on ? colors.accentInk : colors.ink }}>{formatDate(date, { day: "numeric" })}</Text>
+              <Text style={{ fontFamily: on ? fonts.bold : fonts.medium, fontSize: textSize.subheadline, color: on ? colors.accentInk : colors.ink }}>{formatDate(date, { day: "numeric" })}</Text>
             </Pressable>
           );
         })}
@@ -160,20 +160,23 @@ function DatePicker({ title, initial, onPick }: { title: string; initial: Date; 
   );
 }
 
+// The toast sits just above the floating tab bar.
+const TOAST_BOTTOM = 108;
+
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.6)" },
-  sheetWrap: { position: "absolute", left: 12, right: 12, bottom: 28, gap: 8 },
-  sheet: { borderRadius: 20, borderCurve: "continuous" },
-  sheetHeader: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 2 },
-  option: { minHeight: 52, alignItems: "center", justifyContent: "center", borderTopWidth: 1, borderTopColor: colors.surfaceInset, paddingHorizontal: 16 },
-  optionText: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, textAlign: "center" },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: scrim },
+  sheetWrap: { position: "absolute", left: space.md, right: space.md, bottom: space.xxl, gap: space.sm },
+  sheet: { borderRadius: radius.xl, borderCurve: "continuous" },
+  sheetHeader: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.md, gap: space.xxs },
+  option: { minHeight: 52, alignItems: "center", justifyContent: "center", borderTopWidth: 1, borderTopColor: colors.surfaceInset, paddingHorizontal: space.lg },
+  optionText: { fontFamily: fonts.medium, fontSize: textSize.callout, color: colors.ink, textAlign: "center" },
   // The toast is the one pale floating thing: dark text, a sand check.
   cancel: { minHeight: 52, alignItems: "center", justifyContent: "center" },
-  toastWrap: { position: "absolute", left: 16, right: 16, bottom: 108 },
-  toast: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: radius.card, borderCurve: "continuous", backgroundColor: colors.urgent, paddingHorizontal: 14, paddingVertical: 12, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 15, shadowOffset: { width: 0, height: 10 } },
-  toastMark: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
-  toastText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.urgentInk },
-  picker: { borderRadius: 20, borderCurve: "continuous", padding: 16, gap: 10 },
+  toastWrap: { position: "absolute", left: space.lg, right: space.lg, bottom: TOAST_BOTTOM },
+  toast: { flexDirection: "row", alignItems: "center", gap: space.md, borderRadius: radius.card, borderCurve: "continuous", backgroundColor: colors.urgent, paddingHorizontal: space.lg, paddingVertical: space.md, boxShadow: shadow.floating },
+  toastMark: { width: 24, height: 24, borderRadius: radius.pill, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  toastText: { flex: 1, fontFamily: fonts.medium, fontSize: textSize.subheadline, color: colors.urgentInk },
+  picker: { borderRadius: radius.xl, borderCurve: "continuous", padding: space.lg, gap: space.md },
   pickerHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   pickerStep: { width: 36, height: 36, borderRadius: radius.control, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
   pickerGrid: { flexDirection: "row", flexWrap: "wrap" },

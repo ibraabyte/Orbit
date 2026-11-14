@@ -5,7 +5,7 @@ import { BudgetCard } from "@/components/budget-card";
 import { Badge, Card, EmptyState, GoalBar, IconTile, ListRow, ProgressBar, RowButton, StatGrid, StatTile, type, type IconName } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Columns, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { useBankReview } from "@/hooks/use-bank-review";
 import { useCardPicker } from "@/hooks/use-card-picker";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -183,7 +183,7 @@ export default function Finance() {
       <Card title={fh.expenses} fold={{ open: expensesOpen, onToggle: () => toggle("expenses", false), summary: expensesOpen ? undefined : formatMoney(finance.monthSpend, currency) }}>
         <SubHead title={t.byCategory} />
         {categories.map((row) => (
-          <View key={row.category} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <View key={row.category} style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
             <Text style={[type.barLabel, { width: 96 }]} numberOfLines={1}>
               {t.financeCategoryNames[row.category]}
             </Text>
@@ -214,7 +214,7 @@ export default function Finance() {
 /** A smaller heading inside an open section. */
 function SubHead({ title, value }: { title: string; value?: string }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 10 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm, paddingTop: space.md }}>
       <Text style={[type.tileLabel, { flex: 1 }]}>{title}</Text>
       {value ? <Text style={type.rowSubtitle}>{value}</Text> : null}
     </View>

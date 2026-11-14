@@ -8,7 +8,7 @@ import { Badge, Card, CheckItem, EmptyState, Icon, MoreButton, RowButton, StatGr
 import { ExerciseThumb } from "@/components/exercise-ui";
 import { useOverlays } from "@/components/overlays";
 import { Button, Input, Loading, Screen } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { loadNotificationPrefs } from "@/hooks/use-notification-prefs";
 import { useSections } from "@/hooks/use-sections";
 import type { SectionKey } from "@/lib/app-sections";
@@ -407,7 +407,7 @@ function ExerciseCard({
     <Card>
       <View style={styles.exerciseHead}>
         <ExerciseThumb uri={exercise.image_url} size={40} />
-        <View style={{ flex: 1, gap: 2 }}>
+        <View style={{ flex: 1, gap: space.xxs }}>
           <Text style={type.cardTitle}>{exercise.name}</Text>
           <Text style={type.rowSubtitle}>{last ? `${tt.lastTime}: ${sessionLine(last.sets)}` : history ? tt.firstTime : " "}</Text>
         </View>
@@ -510,11 +510,11 @@ function SetRow({
 }
 
 const styles = StyleSheet.create({
-  exerciseHead: { flexDirection: "row", alignItems: "center", gap: 10 },
-  badges: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  setHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 4 },
-  headCell: { fontFamily: fonts.medium, fontSize: 11, color: colors.inkMuted, textAlign: "center" },
-  setRow: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 48, borderRadius: radius.control, paddingHorizontal: 2 },
+  exerciseHead: { flexDirection: "row", alignItems: "center", gap: space.md },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  setHeader: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingTop: space.xs },
+  headCell: { fontFamily: fonts.medium, fontSize: textSize.caption2, color: colors.inkMuted, textAlign: "center" },
+  setRow: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 48, borderRadius: radius.control, paddingHorizontal: space.xxs },
   setRowDone: { backgroundColor: colors.accentTint },
   colSet: { width: 30, alignItems: "center" },
   colPrev: { flex: 1, minWidth: 0 },
@@ -522,13 +522,13 @@ const styles = StyleSheet.create({
   colCheck: { width: 36, alignItems: "center" },
   setNumber: { height: 28, borderRadius: radius.badge, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
   warmup: { backgroundColor: colors.accentTint, borderWidth: 1, borderColor: colors.accentLine },
-  cell: { height: 38, borderRadius: radius.control, backgroundColor: colors.field, color: colors.ink, fontFamily: fonts.semibold, fontSize: 15, textAlign: "center", paddingHorizontal: 4 },
-  record: { fontFamily: fonts.semibold, fontSize: 10, color: colors.link },
-  exerciseFoot: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 4 },
-  restChip: { minHeight: 36, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline },
-  restBar: { position: "absolute", start: 16, end: 16, flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.card, backgroundColor: colors.accent, maxWidth: 728, alignSelf: "center" },
-  restClock: { fontFamily: fonts.bold, fontSize: 22, color: colors.accentInk },
-  restName: { fontFamily: fonts.medium, fontSize: 12, color: colors.accentInk },
-  restButton: { minHeight: 36, minWidth: 44, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: "rgba(10,10,11,0.12)", alignItems: "center", justifyContent: "center" },
-  restButtonText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.accentInk }
+  cell: { height: 38, borderRadius: radius.control, backgroundColor: colors.field, color: colors.ink, fontFamily: fonts.semibold, fontSize: textSize.subheadline, textAlign: "center", paddingHorizontal: space.xs },
+  record: { fontFamily: fonts.semibold, fontSize: textSize.caption2, color: colors.link },
+  exerciseFoot: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingTop: space.xs },
+  restChip: { minHeight: 36, flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline },
+  restBar: { position: "absolute", start: space.lg, end: space.lg, flexDirection: "row", alignItems: "center", gap: space.md, paddingVertical: space.md, paddingHorizontal: space.lg, borderRadius: radius.card, backgroundColor: colors.accent, maxWidth: 728, alignSelf: "center" },
+  restClock: { fontFamily: fonts.bold, fontSize: textSize.title2, color: colors.accentInk },
+  restName: { fontFamily: fonts.medium, fontSize: textSize.caption1, color: colors.accentInk },
+  restButton: { minHeight: 36, minWidth: 44, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.inkWash, alignItems: "center", justifyContent: "center" },
+  restButtonText: { fontFamily: fonts.semibold, fontSize: textSize.footnote, color: colors.accentInk }
 });

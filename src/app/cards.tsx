@@ -12,6 +12,7 @@ import { activeSubscriptions, formatMoney, mainCurrency } from "@/lib/finance";
 import { formatDate, t } from "@/lib/i18n";
 import type { CardKind, CardNetwork, PaymentCard } from "@/lib/types";
 import { cardExpiryState, cardLabel, cardSubscriptions, formatCardExpiry, normalizeLast4, parseCardExpiry } from "@/lib/wealth";
+import { space } from "@/components/theme";
 
 const networks: CardNetwork[] = ["mada", "visa", "mastercard", "amex", "other"];
 const cardKinds: CardKind[] = ["credit", "debit", "prepaid"];
@@ -88,7 +89,7 @@ export default function Cards() {
       <Card title={adding ? t.addCard : undefined}>
         {!data.cards.length && !adding ? <EmptyState icon="credit-card">{t.cardsEmpty}</EmptyState> : null}
         {adding ? (
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: space.sm }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />
             <ChoiceButton title={t.cardNetwork} value={network} options={networks} labels={t.cardNetworks} onChange={setNetwork} />
             <ChoiceButton title={t.cardKind} value={kind} options={cardKinds} labels={t.cardKinds} onChange={setKind} />

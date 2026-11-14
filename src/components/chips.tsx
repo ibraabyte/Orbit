@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { type } from "@/components/drift";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, space, textSize } from "@/components/theme";
 
 // A wrapping row of choices on the card colour; the chosen one is pale with dark text.
 export function Chips<T extends string>({
@@ -40,7 +40,7 @@ export function Chip({ label, selected, onPress, onLongPress, accessibilityLabel
       accessibilityHint={onLongPress ? "Long press for more" : undefined}
       style={({ pressed }) => [styles.chip, selected && { borderColor: colors.urgent, backgroundColor: colors.urgent }, pressed && { opacity: 0.7 }]}
     >
-      <Text style={[type.pill, { fontFamily: fonts.semibold, fontSize: 12, color: selected ? colors.urgentInk : colors.ink }]} numberOfLines={1}>
+      <Text style={[type.pill, { fontFamily: fonts.semibold, fontSize: textSize.caption1, color: selected ? colors.urgentInk : colors.ink }]} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
@@ -48,6 +48,6 @@ export function Chip({ label, selected, onPress, onLongPress, accessibilityLabel
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { minHeight: 34, paddingHorizontal: 12, justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }
+  row: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  chip: { minHeight: 34, paddingHorizontal: space.md, justifyContent: "center", borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface }
 });

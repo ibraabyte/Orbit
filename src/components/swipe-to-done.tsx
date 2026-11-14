@@ -1,7 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { useMemo, useRef, type ReactNode } from "react";
 import { Animated, PanResponder, StyleSheet, Text, View } from "react-native";
-import { colors, fonts, labelCase } from "@/components/theme";
+import { colors, fonts, labelCase, space, textSize } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
 const THRESHOLD = 88;
@@ -54,6 +54,6 @@ export function SwipeToDone({ onDone, children }: { onDone: () => void; children
 }
 
 const styles = StyleSheet.create({
-  behind: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 8 },
-  behindText: { fontFamily: fonts.medium, fontSize: 11, color: colors.link, ...labelCase }
+  behind: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: space.sm },
+  behindText: { fontFamily: fonts.medium, fontSize: textSize.caption2, color: colors.link, ...labelCase }
 });

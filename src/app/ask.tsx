@@ -4,7 +4,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { AiPicker } from "@/components/ai-picker";
 import { Card, CardLink, type } from "@/components/drift";
 import { Button, ErrorState, Input, Loading, Screen } from "@/components/screen";
-import { colors, radius } from "@/components/theme";
+import { colors, radius, space } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
 import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -133,7 +133,7 @@ export default function Ask() {
       ) : null}
       {gate === "ready" ? (
         <>
-          <Card style={{ gap: 10 }}>
+          <Card style={{ gap: space.md }}>
             <Input
               value={draft}
               onChangeText={setDraft}
@@ -144,7 +144,7 @@ export default function Ask() {
               returnKeyType="send"
               submitBehavior="blurAndSubmit"
               onSubmitEditing={() => send(draft)}
-              style={{ minHeight: 48, paddingTop: 12, paddingBottom: 12, textAlign: "auto", writingDirection: "auto" }}
+              style={{ minHeight: 48, paddingTop: space.md, paddingBottom: space.md, textAlign: "auto", writingDirection: "auto" }}
             />
             <Button variant="primary" title={sending ? t.askThinking : t.askSend} disabled={sending || !cleanQuestion(draft)} onPress={() => send(draft)} />
           </Card>
@@ -161,13 +161,13 @@ export default function Ask() {
             </Card>
           ) : null}
           {chat.map(({ question, answer }) => (
-            <Card key={question.id} style={{ gap: 10 }}>
-              <View style={{ gap: 2 }}>
+            <Card key={question.id} style={{ gap: space.md }}>
+              <View style={{ gap: space.xxs }}>
                 <Text style={type.tileLabel}>{t.askYou}</Text>
                 <Text style={[type.body, styles.text]}>{question.content}</Text>
               </View>
               {answer ? (
-                <View style={{ gap: 2 }}>
+                <View style={{ gap: space.xxs }}>
                   <Text style={type.tileLabel}>{t.askAnswer}</Text>
                   <Text style={[type.body, styles.text]} selectable>
                     {answer.content}
@@ -180,7 +180,7 @@ export default function Ask() {
                 </Text>
               ) : null}
               {question.failed ? (
-                <View style={{ gap: 8 }}>
+                <View style={{ gap: space.sm }}>
                   <Text style={[type.rowSubtitle, { color: colors.dangerOnShell }]} accessibilityRole="alert">{question.failed}</Text>
                   <Button variant="outline" title={t.askRetry} disabled={sending} onPress={() => void ask(question.content, question.id)} />
                 </View>
@@ -195,6 +195,6 @@ export default function Ask() {
 
 const styles = StyleSheet.create({
   text: { writingDirection: "auto" },
-  chips: { gap: 8 },
-  chip: { minHeight: 44, justifyContent: "center", paddingHorizontal: 14, paddingVertical: 8, borderRadius: radius.tile, backgroundColor: colors.surfaceInset }
+  chips: { gap: space.sm },
+  chip: { minHeight: 44, justifyContent: "center", paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.tile, backgroundColor: colors.surfaceInset }
 });

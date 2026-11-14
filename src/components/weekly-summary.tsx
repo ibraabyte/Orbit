@@ -1,7 +1,7 @@
 import { Text, View } from "react-native";
 import { Card, CardLink, StatGrid, StatTile, type } from "@/components/drift";
 import { Button } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import type { WeekState } from "@/hooks/use-weekly-summary";
 import { formatMoney } from "@/lib/finance";
 import { digits, formatDate, formatNumber, t } from "@/lib/i18n";
@@ -30,7 +30,7 @@ export function WeekFactsGrid({ facts }: { facts: WeekFacts }) {
   if (facts.saved) tiles.push(<StatTile key="saved" label={t.weekSaved} value={formatNumber(facts.saved)} href="/library" />);
   const changes = facts.spent.map((money) => spendChange(facts, money.currency)).filter((change): change is number => change !== null);
   return (
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: space.sm }}>
       <StatGrid columns={3}>{tiles}</StatGrid>
       {changes.length === 1 ? <Text style={type.rowSubtitle}>{`${t.weekSpent}: ${t.weekVsLast.replace("{n}", digits(changes[0] > 0 ? `+${changes[0]}` : changes[0]))}`}</Text> : null}
     </View>
@@ -49,7 +49,7 @@ export function WeekWritten({ state, retry, compact }: { state: WeekState; retry
   if (state.status === "consent") return <Text style={type.rowSubtitle}>{t.weekConsent}</Text>;
   if (state.status === "error")
     return (
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: space.sm }}>
         <Text style={type.rowSubtitle} accessibilityLiveRegion="polite">
           {`${t.weekFailed} ${state.message}`.trim()}
         </Text>
@@ -58,12 +58,12 @@ export function WeekWritten({ state, retry, compact }: { state: WeekState; retry
     );
   const { summary, plan } = state.reply;
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: space.md }}>
       <Text style={type.body} numberOfLines={compact ? 5 : undefined}>
         {digits(summary)}
       </Text>
       {plan.length ? (
-        <View style={{ gap: 4 }}>
+        <View style={{ gap: space.xs }}>
           <Text style={type.tileLabel}>{t.weekPlan}</Text>
           {plan.slice(0, compact ? 3 : plan.length).map((item) => (
             <Text key={item} style={type.body}>

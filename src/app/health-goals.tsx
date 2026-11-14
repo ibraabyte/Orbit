@@ -7,6 +7,7 @@ import { Button, Input, Screen, ui } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { getApi } from "@/lib/backend";
 import { goalFields, goalsBody, goalsChanged, goalsForm, ht, type GoalsForm } from "@/lib/health-hub";
+import { space } from "@/components/theme";
 
 // Daily calorie and macro goals, and workout minutes a week. Saved on your profile; Food, Health and Today read them.
 export default function HealthGoals() {
@@ -46,10 +47,10 @@ export default function HealthGoals() {
 
   return (
     <Screen stackAction={changed && !saving ? { label: ht.saveGoals, onPress: () => void save() } : undefined}>
-      <Text style={[type.shellMuted, { paddingHorizontal: 4 }]}>{ht.goalsHint}</Text>
+      <Text style={[type.shellMuted, { paddingHorizontal: space.xs }]}>{ht.goalsHint}</Text>
       <Card title={ht.goals}>
         {goalFields.map((field) => (
-          <View key={field.key} style={{ gap: 6, paddingVertical: 4 }}>
+          <View key={field.key} style={{ gap: space.sm, paddingVertical: space.xs }}>
             <Text style={type.tileLabel}>{field.label}</Text>
             <Input
               value={form[field.key]}

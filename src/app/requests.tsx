@@ -9,6 +9,7 @@ import { BleedRow, Button, Screen } from "@/components/screen";
 import { useSeerr } from "@/hooks/use-seerr";
 import { formatDate, t } from "@/lib/i18n";
 import { mediaBadge, mt, quotaLine, REQUEST_FILTERS, requestBadge, seerrTitle, type RequestFilter, type SeerrQuota, type SeerrRequest } from "@/lib/seerr";
+import { space } from "@/components/theme";
 
 const PAGE = 20;
 type Look = { title: string; posterPath?: string | null };
@@ -125,7 +126,7 @@ export default function Requests() {
               onPress={() => openTitle(request.type, request.media.tmdbId)}
               trailing={
                 seerr.isAdmin && request.status === 1 ? (
-                  <View style={{ gap: 6 }}>
+                  <View style={{ gap: space.sm }}>
                     <RowButton icon="check" label={mt.approve} onPress={() => act(() => client!.approve(request.id))} />
                     <RowButton outline label={mt.decline} onPress={() => act(() => client!.decline(request.id))} />
                   </View>

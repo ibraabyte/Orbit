@@ -7,6 +7,7 @@ import { Button, Input, Loading, Screen } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, INJURY_JOINTS, INJURY_MUSCLES, label, sortInjuries, type Injury, type InjuryArea } from "@/lib/exercises";
 import { formatDate, t } from "@/lib/i18n";
+import { space } from "@/components/theme";
 
 // Injuries you're working around. Active ones change what Exercises suggests.
 export default function Injuries() {
@@ -86,10 +87,10 @@ export default function Injuries() {
 
   return (
     <Screen refreshing={loading} onRefresh={load}>
-      <Text style={[type.shellMuted, { paddingHorizontal: 4 }]}>{et.injuriesHint}</Text>
+      <Text style={[type.shellMuted, { paddingHorizontal: space.xs }]}>{et.injuriesHint}</Text>
 
       <Card title={et.addInjury}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
           <Chip label={`${et.where}: ${label(area)}`} icon="map-pin" on onPress={pickArea} />
           <Chip label={`${et.since}: ${formatDate(`${since}T12:00:00`)}`} icon="calendar" on={false} onPress={() => void pickSince()} />
         </View>

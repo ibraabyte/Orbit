@@ -8,7 +8,7 @@ import { Badge, Card, EmptyState, Icon, IconTile, ListRow, toneToBadge, type } f
 import { Button, Loading, Screen, Segments } from "@/components/screen";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
 import { VoiceConnectForm } from "@/components/voice-connect-form";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { useSeerr } from "@/hooks/use-seerr";
 import { getApi } from "@/lib/backend";
 import { t } from "@/lib/i18n";
@@ -88,7 +88,7 @@ export default function Integrations() {
 
   return (
     <Screen refreshing={loading} onRefresh={load}>
-      <Text style={[type.shellMuted, { paddingHorizontal: 4 }]}>Each connection is yours only. Keys are kept encrypted on your Orbit server.</Text>
+      <Text style={[type.shellMuted, { paddingHorizontal: space.xs }]}>Each connection is yours only. Keys are kept encrypted on your Orbit server.</Text>
 
       <Card title="WHOOP" action={<Badge tone={toneToBadge(whoop.tone)}>{whoop.label}</Badge>}>
         <ListRow
@@ -131,7 +131,7 @@ export default function Integrations() {
                 title={AI_CHOICE_NAMES[choice.provider]}
                 subtitle={choice.model ?? undefined}
                 trailing={
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
                     {choice.is_default ? (
                       <Badge tone="success">{t.aiDefault}</Badge>
                     ) : (

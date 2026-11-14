@@ -7,6 +7,7 @@ import { useOverlays } from "@/components/overlays";
 import { BleedRow, Button, Loading, Screen, SearchBar } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, exerciseSubtitle, GYM_EQUIPMENT, hiddenNote, injuryNote, label, MUSCLES, NO_EQUIPMENT, type ExerciseSearch, type GymEquipment, type Muscle } from "@/lib/exercises";
+import { space, textSize } from "@/components/theme";
 
 // Search the exercise library. "Only my gym" keeps what your gym's equipment allows; active injuries hide
 // exercises that mainly work the injured area unless you ask to see them.
@@ -97,7 +98,7 @@ export default function Exercises() {
       ) : null}
 
       {result ? (
-        <View style={{ gap: 4, paddingHorizontal: 4 }}>
+        <View style={{ gap: space.xs, paddingHorizontal: space.xs }}>
           <Text style={type.shellMeta}>{et.results(result.total)}</Text>
           {note ? <Text style={type.shellMuted}>{note}</Text> : null}
         </View>
@@ -126,7 +127,7 @@ export default function Exercises() {
       )}
 
       {result && result.items.length < result.total ? <Button variant="outline" title={et.loadMore} disabled={loading} onPress={() => void load(result.items.length)} /> : null}
-      <Text style={[type.shellMuted, { textAlign: "center", fontSize: 11 }]}>{et.photoCredit}</Text>
+      <Text style={[type.shellMuted, { textAlign: "center", fontSize: textSize.caption2 }]}>{et.photoCredit}</Text>
     </Screen>
   );
 }

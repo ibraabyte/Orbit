@@ -6,7 +6,7 @@ import { AiPicker } from "@/components/ai-picker";
 import { Icon, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
 import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -223,7 +223,7 @@ export default function Capture() {
       <View style={styles.header}>
         <Text style={styles.title}>{t.assistantTitle}</Text>
         <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={10}>
-          <Text style={[type.pill, { fontSize: 14, color: colors.onShellMuted }]}>{t.cancel}</Text>
+          <Text style={[type.pill, { fontSize: textSize.subheadline, color: colors.onShellMuted }]}>{t.cancel}</Text>
         </Pressable>
       </View>
 
@@ -258,7 +258,7 @@ export default function Capture() {
                   if (!key || off) return null;
                   return (
                     <View style={styles.field}>
-                      <Text style={[type.rowSubtitle, { fontSize: 13, alignSelf: "center" }]}>{fieldName(key, isArabic)}</Text>
+                      <Text style={[type.rowSubtitle, { fontSize: textSize.footnote, alignSelf: "center" }]}>{fieldName(key, isArabic)}</Text>
                       <TextInput
                         style={styles.number}
                         value={typed[index] ?? digits(String(action.fields[key] ?? ""))}
@@ -274,8 +274,8 @@ export default function Capture() {
                 })()}
                 {actionRows(action, isArabic, off ? null : editableField(action)).map(([key, value]) => (
                   <View key={key} style={styles.field}>
-                    <Text style={[type.rowSubtitle, { fontSize: 13 }]}>{key}</Text>
-                    <Text style={[type.barValue, { flexShrink: 1, fontSize: 13, textAlign: "right" }]}>{value}</Text>
+                    <Text style={[type.rowSubtitle, { fontSize: textSize.footnote }]}>{key}</Text>
+                    <Text style={[type.barValue, { flexShrink: 1, fontSize: textSize.footnote, textAlign: "right" }]}>{value}</Text>
                   </View>
                 ))}
               </View>
@@ -283,13 +283,13 @@ export default function Capture() {
           })}
           {total ? (
             <View style={[styles.field, styles.total]}>
-              <Text style={[type.title, { fontSize: 14 }]}>{t.assistantTotal}</Text>
-              <Text style={[type.barValue, { fontSize: 14 }]}>
+              <Text style={[type.title, { fontSize: textSize.subheadline }]}>{t.assistantTotal}</Text>
+              <Text style={[type.barValue, { fontSize: textSize.subheadline }]}>
                 {digits(`${total.calories.toLocaleString(isArabic ? "ar-SA-u-nu-latn" : "en-US")} ${t.kcal}`)}
               </Text>
             </View>
           ) : null}
-          {estimated ? <Text style={[type.rowSubtitle, { fontSize: 12 }]}>{t.assistantEstimate}</Text> : null}
+          {estimated ? <Text style={[type.rowSubtitle, { fontSize: textSize.caption1 }]}>{t.assistantEstimate}</Text> : null}
           {answer.actions.length ? (
             <Button
               title={busy ? t.assistantThinking : chosen.length === 1 ? t.assistantConfirmOne : t.assistantConfirm.replace("{n}", digits(chosen.length))}
@@ -357,8 +357,8 @@ export default function Capture() {
           {parsed.validation.ok
             ? draftFields(parsed.draft).map(([key, value]) => (
                 <View key={key} style={styles.field}>
-                  <Text style={[type.rowSubtitle, { fontSize: 14 }]}>{key}</Text>
-                  <Text style={[type.barValue, { flexShrink: 1, fontSize: 14, textAlign: "right" }]}>{value}</Text>
+                  <Text style={[type.rowSubtitle, { fontSize: textSize.subheadline }]}>{key}</Text>
+                  <Text style={[type.barValue, { flexShrink: 1, fontSize: textSize.subheadline, textAlign: "right" }]}>{value}</Text>
                 </View>
               ))
             : null}
@@ -403,7 +403,7 @@ export default function Capture() {
       ) : null}
 
       {!answer && !text.trim() && recent.length ? (
-        <View style={{ gap: 6 }}>
+        <View style={{ gap: space.sm }}>
           <Text style={type.shellMeta}>{t.recent}</Text>
           {recent.map((line) => (
             <Pressable key={line} onPress={() => setText(line)} accessibilityRole="button" style={styles.recent}>
@@ -416,7 +416,7 @@ export default function Capture() {
         </View>
       ) : null}
 
-      {failure ? <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.dangerOnShell }}>{failure}</Text> : null}
+      {failure ? <Text style={{ fontFamily: fonts.semibold, fontSize: textSize.footnote, color: colors.dangerOnShell }}>{failure}</Text> : null}
 
       {parsed ? (
         <Button title={busy ? t.connecting : t.save} variant="primary" disabled={!parsed.validation.ok || busy} onPress={() => void quickAdd()} />
@@ -428,25 +428,25 @@ export default function Capture() {
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: 20, gap: 12 },
+  screen: { padding: space.xl, gap: space.md },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  title: { fontFamily: fonts.bold, fontSize: 20, color: colors.onShell },
+  title: { fontFamily: fonts.bold, fontSize: textSize.title3, color: colors.onShell },
   auto: { writingDirection: "auto" },
-  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  mic: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceInset, borderWidth: 1, borderColor: colors.hairline },
+  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: space.sm },
+  mic: { width: 52, height: 52, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceInset, borderWidth: 1, borderColor: colors.hairline },
   chipOn: { backgroundColor: colors.urgent },
-  action: { gap: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },
-  total: { paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },
-  number: { width: 96, minHeight: 36, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, textAlign: "center" },
-  note: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
-  input: { flex: 1, maxHeight: 140, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top", writingDirection: "auto", minHeight: 52, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, backgroundColor: colors.field, fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { minHeight: 34, paddingHorizontal: 12, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 5, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
-  preview: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
-  previewHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  action: { gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
+  total: { paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
+  number: { width: 96, minHeight: 36, paddingHorizontal: space.md, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: textSize.subheadline, color: colors.ink, textAlign: "center" },
+  note: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.sm },
+  input: { flex: 1, maxHeight: 140, paddingTop: space.lg, paddingBottom: space.lg, textAlignVertical: "top", writingDirection: "auto", minHeight: 52, paddingHorizontal: space.lg, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, backgroundColor: colors.field, fontFamily: fonts.medium, fontSize: textSize.body, color: colors.ink },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  chip: { minHeight: 34, paddingHorizontal: space.md, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: space.xs, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
+  preview: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.sm },
+  previewHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
   previewMark: { width: 28, height: 28, borderRadius: radius.control, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
-  field: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  missing: { backgroundColor: colors.accentTint, borderRadius: radius.control, paddingHorizontal: 10, paddingVertical: 8 },
-  recent: { minHeight: 40, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, backgroundColor: colors.surface, borderRadius: radius.control },
-  recentText: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.ink }
+  field: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
+  missing: { backgroundColor: colors.accentTint, borderRadius: radius.control, paddingHorizontal: space.md, paddingVertical: space.sm },
+  recent: { minHeight: 40, flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.md, backgroundColor: colors.surface, borderRadius: radius.control },
+  recentText: { flex: 1, fontFamily: fonts.regular, fontSize: textSize.footnote, color: colors.ink }
 });

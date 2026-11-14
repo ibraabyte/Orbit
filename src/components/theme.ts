@@ -1,4 +1,4 @@
-import { Appearance } from "react-native";
+import { Appearance, DynamicColorIOS, useColorScheme, type OpaqueColorValue } from "react-native";
 import { isArabic } from "@/lib/i18n";
 
 // Refined ("Orbit Refined" from the design handoff): one sand accent, content on cards (a lifted surface with a hairline
@@ -49,6 +49,8 @@ export const night = {
   success: "#f2f0ea",
   successTint: "#1e1e21",
   sage: "#5d5b56", // second data series: grey bars beside the sand one
+  // A dark film over a sand fill (the rest timer's buttons).
+  inkWash: "rgba(10,10,11,0.12)",
   // Error text.
   dangerOnShell: "#f2a091"
 };
@@ -93,17 +95,58 @@ export const day: Palette = {
   success: "#1a1a1c",
   successTint: "#efe9de",
   sage: "#c9c2b4",
+  inkWash: "rgba(10,10,11,0.12)",
   dangerOnShell: "#b3402e"
 };
 
-// Read once at launch. Expo Go and builds report the phone's setting because app.json says "automatic".
+// The phone's setting at launch. Expo Go and builds report it because app.json says "automatic".
 export const scheme: "light" | "dark" = Appearance.getColorScheme() === "light" ? "light" : "dark";
-export const colors: Palette = scheme === "light" ? day : night;
 
-// The ground is flat.
-export const backdrop = `linear-gradient(180deg, ${colors.shellTop} 0%, ${colors.shell} 100%)`;
+/** A colour from the theme: a plain string, or on iOS a native dynamic colour. Never build strings from it. */
+export type Color = string | OpaqueColorValue;
+export type Colors = { [K in keyof Palette]: Color };
 
-export const radius = { card: 22, tile: 14, control: 10, badge: 6, chip: 999, pill: 999 } as const;
+// On iOS every colour is a native dynamic colour: it follows a light/dark change live, with no reload, even inside
+// StyleSheet.create. Android has no such colour, so it keeps the palette of the launch setting (and reloads on a change,
+// see src/app/_layout.tsx). Where a plain string is needed (gradients, the widget), use usePalette().
+export const colors: Colors =
+  process.env.EXPO_OS === "ios"
+    ? (Object.fromEntries((Object.keys(night) as (keyof Palette)[]).map((key) => [key, DynamicColorIOS({ light: day[key], dark: night[key] })])) as Colors)
+    : scheme === "light"
+      ? day
+      : night;
+
+/** The palette of the current light/dark setting, as plain strings. Re-renders when the setting changes. */
+export function usePalette(): Palette {
+  return useColorScheme() === "light" ? day : night;
+}
+
+/** The current light/dark setting. Re-renders when it changes. */
+export function useScheme(): "light" | "dark" {
+  return useColorScheme() === "light" ? "light" : "dark";
+}
+
+// Spacing: one 4-point scale. Gaps, padding and margins take a step from here, never a raw number.
+export const space = { none: 0, xxs: 2, xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32, huge: 48, giant: 64 } as const;
+
+// The iOS text styles at the default Dynamic Type size, and their line heights. "display" is Orbit's own, for one big
+// number. Weights come from fonts below (custom fonts ignore fontWeight on iOS).
+export const textSize = { caption2: 11, caption1: 12, footnote: 13, subheadline: 15, callout: 16, body: 17, headline: 17, title3: 20, title2: 22, title1: 28, largeTitle: 34, display: 56 } as const;
+export const lineHeights = { caption2: 13, caption1: 16, footnote: 18, subheadline: 20, callout: 21, body: 22, headline: 22, title3: 25, title2: 28, title1: 34, largeTitle: 41, display: 60 } as const;
+
+// Corners on the same 4-point scale. card, tile, control and badge name what they are for; pill is a capsule or a circle.
+export const radius = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 28, card: 20, tile: 12, control: 8, badge: 4, chip: 999, pill: 999 } as const;
+
+// Shadows as CSS boxShadow. Black at a low alpha reads in both palettes. raised: a card lifted a little; floating: what
+// hovers over content (the tab bar, a toast); poster: artwork on a backdrop.
+export const shadow = {
+  raised: "0 1px 2px rgba(0,0,0,0.06)",
+  floating: "0 8px 18px rgba(0,0,0,0.12)",
+  poster: "0 8px 16px rgba(0,0,0,0.5)"
+} as const;
+
+// Dimmed layer behind a sheet or a menu.
+export const scrim = "rgba(0,0,0,0.5)";
 
 // One family per weight (custom fonts ignore fontWeight on iOS); files load in src/app/_layout.tsx.
 // JetBrains Mono for Latin and numbers, IBM Plex Sans Arabic for Arabic.

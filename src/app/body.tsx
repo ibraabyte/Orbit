@@ -5,7 +5,7 @@ import { Card, EmptyState, Icon, ListRow, MoreButton, TrendBars, type } from "@/
 import { Chip } from "@/components/exercise-ui";
 import { toDateKey, useOverlays } from "@/components/overlays";
 import { BleedRow, Button, Input, Loading, Screen, Segments } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { getApi } from "@/lib/backend";
 import { digits, formatDate, t } from "@/lib/i18n";
@@ -107,11 +107,11 @@ export default function Body() {
             <Chip key={item} label={tt.kinds[item]} on={kind === item} onPress={() => setKind(item)} />
           ))}
         </BleedRow>
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+        <View style={{ flexDirection: "row", gap: space.sm, alignItems: "center" }}>
           <Input style={{ flex: 1 }} value={value} onChangeText={setValue} placeholder={`${tt.kinds[kind]} (${unit})`} keyboardType="decimal-pad" onSubmitEditing={() => void add()} returnKeyType="done" />
           {unitKey ? <Segments small options={unitsFor(kind)} value={unit} onChange={(next) => setUnits((current) => ({ ...current, [unitKey]: next }))} /> : null}
         </View>
-        <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+        <View style={{ flexDirection: "row", gap: space.sm, alignItems: "center" }}>
           <Chip label={formatDate(`${date}T12:00:00`, { weekday: "short", day: "numeric", month: "short" })} icon="calendar" on={false} onPress={() => void pickDay()} />
           <View style={{ flex: 1 }}>
             <Button variant="primary" title={t.save} disabled={busy || !value.trim()} onPress={() => void add()} />
@@ -125,7 +125,7 @@ export default function Body() {
         <EmptyState icon="maximize">{tt.noMeasurements}</EmptyState>
       ) : (
         <>
-          <Text style={[type.shellMuted, { paddingHorizontal: 4 }]}>{tt.tapForHistory}</Text>
+          <Text style={[type.shellMuted, { paddingHorizontal: space.xs }]}>{tt.tapForHistory}</Text>
           {trends.map((trend) => (
             <TrendCard key={trend.kind} trend={trend} open={open === trend.kind} onToggle={() => setOpen(open === trend.kind ? null : trend.kind)} rows={open === trend.kind ? kindHistory(trend.kind, measurements, weights) : []} onRemove={(id) => remove(trend.kind, id)} />
           ))}
@@ -140,15 +140,15 @@ const trim1 = (value: number) => String(Math.round(value * 10) / 10);
 function TrendCard({ trend, open, onToggle, rows, onRemove }: { trend: Trend; open: boolean; onToggle: () => void; rows: { id: string; value: number; unit: string; at: string }[]; onRemove: (id: string) => void }) {
   const change = changeText(trend.change, trend.latest.unit);
   const toggle = (
-    <Pressable onPress={onToggle} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={`${tt.kinds[trend.kind]}, ${tt.entries(trend.count)}`} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+    <Pressable onPress={onToggle} accessibilityRole="button" accessibilityState={{ expanded: open }} accessibilityLabel={`${tt.kinds[trend.kind]}, ${tt.entries(trend.count)}`} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: space.xs }}>
       <Text style={type.hint}>{tt.entries(trend.count)}</Text>
       <Icon name={open ? "chevron-up" : "chevron-down"} size={16} color={colors.inkFaint} />
     </Pressable>
   );
   return (
     <Card title={tt.kinds[trend.kind]} action={toggle}>
-      <Pressable onPress={onToggle} style={{ flexDirection: "row", alignItems: "flex-end", gap: 12 }}>
-        <View style={{ gap: 2, minWidth: 120 }}>
+      <Pressable onPress={onToggle} style={{ flexDirection: "row", alignItems: "flex-end", gap: space.md }}>
+        <View style={{ gap: space.xxs, minWidth: 120 }}>
           <Text style={type.stat}>
             {digits(trim1(trend.latest.value))} <Text style={type.rowSubtitle}>{trend.latest.unit}</Text>
           </Text>

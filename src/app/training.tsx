@@ -9,6 +9,7 @@ import { et } from "@/lib/exercises";
 import { digits, formatDate, t } from "@/lib/i18n";
 import { pt } from "@/lib/plan";
 import { trainingApi, tt, volumeText, type SessionSummary } from "@/lib/training";
+import { space } from "@/components/theme";
 
 const stamp = (iso: string) => formatDate(iso, { weekday: "short", day: "numeric", month: "short" });
 
@@ -91,7 +92,7 @@ export default function Training() {
         </Card>
       )}
 
-      <View style={{ paddingHorizontal: 4 }}>
+      <View style={{ paddingHorizontal: space.xs }}>
         <Text style={[type.shellMuted, { textAlign: "center" }]} onPress={() => router.push("/exercises")}>
           {et.exercises} ›
         </Text>

@@ -6,7 +6,7 @@ import { resyncWidget } from "@/hooks/use-widget-sync";
 import { Avatar, BentoGrid, BentoTile, Card, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space, textSize } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSections } from "@/hooks/use-sections";
 import { clearAskConsent, loadAskConsent } from "@/hooks/use-ask-consent";
@@ -81,9 +81,9 @@ export default function Settings() {
 
   return (
     <Screen>
-      <Card style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}>
+      <Card style={{ flexDirection: "row", alignItems: "center", gap: space.lg, paddingVertical: space.lg }}>
         <Avatar name={name} size={48} dark />
-        <Text style={[type.title, { flex: 1, fontSize: 16 }]}>{name}</Text>
+        <Text style={[type.title, { flex: 1, fontSize: textSize.callout }]}>{name}</Text>
       </Card>
       {/* Bento, like More: one card per setting, two to a row; a card with a control holds it at its top end. */}
       <BentoGrid>

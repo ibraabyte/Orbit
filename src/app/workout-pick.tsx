@@ -5,7 +5,7 @@ import { Badge, Card, EmptyState, Icon, ListRow, type } from "@/components/drift
 import { Chip, ExerciseThumb } from "@/components/exercise-ui";
 import { useOverlays } from "@/components/overlays";
 import { BleedRow, Loading, Screen, SearchBar } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, textSize } from "@/components/theme";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, exerciseSubtitle, injuryNote, label, MUSCLES, type ExerciseSearch, type Muscle } from "@/lib/exercises";
 import { trainingApi, tt } from "@/lib/training";
@@ -92,7 +92,7 @@ export default function WorkoutPick() {
           })}
         </Card>
       )}
-      <Text style={[type.shellMuted, { textAlign: "center", fontSize: 11 }]}>{et.photoCredit}</Text>
+      <Text style={[type.shellMuted, { textAlign: "center", fontSize: textSize.caption2 }]}>{et.photoCredit}</Text>
     </Screen>
   );
 }

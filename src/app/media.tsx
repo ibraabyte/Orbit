@@ -14,6 +14,7 @@ import { formatDate, t } from "@/lib/i18n";
 import { DISCOVER_ROWS, mt, seerrTitle, type DiscoverRow, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult } from "@/lib/seerr";
 import type { WatchItem } from "@/lib/types";
 import { groupWatchItems, progressLabel } from "@/lib/watchlist";
+import { space } from "@/components/theme";
 
 export default function Media() {
   const seerr = useSeerr();
@@ -24,7 +25,7 @@ export default function Media() {
 function Connect({ connect, error }: { connect: (url: string, apiKey: string) => Promise<void>; error: string | null }) {
   return (
     <Screen>
-      <Card title={t.seerrConnect} style={{ gap: 12, paddingVertical: 16 }}>
+      <Card title={t.seerrConnect} style={{ gap: space.md, paddingVertical: space.lg }}>
         <Text style={type.rowSubtitle}>{error ?? t.seerrHint}</Text>
         <SeerrConnectForm connect={connect} />
       </Card>
@@ -174,7 +175,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
                   subtitle={[request.requestedBy?.displayName, formatDate(request.createdAt)].filter(Boolean).join(" · ")}
                   onPress={() => openTitle(request.type, request.media.tmdbId)}
                   trailing={
-                    <View style={{ flexDirection: "row", gap: 6 }}>
+                    <View style={{ flexDirection: "row", gap: space.sm }}>
                       <RowButton icon="check" label={mt.approve} onPress={() => act(() => client.approve(request.id))} />
                       <RowButton outline icon="x" label={mt.decline} onPress={() => act(() => client.decline(request.id))} />
                     </View>

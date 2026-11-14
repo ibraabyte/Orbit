@@ -20,7 +20,7 @@ import { OverlayProvider } from "@/components/overlays";
 import { SectionOffCover } from "@/components/section-off";
 import { Loading } from "@/components/screen";
 import { SidebarLayout } from "@/components/sidebar";
-import { colors, scheme } from "@/components/theme";
+import { colors, scheme, space } from "@/components/theme";
 import { clearDashboardCache, DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { clearWidget } from "@/hooks/use-widget-sync";
@@ -50,9 +50,11 @@ export default function RootLayout() {
 
   useEffect(() => (configured ? watchSession(setSession) : undefined), []);
 
-  // Styles are built once at launch from the phone's light/dark setting, so a new setting reloads the app when it
-  // comes back to the front. Only while active: iOS flips the setting in the background while taking snapshots.
+  // On iOS colours follow a light/dark change live (see theme.ts). Android styles keep the launch palette, so a new
+  // setting reloads the app when it comes back to the front. Only while active: the setting can flip in the background
+  // while the system takes snapshots.
   useEffect(() => {
+    if (process.env.EXPO_OS !== "android") return;
     const check = () => {
       if (AppState.currentState !== "active" || (Appearance.getColorScheme() === "light" ? "light" : "dark") === scheme) return;
       if (__DEV__ && typeof DevSettings.reload === "function") return DevSettings.reload();
@@ -73,7 +75,7 @@ export default function RootLayout() {
 
   if (!configured) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: colors.shell }}>
+      <View style={{ flex: 1, justifyContent: "center", padding: space.xxl, backgroundColor: colors.shell }}>
         <Text style={{ color: colors.onShell }}>Add EXPO_PUBLIC_API_URL (Orbit's server) to .env.local, then restart.</Text>
       </View>
     );
@@ -108,7 +110,7 @@ export default function RootLayout() {
 
   return (
     <ShareIntentProvider options={{ disabled: shareDisabled, resetOnBackground: true }}>
-      <StatusBar style={scheme === "light" ? "dark" : "light"} />
+      <StatusBar style="auto" />
       {session ? (
         <AppLock>
           <DashboardDataProvider key={session.userId} userId={session.userId}>

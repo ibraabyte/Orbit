@@ -3,7 +3,7 @@ import type { BottomTabBarProps } from "expo-router/js-tabs";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Glass, Icon, type IconName } from "@/components/drift";
 import { openCapture, useSidebar } from "@/components/screen";
-import { colors, fonts } from "@/components/theme";
+import { colors, fonts, radius, shadow, space, textSize } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
 // Refined tab bar: a floating Liquid Glass capsule above the bottom edge (solid card colour where glass isn't available).
@@ -92,36 +92,33 @@ export function DriftTabBar({
 }
 
 const styles = StyleSheet.create({
-  bar: { position: "absolute", left: 16, right: 16, alignItems: "center" },
+  bar: { position: "absolute", left: space.lg, right: space.lg, alignItems: "center" },
   shadow: {
     width: "100%",
     maxWidth: 320,
-    borderRadius: 999,
-    shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 8 },
+    borderRadius: radius.pill,
+    boxShadow: shadow.floating,
   },
   capsule: {
-    borderRadius: 999,
+    borderRadius: radius.pill,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.edge,
     overflow: "hidden",
   },
-  tabs: { flexDirection: "row", alignItems: "center", gap: 6, padding: 6 },
+  tabs: { flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.sm },
   tab: {
     flex: 1,
     height: 56,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     alignItems: "center",
     justifyContent: "center",
-    gap: 3,
+    gap: space.xs,
   },
-  label: { fontFamily: fonts.semibold, fontSize: 10 },
+  label: { fontFamily: fonts.semibold, fontSize: textSize.caption2 },
   assistant: {
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: radius.xxl,
     backgroundColor: colors.accent,
     alignItems: "center",
     justifyContent: "center",

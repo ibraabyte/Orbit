@@ -4,7 +4,7 @@ import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSh
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, flip, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
 import { useReduceMotion } from "@/components/motion";
-import { backdrop, colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { et } from "@/lib/exercises";
 import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
@@ -141,7 +141,7 @@ function StackHeader({ action, title }: { action?: { label: string; onPress: () 
   // One exercise's page sits under the library.
   const meta = stackScreens[path] ?? (path.startsWith("/exercises/") ? { title: et.exercises } : path.startsWith("/task/") ? { title: t.task } : undefined);
   return (
-    <View style={{ gap: 10 }}>
+    <View style={{ gap: space.md }}>
       <View style={styles.stackBar}>
         <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t.back} style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}>
           <View style={flip}>
@@ -277,9 +277,9 @@ export function Skeleton() {
   }, [pulse]);
   const block = (height: number, radiusValue: number = radius.card) => <Animated.View style={{ flex: 1, height, borderRadius: radiusValue, backgroundColor: colors.surfaceInset, opacity: pulse }} />;
   return (
-    <View style={{ gap: 14 }} accessibilityLabel={t.loading}>
+    <View style={{ gap: space.lg }} accessibilityLabel={t.loading}>
       <View style={{ flexDirection: "row" }}>{block(72)}</View>
-      <View style={{ flexDirection: "row", gap: 10 }}>
+      <View style={{ flexDirection: "row", gap: space.md }}>
         {block(70, radius.tile)}
         {block(70, radius.tile)}
       </View>
@@ -296,7 +296,7 @@ export function Segments<T extends string>({ options, value, onChange, labels, s
         const selected = option === value;
         return (
           <Pressable key={option} onPress={() => onChange(option)} accessibilityRole="tab" accessibilityState={{ selected }} style={[styles.segment, small && styles.segmentSmall, selected && styles.segmentSelected]}>
-            <Text style={[styles.segmentText, small && { fontSize: 12 }, { color: selected ? colors.urgentInk : colors.inkMuted }]}>{labels ? labels[option] : option}</Text>
+            <Text style={[styles.segmentText, small && { fontSize: textSize.caption1 }, { color: selected ? colors.urgentInk : colors.inkMuted }]}>{labels ? labels[option] : option}</Text>
           </Pressable>
         );
       })}
@@ -364,8 +364,8 @@ export function Loading() {
 }
 
 export const ui = StyleSheet.create({
-  error: { fontFamily: fonts.medium, fontSize: 14, color: colors.dangerOnShell },
-  input: { minWidth: 0, minHeight: 48, backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: 14, fontSize: 16, fontFamily: fonts.medium, color: colors.ink }
+  error: { fontFamily: fonts.medium, fontSize: textSize.subheadline, color: colors.dangerOnShell },
+  input: { minWidth: 0, minHeight: 48, backgroundColor: colors.surface, borderColor: colors.hairline, borderWidth: 1, borderRadius: radius.tile, borderCurve: "continuous", paddingHorizontal: space.lg, fontSize: textSize.callout, fontFamily: fonts.medium, color: colors.ink }
 });
 
 const buttonStyles = StyleSheet.create({
@@ -376,38 +376,38 @@ const buttonStyles = StyleSheet.create({
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  shell: { flex: 1, backgroundColor: colors.shell, experimental_backgroundImage: backdrop },
-  content: { paddingHorizontal: 20, gap: 14 },
+  shell: { flex: 1, backgroundColor: colors.shell },
+  content: { paddingHorizontal: space.xl, gap: space.lg },
   column: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center" },
-  columns: { flexDirection: "row", alignItems: "flex-start", gap: 14 },
-  columnHalf: { flex: 1, minWidth: 0, gap: 14 },
-  groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12, minHeight: 20, paddingHorizontal: 4 },
-  tabHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 12, paddingTop: 4, paddingBottom: 2 },
-  headerButton: { minHeight: 44, minWidth: 44, paddingHorizontal: 12, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderRadius: radius.tile, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
-  stackBar: { flexDirection: "row", alignItems: "center", gap: 8 },
+  columns: { flexDirection: "row", alignItems: "flex-start", gap: space.lg },
+  columnHalf: { flex: 1, minWidth: 0, gap: space.lg },
+  groupHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, minHeight: 20, paddingHorizontal: space.xs },
+  tabHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.md, paddingTop: space.xs, paddingBottom: space.xxs },
+  headerButton: { minHeight: 44, minWidth: 44, paddingHorizontal: space.md, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.sm, borderRadius: radius.tile, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
+  stackBar: { flexDirection: "row", alignItems: "center", gap: space.sm },
   backButton: { width: 44, height: 44, borderRadius: radius.tile, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, alignItems: "center", justifyContent: "center" },
-  stackTitle: { flex: 1, fontFamily: fonts.semibold, fontSize: 26, lineHeight: 30, letterSpacing: -0.4, color: colors.onShell },
-  stackAction: { minHeight: 40, paddingHorizontal: 12, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
-  bleed: { marginHorizontal: -20, flexGrow: 0 },
-  bleedContent: { paddingHorizontal: 20, gap: 6 },
-  hint: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, borderWidth: 1, borderStyle: "dashed", borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
+  stackTitle: { flex: 1, fontFamily: fonts.semibold, fontSize: textSize.title1, lineHeight: lineHeights.title1, letterSpacing: -0.4, color: colors.onShell },
+  stackAction: { minHeight: 40, paddingHorizontal: space.md, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  bleed: { marginHorizontal: -space.xl, flexGrow: 0 },
+  bleedContent: { paddingHorizontal: space.xl, gap: space.sm },
+  hint: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.md, borderWidth: 1, borderStyle: "dashed", borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
   hintMark: { width: 22, height: 22, borderRadius: radius.badge, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
-  hintText: { flex: 1, fontFamily: fonts.regular, fontSize: 12, color: colors.inkFaint },
-  offline: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: colors.urgent, paddingHorizontal: 20, paddingVertical: 6 },
-  offlineDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.accent },
-  offlineText: { flex: 1, fontFamily: fonts.medium, fontSize: 12, color: colors.urgentInk },
-  error: { alignItems: "center", gap: 14, paddingHorizontal: 12, paddingVertical: 60 },
-  errorMark: { width: 56, height: 56, borderRadius: 20, borderCurve: "continuous", backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
-  errorGlyph: { fontFamily: fonts.semibold, fontSize: 28, color: colors.urgentInk },
-  segments: { flexDirection: "row", backgroundColor: colors.surfaceInset, borderRadius: radius.tile, borderCurve: "continuous", padding: 3, gap: 3 },
+  hintText: { flex: 1, fontFamily: fonts.regular, fontSize: textSize.caption1, color: colors.inkFaint },
+  offline: { flexDirection: "row", alignItems: "center", gap: space.sm, backgroundColor: colors.urgent, paddingHorizontal: space.xl, paddingVertical: space.sm },
+  offlineDot: { width: 8, height: 8, borderRadius: radius.pill, backgroundColor: colors.accent },
+  offlineText: { flex: 1, fontFamily: fonts.medium, fontSize: textSize.caption1, color: colors.urgentInk },
+  error: { alignItems: "center", gap: space.lg, paddingHorizontal: space.md, paddingVertical: space.giant },
+  errorMark: { width: 56, height: 56, borderRadius: radius.xl, borderCurve: "continuous", backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
+  errorGlyph: { fontFamily: fonts.semibold, fontSize: textSize.title1, color: colors.urgentInk },
+  segments: { flexDirection: "row", backgroundColor: colors.surfaceInset, borderRadius: radius.tile, borderCurve: "continuous", padding: space.xs, gap: space.xs },
   segment: { flex: 1, minHeight: 38, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
-  segmentsSmall: { alignSelf: "flex-start", borderRadius: 12 },
+  segmentsSmall: { alignSelf: "flex-start", borderRadius: radius.md },
   // flexBasis too: on the web a 0% basis from flex: 1 would survive flex: 0 and squeeze the labels.
-  segmentSmall: { flexGrow: 0, flexShrink: 0, flexBasis: "auto", minHeight: 30, paddingHorizontal: 12, borderRadius: 9 },
+  segmentSmall: { flexGrow: 0, flexShrink: 0, flexBasis: "auto", minHeight: 30, paddingHorizontal: space.md, borderRadius: radius.sm },
   segmentSelected: { backgroundColor: colors.urgent },
-  segmentText: { fontFamily: fonts.semibold, fontSize: 14 },
-  button: { minHeight: 50, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: 20, alignItems: "center", justifyContent: "center" },
-  buttonText: { fontFamily: fonts.semibold, fontSize: 16 },
-  search: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
-  searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: 15, color: colors.ink, minHeight: 44 }
+  segmentText: { fontFamily: fonts.semibold, fontSize: textSize.subheadline },
+  button: { minHeight: 50, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: space.xl, alignItems: "center", justifyContent: "center" },
+  buttonText: { fontFamily: fonts.semibold, fontSize: textSize.callout },
+  search: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.lg, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
+  searchInput: { flex: 1, fontFamily: fonts.medium, fontSize: textSize.subheadline, color: colors.ink, minHeight: 44 }
 });

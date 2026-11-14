@@ -10,7 +10,7 @@ import { useOverlays } from "@/components/overlays";
 import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, Skeleton, TabHeader } from "@/components/screen";
 import { SwipeToDone } from "@/components/swipe-to-done";
 import { TaskRow } from "@/components/task-row";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useMorningBrief } from "@/hooks/use-morning-brief";
 import { useNow } from "@/hooks/use-now";
@@ -272,7 +272,7 @@ export default function Today() {
         <DoseRow key={entry.key} entry={entry} first={index === 0} />
       ))}
       {openDoses.length ? (
-        <View style={{ paddingTop: 10, alignItems: "flex-start" }}>
+        <View style={{ paddingTop: space.md, alignItems: "flex-start" }}>
           <CardLink href="/medications" label={rx.medications} />
         </View>
       ) : null}
@@ -285,9 +285,9 @@ export default function Today() {
   const healthLogged = (foodOn && summary.todayCalories > 0) || summary.todayWorkoutMinutes > 0 || summary.todaySleepMinutes > 0;
   const healthCard = show("health") && on("health") && healthLogged ? (
     <Card title={t.healthToday} action={<CardLink href="/health" label={t.health} />}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space.lg }}>
         {foodOn ? <RingGauge value={calorieShare} label={calorieTarget ? `${Math.round(calorieShare * 100)}%` : "–"} /> : null}
-        <View style={{ flex: 1, flexDirection: "row", gap: 8 }}>
+        <View style={{ flex: 1, flexDirection: "row", gap: space.sm }}>
           {foodOn ? (
             <View style={{ flex: 1 }}>
               <Metric label={t.calories} value={summary.todayCalories} unit={calorieTarget ? `/ ${calorieTarget}` : undefined} />
@@ -348,8 +348,8 @@ function digestIcon(tone?: string | null) {
 
 const styles = StyleSheet.create({
   heroMark: { width: 40, height: 40, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accentWash, alignItems: "center", justifyContent: "center" },
-  heroValue: { fontFamily: fonts.semibold, fontSize: 18, lineHeight: 24, color: colors.ink },
-  heroIn: { fontFamily: fonts.medium, fontSize: 13, color: colors.link },
-  nextRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.surfaceInset, backgroundColor: colors.surface },
-  nextTime: { width: 52, fontFamily: fonts.semibold, fontSize: 12, color: colors.inkMuted, writingDirection: "ltr" }
+  heroValue: { fontFamily: fonts.semibold, fontSize: textSize.headline, lineHeight: lineHeights.headline, color: colors.ink },
+  heroIn: { fontFamily: fonts.medium, fontSize: textSize.footnote, color: colors.link },
+  nextRow: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 52, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: colors.surfaceInset, backgroundColor: colors.surface },
+  nextTime: { width: 52, fontFamily: fonts.semibold, fontSize: textSize.caption1, color: colors.inkMuted, writingDirection: "ltr" }
 });

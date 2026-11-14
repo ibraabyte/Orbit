@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { BentoGrid, BentoTile, Card, Icon, IconTile, ListRow, RingGauge } from "@/components/drift";
 import { GroupHeader, HeaderButton, Screen, TabHeader } from "@/components/screen";
 import { insideFinance, insideHealth, mt, useSectionStatus, useVisibleSections, type Section } from "@/components/sections";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { openTasks, summarizeDashboard, weeklySummary } from "@/lib/dashboard";
 import { isPastDue } from "@/lib/dates";
@@ -57,7 +57,7 @@ export default function More() {
           <Text style={styles.leadTitle}>{t.tasks}</Text>
           {summary.todayTaskCount ? <Text style={styles.leadSide}>{mt.today(formatNumber(summary.todayTaskCount))}</Text> : null}
         </View>
-        <View style={{ gap: 2 }}>
+        <View style={{ gap: space.xxs }}>
           {status.tasks?.value ? <Text style={styles.leadValue}>{status.tasks.value}</Text> : <Icon name="check" size={36} color={colors.urgentInk} />}
           <Text style={styles.leadSide}>{status.tasks?.caption}</Text>
         </View>
@@ -77,7 +77,7 @@ export default function More() {
     <Link key="health" href="/health" asChild>
       <Pressable accessibilityRole="link" style={styles.health}>
         <RingGauge value={Math.min(1, workoutDone / workoutTarget)} size={52} thickness={6} track={colors.accentWash} hole={colors.accentTint} />
-        <View style={{ flex: 1, gap: 4 }}>
+        <View style={{ flex: 1, gap: space.xs }}>
           <Text style={styles.title}>{t.health}</Text>
           <Text style={[styles.line, { color: colors.accentTintInk }]} numberOfLines={3}>
             {workoutDone >= workoutTarget ? mt.targetMet : mt.minLeft(formatNumber(workoutTarget - workoutDone))}
@@ -171,7 +171,7 @@ export default function More() {
           ) : null}
           {tileGroups.map(([label, items]) =>
             items.length ? (
-              <View key={label} style={{ gap: 8 }}>
+              <View key={label} style={{ gap: space.sm }}>
                 <GroupHeader label={label} />
                 <BentoGrid>
                   {items.map((item) => (
@@ -188,31 +188,31 @@ export default function More() {
 }
 
 // Link's Slot takes one style object, not an array, so every linked card has its own entry.
-const card = { borderRadius: 24, borderCurve: "continuous" } as const;
+const card = { borderRadius: radius.card, borderCurve: "continuous" } as const;
 const plain = { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline } as const;
 
 const styles = StyleSheet.create({
-  search: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 54, paddingHorizontal: 16, ...plain, borderColor: colors.accentLine, borderRadius: radius.pill },
-  searchInput: { flex: 1, minHeight: 44, fontFamily: fonts.regular, fontSize: 15, color: colors.ink },
-  row: { flexDirection: "row", gap: 10 },
-  column: { flex: 1, flexBasis: 0, gap: 10 },
-  spread: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  search: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 54, paddingHorizontal: space.lg, ...plain, borderColor: colors.accentLine, borderRadius: radius.pill },
+  searchInput: { flex: 1, minHeight: 44, fontFamily: fonts.regular, fontSize: textSize.subheadline, color: colors.ink },
+  row: { flexDirection: "row", gap: space.md },
+  column: { flex: 1, flexBasis: 0, gap: space.md },
+  spread: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm },
   // Tasks: the inverted card, dark on the day ground and pale at night.
-  lead: { ...card, flex: 1, flexBasis: 0, minWidth: 0, minHeight: 236, justifyContent: "space-between", gap: 12, padding: 16, backgroundColor: colors.urgent },
-  leadTitle: { fontFamily: fonts.semibold, fontSize: 14, color: colors.urgentInk },
-  leadSide: { fontFamily: fonts.medium, fontSize: 12, color: colors.urgentInk, opacity: 0.7 },
-  leadValue: { fontFamily: fonts.bold, fontSize: 56, lineHeight: 60, color: colors.urgentInk },
-  leadFoot: { gap: 4, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.edge },
-  leadTask: { fontFamily: fonts.semibold, fontSize: 12, color: colors.urgentInk },
-  leadDue: { fontFamily: fonts.regular, fontSize: 11, color: colors.urgentInk, opacity: 0.6 },
-  health: { ...card, flex: 1, minHeight: 113, padding: 14, flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: colors.accentTint },
-  finance: { ...card, ...plain, flex: 1, minHeight: 113, padding: 14, justifyContent: "space-between" },
-  habits: { ...card, ...plain, gap: 12, padding: 14 },
-  title: { fontFamily: fonts.bold, fontSize: 14, color: colors.ink },
-  line: { fontFamily: fonts.regular, fontSize: 11, lineHeight: 15, color: colors.inkMuted },
-  number: { fontFamily: fonts.bold, fontSize: 24, color: colors.ink },
+  lead: { ...card, flex: 1, flexBasis: 0, minWidth: 0, minHeight: 236, justifyContent: "space-between", gap: space.md, padding: space.lg, backgroundColor: colors.urgent },
+  leadTitle: { fontFamily: fonts.semibold, fontSize: textSize.subheadline, color: colors.urgentInk },
+  leadSide: { fontFamily: fonts.medium, fontSize: textSize.caption1, color: colors.urgentInk, opacity: 0.7 },
+  leadValue: { fontFamily: fonts.bold, fontSize: textSize.display, lineHeight: lineHeights.display, color: colors.urgentInk },
+  leadFoot: { gap: space.xs, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.edge },
+  leadTask: { fontFamily: fonts.semibold, fontSize: textSize.caption1, color: colors.urgentInk },
+  leadDue: { fontFamily: fonts.regular, fontSize: textSize.caption2, color: colors.urgentInk, opacity: 0.6 },
+  health: { ...card, flex: 1, minHeight: 113, padding: space.lg, flexDirection: "row", alignItems: "center", gap: space.md, backgroundColor: colors.accentTint },
+  finance: { ...card, ...plain, flex: 1, minHeight: 113, padding: space.lg, justifyContent: "space-between" },
+  habits: { ...card, ...plain, gap: space.md, padding: space.lg },
+  title: { fontFamily: fonts.bold, fontSize: textSize.subheadline, color: colors.ink },
+  line: { fontFamily: fonts.regular, fontSize: textSize.caption2, lineHeight: lineHeights.caption2, color: colors.inkMuted },
+  number: { fontFamily: fonts.bold, fontSize: textSize.title2, color: colors.ink },
   week: { flexDirection: "row", justifyContent: "space-between" },
-  day: { alignItems: "center", gap: 4 },
-  dot: { width: 16, height: 16, borderRadius: 8, borderWidth: 1, borderColor: colors.hairline },
-  dayLetter: { fontFamily: fonts.medium, fontSize: 10, color: colors.inkMuted }
+  day: { alignItems: "center", gap: space.xs },
+  dot: { width: 16, height: 16, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline },
+  dayLetter: { fontFamily: fonts.medium, fontSize: textSize.caption2, color: colors.inkMuted }
 });

@@ -7,7 +7,7 @@ import { AiPicker } from "@/components/ai-picker";
 import { Badge, Card, EmptyState, GoalBar, Hero, heroRing, ListRow, Metric, RingGauge, toneGlyph, toneToBadge, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Loading, Screen, ui } from "@/components/screen";
-import { colors, fonts } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
 import { getApi, hasServer } from "@/lib/backend";
 import { formatNumber, t } from "@/lib/i18n";
@@ -149,7 +149,7 @@ export default function Whoop() {
 
       <Hero>
         <RingGauge value={(recovery ?? 0) / 100} size={96} thickness={11} label={recovery === null ? "–" : `${Math.round(recovery)}%`} sublabel={t.recovery} {...heroRing} />
-        <View style={{ flex: 1, gap: 10 }}>
+        <View style={{ flex: 1, gap: space.md }}>
           <View style={styles.heroRow}>
             <View style={{ flex: 1 }}>
               <Metric onLime label="HRV" value={show("hrv", (v) => `${Math.round(v)}`)} unit="ms" />
@@ -173,7 +173,7 @@ export default function Whoop() {
         <Card
           title={t.recovery14}
           action={
-            <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={{ flexDirection: "row", gap: space.sm }}>
               <Text style={type.tileLabel}>● {t.good}</Text>
               <Text style={type.tileLabel}>◐ {t.mid}</Text>
               <Text style={type.tileLabel}>○ {t.poor}</Text>
@@ -223,14 +223,14 @@ export default function Whoop() {
         {!status.ai_configured ? (
           <EmptyState>{t.aiConnectFirst}</EmptyState>
         ) : insight ? (
-          <View style={{ gap: 4 }}>
+          <View style={{ gap: space.xs }}>
             <Text style={styles.arabic}>{insight.summary}</Text>
             {[...insight.highlights, ...insight.recommendations].map((line) => (
               <Text key={line} style={styles.arabic}>
                 {`• ${line}`}
               </Text>
             ))}
-            <Text style={[type.rowSubtitle, { marginTop: 4 }]}>
+            <Text style={[type.rowSubtitle, { marginTop: space.xs }]}>
               {insight.period_start} → {insight.period_end}
             </Text>
           </View>
@@ -242,12 +242,12 @@ export default function Whoop() {
       </Card>
 
       <Card title={t.connection}>
-        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
           <Text style={type.rowSubtitle}>{t.lastSync}</Text>
           <Text style={[type.barValue, { flexShrink: 1 }]}>{status.last_sync_error ?? syncedAgo(status.last_synced_at)}</Text>
         </View>
         {status.last_sync_error?.includes("again") ? <Button variant="outline" title={t.connectWhoop} disabled={busy !== null} onPress={connect} /> : null}
-        <View style={{ flexDirection: "row", gap: 8 }}>
+        <View style={{ flexDirection: "row", gap: space.sm }}>
           <View style={{ flex: 1 }}>
             <Button title={busy === "sync" ? `${t.syncNow}…` : t.syncNow} disabled={busy !== null} onPress={sync} />
           </View>
@@ -263,28 +263,28 @@ export default function Whoop() {
 /** Not connected, or not set up: the WHOOP mark, a line, and the way forward. */
 function Gate({ title, detail, children }: { title: string; detail: string; children?: ReactNode }) {
   return (
-    <Card style={{ alignItems: "center", gap: 12, paddingVertical: 28 }}>
+    <Card style={{ alignItems: "center", gap: space.md, paddingVertical: space.xxl }}>
       <View style={styles.gateMark}>
         <Text style={styles.gateGlyph}>W</Text>
       </View>
       <Text style={type.h2}>{title}</Text>
-      <Text style={[type.rowSubtitle, { fontSize: 13, textAlign: "center" }]}>{detail}</Text>
+      <Text style={[type.rowSubtitle, { fontSize: textSize.footnote, textAlign: "center" }]}>{detail}</Text>
       {children}
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  ok: { fontFamily: fonts.medium, fontSize: 14, color: colors.link },
-  heroRow: { flexDirection: "row", gap: 10 },
-  chart: { flexDirection: "row", alignItems: "flex-end", height: 72, gap: 4 },
-  barSlot: { flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center", gap: 3 },
+  ok: { fontFamily: fonts.medium, fontSize: textSize.subheadline, color: colors.link },
+  heroRow: { flexDirection: "row", gap: space.md },
+  chart: { flexDirection: "row", alignItems: "flex-end", height: 72, gap: space.xs },
+  barSlot: { flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center", gap: space.xs },
   bar: { width: "100%", flexShrink: 1, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
   barEmpty: { height: 4, backgroundColor: colors.hairline },
   barPoor: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.ink },
-  barGlyph: { fontSize: 9, color: colors.inkMuted },
-  gateMark: { width: 64, height: 64, borderRadius: 16, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
-  gateGlyph: { fontFamily: fonts.bold, fontSize: 22, color: colors.urgentInk },
+  barGlyph: { fontSize: textSize.caption2, color: colors.inkMuted },
+  gateMark: { width: 64, height: 64, borderRadius: radius.lg, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
+  gateGlyph: { fontFamily: fonts.bold, fontSize: textSize.title2, color: colors.urgentInk },
   // The AI summary is Arabic: right-to-left, whatever the rest of the screen does.
-  arabic: { fontFamily: "IBMPlexSansArabic_400Regular", fontSize: 14, lineHeight: 25, color: colors.ink, writingDirection: "rtl", textAlign: "right" }
+  arabic: { fontFamily: "IBMPlexSansArabic_400Regular", fontSize: textSize.subheadline, lineHeight: lineHeights.subheadline, color: colors.ink, writingDirection: "rtl", textAlign: "right" }
 });

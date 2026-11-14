@@ -7,7 +7,7 @@ import { AiPicker } from "@/components/ai-picker";
 import { Badge, Card, CheckItem, EmptyState, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Input, Loading, Screen, Segments, ui } from "@/components/screen";
-import { colors, radius } from "@/components/theme";
+import { colors, radius, space, textSize } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
 import { getApi } from "@/lib/backend";
 import { foodApi, macroText, mealTypeAt, parseAmount, plateItemNutrition, plateTotal, type MealType, type PlateEstimate, type PlateItem } from "@/lib/food-log";
@@ -142,7 +142,7 @@ export default function FoodPhoto() {
           {drafts.map((draft, index) => (
             <View key={index} style={styles.item}>
               <CheckItem checked={draft.include} onPress={() => edit(index, { include: !draft.include })} label={draft.name} size={26} />
-              <View style={{ flex: 1, gap: 6 }}>
+              <View style={{ flex: 1, gap: space.sm }}>
                 <Input value={draft.name} onChangeText={(name) => edit(index, { name })} accessibilityLabel={t.foodName} style={styles.small} />
                 <View style={styles.meta}>
                   <Badge tone={draft.confidence === "high" ? "success" : draft.confidence === "low" ? "urgent" : "neutral"}>{t.confidenceNames[draft.confidence]}</Badge>
@@ -170,8 +170,8 @@ export default function FoodPhoto() {
 
 const styles = StyleSheet.create({
   photo: { width: "100%", aspectRatio: 4 / 3, borderRadius: radius.tile, backgroundColor: colors.surfaceInset },
-  row: { flexDirection: "row", gap: 8 },
-  item: { flexDirection: "row", alignItems: "flex-start", gap: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
-  meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 6 },
-  small: { minHeight: 40, fontSize: 14 }
+  row: { flexDirection: "row", gap: space.sm },
+  item: { flexDirection: "row", alignItems: "flex-start", gap: space.md, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
+  meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.sm },
+  small: { minHeight: 40, fontSize: textSize.subheadline }
 });

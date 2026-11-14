@@ -9,7 +9,7 @@ import { useOverlays } from "@/components/overlays";
 import { RequestOptions, useRequestOptions } from "@/components/request-options";
 import { CastCard, Chip, FactRows, openDiscover, Poster, PosterRail, StatusPill } from "@/components/seerr-parts";
 import { BleedRow, Button, CONTENT_MAX_WIDTH } from "@/components/screen";
-import { backdrop as ground, colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, shadow, space, textSize, usePalette } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -51,6 +51,7 @@ export default function Title() {
   const kind: SeerrMediaType = params.kind === "tv" ? "tv" : "movie";
   const tmdbId = Number(params.id);
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
   const seerr = useSeerr();
   const client = seerr.client;
   const { sheet } = useOverlays();
@@ -127,7 +128,7 @@ export default function Title() {
 
   if (!item) {
     return (
-      <View style={[styles.shell, { paddingTop: insets.top + 64, paddingHorizontal: 20 }]}>
+      <View style={[styles.shell, { paddingTop: insets.top + 64, paddingHorizontal: space.xl }]}>
         <EmptyState>{failed ?? (seerr.ready && !seerr.connected ? t.seerrConnect : `${t.loading}…`)}</EmptyState>
         {back}
       </View>
@@ -202,7 +203,7 @@ export default function Title() {
       badges={<StatusPill badge={requestBadge(request.status)} />}
       subtitle={[request.seasons?.length ? mt.seasonsAsked(request.seasons.map((season) => season.seasonNumber).join(mt.sep)) : null, formatDate(request.createdAt)].filter(Boolean).join(" · ")}
       trailing={
-        <View style={{ gap: 6 }}>
+        <View style={{ gap: space.sm }}>
           <RowButton icon="check" label={mt.approve} disabled={busy} onPress={() => act(() => client!.approve(request.id))} />
           <RowButton outline label={mt.decline} disabled={busy} onPress={() => act(() => client!.decline(request.id))} />
         </View>
@@ -215,14 +216,15 @@ export default function Title() {
       <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 48 }}>
         <View style={styles.backdrop}>
           {backdrop ? <Image source={{ uri: backdrop }} style={StyleSheet.absoluteFill} resizeMode="cover" accessibilityIgnoresInvertColors /> : null}
-          <View style={[StyleSheet.absoluteFill, styles.fade]} />
+          {/* The picture fades into the ground, so the poster and name sit on it. A gradient needs a plain colour, so it follows the setting by re-rendering. */}
+          <View style={[StyleSheet.absoluteFill, { experimental_backgroundImage: `linear-gradient(180deg, transparent 0%, transparent 35%, ${palette.shell} 100%)` }]} />
         </View>
         <View style={styles.content}>
           <View style={styles.head}>
             <View style={styles.posterShadow}>
               <Poster path={item.posterPath} title={name} width={116} />
             </View>
-            <View style={{ flex: 1, gap: 6, justifyContent: "flex-end" }}>
+            <View style={{ flex: 1, gap: space.sm, justifyContent: "flex-end" }}>
               <Text style={styles.name} accessibilityRole="header">
                 {name}
               </Text>
@@ -236,7 +238,7 @@ export default function Title() {
 
           {item.tagline ? <Text style={styles.tagline}>{item.tagline}</Text> : null}
 
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: space.sm }}>
             {play ? <Button variant="primary" title={`▶ ${mt.play}`} onPress={() => void Linking.openURL(play).catch(() => open(play))} /> : null}
             {requestable && !picking && !composing ? <Button variant={play ? "outline" : "primary"} disabled={busy || !client} title={!standard.ok ? mt.request4k : kind === "tv" && status === 4 ? mt.requestMore : kind === "tv" && seasons.length ? mt.requestSeasons : mt.request} onPress={startRequest} /> : null}
             {mine ? <Button variant="outline" disabled={busy} title={mt.cancelRequest} onPress={() => sheet({ title: mt.cancelRequestTitle, detail: name, options: [{ label: mt.cancelRequest, destructive: true, run: () => void act(() => client!.cancel(mine.id)) }] })} /> : null}
@@ -253,7 +255,7 @@ export default function Title() {
           {composing ? (
             <Card title={mt.requestOptions}>
               {optionsPanel}
-              <View style={{ gap: 8, paddingTop: 4 }}>
+              <View style={{ gap: space.sm, paddingTop: space.xs }}>
                 <Button variant="primary" disabled={busy} title={choice.is4k ? mt.request4k : mt.request} onPress={() => send("all")} />
                 <Button variant="outline" title={t.cancel} onPress={() => setComposing(false)} />
               </View>
@@ -313,7 +315,7 @@ export default function Title() {
               })}
               {picking && optionsPanel ? <View style={styles.pickOptions}>{optionsPanel}</View> : null}
               {picking ? (
-                <View style={{ gap: 8, paddingTop: 8 }}>
+                <View style={{ gap: space.sm, paddingTop: space.sm }}>
                   <Button variant="primary" disabled={busy || picking.size === 0} title={`${picking.size === requestableSeasons.length && picking.size > 1 ? `${mt.request} · ${mt.requestAll}` : mt.requestPicked(picking.size)}${choice.is4k ? ` · ${mt.fourK}` : ""}`} onPress={() => send([...picking].sort((a, b) => a - b))} />
                   <Button variant="outline" title={t.cancel} onPress={() => setPicking(null)} />
                 </View>
@@ -391,25 +393,26 @@ function Rating({ label, value, detail }: { label: string; value: string; detail
   );
 }
 
+// How far the poster and name rise over the bottom of the backdrop picture.
+const POSTER_OVERLAP = 120;
+
 const styles = StyleSheet.create({
-  shell: { flex: 1, backgroundColor: colors.shell, experimental_backgroundImage: ground },
+  shell: { flex: 1, backgroundColor: colors.shell },
   backdrop: { height: 260, backgroundColor: colors.surface },
-  // The picture fades into the ground, so the poster and name sit on it.
-  fade: { experimental_backgroundImage: `linear-gradient(180deg, transparent 0%, transparent 35%, ${colors.shell} 100%)` },
-  content: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center", paddingHorizontal: 20, gap: 14, marginTop: -120 },
-  head: { flexDirection: "row", gap: 16, alignItems: "flex-end" },
-  posterShadow: { shadowColor: colors.shell, shadowOpacity: 0.5, shadowRadius: 16, shadowOffset: { width: 0, height: 8 } },
-  name: { fontFamily: fonts.medium, fontSize: 24, lineHeight: 30, letterSpacing: -0.4, color: colors.onShell },
-  tagline: { fontFamily: fonts.regular, fontStyle: "italic", fontSize: 13, lineHeight: 19, color: colors.inkMuted },
-  badges: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  links: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  pickOptions: { paddingTop: 12, marginTop: 4, borderTopWidth: 1, borderTopColor: colors.hairline },
-  episodes: { paddingStart: 48, paddingBottom: 8, gap: 12 },
-  episode: { gap: 3 },
+  content: { width: "100%", maxWidth: CONTENT_MAX_WIDTH, alignSelf: "center", paddingHorizontal: space.xl, gap: space.lg, marginTop: -POSTER_OVERLAP },
+  head: { flexDirection: "row", gap: space.lg, alignItems: "flex-end" },
+  posterShadow: { boxShadow: shadow.poster },
+  name: { fontFamily: fonts.medium, fontSize: textSize.title2, lineHeight: lineHeights.title2, letterSpacing: -0.4, color: colors.onShell },
+  tagline: { fontFamily: fonts.regular, fontStyle: "italic", fontSize: textSize.footnote, lineHeight: lineHeights.footnote, color: colors.inkMuted },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  links: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  pickOptions: { paddingTop: space.md, marginTop: space.xs, borderTopWidth: 1, borderTopColor: colors.hairline },
+  episodes: { paddingStart: space.huge, paddingBottom: space.sm, gap: space.md },
+  episode: { gap: space.xs },
   episodeNumber: { fontFamily: fonts.medium, color: colors.link },
-  ratings: { flexDirection: "row", gap: 10 },
-  rating: { flex: 1, gap: 4, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, padding: 10, alignItems: "flex-start" },
-  ratingValue: { fontFamily: fonts.medium, fontSize: 20, color: colors.ink },
-  backButton: { position: "absolute", start: 20, width: 44, height: 44, borderRadius: 22 },
+  ratings: { flexDirection: "row", gap: space.md },
+  rating: { flex: 1, gap: space.xs, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, padding: space.md, alignItems: "flex-start" },
+  ratingValue: { fontFamily: fonts.medium, fontSize: textSize.title3, color: colors.ink },
+  backButton: { position: "absolute", start: space.xl, width: 44, height: 44, borderRadius: radius.pill },
   glassPress: { flexGrow: 1, minHeight: 44, alignItems: "center", justifyContent: "center" }
 });
