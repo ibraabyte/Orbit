@@ -60,6 +60,7 @@ describe("what each feature uses", () => {
   it("reads choices with their model", () => {
     const set = overview();
     expect(choiceLabel(row("assistant"), "gemini", set)).toBe("Gemini · made-up-gemini");
+    expect(choiceLabel(row("assistant"), "gemini", set, true)).toBe("Gemini");
     expect(choiceLabel(row("call"), "gpt-realtime-mini", set)).toBe("gpt-realtime-mini · cheaper");
     expect(choiceLabel(row("speech"), "phone", set)).toBe("The phone");
     expect(choiceLabel(row("speech"), "cloud", set)).toBe("Voice model: Groq · whisper-large-v3");
@@ -69,7 +70,7 @@ describe("what each feature uses", () => {
     const set = overview();
     expect(featureSummary(row("assistant"), set)).toBe("Default: OpenAI · made-up-gpt");
     expect(featureSummary(row("assistant", { choice: "gemini", effective: "gemini" }), set)).toBe("Gemini · made-up-gemini");
-    expect(featureSummary(row("assistant", { choice: "anthropic", stale: true }), set)).toBe("Claude was removed, so it uses the default for now: OpenAI · made-up-gpt.");
+    expect(featureSummary(row("assistant", { choice: "anthropic", stale: true }), set)).toBe("Claude was removed, so it uses the default for now: OpenAI.");
     expect(featureSummary(row("health", { effective: null, default: null, options: [] }), set)).toBe("Connect an AI above first.");
     expect(featureSummary(row("call", { effective: null, default: null, options: [] }), set)).toBe("Needs an OpenAI key, under AI or Voice model.");
   });

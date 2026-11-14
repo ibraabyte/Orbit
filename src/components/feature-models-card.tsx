@@ -4,7 +4,7 @@ import { Badge, Card, Icon, IconTile, ListRow, type, type IconName } from "@/com
 import { colors } from "@/components/theme";
 import { getApi } from "@/lib/backend";
 import { choiceLabel, featuresApi, featureSummary, featuresOf, type Feature, type FeatureStatus } from "@/lib/feature-models";
-import { t } from "@/lib/i18n";
+import { isArabic, t } from "@/lib/i18n";
 import type { IntegrationsOverview } from "@/lib/integrations";
 
 const ICONS: Record<Feature, IconName> = {
@@ -49,7 +49,7 @@ export function FeatureModelsCard({ overview, onSaved }: { overview: Integration
         return (
           <View key={row.feature}>
             <ListRow
-              leading={<IconTile name={ICONS[row.feature]} tone={row.stale ? "urgent" : "neutral"} />}
+              leading={<IconTile name={ICONS[row.feature]} tone={row.stale ? "accent" : "neutral"} />}
               title={t.featureNames[row.feature]}
               subtitle={featureSummary(row, overview)}
               onPress={canPick ? () => setOpen(expanded ? null : row.feature) : undefined}
@@ -57,7 +57,7 @@ export function FeatureModelsCard({ overview, onSaved }: { overview: Integration
             />
             {expanded ? (
               <View style={styles.options}>
-                <Option label={row.default ? `${t.featureDefaultOption} · ${choiceLabel(row, row.default, overview)}` : t.featureDefaultOption} selected={row.choice === null} disabled={saving} onPress={() => void pick(row, null)} />
+                <Option label={row.default ? `${t.featureDefaultOption} · ${choiceLabel(row, row.default, overview, true)}` : t.featureDefaultOption} selected={row.choice === null} disabled={saving} onPress={() => void pick(row, null)} />
                 {row.options.map((choice) => (
                   <Option key={choice} label={choiceLabel(row, choice, overview)} selected={row.choice === choice} disabled={saving} onPress={() => void pick(row, choice)} />
                 ))}
@@ -91,5 +91,6 @@ const styles = StyleSheet.create({
   options: { gap: 6, paddingBottom: 8, paddingStart: 42 },
   option: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline },
   selected: { borderColor: colors.accentLine, backgroundColor: colors.accentTint },
-  label: { flex: 1, fontSize: 13, color: colors.ink }
+  // A label that is all English (a model name) still lines up with the Arabic ones.
+  label: { flex: 1, fontSize: 13, color: colors.ink, writingDirection: isArabic ? "rtl" : "ltr" }
 });

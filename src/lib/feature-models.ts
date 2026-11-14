@@ -51,10 +51,11 @@ const FOOD_LINE = /^\s*(?:(?:أ|ا|إ)كلت|(?:أ|ا)?فطرت|تريقت|تر�
 export const isFoodLine = (line: string) => FOOD_LINE.test(line);
 
 // How a choice reads in a list: an AI, a realtime model, the phone or the voice model.
-export function choiceLabel(row: Pick<FeatureStatus, "kind">, choice: string, overview: IntegrationsOverview | null): string {
+// short: the AI's name only, for the "Default" option.
+export function choiceLabel(row: Pick<FeatureStatus, "kind">, choice: string, overview: IntegrationsOverview | null, short = false): string {
   if (row.kind === "ai") {
     const name = AI_CHOICE_NAMES[choice as AiChoiceName] ?? choice;
-    const model = overview?.ais?.choices.find((item) => item.provider === choice)?.model;
+    const model = short ? null : overview?.ais?.choices.find((item) => item.provider === choice)?.model;
     return model ? `${name} · ${model}` : name;
   }
   if (row.kind === "realtime") return choice === REALTIME_CHEAPER ? `${choice} · ${t.featureCheaper}` : choice;
@@ -68,7 +69,8 @@ export function choiceLabel(row: Pick<FeatureStatus, "kind">, choice: string, ov
 export function featureSummary(row: FeatureStatus, overview: IntegrationsOverview | null): string {
   if (!row.effective) return row.kind === "realtime" ? t.featureNeedsOpenai : t.featureNeedsAi;
   const now = choiceLabel(row, row.effective, overview);
-  if (row.stale && row.choice) return t.featureStale.replace("{name}", choiceLabel(row, row.choice, overview)).replace("{now}", now);
+  // Short names here, so the long line doesn't break inside a model name.
+  if (row.stale && row.choice) return t.featureStale.replace("{name}", choiceLabel(row, row.choice, overview, true)).replace("{now}", choiceLabel(row, row.effective, overview, true));
   return row.choice ? now : t.featureDefault.replace("{name}", now);
 }
 
