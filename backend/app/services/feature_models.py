@@ -3,8 +3,8 @@
 Three kinds of feature:
 - "ai": the text features. The choice is one of the AIs they connected (whoop_ai.connected), so a cheap model can
   estimate food while a stronger one runs the assistant. Read through whoop_ai.access_for(..., feature=...).
-- "realtime": the live voice call and the phone agent. Both need OpenAI Realtime with their OpenAI key; the choice is
-  the realtime model.
+- "realtime": the live voice call and the phone agent. The choice is the OpenAI realtime model (with their OpenAI key)
+  or, for the call only, "elevenlabs": ElevenLabs Agents with the ElevenLabs key saved as their voice model.
 - "speech": the assistant's mic. "cloud" sends recordings to their voice model (Integrations > Voice), "phone" keeps
   speech to text on the phone. The phone reads this choice itself.
 
@@ -25,6 +25,9 @@ AI_FEATURES = ("assistant", "food_text", "food_photo", "health", "week", "saver"
 REALTIME_FEATURES = ("call", "phone_agent")
 REALTIME_MODELS = ("gpt-realtime", "gpt-realtime-mini")
 DEFAULT_REALTIME = REALTIME_MODELS[0]
+# The live call can also go through ElevenLabs (app/services/elevenlabs_call.py). The phone agent can't: it uses Twilio
+# with OpenAI Realtime.
+ELEVENLABS = "elevenlabs"
 SPEECH_CHOICES = ("phone", "cloud")
 # The ones the app lists, in its order.
 SHOWN = (*AI_FEATURES, "speech", "call", "phone_agent")
@@ -57,7 +60,10 @@ def options(db: Session, user_id: uuid.UUID, feature: str) -> list[str]:
     if kind == "ai":
         return whoop_ai.connected(db, user_id)
     if kind == "realtime":
-        return list(REALTIME_MODELS) if voice_call.call_key(db, user_id) is not None else []
+        found = list(REALTIME_MODELS) if voice_call.call_key(db, user_id) is not None else []
+        if feature == "call" and voice_call.elevenlabs_key(db, user_id) is not None:
+            found.append(ELEVENLABS)
+        return found
     return ["phone", "cloud"] if db.get(VoiceConnection, user_id) is not None else ["phone"]
 
 
@@ -66,7 +72,10 @@ def default(db: Session, user_id: uuid.UUID, feature: str) -> str | None:
     if kind == "ai":
         return whoop_ai.default_choice(db, user_id)
     if kind == "realtime":
-        return DEFAULT_REALTIME if voice_call.call_key(db, user_id) is not None else None
+        if voice_call.call_key(db, user_id) is not None:
+            return DEFAULT_REALTIME
+        # No OpenAI key: the call goes through ElevenLabs when that is the voice model.
+        return ELEVENLABS if feature == "call" and voice_call.elevenlabs_key(db, user_id) is not None else None
     # The mic used the voice model whenever one was connected, so that stays the default.
     return "cloud" if db.get(VoiceConnection, user_id) is not None else "phone"
 

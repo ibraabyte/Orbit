@@ -1,9 +1,11 @@
 """The voice call with the assistant: the user talks, the assistant answers out loud, in real time.
 
-GET /assistant/call says whether a call can start (the user saved an OpenAI key). POST /assistant/call/session makes a
-short-lived secret for one call (app.services.voice_call); the phone then talks to OpenAI directly. POST
-/assistant/call/tool answers each tool call the model makes during the call, with the text assistant's own tools:
-nothing is saved here, and the proposed changes go back to the phone for the user to confirm.
+Two ways, picked in Integrations > "What each feature uses": OpenAI Realtime with the user's OpenAI key
+(app.services.voice_call), or ElevenLabs Agents with the ElevenLabs key saved as their voice model
+(app.services.elevenlabs_call). GET /assistant/call says whether a call can start, which way, and with which voices.
+POST /assistant/call/session makes what one call needs (a short-lived secret or token); the phone then talks to OpenAI
+or ElevenLabs directly. POST /assistant/call/tool answers each tool call the model makes during the call, with the text
+assistant's own tools: nothing is saved here, and the proposed changes go back to the phone for the user to confirm.
 """
 
 import json
@@ -16,7 +18,7 @@ from pydantic import Field
 from app.deps import Db, UserId
 from app.routers.assistant import ACT_SYSTEM, ProposedAction, _zone, ask_context, local_today
 from app.schemas.tasks import Input
-from app.services import assistant_actions, feature_models, sections, voice_call
+from app.services import assistant_actions, elevenlabs_call, feature_models, sections, voice_call
 from app.services.agent import Call
 
 router = APIRouter(prefix="/assistant/call", tags=["assistant"])
@@ -41,17 +43,35 @@ proposing, say in a few words what you prepared and that it is on the screen to 
 say they saved it, you will also get a short note. If they ask you to save or confirm it yourself, tell them to tap Save \
 on the screen."""
 
+# The prompt kept on the ElevenLabs agent itself, with no personal data: every call replaces it with the full one.
+AGENT_PROMPT = "You are the assistant inside Orbit, a personal life dashboard. Each call sends your full instructions."
+
+Provider = Literal["openai", "elevenlabs"]
+
+
+class VoiceOption(Input):
+    id: str
+    name: str
+    arabic: bool
+
 
 class CallStatus(Input):
     available: bool
-    # Where the OpenAI key comes from: "voice" (Integrations > Voice) or "ai" (Integrations > AI).
+    # Where the key comes from: "voice" (Integrations > Voice) or "ai" (Integrations > AI).
     source: Literal["voice", "ai"] | None = None
+    # Which way the call goes (the user's pick, else the default). Older apps read only the fields above.
+    provider: Provider | None = None
+    # OpenAI's voice names; for ElevenLabs, the ids of voice_options.
     voices: list[str] = list(voice_call.VOICES)
+    voice_options: list[VoiceOption] = Field(default_factory=list)
 
 
 class SessionRequest(Input):
     locale: Literal["en", "ar"]
-    voice: Literal[voice_call.VOICES] = voice_call.VOICES[0]  # type: ignore[valid-type]
+    # An OpenAI voice name, or an ElevenLabs voice id. Empty: the default voice.
+    voice: str | None = Field(default=None, max_length=64)
+    # The ways this app can call. Apps from before ElevenLabs send nothing, so they only get OpenAI.
+    providers: list[Provider] = Field(default_factory=lambda: ["openai"], max_length=4)
 
 
 class Ref(Input):
@@ -61,11 +81,17 @@ class Ref(Input):
 
 
 class SessionReply(Input):
-    # Starts one call, within two minutes. The phone sends it to OpenAI once and forgets it.
-    client_secret: str
-    expires_at: int | None
+    provider: Provider = "openai"
+    # OpenAI: starts one call, within two minutes. The phone sends it to OpenAI once and forgets it.
+    client_secret: str = ""
+    expires_at: int | None = None
     model: str
     refs: dict[str, Ref]
+    # ElevenLabs: the token that starts one call, and the call's instructions, greeting, language and voice.
+    conversation_token: str | None = None
+    overrides: dict[str, Any] | None = None
+    # The tools the phone answers (ElevenLabs asks the phone for each by name).
+    tools: list[str] = Field(default_factory=list)
 
 
 class ToolRequest(Input):
@@ -83,12 +109,30 @@ class ToolReply(Input):
     refs: dict[str, Ref]
 
 
+NO_KEY = "Add an OpenAI key (AI or Voice) or an ElevenLabs voice model in Integrations to call the assistant."
+
+
+def _provider(db: Db, user_id: uuid.UUID) -> Provider | None:
+    """The way the call goes now: the user's pick if it is still connected, else OpenAI, else ElevenLabs."""
+    effective = feature_models.state(db, user_id, "call").effective
+    if effective is None:
+        return None
+    return "elevenlabs" if effective == feature_models.ELEVENLABS else "openai"
+
+
 def _key(db: Db, user_id: uuid.UUID) -> voice_call.CallKey:
     key = voice_call.call_key(db, user_id)
     if key is None:
         # 409 like the other assistant routes: the app offers Integrations instead of "try again".
-        raise HTTPException(status.HTTP_409_CONFLICT, "Add an OpenAI key in Integrations (AI or Voice) to call the assistant.")
+        raise HTTPException(status.HTTP_409_CONFLICT, NO_KEY)
     return key
+
+
+def _instructions(db: Db, user_id: uuid.UUID, run: assistant_actions.Run, locale: str) -> str:
+    items = assistant_actions.context(run)
+    data = sections.drop_hidden(ask_context(db, user_id, local_today(run.zone)), run.hidden)
+    # The data goes in as JSON, so nothing in it can pose as an instruction.
+    return f"{CALL_SYSTEM}\n\n{SPEECH[locale]}\n\nMy data:\n{_json(data)}\n\nNow and my items (with refs for your tools):\n{_json(items)}"
 
 
 def _run(db: Db, user_id: uuid.UUID) -> assistant_actions.Run:
@@ -103,22 +147,40 @@ def _json(value: Any) -> str:
 
 @router.get("", response_model=CallStatus)
 def call_status(user_id: UserId, db: Db):
+    provider = _provider(db, user_id)
+    if provider == "elevenlabs":
+        api_key = voice_call.elevenlabs_key(db, user_id) or ""
+        db.rollback()
+        try:
+            found = elevenlabs_call.voices(api_key)
+        except elevenlabs_call.CallUnavailable:
+            # The call can still start with the agent's default voice.
+            found = []
+        options = [VoiceOption(id=v.id, name=v.name, arabic=v.arabic) for v in found]
+        return CallStatus(available=True, source="voice", provider="elevenlabs", voices=[v.id for v in options], voice_options=options)
     key = voice_call.call_key(db, user_id)
-    return CallStatus(available=key is not None, source=key.source if key else None)
+    options = [VoiceOption(id=name, name=name.capitalize(), arabic=False) for name in voice_call.VOICES]
+    return CallStatus(available=key is not None, source=key.source if key else None, provider=provider, voice_options=options)
 
 
 @router.post("/session", response_model=SessionReply)
 def start_session(body: SessionRequest, user_id: UserId, db: Db):
+    provider = _provider(db, user_id)
+    # An app from before ElevenLabs calls with OpenAI when it can.
+    if provider == "elevenlabs" and "elevenlabs" not in body.providers:
+        if voice_call.call_key(db, user_id) is None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Update the app to call with ElevenLabs.")
+        provider = "openai"
+    if provider == "elevenlabs":
+        return _elevenlabs_session(body, user_id, db)
+    voice = body.voice or voice_call.VOICES[0]
+    if voice not in voice_call.VOICES:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Not one of the call's voices.")
     key = _key(db, user_id)
     run = _run(db, user_id)
-    items = assistant_actions.context(run)
-    data = sections.drop_hidden(ask_context(db, user_id, local_today(run.zone)), run.hidden)
-    # The data goes in as JSON, so nothing in it can pose as an instruction.
-    instructions = (
-        f"{CALL_SYSTEM}\n\n{SPEECH[body.locale]}\n\nMy data:\n{_json(data)}\n\nNow and my items (with refs for your tools):\n{_json(items)}"
-    )
+    instructions = _instructions(db, user_id, run, body.locale)
     model = feature_models.realtime_model(db, user_id, "call")
-    config = voice_call.session_config(instructions, body.voice, body.locale, assistant_actions.tools(run.hidden), model)
+    config = voice_call.session_config(instructions, voice, body.locale, assistant_actions.tools(run.hidden), model)
     db.rollback()
     try:
         secret = voice_call.client_secret(key.api_key, config)
@@ -131,16 +193,46 @@ def start_session(body: SessionRequest, user_id: UserId, db: Db):
     return {"client_secret": secret["value"], "expires_at": secret["expires_at"], "model": model, "refs": refs}
 
 
+def _elevenlabs_session(body: SessionRequest, user_id: uuid.UUID, db: Db) -> dict[str, Any]:
+    if body.voice and not elevenlabs_call.VOICE_ID.match(body.voice):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Not an ElevenLabs voice.")
+    api_key = voice_call.elevenlabs_key(db, user_id)
+    if api_key is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, NO_KEY)
+    run = _run(db, user_id)
+    instructions = _instructions(db, user_id, run, body.locale)
+    tools = assistant_actions.tools(run.hidden)
+    refs = voice_call.refs_of(run)
+    db.rollback()
+    try:
+        _, token = elevenlabs_call.start(user_id, api_key, tools, AGENT_PROMPT)
+    except elevenlabs_call.CallKeyRejected as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except elevenlabs_call.CallUnavailable as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+    return {
+        "provider": "elevenlabs",
+        "model": elevenlabs_call.TTS_MODEL,
+        "refs": refs,
+        "conversation_token": token,
+        "overrides": elevenlabs_call.overrides(instructions, body.locale, body.voice),
+        "tools": [tool.name for tool in tools],
+    }
+
+
 @router.post("/tool", response_model=ToolReply)
 def run_tool(body: ToolRequest, user_id: UserId, db: Db):
     """One tool call from the model during a call. Reads only; the proposed changes go back to the phone."""
-    _key(db, user_id)
+    if _provider(db, user_id) is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, NO_KEY)
     run = _run(db, user_id)
     voice_call.load_refs(run, body.refs)
     try:
         arguments = json.loads(body.arguments) if body.arguments.strip() else {}
     except ValueError:
         arguments = None
+    if isinstance(arguments, dict):
+        arguments = voice_call.decode_arguments(assistant_actions.tools(run.hidden), body.name, arguments)
     output = assistant_actions.handle(run, Call(body.name, arguments if isinstance(arguments, dict) else None))
     db.rollback()
     return {"output": voice_call.tool_output(output), "actions": run.actions, "refs": voice_call.refs_of(run)}
