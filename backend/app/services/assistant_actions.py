@@ -168,7 +168,11 @@ class Run:
     def ref(self, kind: str, row: Any) -> str:
         if row.id in self.by_id:
             return self.by_id[row.id]
-        name = f"{kind}-{sum(1 for item in self.items.values() if item.kind == kind) + 1}"
+        number = sum(1 for item in self.items.values() if item.kind == kind) + 1
+        # Refs carried over from an earlier request (a voice call) can leave gaps: never reuse a name.
+        while f"{kind}-{number}" in self.items:
+            number += 1
+        name = f"{kind}-{number}"
         self.items[name] = Item(kind, row.id, _label(self, KINDS[kind], row))
         self.by_id[row.id] = name
         return name

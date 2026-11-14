@@ -36,7 +36,8 @@
         "android.permission.USE_FINGERPRINT",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
-      ]
+      ],
+      "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW"]
     },
     "plugins": [
       "expo-router",
@@ -86,7 +87,7 @@
         "expo-camera",
         {
           "cameraPermission": "Orbit uses the camera to scan food barcodes and to photograph your meals for calorie estimates.",
-          "microphonePermission": "Orbit uses the microphone only when you tap the mic button, so you can tell the assistant what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك، عشان تقول للمساعد وش يضيف أو يعدّل.",
+          "microphonePermission": "Orbit uses the microphone only when you tap the mic or call button, so you can talk to the assistant and tell it what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك أو الاتصال، عشان تكلّم المساعد وتقول له وش يضيف أو يعدّل.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }
@@ -96,13 +97,13 @@
         {
           "photosPermission": "Orbit lets you pick a photo of your meal to estimate its calories.",
           "cameraPermission": "Orbit uses the camera to scan food barcodes and to photograph your meals for calorie estimates.",
-          "microphonePermission": "Orbit uses the microphone only when you tap the mic button, so you can tell the assistant what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك، عشان تقول للمساعد وش يضيف أو يعدّل."
+          "microphonePermission": "Orbit uses the microphone only when you tap the mic or call button, so you can talk to the assistant and tell it what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك أو الاتصال، عشان تكلّم المساعد وتقول له وش يضيف أو يعدّل."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "Orbit uses the microphone only when you tap the mic button, so you can tell the assistant what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك، عشان تقول للمساعد وش يضيف أو يعدّل.",
+          "microphonePermission": "Orbit uses the microphone only when you tap the mic or call button, so you can talk to the assistant and tell it what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك أو الاتصال، عشان تكلّم المساعد وتقول له وش يضيف أو يعدّل.",
           "enableBackgroundRecording": false,
           "enableBackgroundPlayback": false
         }
@@ -110,12 +111,19 @@
       [
         "expo-speech-recognition",
         {
-          "microphonePermission": "Orbit uses the microphone only when you tap the mic button, so you can tell the assistant what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك، عشان تقول للمساعد وش يضيف أو يعدّل.",
+          "microphonePermission": "Orbit uses the microphone only when you tap the mic or call button, so you can talk to the assistant and tell it what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك أو الاتصال، عشان تكلّم المساعد وتقول له وش يضيف أو يعدّل.",
           "speechRecognitionPermission": "Orbit turns what you say into text on this device, so the assistant can understand it. · يحوّل Orbit كلامك إلى نص على جهازك نفسه، عشان يفهمه المساعد.",
           "androidSpeechServicePackages": [
             "com.google.android.as",
             "com.google.android.googlequicksearchbox"
           ]
+        }
+      ],
+      [
+        "@config-plugins/react-native-webrtc",
+        {
+          "cameraPermission": "Orbit uses the camera to scan food barcodes and to photograph your meals for calorie estimates.",
+          "microphonePermission": "Orbit uses the microphone only when you tap the mic or call button, so you can talk to the assistant and tell it what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك أو الاتصال، عشان تكلّم المساعد وتقول له وش يضيف أو يعدّل."
         }
       ],
       [
