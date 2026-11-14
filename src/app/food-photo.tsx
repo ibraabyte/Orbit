@@ -32,7 +32,7 @@ async function shrink(asset: ImagePicker.ImagePickerAsset) {
 
 export default function FoodPhoto() {
   const { toast } = useOverlays();
-  const ai = useAiChoices("food-photo");
+  const ai = useAiChoices("food_photo");
   const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
   const [note, setNote] = useState("");
   const [estimate, setEstimate] = useState<PlateEstimate | null>(null);

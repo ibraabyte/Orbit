@@ -70,6 +70,8 @@ const en = {
   provider: "Provider", totalAmount: "Total amount", paymentsCount: "Number of payments", firstPayment: "First payment", firstPaidNow: "First payment already paid", paymentsPaid: "paid", remaining: "Left", nextPayment: "Next", showAll: "Show all", showLess: "Show less", paidOff: "Paid off", markUnpaid: "Mark unpaid", installment: "Installment", schedulePreview: "payments of",
   moneyDue: "Money due", dueTomorrow: "Tomorrow",
   moneyEmpty: "Add your bank accounts, wallets and cash to see all your money in one place.", investEmpty: "Add each investment app or portfolio with what you put in and what it is worth now.", cardsEmpty: "Add a card with its name and last 4 digits, then pick it for each subscription.", obligationsEmpty: "Add a pay-later plan or a loan to track what is left and when each payment is due.",
+  featuresTitle: "What each feature uses", featuresIntro: "Pick one of your connected models for each feature, like a cheaper one for food and a stronger one for the assistant. Left alone, a feature uses the default.", featureDefault: "Default: {name}", featureDefaultOption: "Default", featureStale: "{name} was removed, so it uses the default for now: {now}.", featureNeedsAi: "Connect an AI above first.", featureNeedsOpenai: "Needs an OpenAI key, under AI or Voice model.", featurePhone: "The phone", featureCloud: "Voice model: {name}", featureCheaper: "cheaper", featureSaveFailed: "Couldn't save that. Try again.", aiRemoveUsedBy: "These go back to the default: {features}.",
+  featureNames: { assistant: "Assistant", food_text: "Food by text", food_photo: "Plate photo", health: "Health summary", week: "Friday summary", saver: "Saved link summary", speech: "Speech to text", call: "Voice call", phone_agent: "Phone agent" },
 };
 
 const ar: typeof en = {
@@ -135,6 +137,8 @@ const ar: typeof en = {
   provider: "الجهة", totalAmount: "المبلغ الكامل", paymentsCount: "عدد الدفعات", firstPayment: "أول دفعة", firstPaidNow: "الدفعة الأولى مدفوعة", paymentsPaid: "مدفوعة", remaining: "المتبقي", nextPayment: "القادمة", showAll: "عرض الكل", showLess: "عرض أقل", paidOff: "انتهى السداد", markUnpaid: "إلغاء الدفع", installment: "قسط", schedulePreview: "دفعات بقيمة",
   moneyDue: "مدفوعات قريبة", dueTomorrow: "بكرة",
   moneyEmpty: "أضف حساباتك ومحافظك والكاش لتشوف كل فلوسك في مكان واحد.", investEmpty: "أضف كل تطبيق أو محفظة استثمار بالمبلغ اللي حطيته وقيمته الحالية.", cardsEmpty: "أضف بطاقة باسمها وآخر ٤ أرقام، ثم اخترها لكل اشتراك.", obligationsEmpty: "أضف خطة تقسيط أو قرض لتتابع المتبقي وموعد كل دفعة.",
+  featuresTitle: "وش يستخدم كل قسم", featuresIntro: "اختر لكل قسم مودل من المودلات المربوطة عندك، مثلاً مودل أرخص للأكل وأقوى للمساعد. إذا ما اخترت شي، يستخدم القسم الافتراضي.", featureDefault: "الافتراضي: {name}", featureDefaultOption: "الافتراضي", featureStale: "{name} انحذف، فالقسم يستخدم الافتراضي حاليًا: {now}.", featureNeedsAi: "اربط ذكاء من فوق أول.", featureNeedsOpenai: "يحتاج مفتاح OpenAI في الذكاء أو مودل الصوت.", featurePhone: "الجوال", featureCloud: "مودل الصوت: {name}", featureCheaper: "أرخص", featureSaveFailed: "ما انحفظ. جرّب مرة ثانية.", aiRemoveUsedBy: "هذي الأقسام ترجع للافتراضي: {features}.",
+  featureNames: { assistant: "المساعد", food_text: "الأكل بالكتابة", food_photo: "تصوير الصحن", health: "ملخص الصحة", week: "ملخص الجمعة", saver: "ملخص الروابط", speech: "تحويل الصوت لنص", call: "المكالمة الصوتية", phone_agent: "وكيل الاتصال" },
 };
 
 export const t = isArabic ? ar : en;

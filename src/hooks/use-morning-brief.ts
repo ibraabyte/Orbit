@@ -9,7 +9,8 @@ import { emptyData, useDashboardData } from "@/hooks/use-dashboard-data";
 import { activeProvider, briefStep, serverDetail } from "@/lib/ask";
 import { getApi } from "@/lib/backend";
 import { isArabic, t } from "@/lib/i18n";
-import { integrationsApi } from "@/lib/integrations";
+import { featureAi } from "@/lib/feature-models";
+import { aiQuery, integrationsApi } from "@/lib/integrations";
 import { localDateKey } from "@/lib/insights";
 import { briefCacheKey, briefPlan, isNoAiError, MORNING_DEFAULT, morningNotifications, parseBriefCache, parseMorningSettings, type BriefSeen, type MorningLabels, type MorningSettings } from "@/lib/morning-brief";
 
@@ -64,7 +65,10 @@ export function useMorningBrief(enabled = true) {
       let again = false;
       try {
         // The agreement is for one AI; check it is still the one that would get the data.
-        const provider = activeProvider(await integrationsApi.overview(getApi()));
+        // The AI set for this in Integrations, else the default; asked for by name so the agreement matches it.
+        const overview = await integrationsApi.overview(getApi());
+        const picked = featureAi(overview, "assistant");
+        const provider = activeProvider(overview, picked);
         const step = briefStep(accepted, provider);
         if (step !== "ask" || provider === null) {
           dropCache();
@@ -76,7 +80,7 @@ export function useMorningBrief(enabled = true) {
           again = true;
           return;
         }
-        const { text } = await getApi().post<{ text: string }>("/assistant/brief", { date, locale });
+        const { text } = await getApi().post<{ text: string }>(`/assistant/brief${aiQuery(picked)}`, { date, locale });
         // The agreement may have been withdrawn or changed while the AI was writing: then the text is dropped, not shown or saved.
         const now = await loadAskConsent(userId);
         if (now !== accepted) {

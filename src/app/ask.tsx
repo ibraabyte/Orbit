@@ -23,7 +23,7 @@ const suggestions: [string, SectionKey | null][] = [[t.askQ1, "finance"], [t.ask
 // Nothing is sent until you agree, once, to sending your data to the AI that is connected now.
 export default function Ask() {
   const { userId } = useDashboardData();
-  const ai = useAiChoices("ask");
+  const ai = useAiChoices("assistant");
   const { on } = useSections();
   // undefined: not read yet. null: no AI connected / not agreed.
   const provider = ai.overview ? activeProvider(ai.overview, ai.current) : ai.error ? null : undefined;

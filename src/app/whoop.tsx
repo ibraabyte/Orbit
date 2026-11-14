@@ -27,7 +27,7 @@ import {
 export default function Whoop() {
   const onServer = hasServer();
   const { sheet } = useOverlays();
-  const ai = useAiChoices("whoop");
+  const ai = useAiChoices("health");
   const params = useLocalSearchParams<{ status?: string }>();
   const [status, setStatus] = useState<WhoopStatus | null>(null);
   const [summary, setSummary] = useState<WhoopSummary | null>(null);
