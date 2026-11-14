@@ -112,7 +112,8 @@ export default function PhoneCalls() {
         <Text style={type.rowSubtitle}>{px.request}</Text>
         <Input accessibilityLabel={px.request} placeholder={px.requestPh} value={request} onChangeText={setRequest} multiline maxLength={500} />
         <Input accessibilityLabel={px.business} placeholder={`${px.business}: ${px.businessPh}`} value={business} onChangeText={setBusiness} maxLength={120} />
-        <Input accessibilityLabel={px.number} placeholder={`${px.number}: ${px.numberPh}`} value={number} onChangeText={setNumber} keyboardType="phone-pad" style={{ writingDirection: "ltr" }} />
+        <Text style={type.rowSubtitle}>{px.number}</Text>
+        <Input accessibilityLabel={px.number} placeholder={px.numberPh} value={number} onChangeText={setNumber} keyboardType="phone-pad" style={{ writingDirection: "ltr" }} />
         <Button variant="primary" title={busy ? px.preparing : px.prepare} disabled={busy || !request.trim() || !number.trim()} onPress={() => void prepare()} />
       </Card>
       <Card title={px.past}>
