@@ -137,7 +137,9 @@ export function ChoiceMenu({ title, choices, multiple, fill, style, children }: 
       actions={choices.map((choice, index) => ({ id: String(index), title: choice.label, state: choice.selected ? "on" : "off" }))}
       onPressAction={({ nativeEvent }) => {
         const choice = choices[Number(nativeEvent.event)];
-        if (choice && (multiple || !choice.selected)) choice.run();
+        if (!choice || (!multiple && choice.selected)) return;
+        if (process.env.EXPO_OS === "ios") void Haptics.selectionAsync().catch(() => undefined);
+        choice.run();
       }}
     >
       {/* The menu opens on the tap; the control inside only shows what it is. */}

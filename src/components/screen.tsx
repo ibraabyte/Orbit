@@ -1,5 +1,6 @@
 import { router, Stack, usePathname } from "expo-router";
 import SegmentedControl from "@expo/ui/community/segmented-control";
+import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { SearchBarCommands } from "react-native-screens";
 import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View, type TextInputProps } from "react-native";
@@ -366,7 +367,9 @@ export function Segments<T extends string>({ options, value, onChange, labels }:
       selectedIndex={Math.max(0, options.indexOf(value))}
       onChange={(event) => {
         const next = options[event.nativeEvent.selectedSegmentIndex];
-        if (next !== undefined && next !== value) onChange(next);
+        if (next === undefined || next === value) return;
+        if (process.env.EXPO_OS === "ios") void Haptics.selectionAsync().catch(() => undefined);
+        onChange(next);
       }}
       appearance={scheme}
       style={styles.segments}
