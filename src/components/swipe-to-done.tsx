@@ -1,38 +1,49 @@
 import * as Haptics from "expo-haptics";
-import { useMemo, useRef, type ReactNode } from "react";
-import { Animated, PanResponder, StyleSheet, Text, View } from "react-native";
+import { useRef, type ReactNode } from "react";
+import { StyleSheet, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 import { colors, fonts, labelCase, space, textSize } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
 const THRESHOLD = 88;
 
-// Swipe a row sideways (either way) past the threshold to complete it; a short drag springs back. The row stays
-// tappable, and VoiceOver gets a "Complete" action instead of the swipe.
+// Swipe a row sideways (either way) past the threshold to complete it; a short drag springs back. The drag runs on the
+// UI thread (Gesture Handler + Reanimated) and only starts on a clearly sideways move, so the list still scrolls. The row
+// stays tappable, and VoiceOver gets a "Complete" action instead of the swipe.
 export function SwipeToDone({ onDone, children }: { onDone: () => void; children: ReactNode }) {
-  const x = useRef(new Animated.Value(0)).current;
+  const x = useSharedValue(0);
   const done = useRef(onDone);
   done.current = onDone;
 
-  const responder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (_, move) => Math.abs(move.dx) > 12 && Math.abs(move.dx) > Math.abs(move.dy) * 2,
-        onPanResponderMove: (_, move) => x.setValue(move.dx),
-        onPanResponderRelease: (_, move) => {
-          if (Math.abs(move.dx) < THRESHOLD) {
-            Animated.spring(x, { toValue: 0, useNativeDriver: true }).start();
-            return;
-          }
-          void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
-          Animated.timing(x, { toValue: Math.sign(move.dx) * 480, duration: 160, useNativeDriver: true }).start(() => {
-            done.current();
-            x.setValue(0);
-          });
-        },
-        onPanResponderTerminate: () => Animated.spring(x, { toValue: 0, useNativeDriver: true }).start()
-      }),
-    [x]
-  );
+  const tick = () => void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+  const finish = () => {
+    done.current();
+    x.value = 0;
+  };
+
+  const pan = Gesture.Pan()
+    .activeOffsetX([-12, 12])
+    .failOffsetY([-12, 12])
+    .onUpdate((event) => {
+      x.value = event.translationX;
+    })
+    .onEnd((event) => {
+      if (Math.abs(event.translationX) < THRESHOLD) {
+        x.value = withSpring(0, { duration: 350, dampingRatio: 0.9 });
+        return;
+      }
+      scheduleOnRN(tick);
+      x.value = withTiming(Math.sign(event.translationX) * 480, { duration: 160 }, (finished) => {
+        if (finished) scheduleOnRN(finish);
+      });
+    })
+    .onFinalize((_, success) => {
+      if (!success) x.value = withSpring(0, { duration: 350, dampingRatio: 0.9 });
+    });
+
+  const slide = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }));
 
   return (
     <View>
@@ -40,15 +51,16 @@ export function SwipeToDone({ onDone, children }: { onDone: () => void; children
         <Text style={styles.behindText}>✓ {t.done}</Text>
         <Text style={styles.behindText}>✓ {t.done}</Text>
       </View>
-      <Animated.View
-        {...responder.panHandlers}
-        accessibilityActions={[{ name: "complete", label: t.complete }]}
-        onAccessibilityAction={(event) => event.nativeEvent.actionName === "complete" && onDone()}
-        accessibilityHint={t.swipeDone}
-        style={{ transform: [{ translateX: x }], backgroundColor: colors.surface }}
-      >
-        {children}
-      </Animated.View>
+      <GestureDetector gesture={pan}>
+        <Animated.View
+          accessibilityActions={[{ name: "complete", label: t.complete }]}
+          onAccessibilityAction={(event) => event.nativeEvent.actionName === "complete" && onDone()}
+          accessibilityHint={t.swipeDone}
+          style={[{ backgroundColor: colors.surface }, slide]}
+        >
+          {children}
+        </Animated.View>
+      </GestureDetector>
     </View>
   );
 }

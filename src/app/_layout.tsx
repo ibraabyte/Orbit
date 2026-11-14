@@ -12,6 +12,7 @@ import * as Notifications from "expo-notifications";
 import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, usePathname } from "expo-router";
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent";
 import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useEffect, useState } from "react";
 import * as Updates from "expo-updates";
 import { Appearance, AppState, DevSettings, Text, View } from "react-native";
@@ -160,29 +161,32 @@ export default function RootLayout() {
   );
 
   return (
-    <ShareIntentProvider options={{ disabled: shareDisabled, resetOnBackground: true }}>
-      <StatusBar style="auto" />
-      {session ? (
-        <AppLock>
-          <DashboardDataProvider key={session.userId} userId={session.userId}>
-            <OverlayProvider>
-              <SidebarLayout>
-                <View style={{ flex: 1 }}>
-                  {stack}
-                  {/* A switched-off section reached by an old link, widget or alert: say so instead of showing it. */}
-                  <SectionOffCover />
-                </View>
-              </SidebarLayout>
-            </OverlayProvider>
-            {/* After the stack, so a notification tap that opened the app navigates once it's mounted. */}
-            <ReminderNotifications />
-            <SharedLinks />
-          </DashboardDataProvider>
-        </AppLock>
-      ) : (
-        stack
-      )}
-    </ShareIntentProvider>
+    // Gesture Handler needs one root view around the app (swipe to complete a task).
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ShareIntentProvider options={{ disabled: shareDisabled, resetOnBackground: true }}>
+        <StatusBar style="auto" />
+        {session ? (
+          <AppLock>
+            <DashboardDataProvider key={session.userId} userId={session.userId}>
+              <OverlayProvider>
+                <SidebarLayout>
+                  <View style={{ flex: 1 }}>
+                    {stack}
+                    {/* A switched-off section reached by an old link, widget or alert: say so instead of showing it. */}
+                    <SectionOffCover />
+                  </View>
+                </SidebarLayout>
+              </OverlayProvider>
+              {/* After the stack, so a notification tap that opened the app navigates once it's mounted. */}
+              <ReminderNotifications />
+              <SharedLinks />
+            </DashboardDataProvider>
+          </AppLock>
+        ) : (
+          stack
+        )}
+      </ShareIntentProvider>
+    </GestureHandlerRootView>
   );
 }
 
