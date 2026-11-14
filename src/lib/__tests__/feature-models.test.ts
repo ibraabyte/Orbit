@@ -72,7 +72,10 @@ describe("what each feature uses", () => {
     expect(featureSummary(row("assistant", { choice: "gemini", effective: "gemini" }), set)).toBe("Gemini · made-up-gemini");
     expect(featureSummary(row("assistant", { choice: "anthropic", stale: true }), set)).toBe("Claude was removed, so it uses the default for now: OpenAI.");
     expect(featureSummary(row("health", { effective: null, default: null, options: [] }), set)).toBe("Connect an AI above first.");
-    expect(featureSummary(row("call", { effective: null, default: null, options: [] }), set)).toBe("Needs an OpenAI key, under AI or Voice model.");
+    expect(featureSummary(row("call", { effective: null, default: null, options: [] }), set)).toBe("Needs an OpenAI key, or ElevenLabs as your voice model.");
+    expect(featureSummary(row("phone_agent", { effective: null, default: null, options: [] }), set)).toBe("Needs an OpenAI key, under AI or Voice model.");
+    // The call can go through ElevenLabs.
+    expect(choiceLabel(row("call"), "elevenlabs", set)).toBe("ElevenLabs · Arabic voices");
   });
 
   it("names the features a removed AI was set for", () => {

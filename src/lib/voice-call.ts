@@ -1,13 +1,17 @@
 import type { ProposedAction } from "@/lib/assistant";
 
-// The voice call with the assistant (src/app/call.tsx, src/hooks/use-voice-call.ts). The Orbit server makes a short
-// secret for one call with the user's own OpenAI key (POST /assistant/call/session); the phone talks to OpenAI Realtime
-// over WebRTC with it, and the tool calls the model makes go back to the server (POST /assistant/call/tool), which
+// The voice call with the assistant (src/app/call.tsx, src/hooks/use-voice-call.ts). Two ways, picked in Integrations
+// ("What each feature uses"): OpenAI Realtime with the user's OpenAI key, or ElevenLabs Agents with the ElevenLabs key
+// saved as their voice model. The Orbit server makes what one call needs (POST /assistant/call/session): a short OpenAI
+// secret, or an ElevenLabs conversation token with the call's instructions. The phone then talks to OpenAI or
+// ElevenLabs over WebRTC, and the tool calls the model makes go back to the server (POST /assistant/call/tool), which
 // answers them with the text assistant's own tools. Changes come back as proposals; only a tap saves one.
 // Shapes mirror backend/app/routers/call.py. This file is the part with no native code, so it can be tested.
 
 export const CALL_VOICES = ["marin", "cedar", "ash", "coral", "sage", "verse"] as const;
-export type CallVoice = (typeof CALL_VOICES)[number];
+// An OpenAI voice name, or an ElevenLabs voice id.
+export type CallVoice = string;
+export type CallProvider = "openai" | "elevenlabs";
 export const CALL_URL = "https://api.openai.com/v1/realtime/calls";
 // A call ends by itself after this long, so a forgotten one doesn't keep spending the user's credit.
 export const MAX_CALL_SECONDS = 15 * 60;
@@ -15,8 +19,20 @@ export const MAX_CALL_SECONDS = 15 * 60;
 export const MAX_CAPTIONS = 24;
 
 export type CallRef = { kind: string; id: string; label: string };
-export type CallStatus = { available: boolean; source: "voice" | "ai" | null; voices: string[] };
-export type SessionReply = { client_secret: string; expires_at: number | null; model: string; refs: Record<string, CallRef> };
+export type VoiceOption = { id: string; name: string; arabic: boolean };
+// provider and voice_options come from servers that know ElevenLabs.
+export type CallStatus = { available: boolean; source: "voice" | "ai" | null; voices: string[]; provider?: CallProvider | null; voice_options?: VoiceOption[] };
+export type SessionReply = {
+  provider?: CallProvider;
+  client_secret: string;
+  expires_at: number | null;
+  model: string;
+  refs: Record<string, CallRef>;
+  // ElevenLabs: the token that starts the call, its instructions/greeting/language/voice, and the tools the phone answers.
+  conversation_token?: string | null;
+  overrides?: Record<string, unknown> | null;
+  tools?: string[];
+};
 export type ToolReply = { output: string; actions: ProposedAction[]; refs: Record<string, CallRef> };
 
 export type CallPhase = "idle" | "connecting" | "listening" | "thinking" | "speaking" | "ended";
@@ -26,10 +42,28 @@ export type CallView = { phase: CallPhase; captions: Caption[]; error: string | 
 
 export const initialView: CallView = { phase: "idle", captions: [], error: null };
 
-// Agreeing to send the voice to OpenAI is kept on this phone, per account.
+// Agreeing to send the voice to OpenAI (or ElevenLabs) is kept on this phone, per account; the value is the company.
 export const callConsentKey = (userId: string) => `orbit.call.consent.${userId}`;
-export const callVoiceKey = "orbit.call.voice";
+// The picked voice, kept per company (OpenAI names and ElevenLabs ids don't mix).
+export const callVoiceKey = (provider: CallProvider = "openai") => (provider === "openai" ? "orbit.call.voice" : `orbit.call.voice.${provider}`);
 export const isCallVoice = (value: unknown): value is CallVoice => typeof value === "string" && (CALL_VOICES as readonly string[]).includes(value);
+
+export const providerOf = (status: CallStatus | null): CallProvider => status?.provider ?? "openai";
+export const providerName = (provider: CallProvider) => (provider === "elevenlabs" ? "ElevenLabs" : "OpenAI");
+
+// The voices to pick from: the server's list (Arabic ones first for ElevenLabs), else OpenAI's names.
+export function voiceOptions(status: CallStatus | null): VoiceOption[] {
+  if (status?.voice_options?.length) return status.voice_options;
+  if (providerOf(status) === "elevenlabs") return [];
+  return CALL_VOICES.map((id) => ({ id, name: id[0].toUpperCase() + id.slice(1), arabic: false }));
+}
+
+// The saved voice while it is still offered; else the first one (for ElevenLabs an Arabic one when there is). Null: the
+// server's default voice.
+export function pickedVoice(options: VoiceOption[], saved: string | null | undefined): string | null {
+  if (saved && options.some((option) => option.id === saved)) return saved;
+  return options[0]?.id ?? null;
+}
 
 type Event = { type?: string; [key: string]: unknown };
 
@@ -82,6 +116,21 @@ export function reduceEvent(view: CallView, event: Event): CallView {
   }
 }
 
+// ElevenLabs sends whole lines (not deltas) and a mode; each line is a caption of its own.
+export function elevenMessage(view: CallView, id: string, role: "user" | "agent", message: string): CallView {
+  if (view.phase === "ended" || !message.trim()) return view;
+  const caption: Caption = { id, role: role === "user" ? "user" : "assistant", text: message.trim() };
+  return { ...view, captions: [...view.captions.filter((item) => item.id !== id), caption].slice(-MAX_CAPTIONS) };
+}
+
+export function elevenMode(view: CallView, mode: "speaking" | "listening"): CallView {
+  if (view.phase === "ended" || view.phase === "idle") return view;
+  return { ...view, phase: mode };
+}
+
+// The note sent to ElevenLabs after a tap on Save (a contextual update, which the agent reads but doesn't answer).
+export const savedNoteText = (labels: string[]) => `The user tapped Save on the screen. Saved now: ${JSON.stringify(labels)}.`;
+
 // The tool calls in a finished response: the phone runs each through the server, then asks for the next response.
 export function functionCalls(event: Event): FunctionCall[] {
   if (event.type !== "response.done") return [];
@@ -113,7 +162,7 @@ export const savedNoteEvent = (labels: string[]) => ({
   item: {
     type: "message",
     role: "system",
-    content: [{ type: "input_text", text: `The user tapped Save on the screen. Saved now: ${JSON.stringify(labels)}.` }]
+    content: [{ type: "input_text", text: savedNoteText(labels) }]
   }
 });
 

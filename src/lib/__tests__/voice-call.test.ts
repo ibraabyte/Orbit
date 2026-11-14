@@ -4,15 +4,23 @@ import {
   CALL_VOICES,
   callClock,
   callConsentKey,
+  callVoiceKey,
+  elevenMessage,
+  elevenMode,
   functionCalls,
   initialView,
   isCallVoice,
   MAX_CAPTIONS,
   nextRefs,
+  pickedVoice,
+  providerName,
+  providerOf,
   reduceEvent,
   responseEvent,
   savedNoteEvent,
+  savedNoteText,
   toolOutputEvent,
+  voiceOptions,
   type CallView
 } from "@/lib/voice-call";
 
@@ -116,8 +124,49 @@ describe("the voice call", () => {
     expect(callConsentKey("u1")).toBe("orbit.call.consent.u1");
   });
 
+  it("shows ElevenLabs lines as captions and follows its mode", () => {
+    let view = elevenMode(initialView, "speaking");
+    expect(view.phase).toBe("idle");
+    view = elevenMode(live, "speaking");
+    expect(view.phase).toBe("speaking");
+    view = elevenMessage(view, "agent-1", "agent", " هلا! وش أقدر أسوي لك؟ ");
+    view = elevenMessage(view, "user-2", "user", "ذكرني بكرة أشتري حليب");
+    view = elevenMessage(view, "user-3", "user", "   ");
+    expect(view.captions).toEqual([
+      { id: "agent-1", role: "assistant", text: "هلا! وش أقدر أسوي لك؟" },
+      { id: "user-2", role: "user", text: "ذكرني بكرة أشتري حليب" }
+    ]);
+    // A line sent again replaces the first one.
+    expect(elevenMessage(view, "agent-1", "agent", "هلا").captions.map((c) => c.text)).toEqual(["ذكرني بكرة أشتري حليب", "هلا"]);
+    expect(elevenMode(elevenMessage({ ...view, phase: "ended" }, "x", "user", "y"), "listening")).toEqual({ ...view, phase: "ended" });
+    expect(savedNoteText(["حليب"])).toContain("Saved now");
+  });
+
+  it("offers the right voices for each company", () => {
+    expect(providerOf(null)).toBe("openai");
+    expect(providerName("elevenlabs")).toBe("ElevenLabs");
+    const openai = voiceOptions({ available: true, source: "ai", voices: [...CALL_VOICES] });
+    expect(openai.map((v) => v.id)).toEqual([...CALL_VOICES]);
+    expect(openai[0].name).toBe("Marin");
+    const options = [
+      { id: "ArabicVoice000000001", name: "Rakan", arabic: true },
+      { id: "EnglishVoice00000002", name: "Amber", arabic: false }
+    ];
+    const eleven = { available: true, source: "voice" as const, voices: [], provider: "elevenlabs" as const, voice_options: options };
+    expect(voiceOptions(eleven)).toBe(options);
+    expect(voiceOptions({ ...eleven, voice_options: [] })).toEqual([]);
+    // A saved voice no longer offered falls back to the first (Arabic) one; none at all: the server's default.
+    expect(pickedVoice(options, "EnglishVoice00000002")).toBe("EnglishVoice00000002");
+    expect(pickedVoice(options, "marin")).toBe("ArabicVoice000000001");
+    expect(pickedVoice([], "marin")).toBeNull();
+    expect(callVoiceKey()).toBe("orbit.call.voice");
+    expect(callVoiceKey("elevenlabs")).toBe("orbit.call.voice.elevenlabs");
+  });
+
   it("has every call text in the app's language", () => {
     for (const key of ["callTitle", "callConsentBody", "callCost", "callNoKey", "callNeedsBuild"] as const) expect(t[key]).toBeTruthy();
     expect(t.callCost).toContain("{n}");
+    expect(t.callCostEleven).toContain("{n}");
+    expect(t.callConsentTitle).toContain("{company}");
   });
 });

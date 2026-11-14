@@ -70,6 +70,32 @@ def call_key(db: Session, user_id: uuid.UUID) -> CallKey | None:
     return None
 
 
+def elevenlabs_key(db: Session, user_id: uuid.UUID) -> str | None:
+    """The user's ElevenLabs key, saved as their voice model (Integrations > Voice), or None."""
+    voice = db.get(m.VoiceConnection, user_id)
+    if voice is not None and voice.provider == "elevenlabs":
+        return decrypt_secret(voice.api_key) or None
+    return None
+
+
+def decode_arguments(tools: list[Tool], name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    """An object argument that came as JSON text (ElevenLabs sends free-field objects that way) read back as an object."""
+    tool = next((t for t in tools if t.name == name), None)
+    if tool is None:
+        return arguments
+    result = dict(arguments)
+    for key, schema in tool.parameters.get("properties", {}).items():
+        value = result.get(key)
+        if schema.get("type") == "object" and isinstance(value, str) and value.strip():
+            try:
+                parsed = json.loads(value)
+            except ValueError:
+                continue
+            if isinstance(parsed, dict):
+                result[key] = parsed
+    return result
+
+
 def realtime_tools(tools: list[Tool]) -> list[dict[str, Any]]:
     return [{"type": "function", "name": t.name, "description": t.description, "parameters": t.parameters} for t in tools]
 

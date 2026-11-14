@@ -126,6 +126,7 @@
           "microphonePermission": "Orbit uses the microphone only when you tap the mic or call button, so you can talk to the assistant and tell it what to add or change. · يستخدم Orbit المايكروفون فقط لما تضغط زر المايك أو الاتصال، عشان تكلّم المساعد وتقول له وش يضيف أو يعدّل."
         }
       ],
+      "@livekit/react-native-expo-plugin",
       [
         "expo-share-intent",
         {

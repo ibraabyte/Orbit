@@ -79,11 +79,14 @@ def test_no_call_without_an_openai_key(client: TestClient, auth: dict, db: Sessi
 def test_the_voice_models_openai_key_comes_first(client: TestClient, auth: dict, db: Session, openai):
     user_id = me(db)
     add_ai_key(db, user_id)
-    assert client.get("/assistant/call", headers=auth).json() == {
+    status = client.get("/assistant/call", headers=auth).json()
+    assert {key: status[key] for key in ("available", "source", "provider", "voices")} == {
         "available": True,
         "source": "ai",
+        "provider": "openai",
         "voices": list(voice_call.VOICES),
     }
+    assert [voice["id"] for voice in status["voice_options"]] == list(voice_call.VOICES)
     db.add(VoiceConnection(user_id=user_id, provider="openai", model="gpt-4o-transcribe", api_key=encrypt_secret(VOICE_KEY)))
     db.commit()
     assert client.get("/assistant/call", headers=auth).json()["source"] == "voice"
