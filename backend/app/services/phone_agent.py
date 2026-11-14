@@ -26,8 +26,7 @@ from sqlalchemy.orm import Session
 from starlette.websockets import WebSocketDisconnect
 
 from app import models as m
-from app.security import decrypt_secret
-from app.services import assistant, whoop_ai
+from app.services import assistant, voice_call, whoop_ai
 
 log = logging.getLogger(__name__)
 
@@ -73,14 +72,9 @@ FINISH_TOOL = {
 
 
 def openai_key(db: Session, user_id: uuid.UUID) -> str | None:
-    """The user's own OpenAI key: the voice model's if it is OpenAI, else the AI's. None when they saved neither."""
-    voice = db.get(m.VoiceConnection, user_id)
-    if voice is not None and voice.provider == "openai":
-        key = decrypt_secret(voice.api_key)
-        if key:
-            return key
-    ai = db.get(m.AiConnection, (user_id, "openai"))
-    return decrypt_secret(ai.api_key) if ai is not None else None
+    """The user's own OpenAI key (the same one the in-app voice call uses). None when they saved none."""
+    key = voice_call.call_key(db, user_id)
+    return key.api_key if key else None
 
 
 def disclosure(caller_name: str | None, arabic: bool) -> str:
