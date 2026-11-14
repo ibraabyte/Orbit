@@ -4,9 +4,10 @@ import { useRef, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Glass, Icon, type, type IconName } from "@/components/drift";
+import { OrbitMark } from "@/components/assistant-button";
 import { openCapture, useSidebar } from "@/components/screen";
 import { useSectionCounts, useVisibleSections } from "@/components/sections";
-import { colors, fonts, radius, space, textSize } from "@/components/theme";
+import { colors, fonts, radius, space, textSize, usePalette } from "@/components/theme";
 import { formatNumber, t } from "@/lib/i18n";
 import { activeKey, SIDEBAR_WIDTH, sidebarSteps } from "@/lib/sidebar";
 
@@ -33,6 +34,7 @@ function go(from: string, to: string) {
 
 function Sidebar() {
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
   const path = usePathname();
   const counts = useSectionCounts();
   const { groups } = useVisibleSections();
@@ -56,7 +58,7 @@ function Sidebar() {
             accessibilityLabel={t.assistantTitle}
             style={({ pressed }) => [styles.assistant, pressed && { opacity: 0.85 }]}
           >
-            <Icon name="mic" size={18} color={colors.accentInk} />
+            <OrbitMark size={20} color={palette.accentInk} />
             <Text style={styles.assistantText} numberOfLines={1}>
               {t.assistantTitle}
             </Text>
