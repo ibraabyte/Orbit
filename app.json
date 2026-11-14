@@ -127,6 +127,7 @@
         }
       ],
       "@livekit/react-native-expo-plugin",
+      "./plugins/with-native-rtl",
       [
         "expo-share-intent",
         {
