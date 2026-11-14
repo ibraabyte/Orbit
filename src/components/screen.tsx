@@ -1,11 +1,12 @@
 import { router, Stack, usePathname } from "expo-router";
+import SegmentedControl from "@expo/ui/community/segmented-control";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { SearchBarCommands } from "react-native-screens";
 import { Animated, Easing, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View, type TextInputProps } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, Icon, PageTitle, type, useOnSurface } from "@/components/drift";
 import { useReduceMotion } from "@/components/motion";
-import { colors, fonts, radius, space, textSize, usePalette, type Palette } from "@/components/theme";
+import { colors, fonts, radius, space, textSize, usePalette, useScheme, type Palette } from "@/components/theme";
 import { et } from "@/lib/exercises";
 import { ht } from "@/lib/health-hub";
 import { t } from "@/lib/i18n";
@@ -355,18 +356,21 @@ export function Skeleton() {
   );
 }
 
-export function Segments<T extends string>({ options, value, onChange, labels, small }: { options: readonly T[]; value: T; onChange: (next: T) => void; labels?: Record<T, string>; small?: boolean }) {
+// The system segmented control (UISegmentedControl on iOS, Material buttons on Android). small keeps the old call sites
+// compiling; native segments always span the row.
+export function Segments<T extends string>({ options, value, onChange, labels }: { options: readonly T[]; value: T; onChange: (next: T) => void; labels?: Record<T, string>; small?: boolean }) {
+  const scheme = useScheme();
   return (
-    <View style={[styles.segments, small && styles.segmentsSmall]} accessibilityRole="tablist">
-      {options.map((option) => {
-        const selected = option === value;
-        return (
-          <Pressable key={option} onPress={() => onChange(option)} accessibilityRole="tab" accessibilityState={{ selected }} style={[styles.segment, small && styles.segmentSmall, selected && styles.segmentSelected]}>
-            <Text style={[styles.segmentText, small && { fontSize: textSize.caption1 }, { color: selected ? colors.urgentInk : colors.inkMuted }]}>{labels ? labels[option] : option}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <SegmentedControl
+      values={options.map((option) => (labels ? labels[option] : option))}
+      selectedIndex={Math.max(0, options.indexOf(value))}
+      onChange={(event) => {
+        const next = options[event.nativeEvent.selectedSegmentIndex];
+        if (next !== undefined && next !== value) onChange(next);
+      }}
+      appearance={scheme}
+      style={styles.segments}
+    />
   );
 }
 
@@ -450,6 +454,7 @@ const styles = StyleSheet.create({
   tabHeader: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.md, paddingTop: space.xs, paddingBottom: space.xxs },
   headerButton: { minHeight: 44, minWidth: 44, paddingHorizontal: space.md, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.sm, borderRadius: radius.tile, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
   stackAction: { minHeight: 44, paddingHorizontal: space.md, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  segments: { minHeight: 36 },
   bleed: { marginHorizontal: -space.xl, flexGrow: 0 },
   bleedContent: { paddingHorizontal: space.xl, gap: space.sm },
   hint: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.md, borderWidth: 1, borderStyle: "dashed", borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
@@ -461,13 +466,6 @@ const styles = StyleSheet.create({
   error: { alignItems: "center", gap: space.lg, paddingHorizontal: space.md, paddingVertical: space.giant },
   errorMark: { width: 56, height: 56, borderRadius: radius.xl, borderCurve: "continuous", backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
   errorGlyph: { fontFamily: fonts.semibold, fontSize: textSize.title1, color: colors.urgentInk },
-  segments: { flexDirection: "row", backgroundColor: colors.surfaceInset, borderRadius: radius.tile, borderCurve: "continuous", padding: space.xs, gap: space.xs },
-  segment: { flex: 1, minHeight: 38, borderRadius: radius.control, alignItems: "center", justifyContent: "center" },
-  segmentsSmall: { alignSelf: "flex-start", borderRadius: radius.md },
-  // flexBasis too: on the web a 0% basis from flex: 1 would survive flex: 0 and squeeze the labels.
-  segmentSmall: { flexGrow: 0, flexShrink: 0, flexBasis: "auto", minHeight: 30, paddingHorizontal: space.md, borderRadius: radius.sm },
-  segmentSelected: { backgroundColor: colors.urgent },
-  segmentText: { fontFamily: fonts.semibold, fontSize: textSize.subheadline },
   button: { minHeight: 50, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: space.xl, alignItems: "center", justifyContent: "center" },
   buttonText: { fontFamily: fonts.semibold, fontSize: textSize.callout },
   search: { minHeight: 48, flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.lg, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface, borderRadius: radius.tile, borderCurve: "continuous" },
