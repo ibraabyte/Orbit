@@ -1,6 +1,6 @@
 export type TaskStatus = "open" | "done" | "archived";
 export type TaskPriority = "low" | "normal" | "high";
-export type CaptureType = "link" | "screenshot" | "note";
+export type CaptureType = "link" | "screenshot" | "note" | "image" | "video";
 export type ReminderStatus = "scheduled" | "sent" | "cancelled";
 export type RecurrenceRule = "daily" | "weekly" | "monthly";
 export type HabitFrequency = "daily" | "weekly";
@@ -109,8 +109,21 @@ export type Capture = {
   image_url: string | null;
   site_name: string | null;
   summary: string | null;
+  // The smart saver (backend/app/services/saver_jobs.py): what the AI saw, tags, and the words it can be found by.
+  labels: string[];
+  analysis: string | null;
+  search_terms: string | null;
+  content_text: string | null;
+  author: string | null;
+  analysis_status: "none" | "pending" | "done" | "failed" | "no_ai";
+  analysis_error: string | null;
+  media_error: string | null;
   created_at: string;
 };
+
+// A copy the server kept of a saved video or picture; url is a signed server path (lasts about a week).
+export type SavedMedia = { id: string; kind: "image" | "video"; poster: boolean; content_type: string | null; size_bytes: number | null; url: string };
+export type SavedItem = Capture & { media: SavedMedia[] };
 
 export type Attachment = {
   id: string;

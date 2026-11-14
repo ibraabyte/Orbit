@@ -133,11 +133,13 @@
           "iosActivationRules": {
             "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
             "NSExtensionActivationSupportsWebPageWithMaxCount": 1,
-            "NSExtensionActivationSupportsText": true
+            "NSExtensionActivationSupportsText": true,
+            "NSExtensionActivationSupportsImageWithMaxCount": 10,
+            "NSExtensionActivationSupportsMovieWithMaxCount": 4
           },
           "iosAppGroupIdentifier": "group.com.ibraabyte.orbit",
           "iosShareExtensionName": "Orbit Share",
-          "androidIntentFilters": ["text/*"]
+          "androidIntentFilters": ["text/*", "image/*", "video/*"]
         }
       ]
     ],

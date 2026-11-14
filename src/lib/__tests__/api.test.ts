@@ -155,4 +155,21 @@ describe("api client", () => {
     expect(errorMessage(404, "<html>")).toBe("Request failed (404).");
     expect(new ApiError(404, "Task not found.")).toMatchObject({ status: 404, message: "Task not found." });
   });
+
+  it("uploads a file as multipart with the sign-in, and turns server paths into full links", async () => {
+    const fetch = vi.fn(async (url: string | URL | Request, _init?: RequestInit) => (String(url).endsWith("/auth/refresh") ? json(200, tokens(2)) : json(200, { id: "c1" })));
+    const storage = { get: async () => saved(1), set: async () => undefined, remove: async () => undefined };
+    const api = createApiClient({ baseUrl: "https://api.test/", storage, fetch: fetch as unknown as typeof globalThis.fetch });
+    const form = new FormData();
+    form.append("locale", "ar");
+    expect(await api.upload("/captures/upload", form)).toEqual({ id: "c1" });
+    const [url, init] = fetch.mock.calls[1];
+    expect(String(url)).toBe("https://api.test/captures/upload");
+    expect(init?.body).toBe(form);
+    const headers = init?.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer access-2");
+    expect(headers["Content-Type"]).toBeUndefined();
+    expect(api.absolute("/captures/media/m?exp=1&sig=s")).toBe("https://api.test/captures/media/m?exp=1&sig=s");
+    expect(api.absolute("https://cdn.example.com/a.jpg")).toBe("https://cdn.example.com/a.jpg");
+  });
 });

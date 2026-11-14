@@ -62,11 +62,13 @@ export function createApiClient({
 
   async function send(method: string, path: string, body: unknown, token: string | null) {
     const headers: Record<string, string> = { Accept: "application/json" };
-    if (body !== undefined) headers["Content-Type"] = "application/json";
+    // A file upload (the saver's shared pictures and videos) goes as multipart; fetch sets that header itself.
+    const form = typeof FormData !== "undefined" && body instanceof FormData;
+    if (body !== undefined && !form) headers["Content-Type"] = "application/json";
     if (token) headers.Authorization = `Bearer ${token}`;
     let response: Response;
     try {
-      response = await fetchImpl(root + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+      response = await fetchImpl(root + path, { method, headers, body: body === undefined ? undefined : form ? (body as FormData) : JSON.stringify(body) });
     } catch {
       throw new ApiError(0, "Can't reach the Orbit server. Check your connection.");
     }
@@ -210,7 +212,10 @@ export function createApiClient({
     post: <T = unknown>(path: string, body?: unknown) => request<T>("POST", path, body ?? {}),
     put: <T = unknown>(path: string, body: unknown) => request<T>("PUT", path, body),
     patch: <T = unknown>(path: string, body: unknown) => request<T>("PATCH", path, body),
-    delete: (path: string) => request<null>("DELETE", path)
+    delete: (path: string) => request<null>("DELETE", path),
+    upload: <T = unknown>(path: string, form: FormData) => request<T>("POST", path, form),
+    // A server path (like a saver copy's signed link) as a full address for an image or video player.
+    absolute: (path: string) => (/^https?:\/\//.test(path) ? path : root + path)
   };
 }
 
