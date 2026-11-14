@@ -221,7 +221,12 @@ export default function Capture() {
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <Text style={styles.title}>{t.assistantTitle}</Text>
+        <Text style={[styles.title, { flex: 1 }]}>{t.assistantTitle}</Text>
+        {/* A live voice call: talk and hear the answers, no send button. */}
+        <Pressable onPress={() => router.push("/call")} accessibilityRole="button" accessibilityLabel={t.callTitle} hitSlop={8} style={styles.call}>
+          <Icon name="phone" size={14} color={colors.accentInk} />
+          <Text style={[type.pill, { fontSize: 13, color: colors.accentInk }]}>{t.callButton}</Text>
+        </Pressable>
         <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={10}>
           <Text style={[type.pill, { fontSize: 14, color: colors.onShellMuted }]}>{t.cancel}</Text>
         </Pressable>
@@ -429,7 +434,8 @@ export default function Capture() {
 
 const styles = StyleSheet.create({
   screen: { padding: 20, gap: 12 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 14 },
+  call: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.accent },
   title: { fontFamily: fonts.bold, fontSize: 20, color: colors.onShell },
   auto: { writingDirection: "auto" },
   inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
