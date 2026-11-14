@@ -3,6 +3,7 @@
 from app.models.auth import RefreshToken, ServerSettings, User
 from app.models.bank_sms import BankSmsEvent, BankSmsToken, BankTransaction
 from app.models.base import Base
+from app.models.calls import PhoneCall, PhoneConnection
 from app.models.chatgpt import ChatgptConnection
 from app.models.finance import Bill, Budget, Card, Expense, Investment, MoneyAccount, Obligation, ObligationInstallment
 from app.models.fitness import Exercise, GymEquipment, Injury
@@ -48,6 +49,8 @@ __all__ = [
     "MoneyAccount",
     "Obligation",
     "ObligationInstallment",
+    "PhoneCall",
+    "PhoneConnection",
     "PlannedExercise",
     "PlannedWorkout",
     "Profile",
