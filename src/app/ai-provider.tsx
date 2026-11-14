@@ -146,7 +146,7 @@ export default function AiProvider() {
 
   const startSpeech = () =>
     run("speech", async () => {
-      await integrationsApi.connectVoice(getApi(), { provider: "openai", model: pickedSpeech ?? "", apiKey: "" });
+      await integrationsApi.connectVoice(getApi(), { provider: "openai", model: firstModel(models ?? [], "speech", pickedSpeech) ?? "", apiKey: "" });
       await load();
       return { ok: true, message: t.saved };
     });
@@ -309,7 +309,7 @@ export default function AiProvider() {
               <Button variant="outline" title={busy === "remove" ? t.pv.saving : t.pv.removeAll} disabled={busy !== null} onPress={remove} />
             </>
           )}
-          {id === "openai" || id === "anthropic" ? <Text style={type.rowSubtitle}>{t.pv.noSubscription}</Text> : null}
+          {id === "anthropic" ? <Text style={type.rowSubtitle}>{t.pv.noSubscription}</Text> : id === "openai" ? <Text style={type.rowSubtitle}>{t.pv.chatgptNote}</Text> : null}
         </Card>
       ) : null}
 
@@ -336,7 +336,7 @@ export default function AiProvider() {
       {hasSpeech && tab === "key" && (state.keySaved || models) ? (
         <Card title={t.pv.speechTitle} action={<Badge tone={state.speechModel ? "success" : "neutral"}>{state.speechModel ? t.voiceOn : t.pv.speechOff}</Badge>}>
           {state.speechModel ? <Text style={type.rowSubtitle}>{t.pv.speechOn.replace("{name}", provider.name)}</Text> : null}
-          {models ? <ModelPicker models={models} kind="speech" value={pickedSpeech ?? state.speechModel} onPick={pickSpeech} disabled={busy !== null} /> : null}
+          {models ? <ModelPicker models={models} kind="speech" value={firstModel(models, "speech", pickedSpeech ?? state.speechModel)} onPick={pickSpeech} disabled={busy !== null} /> : null}
           {id === "openai" && state.textModel && !state.speechModel ? (
             <>
               {otherVoice ? <Text style={type.rowSubtitle}>{t.pv.speechReplaces.replace("{name}", otherVoice)}</Text> : null}

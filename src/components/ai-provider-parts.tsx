@@ -4,8 +4,8 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon, type } from "@/components/drift";
 import { Input } from "@/components/screen";
 import { colors, fonts, radius } from "@/components/theme";
-import { filterModels, PROVIDER_IDS, PROVIDERS, providerState, providerSummary, rolesLine, type ModelKind, type Provider, type ProviderModel } from "@/lib/ai-providers";
-import { digits, t } from "@/lib/i18n";
+import { filterModels, PROVIDER_IDS, PROVIDERS, providerModel, providerState, providerSummary, rolesLine, type ModelKind, type Provider, type ProviderModel } from "@/lib/ai-providers";
+import { digits, isArabic, t } from "@/lib/i18n";
 import type { IntegrationsOverview } from "@/lib/integrations";
 
 // The company's letter mark on its colour: a simple stand-in, not its logo.
@@ -47,7 +47,10 @@ export function ProviderGrid({ overview }: { overview: IntegrationsOverview }) {
               {rolesLine(provider)}
             </Text>
             <Text style={[styles.status, state.connected && { color: colors.accentDeep }]} numberOfLines={1}>
-              {digits(providerSummary(provider, state))}
+              {state.isDefault ? t.pv.isDefault : state.connected ? t.pv.connected : t.pv.notConnected}
+            </Text>
+            <Text style={[styles.status, { writingDirection: isArabic ? "rtl" : "ltr" }]} numberOfLines={1}>
+              {providerModel(state) ?? " "}
             </Text>
           </Pressable>
         );
@@ -152,6 +155,6 @@ const styles = StyleSheet.create({
   list: { gap: 6 },
   option: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 9, paddingHorizontal: 12, borderRadius: 10, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline },
   selected: { borderColor: colors.accentLine, backgroundColor: colors.accentTint },
-  // Model names are English: keep them left-to-right inside Arabic.
-  ltr: { flex: 1, writingDirection: "ltr", textAlign: "left" }
+  // A model name (English) still lines up with the Arabic text around it, as in the feature list.
+  ltr: { flex: 1, writingDirection: isArabic ? "rtl" : "ltr" }
 });

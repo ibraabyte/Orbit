@@ -83,13 +83,14 @@ export function providerState(overview: IntegrationsOverview, id: ProviderId): P
   };
 }
 
-// The line under a company's name on its card.
+// The model a company's card names: its text model, the ChatGPT account, or its speech model.
+export const providerModel = (state: ProviderState): string | null => state.textModel ?? (state.account ? t.pv.methodChatgpt : null) ?? state.speechModel;
+
+// A company's state in one line (for screen readers).
 export function providerSummary(provider: Provider, state: ProviderState): string {
   if (!state.connected) return t.pv.notConnected;
-  const parts = [state.isDefault ? t.pv.isDefault : t.pv.connected];
-  const model = state.textModel ?? (state.account ? t.pv.methodChatgpt : null) ?? state.speechModel;
-  if (model) parts.push(model);
-  return parts.join(" · ");
+  const model = providerModel(state);
+  return [state.isDefault ? t.pv.isDefault : t.pv.connected, ...(model ? [model] : [])].join(" · ");
 }
 
 export const roleLabel = (role: Role) => ({ text: t.pv.roleText, speech: t.pv.roleSpeech, call: t.pv.roleCall })[role];
