@@ -4,6 +4,7 @@ Point ORBIT_TEST_DATABASE_URL at an empty database you don't mind wiping.
 """
 
 import os
+import tempfile
 from collections.abc import Iterator
 
 import pytest
@@ -13,6 +14,8 @@ os.environ["ORBIT_DATABASE_URL"] = DATABASE_URL
 os.environ.setdefault("ORBIT_JWT_SECRET", "test-secret-that-is-long-enough-for-hs256-signing")
 # Tests drive WHOOP syncs themselves; no background thread.
 os.environ["ORBIT_WHOOP_SYNC_MINUTES"] = "0"
+# The saver's copies of videos and pictures go to a throwaway folder.
+os.environ["ORBIT_MEDIA_DIR"] = tempfile.mkdtemp(prefix="orbit-media-")
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
@@ -81,3 +84,14 @@ def me(client: TestClient) -> dict:
 @pytest.fixture
 def auth(me: dict) -> dict[str, str]:
     return bearer(me)
+
+
+@pytest.fixture(autouse=True)
+def no_video_downloads(monkeypatch: pytest.MonkeyPatch) -> None:
+    """yt-dlp would reach the real internet; a test that wants a video replaces this with its own fake."""
+    from app.services import saver_media
+
+    def refuse(*args, **kwargs):
+        raise saver_media.MediaRefused("The site didn't let Orbit keep a copy of the video.")
+
+    monkeypatch.setattr(saver_media, "ytdlp_download", refuse)

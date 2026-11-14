@@ -21,7 +21,7 @@ from app.routers.admin import load as load_server_settings
 from app.routers.whoop import APP_SCHEMES
 from app.schemas.auth import ChangePassword, GoogleFinish, GoogleStart, GoogleStarted, Me, Refresh, SignIn, SignUp, Tokens
 from app.security import create_access_token, hash_password, hash_refresh_token, new_refresh_token, verify_password
-from app.services import google_api
+from app.services import google_api, saver_media
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -289,4 +289,6 @@ def delete_account(body: DeleteAccount, user_id: UserId, db: Db):
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Password is wrong.")
     db.delete(user)
     db.commit()
+    # The saver's copies of videos and pictures are files, not rows; they go too.
+    saver_media.remove_user(user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

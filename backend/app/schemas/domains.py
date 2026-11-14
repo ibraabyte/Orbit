@@ -7,7 +7,7 @@ value is refused with a clear message before it reaches Postgres.
 
 import uuid
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, field_validator
 
@@ -84,8 +84,20 @@ class CaptureCreate(Tagged):
     _trim = field_validator("category", mode="before")(_trimmed)
 
 
+def _tidy_labels(values: list[str] | None) -> list[str] | None:
+    """Tags as the user typed them: trimmed, no '#', no repeats (ignoring case), empty ones dropped."""
+    if values is None:
+        return None
+    kept: list[str] = []
+    for value in values:
+        word = " ".join(str(value).replace("#", " ").split())
+        if word and word.lower() not in (item.lower() for item in kept):
+            kept.append(word)
+    return kept
+
+
 class CaptureUpdate(Input):
-    type: Literal["link", "screenshot", "note"] | None = None
+    type: Literal["link", "screenshot", "note", "image", "video"] | None = None
     url: str | None = Field(default=None, max_length=2000)
     title: str | None = Field(default=None, min_length=1, max_length=280)
     note: str | None = None
@@ -95,8 +107,11 @@ class CaptureUpdate(Input):
     image_url: str | None = Field(default=None, max_length=2000)
     site_name: str | None = Field(default=None, max_length=120)
     summary: str | None = Field(default=None, max_length=1000)
+    # The smart saver's tags; the app sends the whole list after an edit.
+    labels: list[Annotated[str, Field(max_length=40)]] | None = Field(default=None, max_length=20)
 
     _trim = field_validator("category", mode="before")(_trimmed)
+    _tidy = field_validator("labels", mode="after")(_tidy_labels)
 
 
 class CaptureSave(Input):
@@ -107,12 +122,31 @@ class CaptureSave(Input):
     category: str | None = category_field(None)
     # The title the sharing app already knew (the iOS share sheet often sends one); used when the page gives none.
     title: str | None = Field(default=None, max_length=280)
+    # The language the AI writes the summary and tags in.
+    locale: Literal["en", "ar"] = "en"
 
     _trim = field_validator("category", "url", mode="before")(_trimmed)
 
 
+class CaptureText(Input):
+    """Text shared into the saver on its own (no link in it): kept as a note and looked at by the AI."""
+
+    text: str = Field(min_length=1, max_length=8000)
+    note: str | None = Field(default=None, max_length=2000)
+    category: str | None = category_field(None)
+    locale: Literal["en", "ar"] = "en"
+
+    _trim = field_validator("category", "text", mode="before")(_trimmed)
+
+
 class CaptureSummaryIn(Input):
     locale: Literal["en", "ar"] = "en"
+
+
+class CaptureSearchIn(Input):
+    query: str = Field(min_length=1, max_length=200)
+
+    _trim = field_validator("query", mode="before")(_trimmed)
 
 
 # Food
