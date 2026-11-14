@@ -3,6 +3,7 @@ import { useCallback, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { AiConnectForm } from "@/components/ai-connect-form";
 import { BankSmsCard } from "@/components/bank-sms-card";
+import { FeatureModelsCard } from "@/components/feature-models-card";
 import { ChatgptConnectForm } from "@/components/chatgpt-connect-form";
 import { Badge, Card, EmptyState, Icon, IconTile, ListRow, toneToBadge, type } from "@/components/drift";
 import { Button, Loading, Screen, Segments } from "@/components/screen";
@@ -11,6 +12,7 @@ import { VoiceConnectForm } from "@/components/voice-connect-form";
 import { colors } from "@/components/theme";
 import { useSeerr } from "@/hooks/use-seerr";
 import { getApi } from "@/lib/backend";
+import { featuresOf, removeBody, usedBy } from "@/lib/feature-models";
 import { t } from "@/lib/i18n";
 import { AI_CHOICE_NAMES, aiChoicesOf, aiState, integrationsApi, seerrState, VOICE_PROVIDER_NAMES, voiceOff, voiceState, whoopState, type AiChoice, type IntegrationsOverview } from "@/lib/integrations";
 
@@ -63,7 +65,7 @@ export default function Integrations() {
   const voice = overview.voice ?? voiceOff;
   const voiceNow = voiceState(overview.voice);
   const removeVoice = () =>
-    Alert.alert(t.voiceRemove, t.voiceRemoveBody, [
+    Alert.alert(t.voiceRemove, removeBody(t.voiceRemoveBody, usedBy(featuresOf(overview), "cloud", "speech")), [
       {
         text: t.aiRemove,
         style: "destructive",
@@ -76,7 +78,8 @@ export default function Integrations() {
   const failed = (action: Promise<unknown>) =>
     action.then(load).catch((actionError: unknown) => Alert.alert(t.aiSummary, actionError instanceof Error ? actionError.message : t.tryAgain));
   const removeAi = (choice: AiChoice) =>
-    Alert.alert(t.aiRemoveTitle, t.aiRemoveBody, [
+    // Features set to this AI go back to the default, so name them first.
+    Alert.alert(t.aiRemoveTitle, removeBody(t.aiRemoveBody, usedBy(featuresOf(overview), choice.provider)), [
       {
         text: t.aiRemove,
         style: "destructive",
@@ -218,6 +221,8 @@ export default function Integrations() {
           />
         </Card>
       ) : null}
+
+      <FeatureModelsCard overview={overview} onSaved={(features) => setOverview((current) => (current ? { ...current, features } : current))} />
     </Screen>
   );
 }

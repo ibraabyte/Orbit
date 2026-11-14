@@ -284,10 +284,12 @@ def test_live_call_books_and_makes_a_task(client: TestClient, auth: dict, twilio
     stream_key = twiml.split('name="key" value="')[1].split('"')[0]
     fake = FakeOpenAI("2030-01-06T16:00")
     keys: list[str] = []
+    models: list[str] = []
 
     @asynccontextmanager
-    async def fake_open(api_key: str):
+    async def fake_open(api_key: str, model: str):
         keys.append(api_key)
+        models.append(model)
         yield fake
 
     monkeypatch.setattr(phone_agent, "open_realtime", fake_open)
@@ -311,7 +313,10 @@ def test_live_call_books_and_makes_a_task(client: TestClient, auth: dict, twilio
             socket.receive_json()
 
     assert keys == ["made-up-openai-key"]
+    # Nothing picked in Integrations: the default realtime model.
+    assert models == ["gpt-realtime"]
     setup = fake.sent[0]
+    assert setup["session"]["model"] == "gpt-realtime"
     assert setup["type"] == "session.update"
     assert setup["session"]["audio"]["input"]["format"] == {"type": "audio/pcmu"}
     assert "Never pay" in setup["session"]["instructions"] and "مساعد آلي" in setup["session"]["instructions"]

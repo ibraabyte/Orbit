@@ -16,7 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.models import AiConnection, ChatgptConnection, Profile, User
+from app.models import AiConnection, ChatgptConnection, FeatureModel, Profile, User
 from app.security import decrypt_secret
 
 # ponytail: a fixed list, so no user-supplied address reaches the server's own network. Other hosts go through OpenRouter.
@@ -100,14 +100,20 @@ def default_choice(db: Session, user_id: uuid.UUID) -> str | None:
     return saved if saved in choices else (choices[0] if choices else None)
 
 
-def access_for(db: Session, user_id: uuid.UUID, choice: str | None = None) -> AiAccess | ChatgptAccess | None:
-    """The AI to use: the one picked (only if this user connected it), else their default, else the server's key if
-    they're the admin, else nothing."""
+def feature_choice(db: Session, user_id: uuid.UUID, feature: str) -> str | None:
+    """The AI this user picked for one feature in Integrations, while it is still connected; else None (the default)."""
+    row = db.get(FeatureModel, (user_id, feature))
+    return row.choice if row is not None and row.choice in connected(db, user_id) else None
+
+
+def access_for(db: Session, user_id: uuid.UUID, choice: str | None = None, feature: str | None = None) -> AiAccess | ChatgptAccess | None:
+    """The AI to use: the one picked (only if this user connected it), else the one they set for this feature, else
+    their default, else the server's key if they're the admin, else nothing."""
     if choice is not None:
         if choice not in connected(db, user_id):
             return None
     else:
-        choice = default_choice(db, user_id)
+        choice = (feature_choice(db, user_id, feature) if feature else None) or default_choice(db, user_id)
     if choice == "chatgpt":
         # The ChatGPT account has no settings of its own; it shares the instructions saved with the first key.
         first = db.scalar(

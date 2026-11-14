@@ -240,8 +240,9 @@ def latest_insight(user_id: UserId, db: Db):
 
 @router.post("/insights", response_model=InsightRow, status_code=status.HTTP_201_CREATED)
 def create_insight(user_id: UserId, db: Db, ai: AiPick = None, days: int = Query(30, ge=7, le=90)):
-    """Asks this user's AI (the one picked, else their default) for a fresh summary of the last `days` days and keeps it."""
-    access = whoop_ai.access_for(db, user_id, ai)
+    """Asks this user's AI (the one picked, else the one set for health, else their default) for a fresh summary of the
+    last `days` days and keeps it."""
+    access = whoop_ai.access_for(db, user_id, ai, "health")
     if access is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Connect your AI in Integrations first.")
     last = latest_insight(user_id, db)

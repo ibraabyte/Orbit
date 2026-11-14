@@ -68,7 +68,7 @@ def save(body: s.CaptureSave, user_id: UserId, db: Db):
 @router.post("/{capture_id}/summary", response_model=CaptureRow)
 def summarize(capture_id: uuid.UUID, body: s.CaptureSummaryIn, user_id: UserId, db: Db, ai: AiPick = None):
     row = get_owned(db, m.Capture, capture_id, user_id)
-    access = _connected_ai(db, user_id, ai)
+    access = _connected_ai(db, user_id, ai, "saver")
     known = {"title": row.title, "site": row.site_name or row.source, "description": row.summary, "note": row.note, "url": row.url}
     prompt = f"Write it in {LANGUAGES[body.locale]}. The saved link:\n" + json.dumps(
         {key: value for key, value in known.items() if value}, ensure_ascii=False

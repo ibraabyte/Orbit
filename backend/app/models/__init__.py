@@ -9,7 +9,7 @@ from app.models.finance import Bill, Budget, Card, Expense, Investment, MoneyAcc
 from app.models.fitness import Exercise, GymEquipment, Injury
 from app.models.food import Food
 from app.models.health import GroceryItem, Meal, MealPlan, SleepLog, WeightLog, Workout
-from app.models.integrations import AiConnection, ServiceConnection, VoiceConnection
+from app.models.integrations import AiConnection, FeatureModel, ServiceConnection, VoiceConnection
 from app.models.library import Attachment, Capture, PushSubscription, Tag, Tagging
 from app.models.life import Habit, HabitLog
 from app.models.medications import Medication, MedicationDose
@@ -35,6 +35,7 @@ __all__ = [
     "ChatgptConnection",
     "Exercise",
     "Expense",
+    "FeatureModel",
     "Food",
     "GroceryItem",
     "GymEquipment",

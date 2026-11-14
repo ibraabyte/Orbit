@@ -16,7 +16,7 @@ from pydantic import Field
 from app.deps import Db, UserId
 from app.routers.assistant import ACT_SYSTEM, ProposedAction, _zone, ask_context, local_today
 from app.schemas.tasks import Input
-from app.services import assistant_actions, sections, voice_call
+from app.services import assistant_actions, feature_models, sections, voice_call
 from app.services.agent import Call
 
 router = APIRouter(prefix="/assistant/call", tags=["assistant"])
@@ -117,7 +117,8 @@ def start_session(body: SessionRequest, user_id: UserId, db: Db):
     instructions = (
         f"{CALL_SYSTEM}\n\n{SPEECH[body.locale]}\n\nMy data:\n{_json(data)}\n\nNow and my items (with refs for your tools):\n{_json(items)}"
     )
-    config = voice_call.session_config(instructions, body.voice, body.locale, assistant_actions.tools(run.hidden))
+    model = feature_models.realtime_model(db, user_id, "call")
+    config = voice_call.session_config(instructions, body.voice, body.locale, assistant_actions.tools(run.hidden), model)
     db.rollback()
     try:
         secret = voice_call.client_secret(key.api_key, config)
@@ -127,7 +128,7 @@ def start_session(body: SessionRequest, user_id: UserId, db: Db):
     except voice_call.CallUnavailable as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
     refs = voice_call.refs_of(run)
-    return {"client_secret": secret["value"], "expires_at": secret["expires_at"], "model": voice_call.MODEL, "refs": refs}
+    return {"client_secret": secret["value"], "expires_at": secret["expires_at"], "model": model, "refs": refs}
 
 
 @router.post("/tool", response_model=ToolReply)

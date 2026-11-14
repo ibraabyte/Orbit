@@ -8,6 +8,7 @@ import { useOverlays } from "@/components/overlays";
 import { Button } from "@/components/screen";
 import { colors, fonts, radius } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
+import { isFoodLine, speechOnPhone } from "@/lib/feature-models";
 import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSections } from "@/hooks/use-sections";
@@ -76,7 +77,9 @@ export default function Capture() {
   const listening = voice.listening || cloud.recording;
   const voiceError = cloud.error ?? voice.error;
   const options = { defaultWeightUnit: data.profile?.weight_unit ?? "kg", defaultCurrency: data.expenses[0]?.currency ?? data.bills[0]?.currency ?? "SAR" };
-  const provider = ai.choices ? aiName(ai.choices, ai.current) : null;
+  // A line that logs food goes to the AI set for food by text in Integrations; anything else to the assistant's.
+  const lineAi = ai.choiceFor(isFoodLine(text) ? "food_text" : "assistant");
+  const provider = ai.choices ? aiName(ai.choices, lineAi) : null;
   const instant = !forceAi && !answer ? instantDraft(text, options) : null;
   // No AI connected: the old quick add, where anything else becomes a task.
   const fallback = !provider && !instant && text.trim() ? parseNatural(text, options) : null;
@@ -146,7 +149,7 @@ export default function Capture() {
     setBusy(true);
     setFailure(null);
     try {
-      const reply = await getApi().post<ActReply>(`/assistant/act${aiQuery(ai.current)}`, actBody(line, history, isArabic ? "ar" : "en"));
+      const reply = await getApi().post<ActReply>(`/assistant/act${aiQuery(lineAi)}`, actBody(line, history, isArabic ? "ar" : "en"));
       remember(line);
       setHistory((turns) => [...turns, { role: "user" as const, content: line }, { role: "assistant" as const, content: reply.reply }].slice(-ACT_HISTORY_TURNS));
       setAnswer(reply);
@@ -194,7 +197,8 @@ export default function Capture() {
     beforeVoice.current = text;
     voice.clearError();
     cloud.clearError();
-    const provider = cloudVoiceAvailable && voiceModel?.connected ? voiceModel.provider : null;
+    // Speech to text set to the phone in Integrations keeps the recording on the phone.
+    const provider = cloudVoiceAvailable && voiceModel?.connected && !speechOnPhone(ai.overview) ? voiceModel.provider : null;
     if (!provider) return void voice.start(voiceLang);
     if (voiceConsented(voiceConsent, provider)) return void cloud.start(voiceLang);
     // The recording leaves the phone, so ask once per provider. Saying no uses the phone this time and asks again next time.
@@ -232,7 +236,7 @@ export default function Capture() {
         </Pressable>
       </View>
 
-      <AiPicker choices={ai.choices} value={ai.current} onChange={ai.setPicked} onShell />
+      <AiPicker choices={ai.choices} value={lineAi} onChange={ai.setPicked} onShell />
 
       {answer ? (
         <View style={styles.preview}>

@@ -1,5 +1,6 @@
 import type { ApiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
+import type { FeatureStatus } from "@/lib/feature-models";
 import { syncedAgo } from "@/lib/whoop";
 
 // Every connection is set up by the user from the app, for their account only. The server holds the secrets
@@ -43,6 +44,8 @@ export type IntegrationsOverview = {
   chatgpt: ChatgptStatus;
   // Missing from servers older than the voice model.
   voice?: VoiceStatus;
+  // What each AI feature uses (lib/feature-models.ts). Missing from older servers.
+  features?: FeatureStatus[];
 };
 
 // The AIs as the overview lists them; an older server's single AI is turned into the same shape.
