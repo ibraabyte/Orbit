@@ -30,6 +30,7 @@ from app.services.agent import Tool
 transport: httpx.BaseTransport | None = None
 
 _CLIENT_SECRETS = "https://api.openai.com/v1/realtime/client_secrets"
+# The default; the user can pick gpt-realtime-mini for calls in Integrations (app/services/feature_models.py).
 MODEL = "gpt-realtime"
 # OpenAI's realtime voices. marin and cedar sound the most natural; the first is the default.
 VOICES = ("marin", "cedar", "ash", "coral", "sage", "verse")
@@ -73,12 +74,12 @@ def realtime_tools(tools: list[Tool]) -> list[dict[str, Any]]:
     return [{"type": "function", "name": t.name, "description": t.description, "parameters": t.parameters} for t in tools]
 
 
-def session_config(instructions: str, voice: str, language: str, tools: list[Tool]) -> dict[str, Any]:
+def session_config(instructions: str, voice: str, language: str, tools: list[Tool], model: str = MODEL) -> dict[str, Any]:
     return {
         "expires_after": {"anchor": "created_at", "seconds": SECRET_SECONDS},
         "session": {
             "type": "realtime",
-            "model": MODEL,
+            "model": model,
             "instructions": instructions,
             "output_modalities": ["audio"],
             "audio": {

@@ -198,7 +198,7 @@ def recent(user_id: UserId, db: Db, limit: int = Query(12, ge=1, le=50)):
 @router.post("/photo", response_model=s.PhotoOut)
 def photo(body: s.PhotoIn, user_id: UserId, db: Db, ai: AiPick = None):
     """A plate photo in, a draft list of foods with estimated calories out. Nothing is saved; the photo isn't kept."""
-    access = whoop_ai.access_for(db, user_id, ai)
+    access = whoop_ai.access_for(db, user_id, ai, "food_photo")
     if access is None:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Connect your AI in Integrations first.")
     try:
