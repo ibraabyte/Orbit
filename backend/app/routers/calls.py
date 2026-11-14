@@ -32,7 +32,7 @@ from app.deps import Db, UserId
 from app.models import PhoneCall, PhoneConnection, Profile
 from app.models.calls import ACTIVE_STATUSES, PHONE_PATTERN
 from app.security import decrypt_secret, encrypt_secret
-from app.services import phone_agent, twilio
+from app.services import feature_models, phone_agent, twilio
 
 router = APIRouter(prefix="/calls", tags=["calls"])
 
@@ -388,7 +388,7 @@ async def twilio_status(call_id: uuid.UUID, request: Request):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def _claim(call_id: str, key: str) -> tuple[PhoneCall, str, str, tuple[str, str], ZoneInfo] | None:
+def _claim(call_id: str, key: str) -> tuple[PhoneCall, str, str, tuple[str, str], ZoneInfo, str] | None:
     """The call this stream belongs to, if its one-time key matches. The key can't be used twice."""
     try:
         parsed = uuid.UUID(call_id)
@@ -412,7 +412,8 @@ def _claim(call_id: str, key: str) -> tuple[PhoneCall, str, str, tuple[str, str]
         call.status = "in_progress"
         db.commit()
         db.refresh(call)
-        return call, api_key, setup.voice, (setup.account_sid, token), _zone(db, call.user_id)
+        model = feature_models.realtime_model(db, call.user_id, "phone_agent")
+        return call, api_key, setup.voice, (setup.account_sid, token), _zone(db, call.user_id), model
 
 
 def _save(call_id: uuid.UUID, result: phone_agent.Result) -> None:
@@ -446,7 +447,7 @@ async def call_stream(socket: WebSocket):
         if claimed is None:
             await socket.close(code=1008)
             return
-        call, api_key, voice, (account_sid, token), zone = claimed
+        call, api_key, voice, (account_sid, token), zone, model = claimed
 
         async def hang_up_now() -> None:
             try:
@@ -454,9 +455,9 @@ async def call_stream(socket: WebSocket):
             except twilio.TwilioUnavailable:
                 phone_agent.log.warning("hanging up through Twilio failed")
 
-        setup = phone_agent.session_update(call, voice, zone)
+        setup = phone_agent.session_update(call, voice, zone, model)
         try:
-            async with phone_agent.open_realtime(api_key) as ai:
+            async with phone_agent.open_realtime(api_key, model) as ai:
                 result = await phone_agent.talk(socket, str(start.get("streamSid", "")), ai, setup, zone, hang_up_now)
         except (OSError, TimeoutError) as exc:
             result = phone_agent.Result(error="Couldn't reach OpenAI from the server.")

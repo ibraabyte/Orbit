@@ -26,8 +26,8 @@ REALTIME_FEATURES = ("call", "phone_agent")
 REALTIME_MODELS = ("gpt-realtime", "gpt-realtime-mini")
 DEFAULT_REALTIME = REALTIME_MODELS[0]
 SPEECH_CHOICES = ("phone", "cloud")
-# The ones the app lists. phone_agent joins once its screens are on main.
-SHOWN = (*AI_FEATURES, "speech", "call")
+# The ones the app lists, in its order.
+SHOWN = (*AI_FEATURES, "speech", "call", "phone_agent")
 
 
 def kind_of(feature: str) -> str:

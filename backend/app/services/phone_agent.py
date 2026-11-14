@@ -30,8 +30,9 @@ from app.services import assistant, voice_call, whoop_ai
 
 log = logging.getLogger(__name__)
 
+# The default; the user can pick gpt-realtime-mini for the phone agent in Integrations (app/services/feature_models.py).
 MODEL = "gpt-realtime"
-REALTIME_URL = "wss://api.openai.com/v1/realtime?model=" + MODEL
+REALTIME_URL = "wss://api.openai.com/v1/realtime?model="
 # OpenAI's realtime voices; marin and cedar sound the most natural.
 VOICES = ("marin", "cedar", "ash", "coral", "sage", "verse")
 # Hard limits that keep a call (and its bill) small.
@@ -194,12 +195,12 @@ leaving a message.
 - When the call has reached its end, call finish_call, then say a short goodbye. Keep the whole call under four minutes."""
 
 
-def session_update(call: m.PhoneCall, voice: str, zone: ZoneInfo) -> dict[str, Any]:
+def session_update(call: m.PhoneCall, voice: str, zone: ZoneInfo, model: str = MODEL) -> dict[str, Any]:
     return {
         "type": "session.update",
         "session": {
             "type": "realtime",
-            "model": MODEL,
+            "model": model,
             "instructions": instructions(call, zone),
             "output_modalities": ["audio"],
             "audio": {
@@ -239,15 +240,15 @@ class Realtime(Protocol):
 
 
 @asynccontextmanager
-async def _openai(api_key: str) -> AsyncIterator[Realtime]:
+async def _openai(api_key: str, model: str) -> AsyncIterator[Realtime]:
     from websockets.asyncio.client import connect
 
-    async with connect(REALTIME_URL, additional_headers={"Authorization": f"Bearer {api_key}"}, max_size=None) as socket:
+    async with connect(REALTIME_URL + model, additional_headers={"Authorization": f"Bearer {api_key}"}, max_size=None) as socket:
         yield socket
 
 
 # Replaced in tests with a fake OpenAI.
-open_realtime: Callable[[str], Any] = _openai
+open_realtime: Callable[[str, str], Any] = _openai
 
 
 @dataclass

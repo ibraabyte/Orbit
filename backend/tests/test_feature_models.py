@@ -51,6 +51,10 @@ def add_ai(db: Session, user_id: uuid.UUID, provider: str, key: str) -> None:
     db.commit()
 
 
+def other_auth(client: TestClient) -> dict:
+    return bearer(sign_up(client, email="other@example.com"))
+
+
 def by_feature(response) -> dict[str, dict]:
     return {row["feature"]: row for row in response.json()}
 
@@ -61,7 +65,6 @@ ASK = {"question": "What is overdue?", "history": [], "locale": "en"}
 def test_nothing_picked_is_the_default_for_every_feature(client: TestClient, auth: dict, db: Session):
     features = by_feature(client.get("/integrations/features", headers=auth))
     assert set(features) == set(feature_models.SHOWN)
-    assert "phone_agent" not in features
     assert features["assistant"] == {
         "feature": "assistant",
         "kind": "ai",
@@ -118,7 +121,9 @@ def test_only_what_the_user_connected(client: TestClient, auth: dict, db: Sessio
     # A realtime model is not an AI, and a feature that doesn't exist is refused.
     assert client.put("/integrations/features/assistant", json={"choice": "gpt-realtime"}, headers=auth).status_code == 409
     assert client.put("/integrations/features/nope", json={"choice": "openai"}, headers=auth).status_code == 422
-    assert client.put("/integrations/features/phone_agent", json={"choice": "gpt-realtime"}, headers=auth).status_code == 422
+    assert client.put("/integrations/features/phone_agent", json={"choice": "made-up-model"}, headers=auth).status_code == 409
+    # No OpenAI key: no realtime model for the call or the phone agent.
+    assert client.put("/integrations/features/phone_agent", json={"choice": "gpt-realtime"}, headers=other_auth(client)).status_code == 409
     assert db.scalar(select(FeatureModel)) is None
 
 
@@ -153,7 +158,10 @@ def test_the_call_uses_the_picked_realtime_model(client: TestClient, auth: dict,
     assert response.status_code == 200, response.text
     assert response.json()["model"] == "gpt-realtime-mini"
     assert json.loads(providers[-1].content)["session"]["model"] == "gpt-realtime-mini"
+    # The phone agent keeps its own choice.
     assert feature_models.realtime_model(db, me(db), "phone_agent") == "gpt-realtime"
+    client.put("/integrations/features/phone_agent", json={"choice": "gpt-realtime-mini"}, headers=auth)
+    assert feature_models.realtime_model(db, me(db), "phone_agent") == "gpt-realtime-mini"
 
 
 def test_speech_can_stay_on_the_phone(client: TestClient, auth: dict, db: Session):
