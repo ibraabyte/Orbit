@@ -99,7 +99,8 @@ export function briefStep(accepted: string | null, provider: string | null): Bri
 }
 
 // Withdrawing removes the agreement and the saved AI brief and weekly summary, which were written from data sent under it.
-export const withdrawKeys = (userId: string) => [consentKey(userId), briefCacheKey(userId), weekCacheKey(userId)];
+// The voice call's agreement too (src/lib/voice-call.ts callConsentKey): it sends the same items, by voice.
+export const withdrawKeys = (userId: string) => [consentKey(userId), briefCacheKey(userId), weekCacheKey(userId), `orbit.call.consent.${userId}`];
 
 // The server's own message is English; in Arabic only the local text is shown, never a mix.
 export const serverDetail = (error: unknown, arabic: boolean) => (!arabic && error instanceof Error ? error.message : "");

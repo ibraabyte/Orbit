@@ -14,6 +14,7 @@
     "eas-build-pre-install": "node scripts/check-build-env.mjs"
   },
   "dependencies": {
+    "@config-plugins/react-native-webrtc": "~15.0.2",
     "@expo-google-fonts/ibm-plex-sans-arabic": "^0.4.2",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@expo/ui": "~58.0.28",
@@ -47,9 +48,11 @@
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
     "react-native-gesture-handler": "~3.3.0",
+    "react-native-incall-manager": "~4.3.0",
     "react-native-reanimated": "4.7.1",
     "react-native-safe-area-context": "~5.10.1",
     "react-native-screens": "~4.30.1",
+    "react-native-webrtc": "~155.0.1",
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {

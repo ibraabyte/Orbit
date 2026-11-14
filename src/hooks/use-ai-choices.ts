@@ -1,15 +1,14 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 import { getApi } from "@/lib/backend";
+import { featureAi, type AiFeature } from "@/lib/feature-models";
 import { aiChoicesOf, pickedAi, type AiChoiceName, type AiChoices, type IntegrationsOverview } from "@/lib/integrations";
 
-// The AIs this person connected and the one picked for the next request. The pick starts at their default and is
-// remembered on this phone per screen (key), so the WHOOP screen can keep Claude while the assistant uses ChatGPT.
-export function useAiChoices(key: string) {
+// The AIs this person connected and the one the next request uses: the AI set for this feature in Integrations
+// ("What each feature uses"), else their default. A pick on the screen ("AI for this") lasts for this visit only.
+export function useAiChoices(feature: AiFeature) {
   const [overview, setOverview] = useState<IntegrationsOverview | null>(null);
-  const [picked, setPickedState] = useState<AiChoiceName | null>(null);
+  const [picked, setPicked] = useState<AiChoiceName | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const storageKey = `orbit.ai-pick.${key}`;
 
   const reload = useCallback(async () => {
     try {
@@ -25,21 +24,15 @@ export function useAiChoices(key: string) {
 
   useEffect(() => {
     void reload();
-    AsyncStorage.getItem(storageKey)
-      .then((saved) => setPickedState(saved ? (saved as AiChoiceName) : null))
-      .catch(() => undefined);
-  }, [reload, storageKey]);
-
-  const setPicked = useCallback(
-    (next: AiChoiceName) => {
-      setPickedState(next);
-      void AsyncStorage.setItem(storageKey, next).catch(() => undefined);
-    },
-    [storageKey]
-  );
+  }, [reload]);
 
   const choices: AiChoices | null = overview ? aiChoicesOf(overview) : null;
-  // What the next request uses: the pick while it is still connected, else the default. null: the server decides.
-  const current = choices ? pickedAi(choices, picked) : null;
-  return { overview, choices, current, setPicked, reload, error };
+  // What a request for this feature (or another, like food by text on the assistant) uses: the screen's pick while it
+  // is still connected, else the feature's AI, else the default. null: the server decides.
+  const choiceFor = useCallback(
+    (which: AiFeature): AiChoiceName | null => (choices ? pickedAi(choices, picked ?? featureAi(overview, which)) : null),
+    [choices, overview, picked]
+  );
+  const current = choiceFor(feature);
+  return { overview, choices, current, choiceFor, setPicked, reload, error };
 }

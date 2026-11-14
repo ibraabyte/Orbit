@@ -6,7 +6,8 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { activeProvider, briefStep, serverDetail } from "@/lib/ask";
 import { getApi } from "@/lib/backend";
 import { isArabic } from "@/lib/i18n";
-import { integrationsApi } from "@/lib/integrations";
+import { featureAi } from "@/lib/feature-models";
+import { aiQuery, integrationsApi } from "@/lib/integrations";
 import { isNoAiError } from "@/lib/morning-brief";
 import { parseWeekCache, weekCacheKey, weekCacheValue, weekEnd, type WeekFacts, type WeekReply } from "@/lib/weekly-summary";
 
@@ -44,13 +45,16 @@ export function useWeeklySummary(enabled = true) {
         }
         setState((now) => ({ status: "loading", facts: now.status === "ready" ? now.reply.facts : now.facts }));
         facts = await getApi().post<WeekFacts>("/assistant/week/facts", body);
-        const provider = activeProvider(await integrationsApi.overview(getApi()));
+        // The AI set for this in Integrations, else the default; asked for by name so the agreement matches it.
+        const overview = await integrationsApi.overview(getApi());
+        const picked = featureAi(overview, "week");
+        const provider = activeProvider(overview, picked);
         const step = briefStep(accepted, provider);
         if (step !== "ask" || provider === null) {
           drop();
           return setState(step === "consent" ? { status: "consent", facts } : { status: "no-ai", facts });
         }
-        const reply = await getApi().post<WeekReply>("/assistant/week", body);
+        const reply = await getApi().post<WeekReply>(`/assistant/week${aiQuery(picked)}`, body);
         // Withdrawn or changed while the AI was writing: the text is dropped, not shown or saved.
         if ((await loadAskConsent(userId)) !== accepted) {
           drop();

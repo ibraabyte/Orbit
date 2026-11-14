@@ -176,8 +176,9 @@ def brief_context(db: Db, user_id: uuid.UUID, day: date) -> dict[str, Any]:
     }
 
 
-def _connected_ai(db: Db, user_id: uuid.UUID, ai: str | None = None):
-    access = whoop_ai.access_for(db, user_id, ai)
+def _connected_ai(db: Db, user_id: uuid.UUID, ai: str | None = None, feature: str = "assistant"):
+    """The AI picked with ?ai=, else the one set for this feature in Integrations, else the default."""
+    access = whoop_ai.access_for(db, user_id, ai, feature)
     if access is None:
         # 409, not 503: the app tells "no AI connected" (offer Integrations) from "the AI is down" (502).
         raise HTTPException(status.HTTP_409_CONFLICT, "Connect your AI in Integrations first.")
@@ -622,7 +623,7 @@ def _week(db: Db, user_id: uuid.UUID, end: date) -> tuple[dict[str, Any], dict[s
 
 @router.post("/week", response_model=WeekReply)
 def week(body: WeekRequest, user_id: UserId, db: Db, ai: AiPick = None):
-    access = _connected_ai(db, user_id, ai)
+    access = _connected_ai(db, user_id, ai, "week")
     facts, context = _week(db, user_id, body.end)
     prompt = f"Write my weekly summary in {LANGUAGES[body.locale]}. My week:\n{_json(context)}"
     summary, plan = weekly_summary.parse_reply(_complete(access, WEEK_SYSTEM, prompt))

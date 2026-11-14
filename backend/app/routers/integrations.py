@@ -24,7 +24,7 @@ from app.models import AiConnection, Profile, ServiceConnection, User, VoiceConn
 from app.models.integrations import AI_CHOICES, AI_PROVIDERS, VOICE_PROVIDERS
 from app.routers.chatgpt import ChatgptStatus
 from app.security import decrypt_secret, encrypt_secret
-from app.services import chatgpt_auth, seerr, voice_stt, whoop_ai, whoop_api
+from app.services import chatgpt_auth, feature_models, seerr, voice_stt, whoop_ai, whoop_api
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -102,6 +102,29 @@ class TranscribeOut(BaseModel):
     text: str
 
 
+class FeatureStatus(BaseModel):
+    """What one AI feature uses. kind: "ai" (choices are the connected AIs), "realtime" (OpenAI realtime models) or
+    "speech" ("phone" or "cloud"). choice: what the user saved, null for the default. stale: the saved choice is no
+    longer connected, so the default (effective) is used."""
+
+    feature: str
+    kind: Literal["ai", "realtime", "speech"]
+    choice: str | None
+    effective: str | None
+    default: str | None
+    options: list[str]
+    stale: bool
+
+
+class FeatureChoice(BaseModel):
+    # null: back to the default.
+    choice: str | None = Field(default=None, max_length=100)
+
+
+def _features(db: Session, user_id) -> list[FeatureStatus]:
+    return [FeatureStatus(**vars(state)) for state in feature_models.states(db, user_id)]
+
+
 class Overview(BaseModel):
     whoop: WhoopOverview
     seerr: SeerrStatus
@@ -110,6 +133,7 @@ class Overview(BaseModel):
     ais: AiChoices
     chatgpt: ChatgptStatus
     voice: VoiceStatus
+    features: list[FeatureStatus]
 
 
 class AiDefault(BaseModel):
@@ -212,7 +236,22 @@ def overview(user_id: UserId, db: Db):
         ais=_ai_choices(db, user_id),
         chatgpt=ChatgptStatus(status=chatgpt_auth.connection_status(db, user_id)),
         voice=_voice_status(db.get(VoiceConnection, user_id)),
+        features=_features(db, user_id),
     )
+
+
+@router.get("/features", response_model=list[FeatureStatus])
+def features(user_id: UserId, db: Db):
+    return _features(db, user_id)
+
+
+@router.put("/features/{feature}", response_model=list[FeatureStatus])
+def set_feature(feature: Literal[feature_models.SHOWN], body: FeatureChoice, user_id: UserId, db: Db):  # type: ignore[valid-type]
+    """Points one feature at one of the user's own models; null goes back to the default. Only what they connected."""
+    if body.choice is not None and body.choice not in feature_models.options(db, user_id, feature):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Connect that model in Integrations first.")
+    feature_models.save(db, user_id, feature, body.choice)
+    return _features(db, user_id)
 
 
 @router.get("/ai", response_model=AiStatus)

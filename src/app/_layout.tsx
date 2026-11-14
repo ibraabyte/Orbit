@@ -53,8 +53,8 @@ const nativeHeader = {
 
 // Sections opened from More get a large title that shrinks into the bar as you scroll. Screens one step further in
 // (one task, a form, a picker) keep the small title.
-const sectionScreens = ["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "habits", "health", "integrations", "library", "notifications", "media", "discover", "requests", "sections", "settings", "tasks", "vehicles", "whoop", "exercises/index", "gym", "injuries", "week", "training", "body", "plan", "medications"];
-const detailScreens = ["health-goals", "person", "task/[id]", "exercises/[id]", "workout", "plan-day"];
+const sectionScreens = ["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "habits", "health", "integrations", "library", "notifications", "media", "discover", "requests", "sections", "settings", "tasks", "vehicles", "whoop", "exercises/index", "gym", "injuries", "week", "training", "body", "plan", "medications", "phone-calls"];
+const detailScreens = ["health-goals", "person", "task/[id]", "exercises/[id]", "workout", "plan-day", "phone-call"];
 // Self-contained tasks (add a food, pick an exercise, edit a medication) open as a sheet over what you were doing, with
 // Cancel in its header and swipe-down to close; on Android they push as before.
 const sheetScreens = ["food-add", "food-photo", "food-scan", "workout-pick", "plan-setup", "medication-edit"];
@@ -137,6 +137,7 @@ export default function RootLayout() {
         <Stack.Protected guard={Boolean(session)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.sheet } }} />
+          <Stack.Screen name="call" options={{ presentation: "fullScreenModal", gestureEnabled: false }} />
         </Stack.Protected>
         {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
         <Stack.Protected guard={Boolean(session)}>

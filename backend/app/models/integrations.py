@@ -22,6 +22,10 @@ AI_CHOICES = ("chatgpt", *AI_PROVIDERS)
 # Speech-to-text providers for the assistant's mic (app/services/voice_stt.py).
 VOICE_PROVIDERS = ("openai", "groq", "elevenlabs")
 _voice_providers_sql = ", ".join(f"'{p}'" for p in VOICE_PROVIDERS)
+# The AI features a user can point at one of their models (app/services/feature_models.py). phone_agent is listed
+# ahead of its screens so its own branch only has to read the choice.
+FEATURES = ("assistant", "food_text", "food_photo", "health", "week", "saver", "speech", "call", "phone_agent")
+_features_sql = ", ".join(f"'{f}'" for f in FEATURES)
 
 
 class ServiceConnection(Base):
@@ -66,5 +70,21 @@ class VoiceConnection(Base):
     provider: Mapped[str] = mapped_column(Text, nullable=False)
     model: Mapped[str] = mapped_column(Text, nullable=False)
     api_key: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = created_at()
+    updated_at: Mapped[datetime] = updated_at()
+
+
+class FeatureModel(Base):
+    """What one AI feature uses for this user, when they picked something other than the default. No row: the default
+    (their default AI, the phone's speech to text or the cloud voice model, gpt-realtime). A row whose choice is no longer
+    connected is kept, so the app can say so; until it is changed the feature uses the default."""
+
+    __tablename__ = "feature_models"
+    __table_args__ = (CheckConstraint(f"feature in ({_features_sql})", name="feature"),)
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    feature: Mapped[str] = mapped_column(Text, primary_key=True)
+    # An AI (one of AI_CHOICES), a realtime model, or "phone" / "cloud" for speech; checked by the route.
+    choice: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = updated_at()
