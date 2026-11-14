@@ -1,4 +1,5 @@
 import Feather from "@expo/vector-icons/Feather";
+import { SymbolView, type SFSymbol } from "expo-symbols";
 import { Link, router, type Href } from "expo-router";
 import { GlassView, isGlassEffectAPIAvailable, isLiquidGlassAvailable } from "expo-glass-effect";
 import { createContext, useContext, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
@@ -9,12 +10,83 @@ import { colors, fonts, labelCase, lineHeights, radius, space, textSize, type Co
 import { digits, formatNumber, isArabic, t } from "@/lib/i18n";
 import { barHeights, ringRotations } from "@/lib/ring";
 
-// Refined's building blocks. Icons are Feather. Layout flips by itself in RTL; only
-// direction-carrying icons (chevrons) need the flip below.
+// Refined's building blocks. Icons are named in Feather's set; on iOS each draws as its SF Symbol, elsewhere (and for a
+// name without one) as the Feather glyph. Layout flips by itself in RTL; only direction-carrying icons (chevrons,
+// arrows) need the flip below. Those use the fixed-direction symbols (chevron.right), which iOS does not mirror itself.
 
 export type IconName = ComponentProps<typeof Feather>["name"];
 
+const sfSymbols: Partial<Record<IconName, SFSymbol>> = {
+  activity: "waveform.path.ecg",
+  "alert-circle": "exclamationmark.circle",
+  "alert-triangle": "exclamationmark.triangle",
+  "arrow-right": "arrow.right",
+  "bar-chart-2": "chart.bar",
+  bell: "bell",
+  bookmark: "bookmark",
+  briefcase: "briefcase",
+  calendar: "calendar",
+  camera: "camera",
+  check: "checkmark",
+  "check-circle": "checkmark.circle",
+  "chevron-down": "chevron.down",
+  "chevron-left": "chevron.left",
+  "chevron-right": "chevron.right",
+  "chevron-up": "chevron.up",
+  clock: "clock",
+  coffee: "cup.and.saucer",
+  cpu: "cpu",
+  "credit-card": "creditcard",
+  delete: "delete.left",
+  "edit-3": "pencil",
+  eye: "eye",
+  "eye-off": "eye.slash",
+  feather: "pencil.line",
+  film: "film",
+  globe: "globe",
+  grid: "square.grid.2x2",
+  hash: "number",
+  heart: "heart",
+  home: "house",
+  layers: "square.3.layers.3d",
+  link: "link",
+  lock: "lock",
+  "map-pin": "mappin",
+  maximize: "arrow.up.left.and.arrow.down.right",
+  "message-circle": "bubble.left",
+  mic: "mic",
+  minus: "minus",
+  moon: "moon",
+  "more-horizontal": "ellipsis",
+  "pie-chart": "chart.pie",
+  play: "play",
+  plus: "plus",
+  "plus-square": "plus.square",
+  "refresh-cw": "arrow.clockwise",
+  repeat: "repeat",
+  "rotate-ccw": "arrow.counterclockwise",
+  search: "magnifyingglass",
+  settings: "gearshape",
+  sliders: "slider.horizontal.3",
+  smartphone: "iphone",
+  smile: "face.smiling",
+  square: "square",
+  sun: "sun.max",
+  tool: "wrench.adjustable",
+  "trash-2": "trash",
+  "trending-down": "chart.line.downtrend.xyaxis",
+  "trending-up": "chart.line.uptrend.xyaxis",
+  truck: "car",
+  tv: "tv",
+  "user-plus": "person.badge.plus",
+  watch: "applewatch",
+  x: "xmark",
+  zap: "bolt"
+};
+
 export function Icon({ name, size = 16, color = colors.inkMuted }: { name: IconName; size?: number; color?: Color }) {
+  const symbol = process.env.EXPO_OS === "ios" ? sfSymbols[name] : undefined;
+  if (symbol) return <SymbolView name={symbol} size={size} tintColor={color} weight="medium" accessibilityElementsHidden importantForAccessibility="no" />;
   return <Feather name={name} size={size} color={color} />;
 }
 
