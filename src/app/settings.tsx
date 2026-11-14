@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Alert, DevSettings, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
 import { resyncWidget } from "@/hooks/use-widget-sync";
-import { Avatar, BentoGrid, BentoTile, Card, type } from "@/components/drift";
+import { Avatar, Card, IconTile, ListRow, type } from "@/components/drift";
 import { ChoiceMenu, useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
 import { colors, space, textSize } from "@/components/theme";
@@ -78,12 +78,16 @@ export default function Settings() {
         <Avatar name={name} size={48} dark />
         <Text style={[type.title, { flex: 1, fontSize: textSize.callout }]}>{name}</Text>
       </Card>
-      {/* Bento, like More: one card per setting, two to a row; a card with a control holds it at its top end. */}
-      <BentoGrid>
-        <BentoTile icon="layers" title={st.sections} detail={st.sectionsCount(sectionsOff.length)} href="/sections" />
-        <BentoTile icon="bell" title={t.notifications} detail={t.notificationsDetail} href="/notifications" />
-        <BentoTile
-          icon="lock"
+      {/* Grouped lists, like the system Settings: where to go first, then this phone's preferences, then the server. */}
+      <Card list>
+        <ListRow first leading={<IconTile name="layers" />} title={st.sections} meta={st.sectionsCount(sectionsOff.length)} href="/sections" />
+        <ListRow leading={<IconTile name="bell" />} title={t.notifications} subtitle={t.notificationsDetail} href="/notifications" />
+        <ListRow leading={<IconTile name="link" />} title={t.integrations} subtitle={t.integrationsDetail} href="/integrations" />
+      </Card>
+      <Card list>
+        <ListRow
+          first
+          leading={<IconTile name="lock" />}
           title={t.faceId}
           trailing={
             <Switch
@@ -97,36 +101,34 @@ export default function Settings() {
             />
           }
         />
-        <BentoTile
-          icon="globe"
+        <ListRow
+          leading={<IconTile name="globe" />}
           title={t.language}
-          detail={t.langLabel}
+          meta={t.langLabel}
+          chevron
           onPress={() => {
             const message = toggleLanguage();
             if (message) toast(message);
           }}
         />
-        <ChoiceMenu fill title={t.numerals} choices={numeralChoices} style={{ flexGrow: 1, flexBasis: "40%", minWidth: 0 }}>
-          <BentoTile icon="hash" title={t.numerals} detail={numeralsLabel[numerals]} label={`${t.numerals}, ${numeralsLabel[numerals]}`} onPress={() => undefined} />
+        <ChoiceMenu fill title={t.numerals} choices={numeralChoices}>
+          <ListRow leading={<IconTile name="hash" />} title={t.numerals} meta={numeralsLabel[numerals]} chevron />
         </ChoiceMenu>
-        <BentoTile icon="link" title={t.integrations} detail={t.integrationsDetail} href="/integrations" />
-        {askConsent ? (
-          <View style={{ flexBasis: "100%" }}>
-            <Card>
-              <Text style={type.rowTitle}>{t.askShare}</Text>
-              <Text style={type.rowSubtitle}>{t.askShareDetail.replace("{provider}", askConsent)}</Text>
-              <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />
-            </Card>
-          </View>
-        ) : null}
-      </BentoGrid>
+      </Card>
+      {askConsent ? (
+        <Card>
+          <Text style={type.rowTitle}>{t.askShare}</Text>
+          <Text style={type.rowSubtitle}>{t.askShareDetail.replace("{provider}", askConsent)}</Text>
+          <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />
+        </Card>
+      ) : null}
       {server ? (
-        <BentoGrid>
-          <BentoTile
-            wide
-            icon="user-plus"
+        <Card list>
+          <ListRow
+            first
+            leading={<IconTile name="user-plus" />}
             title={t.allowSignups}
-            detail={`${server.signups_forced_by_server ? t.signupsForced : server.signups_open ? t.signupsOpen : t.signupsClosed} · ${t.serverOnlyYou}`}
+            subtitle={`${server.signups_forced_by_server ? t.signupsForced : server.signups_open ? t.signupsOpen : t.signupsClosed} · ${t.serverOnlyYou}`}
             trailing={
               <Switch
                 accessibilityLabel={t.allowSignups}
@@ -137,7 +139,7 @@ export default function Settings() {
               />
             }
           />
-        </BentoGrid>
+        </Card>
       ) : null}
       <Button title={t.signOut} onPress={() => void signOut()} />
     </Screen>
