@@ -27,9 +27,10 @@ const en = {
   newCategoryBody: "A name for it, like Gifts or Recipes.",
   categories: { video: "Videos", post: "Posts", book: "Books", movie: "Movies", article: "Articles", place: "Places", other: "Other" } as Record<BuiltInCategory, string>,
   statuses: { want: "To see", done: "Seen", all: "All" } as Record<StatusFilter, string>,
-  search: "Search saved links",
+  search: "Search what you saved",
   empty: "Nothing saved yet. Share a link from TikTok, X or any app and pick Orbit, or paste one above.",
   emptyFilter: "Nothing here. Try another category or clear the search.",
+  emptySearch: "No saved item has these words. Try Search by meaning above.",
   open: "Open",
   markDone: "Mark seen",
   markWant: "Back to To see",
@@ -94,6 +95,7 @@ const ar: typeof en = {
   search: "ابحث في المحفوظات",
   empty: "ما حفظت شي للحين. شارك رابط من تيك توك أو تويتر أو أي تطبيق واختر Orbit، أو الصق الرابط فوق.",
   emptyFilter: "ما فيه شي هنا. جرّب قسم ثاني أو امسح البحث.",
+  emptySearch: "ما فيه شي بهذي الكلمات. جرّب «دوّر بالمعنى» فوق.",
   open: "افتح",
   markDone: "شفته",
   markWant: "رجّعه لأبغى أشوفه",
@@ -220,7 +222,8 @@ export function filterSaved<T extends Capture>(captures: T[], { category, status
         .filter(Boolean)
         .join(" ")
     );
-    return words.every((word) => haystack.includes(word));
+    // "الطبخ" also finds "طبخ": Arabic's "the" is dropped from a longer word when the whole word isn't there.
+    return words.every((word) => haystack.includes(word) || (word.length > 4 && word.startsWith("ال") && haystack.includes(word.slice(2))));
   });
 }
 

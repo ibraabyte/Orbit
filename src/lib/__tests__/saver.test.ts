@@ -97,6 +97,7 @@ describe("saver", () => {
     expect(find("one pot")).toEqual(["cook"]);
     expect(find("corniche")).toEqual(["tweet"]);
     expect(find("made up")).toEqual(["tweet"]);
+    expect(find("الطبخ")).toEqual(["cook"]); // "the cooking" finds the "cooking" tag
   });
 
   const media = (overrides: Partial<SavedMedia>): SavedMedia => ({ id: "m", kind: "image", poster: false, content_type: "image/jpeg", size_bytes: 100, url: "/captures/media/m?exp=1&sig=s", ...overrides });

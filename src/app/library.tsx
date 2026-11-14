@@ -335,7 +335,7 @@ export default function Saver() {
       {!items && !error ? <Loading /> : null}
       {items ? (
         <Card>
-          {!shown.length ? <EmptyState icon="bookmark">{smartShown ? st.smartNone : all.length ? st.emptyFilter : st.empty}</EmptyState> : null}
+          {!shown.length ? <EmptyState icon="bookmark">{smartShown ? st.smartNone : !all.length ? st.empty : query.trim() ? st.emptySearch : st.emptyFilter}</EmptyState> : null}
           {shown.map((item) => (
             <SavedRow key={item.id} item={item} onPress={() => router.push(`/saved/${item.id}`)} onMore={() => actions(item)} onToggle={() => void update(item.id, { status: item.status === "want" ? "done" : "want" })} />
           ))}
@@ -412,6 +412,6 @@ const styles = StyleSheet.create({
   more: { width: 26, height: 26, alignItems: "center", justifyContent: "center" },
   play: { position: "absolute", bottom: 5, start: 5, width: 20, height: 20, borderRadius: 10, backgroundColor: "rgba(10,10,11,0.75)", alignItems: "center", justifyContent: "center" },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 2 },
-  tag: { ...type.pill, color: colors.inkMuted, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, overflow: "hidden" },
+  tag: { ...type.hint, fontSize: 12, color: colors.inkMuted, paddingHorizontal: 8, paddingVertical: 1, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, overflow: "hidden" },
   smart: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 14, paddingVertical: 10, borderRadius: radius.control, borderWidth: 1, borderColor: colors.accentLine }
 });
