@@ -10,12 +10,13 @@ import { financeSummary } from "@/lib/finance";
 import { foodSummary } from "@/lib/food";
 import { t } from "@/lib/i18n";
 import { dosesOnDay, rx } from "@/lib/medications";
+import { px } from "@/lib/phone-calls";
 
 // The sections listed on More, and in the iPad sidebar.
 export type Section = { key: string; href: Href; label: string; icon: IconName };
 
 const section = (key: string, label: string, icon: IconName): Section => ({ key, href: `/${key}` as Href, label, icon });
-export const manage = [section("tasks", t.tasks, "check-square")];
+export const manage = [section("tasks", t.tasks, "check-square"), section("phone-calls", px.calls, "phone-outgoing")];
 // Food, Exercises and WHOOP live inside Health now; they can still be pinned for one tap.
 export const logs = [section("health", t.health, "activity"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "bookmark")];
 export const insideHealth = [section("food", t.food, "coffee"), section("exercises", et.exercises, "zap"), section("whoop", t.whoop, "watch"), section("medications", rx.medications, "plus-square")];
