@@ -120,9 +120,9 @@ export default function Call() {
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         <View style={styles.stage}>
-          <Orb phase={phase} />
-          <Text style={styles.phase}>{onCall || phase === "ended" ? phaseText[phase] : t.callTitle}</Text>
-          {onCall ? <Text style={type.shellMeta}>{digits(`${callClock(call.seconds)} / ${callClock(MAX_CALL_SECONDS)}`)}</Text> : null}
+          <Orb phase={phase} compact={onCall || phase === "ended"} />
+          {onCall || phase === "ended" ? <Text style={styles.phase}>{phaseText[phase]}</Text> : null}
+          {onCall ? <Text style={type.shellMeta}>{digits(callClock(call.seconds))}</Text> : null}
         </View>
 
         {onCall || phase === "ended" ? (
@@ -232,7 +232,7 @@ function Control({ icon, label, on, onPress }: { icon: "mic" | "mic-off" | "volu
 }
 
 // Breathes slowly while listening, pulses faster while the assistant talks, holds still otherwise.
-function Orb({ phase }: { phase: CallPhase }) {
+function Orb({ phase, compact }: { phase: CallPhase; compact: boolean }) {
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const live = phase === "listening" || phase === "speaking" || phase === "thinking";
@@ -251,11 +251,13 @@ function Orb({ phase }: { phase: CallPhase }) {
     return () => loop.stop();
   }, [phase, scale]);
   const lit = phase === "speaking";
+  // Smaller during a call, so the captions and the changes to save fit on the screen.
+  const [halo, core] = compact ? [124, 84] : [168, 112];
   return (
-    <View style={styles.orbWrap}>
-      <Animated.View style={[styles.orbHalo, { transform: [{ scale }] }, lit && { borderColor: colors.accent }]} />
-      <View style={[styles.orb, lit && { backgroundColor: colors.accent }]}>
-        <Icon name={phase === "ended" ? "phone-off" : phase === "connecting" ? "loader" : "phone"} size={34} color={lit ? colors.accentInk : colors.accent} />
+    <View style={[styles.orbWrap, { width: halo, height: halo }]}>
+      <Animated.View style={[styles.orbHalo, { width: halo, height: halo, borderRadius: halo / 2, transform: [{ scale }] }, lit && { borderColor: colors.accent }]} />
+      <View style={[styles.orb, { width: core, height: core, borderRadius: core / 2 }, lit && { backgroundColor: colors.accent }]}>
+        <Icon name={phase === "ended" ? "phone-off" : phase === "connecting" ? "loader" : "phone"} size={compact ? 28 : 34} color={lit ? colors.accentInk : colors.accent} />
       </View>
     </View>
   );
@@ -268,9 +270,9 @@ const styles = StyleSheet.create({
   body: { padding: 20, gap: 16, flexGrow: 1 },
   stage: { alignItems: "center", gap: 10, paddingVertical: 12 },
   phase: { fontFamily: fonts.semibold, fontSize: 16, color: colors.onShell, textAlign: "center" },
-  orbWrap: { width: 168, height: 168, alignItems: "center", justifyContent: "center" },
-  orbHalo: { position: "absolute", width: 168, height: 168, borderRadius: 84, borderWidth: 1.5, borderColor: colors.accentLine, backgroundColor: colors.accentTint },
-  orb: { width: 112, height: 112, borderRadius: 56, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.heroEdge },
+  orbWrap: { alignItems: "center", justifyContent: "center" },
+  orbHalo: { position: "absolute", borderWidth: 1.5, borderColor: colors.accentLine, backgroundColor: colors.accentTint },
+  orb: { alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.heroEdge },
   intro: { color: colors.onShell, writingDirection: "auto" },
   captions: { gap: 8 },
   caption: { maxWidth: "88%", paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.tile, gap: 2 },
