@@ -288,7 +288,7 @@ def connect_ai(body: AiConnect, user_id: UserId, db: Db):
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Enter the model name from your AI provider.")
     new_key = (body.api_key or "").strip()
     # A saved key stays with its provider (its own row): never send one company's key to another.
-    api_key = new_key or (decrypt_secret(row.api_key) if row else None)
+    api_key = new_key or (decrypt_secret(row.api_key) if row else None) or _voice_key_for(db, user_id, body.provider)
     if not api_key:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Enter your API key.")
     if new_key or row is None or row.model != model:
@@ -326,6 +326,19 @@ def disconnect_one_ai(provider: Literal[AI_PROVIDERS], user_id: UserId, db: Db):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
+def _voice_key_for(db: Session, user_id, provider: str) -> str | None:
+    """The same company's key saved as the voice model (OpenAI is both), so it isn't typed twice."""
+    voice = db.get(VoiceConnection, user_id)
+    return (decrypt_secret(voice.api_key) or None) if voice is not None and voice.provider == provider else None
+
+
+def _ai_key_for(db: Session, user_id, provider: str) -> str | None:
+    if provider not in AI_PROVIDERS:
+        return None
+    row = db.get(AiConnection, (user_id, provider))
+    return (decrypt_secret(row.api_key) or None) if row is not None else None
+
+
 def _voice_status(row: VoiceConnection | None) -> VoiceStatus:
     if row is None:
         return VoiceStatus(connected=False)
@@ -354,7 +367,12 @@ def connect_voice(body: VoiceConnect, user_id: UserId, db: Db):
     model = voice_stt.model_or_default(body.provider, body.model)
     new_key = (body.api_key or "").strip()
     # A saved key only stands in for its own provider: never send one company's key to another.
-    api_key = new_key or (decrypt_secret(row.api_key) if row and row.provider == body.provider else None)
+    api_key = (
+        new_key
+        or (decrypt_secret(row.api_key) if row and row.provider == body.provider else None)
+        # One company, one key: the OpenAI key saved for text also works for speech to text, and back.
+        or _ai_key_for(db, user_id, body.provider)
+    )
     if not api_key:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "Enter your API key.")
     if new_key or row is None or row.model != model:

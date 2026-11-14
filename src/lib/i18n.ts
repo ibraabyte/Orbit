@@ -70,8 +70,37 @@ const en = {
   provider: "Provider", totalAmount: "Total amount", paymentsCount: "Number of payments", firstPayment: "First payment", firstPaidNow: "First payment already paid", paymentsPaid: "paid", remaining: "Left", nextPayment: "Next", showAll: "Show all", showLess: "Show less", paidOff: "Paid off", markUnpaid: "Mark unpaid", installment: "Installment", schedulePreview: "payments of",
   moneyDue: "Money due", dueTomorrow: "Tomorrow",
   moneyEmpty: "Add your bank accounts, wallets and cash to see all your money in one place.", investEmpty: "Add each investment app or portfolio with what you put in and what it is worth now.", cardsEmpty: "Add a card with its name and last 4 digits, then pick it for each subscription.", obligationsEmpty: "Add a pay-later plan or a loan to track what is left and when each payment is due.",
-  featuresTitle: "What each feature uses", featuresIntro: "Pick one of your connected models for each feature, like a cheaper one for food and a stronger one for the assistant. Left alone, a feature uses the default.", featureDefault: "Default: {name}", featureDefaultOption: "Default", featureStale: "{name} was removed, so it uses the default for now: {now}.", featureNeedsAi: "Connect an AI above first.", featureNeedsOpenai: "Needs an OpenAI key, under AI or Voice model.", featureNeedsRealtime: "Needs an OpenAI key, or ElevenLabs as your voice model.", featureEleven: "ElevenLabs · Arabic voices", featurePhone: "The phone", featureCloud: "Voice model: {name}", featureCheaper: "cheaper", featureSaveFailed: "Couldn't save that. Try again.", aiRemoveUsedBy: "These go back to the default: {features}.",
+  featuresTitle: "What each feature uses", featuresIntro: "Pick one of your connected models for each feature, like a cheaper one for food and a stronger one for the assistant. Left alone, a feature uses the default.", featureDefault: "Default: {name}", featureDefaultOption: "Default", featureStale: "{name} was removed, so it uses the default for now: {now}.", featureNeedsAi: "Connect an AI in Integrations first.", featureNeedsOpenai: "Needs an OpenAI key, added on the OpenAI page in Integrations.", featureNeedsRealtime: "Needs an OpenAI or ElevenLabs key, added in Integrations.", featureEleven: "ElevenLabs · Arabic voices", featurePhone: "The phone", featureCloud: "Voice model: {name}", featureCheaper: "cheaper", featureSaveFailed: "Couldn't save that. Try again.", aiRemoveUsedBy: "These go back to the default: {features}.",
   featureNames: { assistant: "Assistant", food_text: "Food by text", food_photo: "Plate photo", health: "Health summary", week: "Friday summary", saver: "Saved link summary", speech: "Speech to text", call: "Voice call", phone_agent: "Phone agent" },
+  pv: {
+    aiSection: "AI", aiIntro: "Each company works with your own key, kept encrypted on your Orbit server. Tap one to add, test or change it.",
+    connected: "Connected", notConnected: "Not connected", isDefault: "Default", viaAccount: "Account",
+    roleText: "Text", roleSpeech: "Speech to text", roleCall: "Voice call",
+    usesTitle: "What each feature uses", usesDetail: "Pick a model per feature, like a cheaper one for food.", otherServices: "Other services",
+    blurbs: {
+      openai: "GPT for the assistant and summaries, speech to text, and the live voice call.",
+      anthropic: "Claude for the assistant, food, health and summaries.",
+      gemini: "Google's Gemini for the assistant and summaries.",
+      openrouter: "Hundreds of models from many companies with one key or your OpenRouter account.",
+      groq: "Very fast speech to text (Whisper) for the assistant's mic.",
+      elevenlabs: "Speech to text (Scribe) and the live voice call with Arabic voices."
+    },
+    methodKey: "API key", methodChatgpt: "ChatGPT account", methodOpenrouter: "OpenRouter account",
+    keyTitle: "Your key", keySaved: "Saved and encrypted", keyNone: "No key yet", keyPlaceholder: "Paste your API key",
+    getKey: "Where do I get a key?", test: "Test", testing: "Testing…", testOk: "Works · {n} models", change: "Change key", removeAll: "Remove",
+    removeTitle: "Remove {name}?", removeBody: "Orbit forgets this key. Features using it go back to the default.",
+    save: "Save", saving: "Saving…", testFirst: "Test the key first to see its models.",
+    modelTitle: "Model", modelPick: "Pick a model", modelSearch: "Search models", modelMore: "{n} more. Type to search.", modelTyped: "Use “{name}”", modelNone: "No models match.", modelLive: "The list comes from {name} itself, so new models show up here without an app update.",
+    instructionsSave: "Save instructions",
+    speechTitle: "Speech to text", speechOn: "On: the assistant's mic uses {name}", speechOff: "Off", speechUse: "Use for speech to text", speechStop: "Stop using", speechReplaces: "This replaces {name}: one speech model at a time.", speechModel: "Speech model",
+    callTitle: "Voice call", callInfo: "The live voice call can use this company. Pick it under What each feature uses.",
+    makeDefault: "Make it the default", defaultNow: "This is your default AI.",
+    noSubscription: "A ChatGPT Plus or Claude Pro subscription can't be used here: companies only let other apps in with an API key, billed by use.",
+    chatgptNote: "Your ChatGPT account works for written answers only. Speech to text and the voice call need an API key.",
+    openrouterAccount: "Sign in with OpenRouter and it makes a key for Orbit. You can see or cancel it in your OpenRouter account any time.",
+    openrouterSignIn: "Sign in with OpenRouter", openrouterDone: "OpenRouter connected.", openrouterDenied: "Sign-in was cancelled.", openrouterError: "OpenRouter didn't finish the sign-in. Try again.", openrouterExpired: "That sign-in took too long. Try again.",
+    usedBy: "Used by: {features}"
+  },
 };
 
 const ar: typeof en = {
@@ -137,8 +166,37 @@ const ar: typeof en = {
   provider: "الجهة", totalAmount: "المبلغ الكامل", paymentsCount: "عدد الدفعات", firstPayment: "أول دفعة", firstPaidNow: "الدفعة الأولى مدفوعة", paymentsPaid: "مدفوعة", remaining: "المتبقي", nextPayment: "القادمة", showAll: "عرض الكل", showLess: "عرض أقل", paidOff: "انتهى السداد", markUnpaid: "إلغاء الدفع", installment: "قسط", schedulePreview: "دفعات بقيمة",
   moneyDue: "مدفوعات قريبة", dueTomorrow: "بكرة",
   moneyEmpty: "أضف حساباتك ومحافظك والكاش لتشوف كل فلوسك في مكان واحد.", investEmpty: "أضف كل تطبيق أو محفظة استثمار بالمبلغ اللي حطيته وقيمته الحالية.", cardsEmpty: "أضف بطاقة باسمها وآخر ٤ أرقام، ثم اخترها لكل اشتراك.", obligationsEmpty: "أضف خطة تقسيط أو قرض لتتابع المتبقي وموعد كل دفعة.",
-  featuresTitle: "وش يستخدم كل قسم", featuresIntro: "اختر لكل قسم مودل من المودلات المربوطة عندك، مثلاً مودل أرخص للأكل وأقوى للمساعد. إذا ما اخترت شي، يستخدم القسم الافتراضي.", featureDefault: "الافتراضي: {name}", featureDefaultOption: "الافتراضي", featureStale: "القسم كان يستخدم {name} وانحذف، فرجع للافتراضي {now} حاليًا.", featureNeedsAi: "اربط ذكاء من فوق أول.", featureNeedsOpenai: "يحتاج مفتاح OpenAI في الذكاء أو مودل الصوت.", featureNeedsRealtime: "يحتاج مفتاح OpenAI، أو ElevenLabs كمودل صوت.", featureEleven: "ElevenLabs · أصوات عربية", featurePhone: "الجوال", featureCloud: "مودل الصوت: {name}", featureCheaper: "أرخص", featureSaveFailed: "ما انحفظ. جرّب مرة ثانية.", aiRemoveUsedBy: "هذي الأقسام ترجع للافتراضي: {features}.",
+  featuresTitle: "وش يستخدم كل قسم", featuresIntro: "اختر لكل قسم مودل من المودلات المربوطة عندك، مثلاً مودل أرخص للأكل وأقوى للمساعد. إذا ما اخترت شي، يستخدم القسم الافتراضي.", featureDefault: "الافتراضي: {name}", featureDefaultOption: "الافتراضي", featureStale: "القسم كان يستخدم {name} وانحذف، فرجع للافتراضي {now} حاليًا.", featureNeedsAi: "اربط ذكاء من صفحة الربط أول.", featureNeedsOpenai: "يحتاج مفتاح OpenAI، تضيفه من صفحة OpenAI في الربط.", featureNeedsRealtime: "يحتاج مفتاح OpenAI أو ElevenLabs من صفحة الربط.", featureEleven: "ElevenLabs · أصوات عربية", featurePhone: "الجوال", featureCloud: "مودل الصوت: {name}", featureCheaper: "أرخص", featureSaveFailed: "ما انحفظ. جرّب مرة ثانية.", aiRemoveUsedBy: "هذي الأقسام ترجع للافتراضي: {features}.",
   featureNames: { assistant: "المساعد", food_text: "الأكل بالكتابة", food_photo: "تصوير الصحن", health: "ملخص الصحة", week: "ملخص الجمعة", saver: "ملخص الروابط", speech: "تحويل الصوت لنص", call: "المكالمة الصوتية", phone_agent: "وكيل الاتصال" },
+  pv: {
+    aiSection: "الذكاء الاصطناعي", aiIntro: "كل شركة تشتغل بمفتاحك أنت، ويُحفظ مشفّر على سيرفر Orbit. اضغط على أي وحدة عشان تضيف مفتاحها أو تختبره أو تغيّره.",
+    connected: "مربوط", notConnected: "مو مربوط", isDefault: "الافتراضي", viaAccount: "حساب",
+    roleText: "نصوص", roleSpeech: "تحويل الصوت لنص", roleCall: "مكالمة صوتية",
+    usesTitle: "وش يستخدم كل قسم", usesDetail: "اختر مودل لكل قسم، مثلاً مودل أرخص للأكل.", otherServices: "خدمات ثانية",
+    blurbs: {
+      openai: "GPT للمساعد والملخصات، وتحويل الصوت لنص، والمكالمة الصوتية.",
+      anthropic: "Claude للمساعد والأكل والصحة والملخصات.",
+      gemini: "Gemini من قوقل للمساعد والملخصات.",
+      openrouter: "مئات المودلات من شركات كثيرة بمفتاح واحد أو بحسابك في OpenRouter.",
+      groq: "تحويل صوت لنص سريع جدًا (Whisper) لمايك المساعد.",
+      elevenlabs: "تحويل الصوت لنص (Scribe) والمكالمة الصوتية بأصوات عربية."
+    },
+    methodKey: "مفتاح API", methodChatgpt: "حساب ChatGPT", methodOpenrouter: "حساب OpenRouter",
+    keyTitle: "مفتاحك", keySaved: "محفوظ ومشفّر", keyNone: "ما فيه مفتاح للحين", keyPlaceholder: "الصق مفتاح API",
+    getKey: "من وين أجيب المفتاح؟", test: "اختبار", testing: "أختبر…", testOk: "شغّال · {n} مودل", change: "غيّر المفتاح", removeAll: "حذف",
+    removeTitle: "تحذف {name}؟", removeBody: "Orbit ينسى هذا المفتاح، والأقسام اللي تستخدمه ترجع للافتراضي.",
+    save: "حفظ", saving: "أحفظ…", testFirst: "اختبر المفتاح أول عشان تطلع مودلاته.",
+    modelTitle: "المودل", modelPick: "اختر مودل", modelSearch: "دوّر على مودل", modelMore: "فيه {n} ثانية، اكتب عشان تدوّر.", modelTyped: "استخدم «{name}»", modelNone: "ما فيه مودل بهالاسم.", modelLive: "القائمة جاية من {name} نفسها، فأي مودل جديد يطلع هنا بدون تحديث للتطبيق.",
+    instructionsSave: "احفظ التعليمات",
+    speechTitle: "تحويل الصوت لنص", speechOn: "مفعّل: مايك المساعد يستخدم {name}", speechOff: "مو مفعّل", speechUse: "استخدمه لتحويل الصوت", speechStop: "أوقفه", speechReplaces: "هذا بيحل محل {name}، لأن مودل الصوت واحد بس.", speechModel: "مودل الصوت",
+    callTitle: "المكالمة الصوتية", callInfo: "المكالمة الصوتية تقدر تستخدم هالشركة. اخترها من «وش يستخدم كل قسم».",
+    makeDefault: "خلّه الافتراضي", defaultNow: "هذا الذكاء الافتراضي عندك.",
+    noSubscription: "اشتراك ChatGPT Plus أو Claude Pro ما ينفع هنا، لأن الشركات ما تسمح لتطبيق ثاني إلا بمفتاح API، وتحاسبك على قد استخدامك.",
+    chatgptNote: "حساب ChatGPT يشتغل للردود المكتوبة بس. تحويل الصوت والمكالمة يحتاجون مفتاح API.",
+    openrouterAccount: "سجّل دخول بحسابك في OpenRouter، وهو يسوي مفتاح خاص بـOrbit. تقدر تشوفه أو تلغيه من حسابك في OpenRouter متى ما تبي.",
+    openrouterSignIn: "سجّل دخول بـOpenRouter", openrouterDone: "انربط OpenRouter.", openrouterDenied: "انلغى تسجيل الدخول.", openrouterError: "OpenRouter ما كمّل تسجيل الدخول. جرّب مرة ثانية.", openrouterExpired: "تسجيل الدخول طوّل. جرّب مرة ثانية.",
+    usedBy: "يستخدمه: {features}"
+  },
 };
 
 export const t = isArabic ? ar : en;

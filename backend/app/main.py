@@ -12,6 +12,7 @@ from app.config import get_settings
 from app.db import get_sessionmaker
 from app.routers import (
     admin,
+    ai_providers,
     assistant,
     auth,
     bank_sms,
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
         food.router,
         assistant.router,
         integrations.router,
+        ai_providers.router,
         call.router,
         chatgpt.router,
         admin.router,
