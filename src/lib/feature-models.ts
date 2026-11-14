@@ -21,6 +21,8 @@ export type FeatureStatus = {
 };
 
 export const REALTIME_CHEAPER = "gpt-realtime-mini";
+// The voice call can also go through ElevenLabs, with the key saved as the voice model.
+export const CALL_ELEVENLABS = "elevenlabs";
 
 export const featuresApi = {
   list: (api: Pick<ApiClient, "get">) => api.get<FeatureStatus[]>("/integrations/features"),
@@ -58,7 +60,10 @@ export function choiceLabel(row: Pick<FeatureStatus, "kind">, choice: string, ov
     const model = short ? null : overview?.ais?.choices.find((item) => item.provider === choice)?.model;
     return model ? `${name} · ${model}` : name;
   }
-  if (row.kind === "realtime") return choice === REALTIME_CHEAPER ? `${choice} · ${t.featureCheaper}` : choice;
+  if (row.kind === "realtime") {
+    if (choice === CALL_ELEVENLABS) return t.featureEleven;
+    return choice === REALTIME_CHEAPER ? `${choice} · ${t.featureCheaper}` : choice;
+  }
   if (choice === "phone") return t.featurePhone;
   const voice = overview?.voice;
   const name = voice?.provider ? `${VOICE_PROVIDER_NAMES[voice.provider]} · ${voice.model ?? ""}`.trim() : "";
@@ -67,7 +72,7 @@ export function choiceLabel(row: Pick<FeatureStatus, "kind">, choice: string, ov
 
 // The line under a feature's name: what it uses now, and whether its pick was removed.
 export function featureSummary(row: FeatureStatus, overview: IntegrationsOverview | null): string {
-  if (!row.effective) return row.kind === "realtime" ? t.featureNeedsOpenai : t.featureNeedsAi;
+  if (!row.effective) return row.kind === "realtime" ? (row.feature === "call" ? t.featureNeedsRealtime : t.featureNeedsOpenai) : t.featureNeedsAi;
   const now = choiceLabel(row, row.effective, overview);
   // Short names here, so the long line doesn't break inside a model name.
   if (row.stale && row.choice) return t.featureStale.replace("{name}", choiceLabel(row, row.choice, overview, true)).replace("{now}", choiceLabel(row, row.effective, overview, true));

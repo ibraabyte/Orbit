@@ -2,17 +2,17 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { initialWindowMetrics, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button } from "@/components/screen";
 import { colors, fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
-import { useVoiceCall, voiceCallAvailable } from "@/hooks/use-voice-call";
+import { elevenLabsAvailable, useVoiceCall, voiceCallAvailable } from "@/hooks/use-voice-call";
 import { actionRows, applyActions, kindName, opName, type ProposedAction } from "@/lib/assistant";
 import { getApi } from "@/lib/backend";
 import { digits, isArabic, t } from "@/lib/i18n";
-import { CALL_VOICES, callClock, callConsentKey, callVoiceKey, isCallVoice, MAX_CALL_SECONDS, type CallPhase, type CallStatus, type CallVoice } from "@/lib/voice-call";
+import { callClock, callConsentKey, callVoiceKey, MAX_CALL_SECONDS, pickedVoice, providerName, providerOf, voiceOptions, type CallPhase, type CallStatus } from "@/lib/voice-call";
 
 const phaseText: Record<CallPhase, string> = {
   idle: "",
@@ -28,6 +28,8 @@ const errorText = (error: string | null) => {
   if (error === "noKey") return t.callNoKey;
   if (error === "mic") return t.callMicDenied;
   if (error === "lost") return t.callLost;
+  if (error === "update") return t.callNeedsUpdate;
+  if (error === "elevenKey") return t.callElevenKey;
   // A server message is English; in Arabic only the local text is shown.
   if (error === "start" || isArabic) return t.callFailed;
   return `${t.callFailed} ${error}`;
@@ -41,8 +43,12 @@ export default function Call() {
   const { refresh, userId } = useDashboardData();
   const { toast } = useOverlays();
   const [status, setStatus] = useState<CallStatus | null>(null);
-  const [voice, setVoice] = useState<CallVoice>(CALL_VOICES[0]);
+  const [saved, setSaved] = useState<Record<string, string | null>>({});
   const [consent, setConsent] = useState<string | null>(null);
+  // The screen opens as a full-screen modal, where iOS can report no top inset; the app window's insets are the real ones.
+  const insets = useSafeAreaInsets();
+  const top = Math.max(insets.top, initialWindowMetrics?.insets.top ?? 0);
+  const bottom = Math.max(insets.bottom, initialWindowMetrics?.insets.bottom ?? 0);
   const [pending, setPending] = useState<Pending[]>([]);
   const counter = useRef(0);
   const call = useVoiceCall({
@@ -57,30 +63,37 @@ export default function Call() {
       .get<CallStatus>("/assistant/call")
       .then(setStatus)
       .catch(() => setStatus({ available: false, source: null, voices: [] }));
-    AsyncStorage.multiGet([callConsentKey(userId), callVoiceKey])
-      .then(([[, agreed], [, saved]]) => {
+    AsyncStorage.multiGet([callConsentKey(userId), callVoiceKey("openai"), callVoiceKey("elevenlabs")])
+      .then(([[, agreed], [, openai], [, elevenlabs]]) => {
         setConsent(agreed);
-        if (isCallVoice(saved)) setVoice(saved);
+        setSaved({ openai, elevenlabs });
       })
       .catch(() => undefined);
   }, [userId]);
 
-  const pickVoice = (next: CallVoice) => {
-    setVoice(next);
-    void AsyncStorage.setItem(callVoiceKey, next).catch(() => undefined);
+  const provider = providerOf(status);
+  const company = providerName(provider);
+  const voices = voiceOptions(status);
+  const voice = pickedVoice(voices, saved[provider]);
+
+  const pickVoice = (next: string) => {
+    setSaved((current) => ({ ...current, [provider]: next }));
+    void AsyncStorage.setItem(callVoiceKey(provider), next).catch(() => undefined);
   };
 
   const begin = () => {
     setPending([]);
-    if (consent === "openai") return void call.start(voice);
+    // Agreed for this company (the value is the company; agreeing to one doesn't cover the other).
+    if (consent?.split(",").includes(provider)) return void call.start(voice);
     // The voice leaves the phone, so ask once. Saying no keeps the call off.
-    Alert.alert(t.callConsentTitle, t.callConsentBody, [
+    Alert.alert(t.callConsentTitle.replaceAll("{company}", company), t.callConsentBody.replaceAll("{company}", company), [
       { text: t.cancel, style: "cancel" },
       {
         text: t.callConsentAgree,
         onPress: () => {
-          setConsent("openai");
-          void AsyncStorage.setItem(callConsentKey(userId), "openai").catch(() => undefined);
+          const next = [...(consent?.split(",").filter(Boolean) ?? []), provider].join(",");
+          setConsent(next);
+          void AsyncStorage.setItem(callConsentKey(userId), next).catch(() => undefined);
           void call.start(voice);
         }
       }
@@ -107,10 +120,16 @@ export default function Call() {
 
   const shown = captions.filter((caption) => caption.text.trim()).slice(-6);
   const message = errorText(error);
-  const blocked = !voiceCallAvailable ? t.callNeedsBuild : status && !status.available ? t.callNoKey : null;
+  const blocked = !voiceCallAvailable
+    ? t.callNeedsBuild
+    : status && !status.available
+      ? t.callNoKey
+      : provider === "elevenlabs" && !elevenLabsAvailable
+        ? t.callNeedsUpdate
+        : null;
 
   return (
-    <SafeAreaView style={styles.screen} edges={["top", "bottom"]}>
+    <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom }]}>
       <View style={styles.header}>
         <Text style={styles.title}>{t.callTitle}</Text>
         <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={t.cancel} hitSlop={10}>
@@ -142,14 +161,20 @@ export default function Call() {
           <View style={{ gap: 12 }}>
             <Text style={[type.body, styles.intro]}>{t.callIntro}</Text>
             <Text style={type.shellMeta}>{t.callVoice}</Text>
-            <View style={styles.chips}>
-              {CALL_VOICES.map((name) => (
-                <Pressable key={name} onPress={() => pickVoice(name)} accessibilityRole="tab" accessibilityState={{ selected: voice === name }} style={[styles.chip, voice === name && styles.chipOn]}>
-                  <Text style={[type.barLabel, voice === name && { color: colors.urgentInk }]}>{name[0].toUpperCase() + name.slice(1)}</Text>
-                </Pressable>
-              ))}
-            </View>
-            <Text style={type.shellMuted}>{t.callCost.replace("{n}", digits(MAX_CALL_SECONDS / 60))}</Text>
+            {voices.length ? (
+              <View style={styles.chips}>
+                {voices.map((option) => (
+                  <Pressable key={option.id} onPress={() => pickVoice(option.id)} accessibilityRole="tab" accessibilityState={{ selected: voice === option.id }} style={[styles.chip, voice === option.id && styles.chipOn]}>
+                    <Text style={[type.barLabel, voice === option.id && { color: colors.urgentInk }]} numberOfLines={1}>
+                      {option.name}
+                    </Text>
+                    {option.arabic ? <Text style={[styles.chipTag, voice === option.id && { color: colors.urgentInk }]}>{t.callArabic}</Text> : null}
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
+            {provider === "elevenlabs" ? <Text style={type.shellMuted}>{voices.length ? t.callVoicesHint : t.callVoicesEmpty}</Text> : null}
+            <Text style={type.shellMuted}>{(provider === "elevenlabs" ? t.callCostEleven : t.callCost).replace("{n}", digits(MAX_CALL_SECONDS / 60))}</Text>
           </View>
         )}
 
@@ -216,7 +241,7 @@ export default function Call() {
           <Button title={phase === "ended" ? t.callAgain : t.callStart} variant="primary" disabled={Boolean(blocked) || status === null} onPress={begin} />
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -280,7 +305,8 @@ const styles = StyleSheet.create({
   theirs: { alignSelf: "flex-start", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline },
   captionText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.onShell, writingDirection: "auto" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { minHeight: 34, paddingHorizontal: 14, justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
+  chip: { minHeight: 34, maxWidth: "100%", paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
+  chipTag: { fontFamily: fonts.semibold, fontSize: 11, color: colors.accent },
   chipOn: { backgroundColor: colors.urgent },
   card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
   action: { gap: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },

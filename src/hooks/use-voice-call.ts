@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { NativeModules, Platform } from "react-native";
 import type { ProposedAction } from "@/lib/assistant";
 import { getApi } from "@/lib/backend";
 import {
   CALL_URL,
+  elevenMessage,
+  elevenMode,
   functionCalls,
   greeting,
   initialView,
@@ -11,6 +14,7 @@ import {
   reduceEvent,
   responseEvent,
   savedNoteEvent,
+  savedNoteText,
   toolFailedOutput,
   toolOutputEvent,
   type CallRef,
@@ -21,7 +25,12 @@ import {
   type ToolReply
 } from "@/lib/voice-call";
 
-type WebRtc = typeof import("react-native-webrtc");
+// LiveKit's build of WebRTC: the same API as react-native-webrtc, and the one ElevenLabs' SDK runs on, so both ways of
+// calling share one WebRTC in the app.
+type WebRtc = typeof import("@livekit/react-native-webrtc");
+type ElevenClient = typeof import("@elevenlabs/client");
+type ElevenConversation = Awaited<ReturnType<ElevenClient["Conversation"]["startSession"]>>;
+type LiveKit = typeof import("@livekit/react-native");
 type InCall = typeof import("react-native-incall-manager").default;
 
 // Loaded once, lazily: an installed build from before this feature has neither native module, and the assistant must
@@ -34,20 +43,37 @@ function load<T>(get: () => T): T | null {
   }
 }
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const webrtc = load(() => require("react-native-webrtc") as WebRtc);
+const webrtc = load(() => require("@livekit/react-native-webrtc") as WebRtc);
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const inCall = load(() => (require("react-native-incall-manager") as { default: InCall }).default);
 export const voiceCallAvailable = Boolean(webrtc?.RTCPeerConnection && webrtc.mediaDevices);
+// ElevenLabs runs on LiveKit, whose native part came with the same build.
+export const elevenLabsAvailable = voiceCallAvailable && Boolean(NativeModules.LivekitReactNativeModule);
+
+// Loaded only when an ElevenLabs call starts: loading it sets up LiveKit's WebRTC globals and audio for the call.
+let eleven: { client: ElevenClient; livekit: LiveKit } | null = null;
+function loadEleven() {
+  if (eleven || !elevenLabsAvailable) return eleven;
+  eleven = load(() => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    require("@elevenlabs/react-native");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return { client: require("@elevenlabs/client") as ElevenClient, livekit: require("@livekit/react-native") as LiveKit };
+  });
+  return eleven;
+}
 
 type Peer = InstanceType<WebRtc["RTCPeerConnection"]>;
 type Channel = ReturnType<Peer["createDataChannel"]>;
 type Stream = Awaited<ReturnType<WebRtc["mediaDevices"]["getUserMedia"]>>;
 
-export type CallError = "start" | "mic" | "lost" | "noKey" | string;
+export type CallError = "start" | "mic" | "lost" | "noKey" | "update" | "elevenKey" | string;
 
-// A live voice call with the assistant. Audio goes straight between the phone and OpenAI (WebRTC, with the phone's own
-// echo cancellation, so the user can talk over the assistant); the server only makes the call's secret and answers its
-// tool calls. Proposed changes are handed to onActions; nothing is saved here.
+const micDenied = (error: unknown) => error instanceof Error && /permission|denied|not ?allowed/i.test(`${error.name} ${error.message}`);
+
+// A live voice call with the assistant. Audio goes straight between the phone and OpenAI or ElevenLabs (WebRTC, with the
+// phone's own echo cancellation, so the user can talk over the assistant); the server only makes what the call needs and
+// answers its tool calls. Proposed changes are handed to onActions; nothing is saved here.
 export function useVoiceCall(options: { onActions: (actions: ProposedAction[]) => void; arabic: boolean }) {
   const [view, setView] = useState<CallView>(initialView);
   const [muted, setMuted] = useState(false);
@@ -58,6 +84,7 @@ export function useVoiceCall(options: { onActions: (actions: ProposedAction[]) =
   const stream = useRef<Stream | null>(null);
   const refs = useRef<Record<string, CallRef>>({});
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const conversation = useRef<ElevenConversation | null>(null);
   const live = useRef(false);
   const onActions = useRef(options.onActions);
   onActions.current = options.onActions;
@@ -80,6 +107,9 @@ export function useVoiceCall(options: { onActions: (actions: ProposedAction[]) =
     try {
       peer.current?.close();
     } catch {}
+    const ending = conversation.current;
+    conversation.current = null;
+    if (ending) void ending.endSession().catch(() => undefined);
     channel.current = null;
     stream.current = null;
     peer.current = null;
@@ -92,20 +122,65 @@ export function useVoiceCall(options: { onActions: (actions: ProposedAction[]) =
 
   useEffect(() => () => hangUp(), [hangUp]);
 
-  // Each tool call goes through the Orbit server; once every call in the response is answered, the model goes on.
+  // One tool call, answered by the Orbit server. Its answer goes back to the model.
+  const runTool = async (name: string, args: string) => {
+    try {
+      const reply = await getApi().post<ToolReply>("/assistant/call/tool", { name, arguments: args, refs: refs.current });
+      refs.current = nextRefs(refs.current, reply.refs);
+      if (reply.actions.length) onActions.current(reply.actions);
+      return reply.output;
+    } catch {
+      return toolFailedOutput();
+    }
+  };
+
+  // OpenAI: once every call in the response is answered, the model goes on.
   const runTools = async (calls: FunctionCall[]) => {
     for (const call of calls) {
-      let output = toolFailedOutput();
-      try {
-        const reply = await getApi().post<ToolReply>("/assistant/call/tool", { name: call.name, arguments: call.arguments, refs: refs.current });
-        refs.current = nextRefs(refs.current, reply.refs);
-        output = reply.output;
-        if (reply.actions.length) onActions.current(reply.actions);
-      } catch {}
+      const output = await runTool(call.name, call.arguments);
       if (!live.current) return;
       send(toolOutputEvent(call.callId, output));
     }
     send(responseEvent());
+  };
+
+  const startClock = () => {
+    const began = Date.now();
+    timer.current = setInterval(() => {
+      const now = (Date.now() - began) / 1000;
+      setSeconds(now);
+      if (now >= MAX_CALL_SECONDS) hangUp(null);
+    }, 1000);
+  };
+
+  // ElevenLabs: its SDK runs the call over LiveKit; the tools are answered by name, the same way.
+  const startEleven = async (session: SessionReply) => {
+    const sdk = loadEleven();
+    if (!sdk || !session.conversation_token) return hangUp("start");
+    const tools = Object.fromEntries(
+      (session.tools ?? []).map((name) => [name, async (parameters: unknown) => (live.current ? runTool(name, JSON.stringify(parameters ?? {})) : toolFailedOutput())])
+    );
+    try {
+      const started = await sdk.client.Conversation.startSession({
+        conversationToken: session.conversation_token,
+        connectionType: "webrtc",
+        overrides: (session.overrides ?? undefined) as never,
+        clientTools: tools,
+        onConnect: () => setView((current) => ({ ...current, phase: "listening" })),
+        onModeChange: ({ mode }) => setView((current) => elevenMode(current, mode)),
+        onMessage: ({ message, role, event_id }) => setView((current) => elevenMessage(current, `${role}-${event_id}`, role, message)),
+        onError: (message) => setView((current) => ({ ...current, error: message || "start" })),
+        onDisconnect: (details) => {
+          if (live.current) hangUp(details.reason === "error" ? "lost" : null);
+        }
+      });
+      if (!live.current) return void started.endSession().catch(() => undefined);
+      conversation.current = started;
+      setSpeaker(true);
+      startClock();
+    } catch (error) {
+      hangUp(micDenied(error) ? "mic" : "start");
+    }
   };
 
   const onEvent = (raw: unknown) => {
@@ -121,7 +196,7 @@ export function useVoiceCall(options: { onActions: (actions: ProposedAction[]) =
   };
 
   const start = useCallback(
-    async (voice: CallVoice) => {
+    async (voice: CallVoice | null) => {
       if (!webrtc || live.current) return;
       live.current = true;
       refs.current = {};
@@ -130,14 +205,19 @@ export function useVoiceCall(options: { onActions: (actions: ProposedAction[]) =
       setView({ phase: "connecting", captions: [], error: null });
       let session: SessionReply;
       try {
-        session = await getApi().post<SessionReply>("/assistant/call/session", { locale: arabic ? "ar" : "en", voice });
+        const providers = elevenLabsAvailable ? ["openai", "elevenlabs"] : ["openai"];
+        session = await getApi().post<SessionReply>("/assistant/call/session", { locale: arabic ? "ar" : "en", voice: voice || null, providers });
       } catch (error) {
         live.current = false;
         const status = (error as { status?: number })?.status;
-        setView({ phase: "idle", captions: [], error: status === 409 ? "noKey" : error instanceof Error && error.message ? error.message : "start" });
+        const message = error instanceof Error ? error.message : "";
+        // A 409 is a missing key, or ElevenLabs refusing it: that message says what to fix.
+        const code = status === 409 ? (/ElevenLabs refused/i.test(message) ? "elevenKey" : /update the app/i.test(message) ? "update" : "noKey") : message || "start";
+        setView({ phase: "idle", captions: [], error: code });
         return;
       }
       refs.current = session.refs;
+      if (session.provider === "elevenlabs") return startEleven(session);
       try {
         const media = await webrtc.mediaDevices.getUserMedia({ audio: true, video: false });
         if (!live.current) return media.getTracks().forEach((track) => track.stop());
@@ -171,15 +251,9 @@ export function useVoiceCall(options: { onActions: (actions: ProposedAction[]) =
           inCall?.setKeepScreenOn(true);
         } catch {}
         setSpeaker(true);
-        const began = Date.now();
-        timer.current = setInterval(() => {
-          const now = (Date.now() - began) / 1000;
-          setSeconds(now);
-          if (now >= MAX_CALL_SECONDS) hangUp(null);
-        }, 1000);
+        startClock();
       } catch (error) {
-        const denied = error instanceof Error && /permission|denied|not ?allowed/i.test(`${error.name} ${error.message}`);
-        hangUp(denied ? "mic" : "start");
+        hangUp(micDenied(error) ? "mic" : "start");
       }
     },
     [arabic, hangUp]
@@ -190,20 +264,26 @@ export function useVoiceCall(options: { onActions: (actions: ProposedAction[]) =
     stream.current?.getAudioTracks().forEach((track) => {
       track.enabled = !next;
     });
+    conversation.current?.setMicMuted(next);
     setMuted(next);
   };
 
   const toggleSpeaker = () => {
     const next = !speaker;
     try {
-      inCall?.setForceSpeakerphoneOn(next);
+      if (conversation.current) {
+        const output = Platform.OS === "ios" ? (next ? "force_speaker" : "default") : next ? "speaker" : "earpiece";
+        void eleven?.livekit.AudioSession.selectAudioOutput(output).catch(() => undefined);
+      } else inCall?.setForceSpeakerphoneOn(next);
     } catch {}
     setSpeaker(next);
   };
 
   // Tells the model what the user just saved, so it doesn't offer it again.
   const noteSaved = (labels: string[]) => {
-    if (labels.length) send(savedNoteEvent(labels));
+    if (!labels.length) return;
+    if (conversation.current) conversation.current.sendContextualUpdate(savedNoteText(labels));
+    else send(savedNoteEvent(labels));
   };
 
   const reset = () => setView(initialView);

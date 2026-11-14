@@ -65,7 +65,7 @@ export default function Integrations() {
   const voice = overview.voice ?? voiceOff;
   const voiceNow = voiceState(overview.voice);
   const removeVoice = () =>
-    Alert.alert(t.voiceRemove, removeBody(t.voiceRemoveBody, usedBy(featuresOf(overview), "cloud", "speech")), [
+    Alert.alert(t.voiceRemove, removeBody(t.voiceRemoveBody, [...usedBy(featuresOf(overview), "cloud", "speech"), ...usedBy(featuresOf(overview), "elevenlabs", "realtime")]), [
       {
         text: t.aiRemove,
         style: "destructive",
