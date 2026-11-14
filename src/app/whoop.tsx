@@ -275,7 +275,7 @@ function Gate({ title, detail, children }: { title: string; detail: string; chil
 }
 
 const styles = StyleSheet.create({
-  ok: { fontFamily: fonts.medium, fontSize: 14, color: colors.accent },
+  ok: { fontFamily: fonts.medium, fontSize: 14, color: colors.link },
   heroRow: { flexDirection: "row", gap: 10 },
   chart: { flexDirection: "row", alignItems: "flex-end", height: 72, gap: 4 },
   barSlot: { flex: 1, height: "100%", justifyContent: "flex-end", alignItems: "center", gap: 3 },

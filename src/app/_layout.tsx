@@ -13,13 +13,14 @@ import { router, Stack, usePathname } from "expo-router";
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
-import { Text, View } from "react-native";
+import * as Updates from "expo-updates";
+import { Appearance, AppState, DevSettings, Text, View } from "react-native";
 import { AppLock } from "@/components/app-lock";
 import { OverlayProvider } from "@/components/overlays";
 import { SectionOffCover } from "@/components/section-off";
 import { Loading } from "@/components/screen";
 import { SidebarLayout } from "@/components/sidebar";
-import { colors } from "@/components/theme";
+import { colors, scheme } from "@/components/theme";
 import { clearDashboardCache, DashboardDataProvider } from "@/hooks/use-dashboard-data";
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { clearWidget } from "@/hooks/use-widget-sync";
@@ -48,6 +49,18 @@ export default function RootLayout() {
   });
 
   useEffect(() => (configured ? watchSession(setSession) : undefined), []);
+
+  // Styles are built once at launch from the phone's light/dark setting, so a new setting reloads the app when it
+  // comes back to the front. Only while active: iOS flips the setting in the background while taking snapshots.
+  useEffect(() => {
+    const check = () => {
+      if (AppState.currentState !== "active" || (Appearance.getColorScheme() === "light" ? "light" : "dark") === scheme) return;
+      if (__DEV__ && typeof DevSettings.reload === "function") return DevSettings.reload();
+      void Updates.reloadAsync().catch(() => undefined);
+    };
+    const subscriptions = [AppState.addEventListener("change", check), Appearance.addChangeListener(check)];
+    return () => subscriptions.forEach((subscription) => subscription.remove());
+  }, []);
 
   // Personal data shouldn't outlive the session on a shared phone, however it ended (sign-out, expiry, or a session
   // that failed to restore at launch): the widget, the saved "orbit.cache." copies, and scheduled alarms, which carry titles.
@@ -78,7 +91,7 @@ export default function RootLayout() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.shell } }}>
       <Stack.Protected guard={Boolean(session)}>
         <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: "rgba(10,10,11,0.86)" } }} />
+        <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.sheet } }} />
       </Stack.Protected>
       {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
       <Stack.Protected guard={Boolean(session)}>
@@ -95,7 +108,7 @@ export default function RootLayout() {
 
   return (
     <ShareIntentProvider options={{ disabled: shareDisabled, resetOnBackground: true }}>
-      <StatusBar style="light" />
+      <StatusBar style={scheme === "light" ? "dark" : "light"} />
       {session ? (
         <AppLock>
           <DashboardDataProvider key={session.userId} userId={session.userId}>

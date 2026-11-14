@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   blankLetter: { fontFamily: fonts.medium, color: colors.inkFaint },
   corner: { position: "absolute", top: 6, end: 6, minWidth: 22, height: 22, borderRadius: radius.pill, paddingHorizontal: 5, alignItems: "center", justifyContent: "center", backgroundColor: colors.shell, borderWidth: 1, borderColor: colors.accent },
   cornerFull: { backgroundColor: colors.urgent, borderColor: colors.urgent },
-  cornerGlyph: { fontFamily: fonts.bold, fontSize: 11, color: colors.accent },
+  cornerGlyph: { fontFamily: fonts.bold, fontSize: 11, color: colors.link },
   seeAll: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 32 },
   grid: { flexDirection: "row", flexWrap: "wrap" },
   cast: { width: 84, alignItems: "center", gap: 4 },

@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
   wordmark: { fontFamily: "JetBrainsMono_600SemiBold", fontSize: 30, lineHeight: 36, color: colors.onShell },
   subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
   label: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted },
-  inputWrap: { minHeight: 50, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: "#26262a" },
+  inputWrap: { minHeight: 50, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.input },
   input: { flex: 1, minWidth: 0, minHeight: 48, paddingHorizontal: 14, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
   inputError: { borderWidth: 2, borderColor: colors.dangerOnShell }
 });

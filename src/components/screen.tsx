@@ -189,8 +189,8 @@ export function TabHeader({ title, kicker, action }: { title: string; kicker?: s
   );
 }
 
-/** Small control beside a tab title (Customize, language): a card-coloured button with a hairline edge. With an icon it shows the icon before the label. */
-export function HeaderButton({ label, icon, onPress }: { label: string; icon?: "sliders"; onPress: () => void }) {
+/** Small control beside a tab title (Customize, Settings): a card-coloured button with a hairline edge. With an icon it shows the icon before the label. */
+export function HeaderButton({ label, icon, onPress }: { label: string; icon?: "sliders" | "settings"; onPress: () => void }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.headerButton, pressed && { opacity: 0.7 }]}>
       {icon ? <Icon name={icon} size={15} color={colors.ink} /> : null}

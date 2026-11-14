@@ -278,7 +278,7 @@ function SavedRow({ item, busy, onPress, onMore, onToggle }: { item: Capture; bu
       </View>
       <View style={styles.side}>
         <Pressable onPress={onToggle} hitSlop={8} accessibilityRole="checkbox" accessibilityState={{ checked: done }} accessibilityLabel={done ? st.markWant : st.markDone} style={[styles.check, done && styles.checkOn]}>
-          {done ? <Icon name="check" size={14} color={colors.accent} /> : null}
+          {done ? <Icon name="check" size={14} color={colors.link} /> : null}
         </Pressable>
         <Pressable onPress={onMore} hitSlop={8} accessibilityRole="button" accessibilityLabel={st.moveTo} style={styles.more}>
           <Icon name="more-horizontal" size={18} color={colors.inkFaint} />

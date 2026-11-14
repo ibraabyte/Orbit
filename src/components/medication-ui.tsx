@@ -28,7 +28,7 @@ export function DoseRow({ entry, first }: { entry: ScheduledDose; first?: boolea
     });
   return (
     <View style={[styles.row, first && { borderTopWidth: 0 }]}>
-      <Text style={[styles.time, state === "due" && { color: colors.accent }, state === "missed" && { color: colors.dangerOnShell }]}>{formatClock24(entry.at)}</Text>
+      <Text style={[styles.time, state === "due" && { color: colors.link }, state === "missed" && { color: colors.dangerOnShell }]}>{formatClock24(entry.at)}</Text>
       <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
         <Text style={[type.rowTitle, !open && { color: colors.inkMuted }]} numberOfLines={2}>
           {medication.name}

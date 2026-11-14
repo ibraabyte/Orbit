@@ -44,7 +44,7 @@ function Sidebar() {
 
   return (
     <View style={[styles.rail, { paddingTop: insets.top + 8, paddingBottom: Math.max(12, insets.bottom) }]}>
-      <Glass tint="rgba(10,10,11,0.6)" style={styles.panel}>
+      <Glass tint={colors.glassTint} style={styles.panel}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.brand}>Orbit</Text>
           <Pressable
@@ -95,7 +95,7 @@ function Item({ icon, label, count, selected, onPress, tab }: { icon: IconName; 
       <Text style={[styles.itemText, { color: tint }]} numberOfLines={1}>
         {label}
       </Text>
-      {count ? <Text style={[type.badge, { color: colors.accent }]}>{formatNumber(count)}</Text> : null}
+      {count ? <Text style={[type.badge, { color: colors.link }]}>{formatNumber(count)}</Text> : null}
     </Pressable>
   );
 }

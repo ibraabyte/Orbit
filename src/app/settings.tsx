@@ -1,10 +1,9 @@
-import { Link } from "expo-router";
 import * as Updates from "expo-updates";
 import { useEffect, useState } from "react";
-import { Alert, DevSettings, Pressable, Switch, Text, View } from "react-native";
+import { Alert, DevSettings, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
 import { resyncWidget } from "@/hooks/use-widget-sync";
-import { Avatar, Card, Chevron, IconTile, ListRow, type } from "@/components/drift";
+import { Avatar, BentoGrid, BentoTile, Card, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
 import { colors } from "@/components/theme";
@@ -16,19 +15,6 @@ import { getApi, signOut } from "@/lib/backend";
 import { currentNumerals, saveNumerals, t, toggleLanguage } from "@/lib/i18n";
 import { adminApi, type ServerSettings } from "@/lib/integrations";
 import type { Numerals } from "@/lib/numerals";
-
-// A row in the settings card. The top row (first) has no line above it.
-function Setting({ label, detail, first, children }: { label: string; detail?: string; first?: boolean; children: React.ReactNode }) {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 10, borderTopWidth: first ? 0 : 1, borderTopColor: colors.surfaceInset }}>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={type.rowTitle}>{label}</Text>
-        {detail ? <Text style={type.rowSubtitle}>{detail}</Text> : null}
-      </View>
-      {children}
-    </View>
-  );
-}
 
 export default function Settings() {
   const { data, userId } = useDashboardData();
@@ -99,73 +85,64 @@ export default function Settings() {
         <Avatar name={name} size={48} dark />
         <Text style={[type.title, { flex: 1, fontSize: 16 }]}>{name}</Text>
       </Card>
-      <Card list>
-        <ListRow first leading={<IconTile name="layers" />} title={st.sections} meta={st.sectionsCount(sectionsOff.length)} href="/sections" chevron />
-      </Card>
-      <Card list>
-        <Setting first label={t.faceId}>
-          <Switch
-            accessibilityLabel={t.faceId}
-            trackColor={track} thumbColor={colors.ink}
-            value={lock}
-            onValueChange={(next) => {
-              setLock(next);
-              void setAppLockEnabled(next).then(resyncWidget);
-            }}
-          />
-        </Setting>
-        <Link href="/notifications" asChild>
-          <Pressable accessibilityRole="link">
-            <Setting label={t.notifications} detail={t.notificationsDetail}>
-              <Chevron />
-            </Setting>
-          </Pressable>
-        </Link>
-        {askConsent ? (
-          <Setting label={t.askShare} detail={t.askShareDetail.replace("{provider}", askConsent)}>
-            <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />
-          </Setting>
-        ) : null}
-        <Pressable
-          accessibilityRole="button"
+      {/* Bento, like More: one card per setting, two to a row; a card with a control holds it at its top end. */}
+      <BentoGrid>
+        <BentoTile icon="layers" title={st.sections} detail={st.sectionsCount(sectionsOff.length)} href="/sections" />
+        <BentoTile icon="bell" title={t.notifications} detail={t.notificationsDetail} href="/notifications" />
+        <BentoTile
+          icon="lock"
+          title={t.faceId}
+          trailing={
+            <Switch
+              accessibilityLabel={t.faceId}
+              trackColor={track}
+              value={lock}
+              onValueChange={(next) => {
+                setLock(next);
+                void setAppLockEnabled(next).then(resyncWidget);
+              }}
+            />
+          }
+        />
+        <BentoTile
+          icon="globe"
+          title={t.language}
+          detail={t.langLabel}
           onPress={() => {
             const message = toggleLanguage();
             if (message) toast(message);
           }}
-        >
-          <Setting label={t.language}>
-            <Text style={type.rowSubtitle}>{t.langLabel}</Text>
-            <Chevron />
-          </Setting>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={`${t.numerals}, ${numeralsLabel[numerals]}`} onPress={pickNumerals}>
-          <Setting label={t.numerals}>
-            <Text style={type.rowSubtitle}>{numeralsLabel[numerals]}</Text>
-            <Chevron />
-          </Setting>
-        </Pressable>
-      </Card>
-      <Card title={t.integrations}>
-        <ListRow leading={<IconTile name="link" />} title={t.integrations} subtitle={t.integrationsDetail} href="/integrations" chevron />
-      </Card>
+        />
+        <BentoTile icon="hash" title={t.numerals} detail={numeralsLabel[numerals]} label={`${t.numerals}, ${numeralsLabel[numerals]}`} onPress={pickNumerals} />
+        <BentoTile icon="link" title={t.integrations} detail={t.integrationsDetail} href="/integrations" />
+        {askConsent ? (
+          <View style={{ flexBasis: "100%" }}>
+            <Card>
+              <Text style={type.rowTitle}>{t.askShare}</Text>
+              <Text style={type.rowSubtitle}>{t.askShareDetail.replace("{provider}", askConsent)}</Text>
+              <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />
+            </Card>
+          </View>
+        ) : null}
+      </BentoGrid>
       {server ? (
-        <Card title={t.serverCard}>
-          <Text style={type.rowSubtitle}>{t.serverOnlyYou}</Text>
-          <ListRow
-            leading={<IconTile name="user-plus" />}
+        <BentoGrid>
+          <BentoTile
+            wide
+            icon="user-plus"
             title={t.allowSignups}
-            subtitle={server.signups_forced_by_server ? t.signupsForced : server.signups_open ? t.signupsOpen : t.signupsClosed}
+            detail={`${server.signups_forced_by_server ? t.signupsForced : server.signups_open ? t.signupsOpen : t.signupsClosed} · ${t.serverOnlyYou}`}
             trailing={
               <Switch
                 accessibilityLabel={t.allowSignups}
-                trackColor={track} thumbColor={colors.ink}
+                trackColor={track}
                 value={server.signups_open || server.signups_forced_by_server}
                 disabled={server.signups_forced_by_server}
                 onValueChange={(next) => void setSignups(next)}
               />
             }
           />
-        </Card>
+        </BentoGrid>
       ) : null}
       <Button title={t.signOut} onPress={() => void signOut()} />
     </Screen>

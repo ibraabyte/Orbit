@@ -38,7 +38,7 @@ export default function Sections() {
           <Switch
             accessibilityLabel={st.names[key]}
             trackColor={track}
-            thumbColor={colors.ink}
+           
             value={!hidden.has(key)}
             disabled={lockedOff}
             onValueChange={(next) => void setOn(key, next)}

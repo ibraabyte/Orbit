@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ComponentP
 import * as Haptics from "expo-haptics";
 import { AccessibilityInfo, Animated, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from "react-native";
 import { FadeIn, usePop } from "@/components/motion";
-import { colors, fonts, labelCase, radius } from "@/components/theme";
+import { colors, fonts, labelCase, radius, scheme } from "@/components/theme";
 import { digits, formatNumber, isArabic, t } from "@/lib/i18n";
 import { barHeights, ringRotations } from "@/lib/ring";
 
@@ -40,7 +40,7 @@ export function Glass({ tint, interactive, style, children }: { tint?: string; i
   }, []);
   if (canGlass && !solid) {
     return (
-      <GlassView colorScheme="dark" tintColor={tint} isInteractive={interactive} style={[{ borderCurve: "continuous" }, style]}>
+      <GlassView colorScheme={scheme} tintColor={tint} isInteractive={interactive} style={[{ borderCurve: "continuous" }, style]}>
         {children}
       </GlassView>
     );
@@ -408,7 +408,7 @@ export function CheckItem({ checked, onPress, label, size = 28, ring = colors.in
 
 /** The small count beside a card's title ("3"). Sand when it counts something late. */
 export function CountBadge({ value, alert }: { value: number; alert?: boolean }) {
-  return <Text style={[styles.count, alert && { color: colors.accent, backgroundColor: colors.accentTint }]}>{formatNumber(value)}</Text>;
+  return <Text style={[styles.count, alert && { color: colors.accentTintInk, backgroundColor: colors.accentTint }]}>{formatNumber(value)}</Text>;
 }
 
 /** The ⋯ button that opens a row's action sheet. */
@@ -489,7 +489,59 @@ export const type = StyleSheet.create({
   shellLabel: { fontFamily: fonts.semibold, fontSize: 12, color: colors.onShellMuted, ...labelCase }
 });
 
+/** Bento: More and Settings are cards in a two-up grid. A tile is an icon (with an optional control at its end),
+ * a title and a short line. With href it is a link, with onPress a button; `wide` takes the whole row. An odd last
+ * tile stretches to fill its row. */
+export function BentoGrid({ children }: { children: ReactNode }) {
+  return <View style={styles.bentoGrid}>{children}</View>;
+}
+
+export function BentoTile({ icon, title, detail, href, onPress, trailing, wide, alert, label }: { icon: IconName; title: string; detail?: string | null; href?: Href; onPress?: () => void; trailing?: ReactNode; wide?: boolean; alert?: boolean; label?: string }) {
+  const body = (
+    <>
+      <View style={styles.bentoTop}>
+        <Icon name={icon} size={18} color={colors.link} />
+        {trailing ?? null}
+      </View>
+      <Text style={styles.bentoTitle} numberOfLines={1}>
+        {title}
+      </Text>
+      {detail ? (
+        <Text style={[styles.bentoDetail, alert && { color: colors.link }]} numberOfLines={2}>
+          {detail}
+        </Text>
+      ) : null}
+    </>
+  );
+  // Link's Slot refuses a style array, so it is flattened.
+  const style = StyleSheet.flatten([styles.bento, wide && styles.bentoWide]);
+  const a11y = label ?? (detail ? `${title}, ${detail}` : title);
+  if (href) {
+    return (
+      <Link href={href} asChild>
+        <Pressable accessibilityRole="link" accessibilityLabel={a11y} style={style}>
+          {body}
+        </Pressable>
+      </Link>
+    );
+  }
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={a11y} style={({ pressed }) => [style, pressed && { opacity: 0.7 }]}>
+        {body}
+      </Pressable>
+    );
+  }
+  return <View style={style}>{body}</View>;
+}
+
 const styles = StyleSheet.create({
+  bentoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  bento: { flexGrow: 1, flexBasis: "40%", minWidth: 0, minHeight: 104, gap: 6, padding: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous" },
+  bentoWide: { flexBasis: "100%" },
+  bentoTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", minHeight: 24 },
+  bentoTitle: { fontFamily: fonts.semibold, fontSize: 14, color: colors.ink },
+  bentoDetail: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.inkMuted },
   // paddingVertical, not paddingTop/paddingBottom: in React Native the longhand always wins, so a screen's
   // paddingVertical would be ignored.
   card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous", paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
@@ -509,10 +561,10 @@ const styles = StyleSheet.create({
   ringHole: { position: "absolute", alignItems: "center", justifyContent: "center" },
   track: { width: "100%", borderRadius: radius.pill, backgroundColor: colors.surfaceInset, overflow: "hidden" },
   check: { borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  moreButton: { width: 40, height: 40, borderRadius: radius.pill, borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", alignItems: "center", justifyContent: "center" },
+  moreButton: { width: 40, height: 40, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.edge, alignItems: "center", justifyContent: "center" },
   rowButton: { minHeight: 36, paddingHorizontal: 12, borderRadius: radius.control, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4 },
   empty: { alignItems: "center", gap: 10, paddingVertical: 16 },
   foldBody: { gap: 8 },
   count: { fontFamily: fonts.semibold, fontSize: 11, color: colors.inkMuted, backgroundColor: colors.surfaceInset, paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.badge, overflow: "hidden" },
-  exampleLink: { color: colors.accent }
+  exampleLink: { color: colors.link }
 });

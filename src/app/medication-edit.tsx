@@ -33,7 +33,7 @@ function SwitchRow({ label, detail, value, onChange }: { label: string; detail?:
         <Text style={type.rowTitle}>{label}</Text>
         {detail ? <Text style={type.rowSubtitle}>{detail}</Text> : null}
       </View>
-      <Switch accessibilityLabel={label} trackColor={track} thumbColor={colors.ink} value={value} onValueChange={onChange} />
+      <Switch accessibilityLabel={label} trackColor={track} value={value} onValueChange={onChange} />
     </View>
   );
 }

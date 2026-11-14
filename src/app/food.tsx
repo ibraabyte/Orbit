@@ -81,7 +81,7 @@ export default function Food() {
               </Text>
             ) : (
               <Pressable onPress={() => router.push("/health-goals")} accessibilityRole="link" hitSlop={8}>
-                <Text style={[type.link, { color: colors.accent }]}>{t.noTarget}</Text>
+                <Text style={[type.link, { color: colors.link }]}>{t.noTarget}</Text>
               </Pressable>
             )}
             {day ? (

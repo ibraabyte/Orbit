@@ -70,7 +70,7 @@ export default function NotificationsScreen() {
     const quiet = section !== null && !sections.on(section);
     return (
       <Setting first={first} label={label} detail={quiet ? st.quietWithSection(st.names[section!]) : detail}>
-        <Switch accessibilityLabel={label} trackColor={track} thumbColor={colors.ink} value={quiet ? false : prefs.kinds[kind]} disabled={quiet} onValueChange={(on) => void change({ ...prefs, kinds: { ...prefs.kinds, [kind]: on } })} />
+        <Switch accessibilityLabel={label} trackColor={track} value={quiet ? false : prefs.kinds[kind]} disabled={quiet} onValueChange={(on) => void change({ ...prefs, kinds: { ...prefs.kinds, [kind]: on } })} />
       </Setting>
     );
   };
@@ -107,13 +107,13 @@ export default function NotificationsScreen() {
         {prefs.kinds.prayer
           ? PRAYER_NAMES.map((name) => (
               <Setting key={name} inset label={prayerName[name]}>
-                <Switch accessibilityLabel={`${t.notifPrayer}, ${prayerName[name]}`} trackColor={track} thumbColor={colors.ink} value={prefs.prayers[name]} onValueChange={(on) => void change({ ...prefs, prayers: { ...prefs.prayers, [name]: on } })} />
+                <Switch accessibilityLabel={`${t.notifPrayer}, ${prayerName[name]}`} trackColor={track} value={prefs.prayers[name]} onValueChange={(on) => void change({ ...prefs, prayers: { ...prefs.prayers, [name]: on } })} />
               </Setting>
             ))
           : null}
         {toggle("reminders", t.notifReminders, t.notifRemindersDetail)}
         <Setting label={t.morningAlert} detail={t.morningAlertDetail}>
-          <Switch accessibilityLabel={t.morningAlert} trackColor={track} thumbColor={colors.ink} value={morning.enabled} onValueChange={(on) => void changeMorning({ ...morning, enabled: on })} />
+          <Switch accessibilityLabel={t.morningAlert} trackColor={track} value={morning.enabled} onValueChange={(on) => void changeMorning({ ...morning, enabled: on })} />
         </Setting>
         {morning.enabled ? (
           <Pressable accessibilityRole="button" accessibilityLabel={`${t.morningAlertTime}, ${clockAt(morning.hour, morning.minute)}`} onPress={pickMorningTime}>

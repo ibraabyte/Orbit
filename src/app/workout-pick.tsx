@@ -66,7 +66,7 @@ export default function WorkoutPick() {
 
       {typed ? (
         <Card list>
-          <ListRow first leading={<Icon name="edit-3" size={18} color={colors.accent} />} title={tt.custom(typed)} onPress={() => void add({ name: typed })} />
+          <ListRow first leading={<Icon name="edit-3" size={18} color={colors.link} />} title={tt.custom(typed)} onPress={() => void add({ name: typed })} />
         </Card>
       ) : null}
 

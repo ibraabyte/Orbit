@@ -138,7 +138,7 @@ export default function TaskScreen() {
       <View style={{ gap: 6 }}>
         <Input value={draft.title} onChangeText={(title) => set({ title })} placeholder={t.taskTitlePh} maxLength={220} multiline returnKeyType="done" blurOnSubmit style={styles.title} accessibilityLabel={t.taskTitlePh} />
         <Input value={draft.notes} onChangeText={(notes) => set({ notes })} placeholder={t.notesPh} multiline style={styles.notes} accessibilityLabel={t.notesPh} />
-        {dirty ? <Text style={[type.hint, { color: colors.accent }]}>● {t.unsaved}</Text> : null}
+        {dirty ? <Text style={[type.hint, { color: colors.link }]}>● {t.unsaved}</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
 

@@ -1,4 +1,4 @@
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { AiPicker } from "@/components/ai-picker";
@@ -30,7 +30,9 @@ export default function Ask() {
   const [accepted, setAccepted] = useState<string | null | undefined>(undefined);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [items, setItems] = useState<ChatItem[]>([]);
-  const [draft, setDraft] = useState("");
+  // More's search hands over what was typed (?q=), ready to send.
+  const { q } = useLocalSearchParams<{ q?: string }>();
+  const [draft, setDraft] = useState(q ?? "");
   const [sending, setSending] = useState(false);
   const counter = useRef(0);
   const itemsRef = useRef<ChatItem[]>([]);

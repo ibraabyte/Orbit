@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   setNumber: { height: 28, borderRadius: radius.badge, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
   warmup: { backgroundColor: colors.accentTint, borderWidth: 1, borderColor: colors.accentLine },
   cell: { height: 38, borderRadius: radius.control, backgroundColor: colors.field, color: colors.ink, fontFamily: fonts.semibold, fontSize: 15, textAlign: "center", paddingHorizontal: 4 },
-  record: { fontFamily: fonts.semibold, fontSize: 10, color: colors.accent },
+  record: { fontFamily: fonts.semibold, fontSize: 10, color: colors.link },
   exerciseFoot: { flexDirection: "row", alignItems: "center", gap: 8, paddingTop: 4 },
   restChip: { minHeight: 36, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline },
   restBar: { position: "absolute", start: 16, end: 16, flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14, borderRadius: radius.card, backgroundColor: colors.accent, maxWidth: 728, alignSelf: "center" },

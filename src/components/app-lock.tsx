@@ -90,6 +90,6 @@ export function AppLock({ children }: { children: ReactNode }) {
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   cover: { alignItems: "center", justifyContent: "center", gap: 16, padding: 28, backgroundColor: colors.shell },
-  mark: { width: 72, height: 72, borderRadius: 20, borderWidth: 2, borderColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
+  mark: { width: 72, height: 72, borderRadius: 20, borderWidth: 2, borderColor: colors.edge, alignItems: "center", justifyContent: "center" },
   title: { fontFamily: fonts.bold, fontSize: 22, color: colors.onShell }
 });

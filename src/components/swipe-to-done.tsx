@@ -55,5 +55,5 @@ export function SwipeToDone({ onDone, children }: { onDone: () => void; children
 
 const styles = StyleSheet.create({
   behind: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 8 },
-  behindText: { fontFamily: fonts.medium, fontSize: 11, color: colors.accent, ...labelCase }
+  behindText: { fontFamily: fonts.medium, fontSize: 11, color: colors.link, ...labelCase }
 });

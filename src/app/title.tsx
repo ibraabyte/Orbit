@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   pickOptions: { paddingTop: 12, marginTop: 4, borderTopWidth: 1, borderTopColor: colors.hairline },
   episodes: { paddingStart: 48, paddingBottom: 8, gap: 12 },
   episode: { gap: 3 },
-  episodeNumber: { fontFamily: fonts.medium, color: colors.accent },
+  episodeNumber: { fontFamily: fonts.medium, color: colors.link },
   ratings: { flexDirection: "row", gap: 10 },
   rating: { flex: 1, gap: 4, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, padding: 10, alignItems: "flex-start" },
   ratingValue: { fontFamily: fonts.medium, fontSize: 20, color: colors.ink },
