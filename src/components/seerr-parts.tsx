@@ -1,7 +1,7 @@
 import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { Badge, Card, Chevron, type } from "@/components/drift";
+import { Badge, Card, Chevron, pressedFade, type } from "@/components/drift";
 import { BleedRow, CONTENT_MAX_WIDTH } from "@/components/screen";
 import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { mediaBadge, mt, posterUrl, seerrName, seerrYear, type DiscoverList, type SeerrCast, type SeerrMediaType, type SeerrResult, type StatusBadge } from "@/lib/seerr";
@@ -73,7 +73,7 @@ export function PosterCard({ item, width, onPress }: { item: SeerrResult; width:
 /** Small "See all ›" in a section header. */
 export function SeeAll({ onPress, label = mt.seeAll }: { onPress: () => void; label?: string }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8} style={styles.seeAll}>
+    <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8} style={({ pressed }) => [styles.seeAll, pressed && pressedFade]}>
       <Text style={type.link}>{label}</Text>
       <Chevron size={15} color={colors.link} />
     </Pressable>

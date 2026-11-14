@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Badge, Card, Icon, type } from "@/components/drift";
+import { Badge, Card, Icon, pressedFade, type } from "@/components/drift";
 import { Button, Segments } from "@/components/screen";
 import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { formatNumber, macroText, mealTypeAt, scaleNutrition, servingText, sourceLabel, stepServings, type FoodCandidate, type MealType } from "@/lib/food-log";
@@ -36,13 +36,13 @@ export function FoodLogPanel({ food, busy, onLog, onClose }: { food: FoodCandida
 
       <View style={styles.stepper}>
         <Text style={[type.barLabel, { flex: 1 }]}>{t.servings}</Text>
-        <Pressable onPress={() => setServings((value) => stepServings(value, -1))} accessibilityRole="button" accessibilityLabel={`${t.servings} -`} style={styles.stepButton}>
+        <Pressable onPress={() => setServings((value) => stepServings(value, -1))} accessibilityRole="button" accessibilityLabel={`${t.servings} -`} style={({ pressed }) => [styles.stepButton, pressed && pressedFade]}>
           <Icon name="minus" size={16} color={colors.ink} />
         </Pressable>
         <Text style={styles.servings} accessibilityLiveRegion="polite">
           {formatNumber(servings)}
         </Text>
-        <Pressable onPress={() => setServings((value) => stepServings(value, 1))} accessibilityRole="button" accessibilityLabel={`${t.servings} +`} style={styles.stepButton}>
+        <Pressable onPress={() => setServings((value) => stepServings(value, 1))} accessibilityRole="button" accessibilityLabel={`${t.servings} +`} style={({ pressed }) => [styles.stepButton, pressed && pressedFade]}>
           <Icon name="plus" size={16} color={colors.ink} />
         </Pressable>
       </View>

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FlatList, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { flip, Glass, Icon, type } from "@/components/drift";
+import { flip, Glass, Icon, pressedFade, type } from "@/components/drift";
 import { Button, Input } from "@/components/screen";
 import { colors, fonts, radius, scrim, space, textSize } from "@/components/theme";
 import { carMakes, carModels, carName, carYears, filterChoices, parseKm } from "@/lib/car-catalog";
@@ -50,7 +50,7 @@ export function CarPicker({ onClose, onAdd }: { onClose: () => void; onAdd: (car
       <KeyboardAvoidingView behavior="padding" pointerEvents="box-none" style={styles.wrap}>
         <Glass style={[styles.sheet, step !== "details" && { flex: 1 }]}>
           <View style={styles.head}>
-            <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={t.back} style={[styles.back, flip]}>
+            <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={t.back} style={({ pressed }) => [styles.back, flip, pressed && pressedFade]}>
               <Icon name="chevron-left" size={18} color={colors.ink} />
             </Pressable>
             <Text style={[type.title, { flex: 1, textAlign: "center" }]} numberOfLines={2}>

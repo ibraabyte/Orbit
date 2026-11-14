@@ -90,6 +90,11 @@ export function Icon({ name, size = 16, color = colors.inkMuted }: { name: IconN
   return <Feather name={name} size={size} color={color} />;
 }
 
+// Press feedback: a control dims while it is held. pressFade is for a Pressable's style; inside Link asChild (whose Slot
+// drops a style function), the Pressable's children take the pressed state and dim themselves.
+export const pressedFade = { opacity: 0.7 } as const;
+export const pressFade = ({ pressed }: { pressed: boolean }) => (pressed ? pressedFade : null);
+
 export const flip: ViewStyle | null = isArabic ? { transform: [{ scaleX: -1 }] } : null;
 
 export function Chevron({ color = colors.inkFaint, size = 18 }: { color?: Color; size?: number }) {
@@ -170,9 +175,13 @@ export function Hero({ children, style }: { children: ReactNode; style?: ViewSty
 export function CardLink({ href, label }: { href: Href; label: string }) {
   return (
     <Link href={href} asChild>
-      <Pressable accessibilityRole="link" hitSlop={8} style={styles.cardLink}>
-        <Text style={type.link}>{label}</Text>
-        <Chevron size={14} color={colors.link} />
+      <Pressable accessibilityRole="link" hitSlop={8}>
+        {({ pressed }) => (
+          <View style={[styles.cardLink, pressed && pressedFade]}>
+            <Text style={type.link}>{label}</Text>
+            <Chevron size={14} color={colors.link} />
+          </View>
+        )}
       </Pressable>
     </Link>
   );
@@ -227,7 +236,7 @@ export function ListRow({
   if (href) {
     return (
       <Link href={href} asChild>
-        <Pressable accessibilityRole="link">{body}</Pressable>
+        <Pressable accessibilityRole="link">{({ pressed }) => <View style={pressed ? pressedFade : undefined}>{body}</View>}</Pressable>
       </Link>
     );
   }
@@ -314,7 +323,7 @@ export function StatTile({ label, value, unit, color = colors.ink, href, alert, 
   return href ? (
     <Link href={href} asChild>
       <Pressable accessibilityRole="link" style={{ flex: 1 }}>
-        {body}
+        {({ pressed }) => <View style={[{ flex: 1 }, pressed && pressedFade]}>{body}</View>}
       </Pressable>
     </Link>
   ) : (
@@ -486,7 +495,7 @@ export function CountBadge({ value, alert }: { value: number; alert?: boolean })
 /** The ⋯ button that opens a row's action sheet. */
 export function MoreButton({ onPress, label }: { onPress: () => void; label: string }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={styles.moreButton}>
+    <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.moreButton, pressed && pressedFade]}>
       <Icon name="more-horizontal" size={16} color={colors.ink} />
     </Pressable>
   );
@@ -515,7 +524,7 @@ export function EmptyState({ example, children, icon, action }: { example?: stri
       {add ? <RowButton icon="plus" label={add.label} onPress={add.onPress} /> : null}
       {example ? (
         // The example is a starting line: tap it and the assistant opens with it typed in.
-        <Pressable onPress={() => router.push({ pathname: "/capture", params: { text: example } })} accessibilityRole="button" accessibilityLabel={example} hitSlop={8}>
+        <Pressable onPress={() => router.push({ pathname: "/capture", params: { text: example } })} accessibilityRole="button" accessibilityLabel={example} hitSlop={8} style={pressFade}>
           <Text style={[type.code, styles.exampleLink]}>{example} ↗</Text>
         </Pressable>
       ) : null}
