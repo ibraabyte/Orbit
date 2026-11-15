@@ -77,6 +77,9 @@ const en = {
     connected: "Connected", notConnected: "Not connected", isDefault: "Default", viaAccount: "Account",
     roleText: "Text", roleSpeech: "Speech to text", roleCall: "Voice call",
     usesTitle: "What each feature uses", usesDetail: "Pick a model per feature, like a cheaper one for food.", otherServices: "Other services",
+    ahConnect: "Connect Apple Health", ahSync: "Sync now", ahSyncing: "Syncing…", ahReads: "Steps, sleep, workouts, heart rate, weight",
+    ahEmpty: "Apple Health sent nothing. Allow Orbit in Settings → Health → Data Access.", ahFailed: "Couldn't sync Apple Health. Try again.",
+    ahDisconnect: "Disconnect Apple Health", ahDisconnectBody: "Orbit deletes the synced days. Apple Health keeps everything.", disconnectAction: "Disconnect",
     blurbs: {
       openai: "GPT for the assistant and summaries, speech to text, and the live voice call.",
       anthropic: "Claude for the assistant, food, health and summaries.",
@@ -173,6 +176,9 @@ const ar: typeof en = {
     connected: "مربوط", notConnected: "مو مربوط", isDefault: "الافتراضي", viaAccount: "حساب",
     roleText: "نصوص", roleSpeech: "تحويل الصوت لنص", roleCall: "مكالمة صوتية",
     usesTitle: "وش يستخدم كل قسم", usesDetail: "اختر مودل لكل قسم، مثلاً مودل أرخص للأكل.", otherServices: "خدمات ثانية",
+    ahConnect: "اربط صحة Apple", ahSync: "زامن الحين", ahSyncing: "يزامن…", ahReads: "الخطوات، النوم، التمارين، النبض، الوزن",
+    ahEmpty: "ما وصل شي من صحة Apple. اسمح لـ Orbit من الإعدادات ← الصحة ← الوصول للبيانات.", ahFailed: "ما قدرنا نزامن صحة Apple. جرّب مرة ثانية.",
+    ahDisconnect: "افصل صحة Apple", ahDisconnectBody: "Orbit يحذف الأيام اللي زامنها. صحة Apple تحتفظ بكل شي.", disconnectAction: "افصل",
     blurbs: {
       openai: "GPT للمساعد والملخصات، وتحويل الصوت لنص، والمكالمة الصوتية.",
       anthropic: "Claude للمساعد والأكل والصحة والملخصات.",

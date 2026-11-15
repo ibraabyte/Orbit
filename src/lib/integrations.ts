@@ -1,5 +1,6 @@
 import type { ApiClient } from "@/lib/api";
 import { t } from "@/lib/i18n";
+import type { AppleHealthStatus } from "@/lib/apple-health";
 import type { FeatureStatus } from "@/lib/feature-models";
 import { syncedAgo } from "@/lib/whoop";
 
@@ -37,6 +38,8 @@ export const voiceOff: VoiceStatus = { connected: false, provider: null, model: 
 
 export type IntegrationsOverview = {
   whoop: { configured: boolean; connected: boolean; last_synced_at: string | null; last_sync_error: string | null };
+  // Missing from servers older than Apple Health.
+  apple_health?: AppleHealthStatus;
   seerr: SeerrStatus;
   ai: AiStatus;
   // Missing from servers older than "more than one AI".

@@ -12,6 +12,7 @@ import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, 
 import { SwipeToDone } from "@/components/swipe-to-done";
 import { TaskRow } from "@/components/task-row";
 import { colors, fonts, radius } from "@/components/theme";
+import { useAppleHealth } from "@/hooks/use-apple-health";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useMorningBrief } from "@/hooks/use-morning-brief";
 import { useNow } from "@/hooks/use-now";
@@ -66,6 +67,7 @@ export default function Today() {
   const { data, loading, error, refresh, act } = useDashboardData();
   const { next: prayer, today: prayersToday } = usePrayerTimes();
   const readiness = useReadiness();
+  const apple = useAppleHealth().today;
   const { sheet, toast } = useOverlays();
   const now = useNow();
   // iPad, two columns: the quick numbers move to the top of the right column, so both columns end at about the same height.
@@ -295,7 +297,10 @@ export default function Today() {
   // Health shows once something is logged today (food, a workout, sleep); before that it would be a row of zeros.
   // With Food off, the card keeps workouts and sleep and drops the calorie ring.
   const foodOn = on("food");
-  const healthLogged = (foodOn && summary.todayCalories > 0) || summary.todayWorkoutMinutes > 0 || summary.todaySleepMinutes > 0;
+  // Apple Health counts too; a day it and a typed log both have shows the larger number, not the two added up.
+  const workoutToday = Math.max(summary.todayWorkoutMinutes, apple?.workout_minutes ?? 0);
+  const sleepToday = Math.max(summary.todaySleepMinutes, apple?.sleep_minutes ?? 0);
+  const healthLogged = (foodOn && summary.todayCalories > 0) || workoutToday > 0 || sleepToday > 0;
   const healthCard = show("health") && on("health") && healthLogged ? (
     <Card title={t.healthToday} action={<CardLink href="/health" label={t.health} />}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
@@ -307,10 +312,10 @@ export default function Today() {
             </View>
           ) : null}
           <View style={{ flex: 1 }}>
-            <Metric label={t.workouts} value={summary.todayWorkoutMinutes} unit={t.min} />
+            <Metric label={t.workouts} value={workoutToday} unit={t.min} />
           </View>
           <View style={{ flex: 1 }}>
-            <Metric label={t.sleep} value={formatSleepDuration(summary.todaySleepMinutes)} />
+            <Metric label={t.sleep} value={formatSleepDuration(sleepToday)} />
           </View>
         </View>
       </View>
