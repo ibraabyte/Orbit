@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Badge, Card, CardLink, Chevron, CountBadge, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
+import { DOCUMENT_ICONS, DocumentBadge, documentSubtitle } from "@/components/document-ui";
 import { DoseRow } from "@/components/medication-ui";
 import { MorningBriefCard } from "@/components/morning-brief-card";
 import { WeeklySummaryCard } from "@/components/weekly-summary";
@@ -32,6 +33,7 @@ import { formatClock24, formatDate, formatIn, formatNumber, isArabic, t } from "
 import { prayerNamesEn, type PrayerTime } from "@/lib/prayer-times";
 import { buildRail, type RailEntry } from "@/lib/rail";
 import { dayMuscles, pt, recoveryLine } from "@/lib/plan";
+import { daysLeft, documentsDueSoon, documentTitle, dx } from "@/lib/documents";
 import { dosesOnDay, rx } from "@/lib/medications";
 import { formatSleepDuration } from "@/lib/sleep";
 import { cardLabel, moneyDueSoon, type MoneyDue } from "@/lib/wealth";
@@ -48,6 +50,7 @@ const optional = [
   ["upnext", t.nextUp],
   ["workout", pt.todayWorkout],
   ["meds", rx.todayDoses],
+  ["docs", dx.soon],
   ["health", t.healthToday]
 ] as const;
 type OptionalSection = (typeof optional)[number][0];
@@ -110,7 +113,7 @@ export default function Today() {
   const customize = () =>
     sheet({
       title: t.customize,
-      options: optional.filter(([id]) => (id === "money" ? on("finance") : id === "health" ? on("health") : id === "workout" ? on("exercises") : id === "meds" ? on("medications") : true)).map(([id, label]) => ({
+      options: optional.filter(([id]) => (id === "money" ? on("finance") : id === "health" ? on("health") : id === "workout" ? on("exercises") : id === "meds" ? on("medications") : id === "docs" ? on("documents") : true)).map(([id, label]) => ({
         label: `${show(id) ? "●" : "○"} ${label}`,
         run: () => {
           const next = show(id) ? [...hidden, id] : hidden.filter((item) => item !== id);
@@ -278,6 +281,17 @@ export default function Today() {
     </Card>
   ) : null;
 
+  // Papers expired or expiring within a month; the card stays away while everything is valid.
+  const docsDue = show("docs") && on("documents") ? documentsDueSoon(data.documents, now) : [];
+  const docsCard = docsDue.length ? (
+    <Card title={dx.soon} action={<CardLink href="/documents" label={dx.documents} />}>
+      {docsDue.slice(0, 4).map((document, index) => {
+        const left = daysLeft(document, now);
+        return <ListRow key={document.id} first={index === 0} href="/documents" leading={<IconTile name={DOCUMENT_ICONS[document.kind]} tone="urgent" />} title={documentTitle(document)} badges={<DocumentBadge left={left} />} subtitle={documentSubtitle(document, left)} />;
+      })}
+    </Card>
+  ) : null;
+
   // Health shows once something is logged today (food, a workout, sleep); before that it would be a row of zeros.
   // With Food off, the card keeps workouts and sleep and drops the calorie ring.
   const foodOn = on("food");
@@ -324,6 +338,7 @@ export default function Today() {
             {nextCard}
             {clearCard}
             {medsCard}
+            {docsCard}
             {workoutCard}
             {healthCard}
           </>

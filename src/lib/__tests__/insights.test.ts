@@ -109,6 +109,7 @@ const baseData: DashboardData = {
   obligationInstallments: [],
   medications: [],
   medicationDoses: [],
+  documents: [],
 };
 
 describe("insights", () => {

@@ -10,6 +10,7 @@ import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { useWidgetSync } from "@/hooks/use-widget-sync";
 import { sectionOn, type SectionKey } from "@/lib/app-sections";
+import { documentAlerts } from "@/lib/documents";
 import { billRenewalAlerts, formatMoney } from "@/lib/finance";
 import { doseKey, medicationAlerts, parseAlertId } from "@/lib/medications";
 import { notificationAllowed } from "@/lib/notification-prefs";
@@ -49,10 +50,11 @@ export function useReminderNotifications() {
         }
       }
       await Promise.all(
-        scheduled.filter((item) => /^(reminder|task|bill|installment|vehicle|med|medlater)-/.test(item.identifier)).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
+        scheduled.filter((item) => /^(reminder|task|bill|installment|vehicle|document|med|medlater)-/.test(item.identifier)).map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
       );
-      // iOS keeps 64 pending alarms: 32 reminders and doses together + 8 bill + 4 installment + 4 car heads-ups
-      // + 10 prayers + 4 mornings = 62. Doses take up to 12 of the 32 (reminders keep at least 20).
+      // iOS keeps 64 pending alarms: 28 reminders and doses together + 8 bill + 4 installment + 4 car + 4 document
+      // heads-ups + 10 prayers + 4 mornings = 62. Doses take up to 12 of the 28 (reminders keep at least 16). Only the
+      // soonest of each kind are set; the rest are set on a later load, as the soonest go off.
       // Each kind only when it is on in Notifications.
       // A section switched off in Settings → Sections is quiet too: its alarms were just cleared and are not put back.
       const on = (kind: Parameters<typeof notificationAllowed>[1]) => notificationAllowed(prefs, kind, (key) => sectionOn(data.profile, key as SectionKey));
@@ -62,10 +64,11 @@ export function useReminderNotifications() {
       type Alarm = { id: string; title: string; body: string; at: Date; url: string; category?: string; extra?: Record<string, string> };
       const items: Alarm[] = [
         ...doses.map((item) => ({ ...item, category: MEDICATION_CATEGORY, extra: { medicationId: item.medicationId, scheduledAt: item.scheduledAt } })),
-        ...(on("reminders") ? buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 32 - doses.length }) : []),
+        ...(on("reminders") ? buildLocalReminderSchedule({ reminders: data.reminders, tasks: data.tasks, limit: 28 - doses.length }) : []),
         ...(on("bills") ? billRenewalAlerts(data.bills, now, 1, prefs.headsUp).slice(0, 8) : []),
         ...(on("installments") ? installmentAlerts({ obligations: data.obligations, obligationInstallments: data.obligationInstallments }, now, formatMoney, prefs.headsUp).slice(0, 4) : []),
-        ...(on("car") ? vehicleAlerts(vehicles, now, prefs.headsUp).slice(0, 4) : [])
+        ...(on("car") ? vehicleAlerts(vehicles, now, prefs.headsUp).slice(0, 4) : []),
+        ...(on("documents") ? documentAlerts(data.documents, now, prefs.headsUp).slice(0, 4) : [])
       ];
       for (const item of items) {
         // A newer load took over; stop so a deleted reminder isn't put back.
@@ -80,7 +83,7 @@ export function useReminderNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [prefs, data.profile, data.reminders, data.tasks, data.bills, data.obligations, data.obligationInstallments, data.medications, data.medicationDoses, vehicles]);
+  }, [prefs, data.profile, data.reminders, data.tasks, data.bills, data.obligations, data.obligationInstallments, data.medications, data.medicationDoses, data.documents, vehicles]);
 
   // The latest, for a button tapped on a dose reminder (the listener below is set up once).
   const latest = useRef({ act, medications: data.medications });

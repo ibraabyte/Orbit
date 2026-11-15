@@ -83,7 +83,7 @@ export default function RootLayout() {
       </Stack.Protected>
       {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
       <Stack.Protected guard={Boolean(session)}>
-        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "health-goals", "integrations", "ai-provider", "ai-features", "library", "notifications", "media", "title", "discover", "requests", "person", "sections", "settings", "tasks", "task/[id]", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries", "week", "training", "workout", "workout-pick", "body", "plan", "plan-day", "plan-setup", "medications", "medication-edit", "phone-calls", "phone-call", "saved/[id]"].map((name) => (
+        {["accounts", "ask", "cards", "finance", "investments", "obligations", "food", "food-add", "food-photo", "food-scan", "habits", "health", "health-goals", "integrations", "ai-provider", "ai-features", "library", "notifications", "media", "title", "discover", "requests", "person", "sections", "settings", "tasks", "task/[id]", "vehicles", "whoop", "exercises/index", "exercises/[id]", "gym", "injuries", "week", "training", "workout", "workout-pick", "body", "plan", "plan-day", "plan-setup", "medications", "medication-edit", "documents", "document-edit", "phone-calls", "phone-call", "saved/[id]"].map((name) => (
           <Stack.Screen key={name} name={name} />
         ))}
       </Stack.Protected>

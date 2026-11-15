@@ -8,7 +8,7 @@ import type { Profile } from "@/lib/types";
 // The choice lives on the profile (hidden_sections), so the iPhone and the iPad share it; the server also leaves a hidden
 // section out of what the AI sees (backend/app/services/sections.py, same names).
 
-export const SECTION_KEYS = ["health", "food", "exercises", "whoop", "medications", "finance", "habits", "library", "vehicles", "media"] as const;
+export const SECTION_KEYS = ["health", "food", "exercises", "whoop", "medications", "finance", "habits", "library", "vehicles", "documents", "media"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 
 /** Switching health off hides what lives inside it. */
@@ -63,6 +63,8 @@ const SCREENS: Record<string, SectionKey> = {
   habits: "habits",
   library: "library",
   vehicles: "vehicles",
+  documents: "documents",
+  "document-edit": "documents",
   media: "media",
   discover: "media",
   requests: "media",
@@ -131,7 +133,7 @@ const en = {
   insideHealth: "Inside Health",
   offWithHealth: "Off with Health",
   alwaysOn: "Tasks and reminders are always on.",
-  names: { health: "Health", food: "Food", exercises: "Exercises & gym", whoop: "WHOOP", medications: "Medications", finance: "Finance", habits: "Habits", library: "Saver", vehicles: "Car", media: "Movies & TV" } as Record<SectionKey, string>,
+  names: { health: "Health", food: "Food", exercises: "Exercises & gym", whoop: "WHOOP", medications: "Medications", finance: "Finance", habits: "Habits", library: "Saver", vehicles: "Car", documents: "Documents", media: "Movies & TV" } as Record<SectionKey, string>,
   details: {
     health: "Body, sleep, goals and everything below",
     food: "Calories, meals, groceries",
@@ -142,6 +144,7 @@ const en = {
     habits: "Daily and weekly habits",
     library: "Saved links and notes",
     vehicles: "Service and paperwork reminders",
+    documents: "ID, passport, licence and when they expire",
     media: "Seerr: discover and requests"
   } as Record<SectionKey, string>,
   offTitle: "This section is off",
@@ -157,7 +160,7 @@ const ar: typeof en = {
   insideHealth: "داخل الصحة",
   offWithHealth: "مقفول مع الصحة",
   alwaysOn: "المهام والتذكيرات شغالة دايم.",
-  names: { health: "الصحة", food: "الأكل", exercises: "التمارين والنادي", whoop: "WHOOP", medications: "الأدوية", finance: "المالية", habits: "العادات", library: "الحافظة", vehicles: "السيارة", media: "الأفلام والمسلسلات" },
+  names: { health: "الصحة", food: "الأكل", exercises: "التمارين والنادي", whoop: "WHOOP", medications: "الأدوية", finance: "المالية", habits: "العادات", library: "الحافظة", vehicles: "السيارة", documents: "الوثائق", media: "الأفلام والمسلسلات" },
   details: {
     health: "الجسم والنوم والأهداف وكل اللي تحتها",
     food: "السعرات والوجبات والمشتريات",
@@ -168,6 +171,7 @@ const ar: typeof en = {
     habits: "العادات اليومية والأسبوعية",
     library: "الروابط والملاحظات المحفوظة",
     vehicles: "تذكيرات الصيانة والأوراق",
+    documents: "الهوية والجواز والرخصة ومتى تنتهي",
     media: "Seerr: الاكتشاف والطلبات"
   },
   offTitle: "هذا القسم مقفول",
