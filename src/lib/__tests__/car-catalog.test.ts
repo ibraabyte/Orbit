@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { carMakes, carModels, carName, carYears, filterChoices, parseKm } from "@/lib/car-catalog";
+import { carMakeOf, carMakes, carModels, carName, carYears, filterChoices, parseKm } from "@/lib/car-catalog";
 
 describe("car catalog", () => {
   it("has models for every make, with no repeats", () => {
@@ -33,6 +33,13 @@ describe("car catalog", () => {
 
   it("names a car make, model, year", () => {
     expect(carName(" Toyota ", "Camry", "2024")).toBe("Toyota Camry 2024");
+  });
+
+  it("finds the make at the start of a saved name", () => {
+    expect(carMakeOf("Land Rover Defender 2024")).toBe("Land Rover");
+    expect(carMakeOf("GMC Yukon 2023")).toBe("GMC");
+    expect(carMakeOf("Toyotaa Camry 2020")).toBeNull();
+    expect(carMakeOf("Camry")).toBeNull();
   });
 
   it("reads kilometres in both digit sets", () => {
