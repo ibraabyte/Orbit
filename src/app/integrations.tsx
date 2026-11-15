@@ -126,13 +126,13 @@ export default function Integrations() {
             wide
             mark={<LogoMark source={require("../../assets/brand/ai/seerr.png")} />}
             name="Seerr"
-            badge={seerr.connected ? "check" : null}
+            // A server that can't be reached shows as a warning mark, not a line of text.
+            badge={seerr.connected ? (seerr.error ? "alert" : "check") : null}
             icons={["film", "tv"]}
-            label={`Seerr, ${seerrNow.label}, ${seerrNow.detail}`}
+            label={`Seerr, ${seerrNow.label}, ${seerr.error ?? seerrNow.detail}`}
             onPress={seerr.connected ? () => router.push("/media") : undefined}
           />
         </TileGrid>
-        {seerr.error ? <Text style={type.rowSubtitle}>{seerr.error}</Text> : null}
         {!seerr.ready ? <Loading /> : seerr.connected ? null : <SeerrConnectForm connect={(url, key) => seerr.connect(url, key).then(load)} />}
       </Card>
 
