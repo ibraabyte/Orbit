@@ -1,12 +1,13 @@
-import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/native-tabs";
 import { View } from "react-native";
+import { AssistantButton } from "@/components/assistant-button";
 import { openCapture, useSidebar } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { isArabic, t } from "@/lib/i18n";
 
 // The system tab bar (Liquid Glass on iOS 26, Material on Android): Today, the assistant in the middle, and More.
-// The assistant is a tab that never opens: tapping it is blocked natively and opens Capture instead, so it sits in the
-// bar itself, centred between the two. Its icon is the sand Orbit mark drawn as is ("original"), not tinted.
+// The middle tab never opens: tapping it is blocked natively and opens Capture instead. A raised sand Orbit button
+// sits on top of it so the assistant stands out (src/components/assistant-button.tsx).
 // The bar takes its direction from the app's language, not the phone's: in Arabic, Today is on the right.
 // On iPad the sidebar replaces it (src/components/sidebar.tsx).
 export default function TabsLayout() {
@@ -27,6 +28,7 @@ export default function TabsLayout() {
           <NativeTabs.Trigger.Label>{t.more}</NativeTabs.Trigger.Label>
         </NativeTabs.Trigger>
       </NativeTabs>
+      <AssistantButton />
     </View>
   );
 }
