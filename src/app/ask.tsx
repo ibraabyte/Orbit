@@ -150,7 +150,6 @@ export default function Ask() {
           </Card>
           {chat.length === 0 ? (
             <Card title={t.askSuggested}>
-              <Text style={type.rowSubtitle}>{t.askIntro}</Text>
               <View style={styles.chips}>
                 {suggestions.filter(([, section]) => !section || on(section)).map(([question]) => (
                   <Pressable key={question} accessibilityRole="button" disabled={sending} onPress={() => send(question)} style={styles.chip}>

@@ -177,7 +177,6 @@ export default function TaskScreen() {
 
       <Card title={`${repeatGlyph} ${t.repeat}`}>
         <Chips options={repeatOptions} value={draft.recurrence} onChange={(recurrence) => set({ recurrence })} label={(key) => (key === "never" ? t.never : t.recurrenceNames[key])} />
-        {draft.recurrence !== "never" ? <Text style={type.rowSubtitle}>{t.repeatsHint}</Text> : null}
       </Card>
 
       <Card title={t.priority}>

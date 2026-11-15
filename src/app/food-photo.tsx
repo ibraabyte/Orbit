@@ -130,7 +130,6 @@ export default function FoodPhoto() {
             <Button title={busy === "estimate" ? t.estimating : t.estimate} variant="primary" disabled={Boolean(busy)} onPress={() => void runEstimate()} />
           </>
         ) : null}
-        <Text style={type.rowSubtitle}>{t.photoPrivacy}</Text>
       </Card>
 
       {busy === "photo" || busy === "estimate" ? <Loading /> : null}
@@ -161,7 +160,6 @@ export default function FoodPhoto() {
               <Button title={`${t.logItems} (${chosen.length})`} variant="primary" disabled={Boolean(busy) || !chosen.length} onPress={() => void logAll()} />
             </>
           ) : null}
-          <Text style={type.hint}>{t.estimateHint}</Text>
         </Card>
       ) : null}
     </Screen>

@@ -50,13 +50,11 @@ export default function Sections() {
 
   return (
     <Screen title={st.sections}>
-      <Text style={type.rowSubtitle}>{st.sectionsDetail}</Text>
       <Card list>{TOP.map((key, index) => row(key, index === 0))}</Card>
       <View style={{ gap: space.sm }}>
         <GroupHeader label={st.insideHealth} />
         <Card list>{INSIDE.health!.map((key, index) => row(key, index === 0, true))}</Card>
       </View>
-      <Text style={type.rowSubtitle}>{st.alwaysOn}</Text>
     </Screen>
   );
 }
