@@ -17,6 +17,7 @@ from app.models.life import Habit, HabitLog
 from app.models.medications import Medication, MedicationDose
 from app.models.plan import PlannedExercise, PlannedWorkout, TrainingPlan
 from app.models.profile import Profile
+from app.models.shipments import Shipment, ShipmentScan
 from app.models.subscriptions import GmailConnection, SubscriptionFind, SubscriptionScan
 from app.models.tasks import Reminder, Task, TaskList, TaskStep
 from app.models.things import Vehicle, WatchItem
@@ -67,6 +68,8 @@ __all__ = [
     "ServerSettings",
     "ServiceConnection",
     "SleepLog",
+    "Shipment",
+    "ShipmentScan",
     "SubscriptionFind",
     "SubscriptionScan",
     "Tag",

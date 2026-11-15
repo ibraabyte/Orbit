@@ -42,6 +42,8 @@ class Settings(BaseSettings):
     whoop_app_redirect: str = "orbit://whoop"
     # Background sync every N minutes (0 turns it off). The first sync reaches back backfill_days.
     whoop_sync_minutes: int = 120
+    # How often the background job looks for shipments to refresh. 0 turns it off (the app's refresh still works).
+    shipments_sync_minutes: int = 15
     whoop_backfill_days: int = 180
 
     # Food search. Open Food Facts needs no key. USDA FoodData Central needs a free key from

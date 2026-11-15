@@ -6,10 +6,16 @@ in the Google client's "Authorized redirect URIs", the Gmail API must be on, and
 consent screen.
 
 Only the gmail.readonly scope is asked for: Orbit can never send, delete or change mail. Features read mail through
-search() and message() here, and keep only what they need (a sender, a subject line, an amount), never whole emails.
+search() and message() here, and keep only what they need (a sender, a subject line, an amount, a tracking number),
+never whole emails. The order tracker reads an email's text with message_with_text() to find the tracking number in it;
+the text stays in memory and only the number is kept.
 """
 
+import base64
+import binascii
+import html as html_lib
 import logging
+import re
 import uuid
 from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor
@@ -276,6 +282,67 @@ def messages(access: str, ids: list[str]) -> list[MailHeader]:
     def one(message_id: str) -> MailHeader | None:
         try:
             return message(access, message_id)
+        except GmailAuthError:
+            raise
+        except GmailError as exc:
+            if exc.status == 404:
+                return None
+            raise
+
+    with ThreadPoolExecutor(max_workers=PARALLEL_READS) as pool:
+        found = list(pool.map(one, ids))
+    return [item for item in found if item is not None]
+
+
+def _decode(data: str) -> str:
+    try:
+        return base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode("utf-8", errors="replace")
+    except (ValueError, binascii.Error):
+        return ""
+
+
+def _body_text(part: dict[str, Any], limit: int) -> str:
+    """The readable text of a message part: plain text where the email has it, otherwise its HTML without the tags."""
+    plain: list[str] = []
+    html: list[str] = []
+
+    def walk(node: dict[str, Any]) -> None:
+        mime = str(node.get("mimeType") or "")
+        data = (node.get("body") or {}).get("data")
+        if isinstance(data, str) and data:
+            if mime == "text/plain":
+                plain.append(_decode(data))
+            elif mime == "text/html":
+                html.append(_decode(data))
+        for child in node.get("parts") or []:
+            if isinstance(child, dict):
+                walk(child)
+
+    walk(part)
+    if plain:
+        text = "\n".join(plain)
+    else:
+        text = re.sub(r"(?is)<(script|style)\b.*?</\1>", " ", "\n".join(html))
+        text = html_lib.unescape(re.sub(r"<[^>]+>", " ", text))
+    return " ".join(text.split())[:limit]
+
+
+def message_with_text(access: str, message_id: str, limit: int = 20_000) -> tuple[MailHeader, str] | None:
+    """One message's headers and its text, for features that look for one thing inside (a tracking number).
+    The text is only read in memory; callers keep just what they found, never the email."""
+    raw = get(access, f"/messages/{message_id}", {"format": "full"})
+    header = parse_message(raw)
+    if header is None:
+        return None
+    return header, _body_text(raw.get("payload") or {}, limit)
+
+
+def messages_with_text(access: str, ids: list[str]) -> list[tuple[MailHeader, str]]:
+    """Many messages with their text. A message that vanished in between is skipped; an auth failure stops everything."""
+
+    def one(message_id: str) -> tuple[MailHeader, str] | None:
+        try:
+            return message_with_text(access, message_id)
         except GmailAuthError:
             raise
         except GmailError as exc:

@@ -11,6 +11,7 @@ import { foodSummary } from "@/lib/food";
 import { formatNumber, isArabic, t } from "@/lib/i18n";
 import { documentsDueSoon, dx } from "@/lib/documents";
 import { dosesOnDay, rx } from "@/lib/medications";
+import { sx } from "@/lib/shipments";
 import { px } from "@/lib/phone-calls";
 
 // The sections listed on More, and in the iPad sidebar.
@@ -23,7 +24,7 @@ export const logs = [section("health", t.health, "heart"), section("finance", t.
 export const insideHealth = [section("food", t.food, "fork-knife"), section("exercises", et.exercises, "dumbbell"), section("whoop", t.whoop, "activity"), section("medications", rx.medications, "pills")];
 // Money places, investments, cards and installments live inside Finance; they can be pinned the same way.
 export const insideFinance = [section("accounts", t.moneyPlaces, "wallet"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
-export const home = [section("vehicles", t.car, "truck"), section("documents", dx.documents, "file-text"), section("media", t.movies, "film")];
+export const home = [section("vehicles", t.car, "truck"), section("documents", dx.documents, "file-text"), section("shipments", sx.shipments, "package"), section("media", t.movies, "film")];
 const ask = section("ask", t.askOrbit, "message-circle");
 export const system = [section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
 // Ask Orbit leads: it is the assistant, not a setting. Tasks sit with the logs rather than in a group of one.
