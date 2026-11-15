@@ -10,12 +10,14 @@ import { useBankReview } from "@/hooks/use-bank-review";
 import { useCardPicker } from "@/hooks/use-card-picker";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useFolds } from "@/hooks/use-folds";
+import { useHunterCount } from "@/hooks/use-hunter-count";
 import { apiUpdate } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
 import { isToday } from "@/lib/dates";
 import { activeSubscriptions, financeSummary, formatMoney, mainCurrency, nextBillDueDate, spendingByCategory, subscriptionMonthlyTotal } from "@/lib/finance";
 import { budgetMonthTotal, cardsExpiring, fh, isFoldOpen } from "@/lib/finance-hub";
 import { formatDate, t } from "@/lib/i18n";
+import { st } from "@/lib/subscriptions";
 import type { Bill } from "@/lib/types";
 import { cardLabel, formatPercent, obligationsProgress, wealthSummary } from "@/lib/wealth";
 
@@ -30,6 +32,7 @@ export default function Finance() {
   const review = useBankReview(act);
   const { folds, toggle } = useFolds("orbit.finance.folds");
   const pickCard = useCardPicker();
+  const hunted = useHunterCount();
 
   const finance = financeSummary(data);
   // ponytail: totals assume one currency, same as the web app; it is the one most spending is in.
@@ -84,6 +87,14 @@ export default function Finance() {
       subtitle: wealth.owed ? t.owed : fh.obligationsDetail,
       meta: formatMoney(wealth.owed, currency),
       badge: lateInstallments ? { tone: "urgent", glyph: "!", text: fh.overdue(lateInstallments) } : undefined
+    },
+    {
+      href: "/subscriptions",
+      icon: "search",
+      title: st.title,
+      subtitle: st.rowDetail,
+      meta: hunted ? String(hunted) : "",
+      badge: hunted ? { tone: "accent", glyph: "◎", text: st.needsLook } : undefined
     }
   ];
 

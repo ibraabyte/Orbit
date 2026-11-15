@@ -4,6 +4,7 @@ import { Alert, Text } from "react-native";
 import { AppleHealthCard } from "@/components/apple-health-card";
 import { ProviderGrid } from "@/components/ai-provider-parts";
 import { BankSmsCard } from "@/components/bank-sms-card";
+import { GmailCard } from "@/components/gmail-card";
 import { Badge, Card, EmptyState, IconTile, ListRow, toneToBadge, type } from "@/components/drift";
 import { Button, Loading, Screen } from "@/components/screen";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
@@ -12,6 +13,7 @@ import { featuresOf } from "@/lib/feature-models";
 import { digits, t } from "@/lib/i18n";
 import { integrationsApi, seerrState, whoopState, type IntegrationsOverview } from "@/lib/integrations";
 import { getApi } from "@/lib/backend";
+import { hunterApi, type GmailStatus } from "@/lib/subscriptions";
 
 // How many features picked something other than the default, for the "What each feature uses" row.
 function featureCount(overview: IntegrationsOverview): string {
@@ -26,11 +28,14 @@ export default function Integrations() {
   const [overview, setOverview] = useState<IntegrationsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [gmail, setGmail] = useState<GmailStatus | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setOverview(await integrationsApi.overview(getApi()));
+      const [next, mail] = await Promise.all([integrationsApi.overview(getApi()), hunterApi.gmailStatus(getApi()).catch(() => null)]);
+      setOverview(next);
+      setGmail(mail);
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -87,6 +92,8 @@ export default function Integrations() {
       </Card>
 
       <AppleHealthCard status={overview.apple_health} onChange={load} />
+
+      <GmailCard status={gmail} onChange={load} returnPath="integrations" />
 
       <Card title="Seerr" action={<Badge tone={toneToBadge(seerrNow.tone)}>{seerrNow.label}</Badge>}>
         {seerr.error ? <Text style={type.rowSubtitle}>{seerr.error}</Text> : null}
