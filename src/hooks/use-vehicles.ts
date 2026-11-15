@@ -40,5 +40,13 @@ export function useVehicles(userId: string) {
     [refresh]
   );
 
-  return { vehicles, available, refresh, add, update };
+  const remove = useCallback(
+    async (id: string) => {
+      await getApi().delete(`/vehicles/${encodeURIComponent(id)}`);
+      await refresh();
+    },
+    [refresh]
+  );
+
+  return { vehicles, available, refresh, add, update, remove };
 }

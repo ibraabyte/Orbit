@@ -15,11 +15,13 @@ class Vehicle(Owned, Base):
         CheckConstraint("char_length(plate) <= 20", name="plate_length"),
         CheckConstraint("odometer_km >= 0", name="odometer_km"),
         CheckConstraint("next_oil_change_km >= 0", name="next_oil_change_km"),
+        CheckConstraint("body_type in ('sedan', 'hatchback', 'coupe', 'suv', 'pickup', 'van')", name="body_type"),
         Index("vehicles_user_idx", "user_id", "created_at"),
     )
 
     name: Mapped[str] = mapped_column(Text, nullable=False)
     plate: Mapped[str | None] = mapped_column(Text)
+    body_type: Mapped[str | None] = mapped_column(Text)
     odometer_km: Mapped[int | None] = mapped_column(Integer)
     registration_expires_at: Mapped[date | None] = mapped_column(Date)
     insurance_expires_at: Mapped[date | None] = mapped_column(Date)

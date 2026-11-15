@@ -45,6 +45,11 @@ const catalog: Record<string, string[]> = {
 
 export const carMakes = Object.keys(catalog).sort((a, b) => a.localeCompare(b));
 
+// The make a saved name starts with ("Land Rover Defender 2024" → "Land Rover"); null for a typed-in make.
+export function carMakeOf(name: string) {
+  return carMakes.filter((make) => name.startsWith(`${make} `)).sort((a, b) => b.length - a.length)[0] ?? null;
+}
+
 export function carModels(make: string) {
   return catalog[make] ?? [];
 }

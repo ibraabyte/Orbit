@@ -1,12 +1,11 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Text } from "react-native";
-import { AppleHealthCard } from "@/components/apple-health-card";
+import { AppleHealthTile } from "@/components/apple-health-card";
 import { ConnectionTile, IconMark, LogoMark, PickRow, ProviderGrid, ProviderMark, TileGrid, type Pick } from "@/components/ai-provider-parts";
 import { BankSmsCard } from "@/components/bank-sms-card";
 import { GmailCard } from "@/components/gmail-card";
-import { TrackingCard } from "@/components/tracking-card";
-import { Card, EmptyState, Icon, ListRow, type } from "@/components/drift";
+import { Card, EmptyState, Icon, IconTile, ListRow, type } from "@/components/drift";
 import { colors } from "@/components/theme";
 import { PROVIDERS } from "@/lib/ai-providers";
 import { Loading, Screen } from "@/components/screen";
@@ -17,7 +16,7 @@ import { digits, t } from "@/lib/i18n";
 import { AI_CHOICE_NAMES, aiChoicesOf, integrationsApi, seerrState, VOICE_PROVIDER_NAMES, whoopState, type AiChoiceName, type IntegrationsOverview } from "@/lib/integrations";
 import { getApi } from "@/lib/backend";
 import { callsApi, px, type PhoneSetup } from "@/lib/phone-calls";
-import { shipmentsApi, type TrackingStatus } from "@/lib/shipments";
+import { shipmentsApi, sx, type TrackingStatus } from "@/lib/shipments";
 import { hunterApi, type GmailStatus } from "@/lib/subscriptions";
 
 // How many features picked their own model under Advanced, or nothing when all use the defaults.
@@ -44,7 +43,9 @@ export default function Integrations() {
       setOverview(await integrationsApi.overview(getApi()));
       setError(null);
       // The Twilio setup for calls made for you; an older server without it just leaves the tile unconnected.
-      setPhone(await callsApi.setup(getApi()).catch(() => null));
+      // A failed check keeps what was shown, so a slow server never flips Twilio to "not connected".
+      const nextPhone = await callsApi.setup(getApi()).catch(() => null);
+      setPhone((current) => nextPhone ?? current);
       setGmail(await hunterApi.gmailStatus(getApi()).catch(() => null));
       setTracking(await shipmentsApi.overview(getApi()).then((found) => found.tracking).catch(() => null));
     } catch (loadError) {
@@ -109,31 +110,32 @@ export default function Integrations() {
         <TileGrid>
           <ConnectionTile
             wide
-            mark={<IconMark name="watch" />}
+            mark={<LogoMark source={require("../../assets/brand/ai/whoop.png")} />}
             name="WHOOP"
             badge={whoop.tone === "warning" ? "alert" : overview.whoop.connected ? "check" : null}
             icons={["heart", "moon", "activity"]}
             label={`WHOOP, ${whoop.label}, ${whoop.detail}`}
             onPress={overview.whoop.configured ? () => router.push("/whoop") : undefined}
           />
+          <AppleHealthTile status={overview.apple_health} onChange={load} />
         </TileGrid>
       </Card>
 
-      <AppleHealthCard status={overview.apple_health} onChange={load} />
+      <GmailCard tile status={gmail} onChange={load} returnPath="integrations" />
 
       <Card title={t.pv.svcMedia}>
         <TileGrid>
           <ConnectionTile
             wide
-            mark={<IconMark name="film" />}
+            mark={<LogoMark source={require("../../assets/brand/ai/seerr.png")} />}
             name="Seerr"
-            badge={seerr.connected ? "check" : null}
+            // A server that can't be reached shows as a warning mark, not a line of text.
+            badge={seerr.connected ? (seerr.error ? "alert" : "check") : null}
             icons={["film", "tv"]}
-            label={`Seerr, ${seerrNow.label}, ${seerrNow.detail}`}
+            label={`Seerr, ${seerrNow.label}, ${seerr.error ?? seerrNow.detail}`}
             onPress={seerr.connected ? () => router.push("/media") : undefined}
           />
         </TileGrid>
-        {seerr.error ? <Text style={type.rowSubtitle}>{seerr.error}</Text> : null}
         {!seerr.ready ? <Loading /> : seerr.connected ? null : <SeerrConnectForm connect={(url, key) => seerr.connect(url, key).then(load)} />}
       </Card>
 
@@ -151,9 +153,20 @@ export default function Integrations() {
         </TileGrid>
       </Card>
 
-      <GmailCard status={gmail} onChange={load} returnPath="integrations" />
-
-      <TrackingCard status={tracking} onChange={load} />
+      {/* Shipments follow through the person's own 17TRACK key; the key is pasted on the Shipments page. */}
+      <Card title={sx.shipments}>
+        <TileGrid>
+          <ConnectionTile
+            wide
+            mark={<IconTile name="package" />}
+            name="17TRACK"
+            badge={!tracking?.connected ? null : tracking.last_error ? "alert" : "check"}
+            icons={["package", "truck"]}
+            label={`17TRACK, ${tracking?.connected ? sx.trackingLinked : sx.trackingConnect}`}
+            onPress={() => router.push("/shipments")}
+          />
+        </TileGrid>
+      </Card>
 
       <BankSmsCard />
     </Screen>

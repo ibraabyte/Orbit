@@ -6,11 +6,11 @@ import { useSections } from "@/hooks/use-sections";
 import { INSIDE, st, type SectionKey } from "@/lib/app-sections";
 
 const ICONS: Record<SectionKey, IconName> = {
-  health: "activity",
-  food: "coffee",
-  exercises: "zap",
-  whoop: "watch",
-  medications: "plus-square",
+  health: "heart",
+  food: "fork-knife",
+  exercises: "dumbbell",
+  whoop: "activity",
+  medications: "pills",
   finance: "credit-card",
   habits: "repeat",
   library: "bookmark",

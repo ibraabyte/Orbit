@@ -1,16 +1,17 @@
 import { useState } from "react";
 import { Alert } from "react-native";
-import { Badge, Card, IconTile, ListRow } from "@/components/drift";
-import { Button } from "@/components/screen";
+import { ConnectionTile, IconMark } from "@/components/ai-provider-parts";
+import { useOverlays } from "@/components/overlays";
 import { appleHealthApi, type AppleHealthStatus } from "@/lib/apple-health";
 import { appleHealthAvailable, syncAppleHealth } from "@/lib/apple-health-native";
 import { getApi } from "@/lib/backend";
-import { formatDate, t } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
 
-// Apple Health sits next to WHOOP. Only an iPhone build can read Health, so elsewhere the card shows only once
+// Apple Health, a tile next to WHOOP in the Health card. Only an iPhone build can read Health, so elsewhere the card shows only once
 // this account already has days (to let you disconnect them).
-export function AppleHealthCard({ status, onChange }: { status: AppleHealthStatus | undefined; onChange: () => unknown }) {
+export function AppleHealthTile({ status, onChange }: { status: AppleHealthStatus | undefined; onChange: () => unknown }) {
   const [busy, setBusy] = useState(false);
+  const { sheet } = useOverlays();
   if (!status || (!appleHealthAvailable && !status.connected)) return null;
 
   const sync = async () => {
@@ -32,20 +33,28 @@ export function AppleHealthCard({ status, onChange }: { status: AppleHealthStatu
       { text: t.cancel, style: "cancel" }
     ]);
 
-  const synced = status.last_synced_at ? formatDate(status.last_synced_at, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }) : t.pv.ahReads;
+  // Not linked: a tap links it (the Health permission sheet). Linked: sync now or disconnect.
+  const press = () => {
+    if (busy) return;
+    if (!status.connected) return void sync();
+    sheet({
+      title: "Apple Health",
+      options: [
+        ...(appleHealthAvailable ? [{ label: t.pv.ahSync, run: () => void sync() }] : []),
+        { label: t.pv.ahDisconnect, destructive: true, run: disconnect }
+      ]
+    });
+  };
 
   return (
-    <Card title="Apple Health" action={<Badge tone={status.connected ? "success" : "neutral"}>{status.connected ? t.pv.connected : t.pv.notConnected}</Badge>}>
-      {appleHealthAvailable ? (
-        <ListRow
-          leading={<IconTile name="heart" />}
-          title={busy ? t.pv.ahSyncing : status.connected ? t.pv.ahSync : t.pv.ahConnect}
-          subtitle={synced}
-          onPress={busy ? undefined : () => void sync()}
-          chevron
-        />
-      ) : null}
-      {status.connected ? <Button variant="outline" title={t.pv.ahDisconnect} onPress={disconnect} /> : null}
-    </Card>
+    <ConnectionTile
+      wide
+      mark={<IconMark name="heart" color="#FF2D55" />}
+      name="Apple Health"
+      badge={status.connected ? "check" : null}
+      icons={["activity", "moon", "heart"]}
+      label={`Apple Health, ${busy ? t.pv.ahSyncing : status.connected ? t.pv.connected : t.pv.notConnected}`}
+      onPress={press}
+    />
   );
 }

@@ -94,15 +94,15 @@ export default function Health() {
   const medsMeta = data.medications.some(isLow) ? rx.low : openDoses ? `${openDoses}` : undefined;
 
   const allSections: { href: Href; icon: IconName; title: string; subtitle: string; meta?: string }[] = [
-    { href: "/food", icon: "coffee", title: t.food, subtitle: ht.foodDetail, meta: eaten ? `${eaten} ${t.kcal}` : undefined },
+    { href: "/food", icon: "fork-knife", title: t.food, subtitle: ht.foodDetail, meta: eaten ? `${eaten} ${t.kcal}` : undefined },
     { href: "/plan", icon: "calendar", title: pt.plan, subtitle: pt.planDetail },
     { href: "/training", icon: "bar-chart-2", title: tt.workouts, subtitle: tt.workoutsDetail, meta: live.active ? tt.inProgress : undefined },
-    { href: "/exercises", icon: "zap", title: et.exercises, subtitle: ht.exercisesDetail },
+    { href: "/exercises", icon: "dumbbell", title: et.exercises, subtitle: ht.exercisesDetail },
     { href: "/gym", icon: "home", title: et.gym, subtitle: ht.gymDetail },
     { href: "/injuries", icon: "alert-circle", title: et.injuries, subtitle: ht.injuriesDetail, meta: live.injuries ? ht.activeInjuries(live.injuries) : undefined },
     { href: "/body", icon: "maximize", title: tt.measurements, subtitle: tt.measurementsDetail },
-    { href: "/medications", icon: "plus-square", title: rx.medications, subtitle: rx.medicationsDetail, meta: medsMeta },
-    { href: "/whoop", icon: "watch", title: t.whoop, subtitle: ht.whoopDetail, meta: whoop?.connected ? (recovery === null ? undefined : `${Math.round(recovery)}%`) : whoop?.configured ? ht.whoopConnect : undefined }
+    { href: "/medications", icon: "pills", title: rx.medications, subtitle: rx.medicationsDetail, meta: medsMeta },
+    { href: "/whoop", icon: "activity", title: t.whoop, subtitle: ht.whoopDetail, meta: whoop?.connected ? (recovery === null ? undefined : `${Math.round(recovery)}%`) : whoop?.configured ? ht.whoopConnect : undefined }
   ];
   const sections = allSections.filter((section) => !pathHidden(String(section.href), hidden));
 

@@ -10,6 +10,7 @@ function vehicle(overrides: Partial<Vehicle> = {}): Vehicle {
     user_id: "user-1",
     name: "Camry",
     plate: "ABC 1234",
+    body_type: null,
     odometer_km: 80_000,
     registration_expires_at: null,
     insurance_expires_at: null,

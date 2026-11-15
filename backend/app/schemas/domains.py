@@ -490,9 +490,13 @@ class ObligationInstallmentUpdate(Input):
 # Car and watch list
 
 
+BodyType = Literal["sedan", "hatchback", "coupe", "suv", "pickup", "van"]
+
+
 class VehicleCreate(Input):
     name: str = Field(min_length=1, max_length=120)
     plate: str | None = Field(default=None, max_length=20)
+    body_type: BodyType | None = None
     odometer_km: int | None = Field(default=None, ge=0)
     registration_expires_at: date | None = None
     insurance_expires_at: date | None = None
@@ -505,6 +509,7 @@ class VehicleCreate(Input):
 class VehicleUpdate(Input):
     name: str | None = Field(default=None, min_length=1, max_length=120)
     plate: str | None = Field(default=None, max_length=20)
+    body_type: BodyType | None = None
     odometer_km: int | None = Field(default=None, ge=0)
     registration_expires_at: date | None = None
     insurance_expires_at: date | None = None

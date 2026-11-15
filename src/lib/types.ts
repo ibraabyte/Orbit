@@ -378,11 +378,15 @@ export type ObligationInstallment = {
   created_at: string;
 };
 
+export const BODY_TYPES = ["sedan", "hatchback", "coupe", "suv", "pickup", "van"] as const;
+export type BodyType = (typeof BODY_TYPES)[number];
+
 export type Vehicle = {
   id: string;
   user_id: string;
   name: string;
   plate: string | null;
+  body_type: BodyType | null;
   odometer_km: number | null;
   registration_expires_at: string | null;
   insurance_expires_at: string | null;

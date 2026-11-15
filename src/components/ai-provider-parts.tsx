@@ -3,7 +3,7 @@ import { useState, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from "react-native";
 import { Icon, type, type IconName } from "@/components/drift";
 import { Input } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, type Color } from "@/components/theme";
 import { filterModels, modelMaker, PROVIDER_IDS, PROVIDERS, providerState, providerSummary, rolesLine, type ModelKind, type Provider, type ProviderId, type ProviderModel } from "@/lib/ai-providers";
 import { digits, isArabic, t } from "@/lib/i18n";
 import type { IntegrationsOverview } from "@/lib/integrations";
@@ -73,10 +73,10 @@ export function LogoMark({ source, size = 36 }: { source: ImageSourcePropType; s
 }
 
 // An icon on the same white square as a company logo, for a service without one (WHOOP, Seerr).
-export function IconMark({ name, size = 36 }: { name: IconName; size?: number }) {
+export function IconMark({ name, size = 36, color = colors.ink }: { name: IconName; size?: number; color?: Color }) {
   return (
     <View style={[styles.mark, { width: size, height: size, borderRadius: size * 0.28 }]} accessibilityElementsHidden importantForAccessibility="no">
-      <Icon name={name} size={size * 0.5} color={colors.ink} />
+      <Icon name={name} size={size * 0.5} color={color} />
     </View>
   );
 }

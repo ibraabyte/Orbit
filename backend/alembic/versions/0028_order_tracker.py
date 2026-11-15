@@ -11,7 +11,7 @@ No existing row or column is changed or removed.
 Downgrading drops the two tables (the followed shipments are lost) and removes linked 17TRACK keys before narrowing
 the check back to Seerr only.
 
-Comes after 0026 (documents).
+Comes after 0027 (vehicle body type).
 """
 
 from collections.abc import Sequence
@@ -20,8 +20,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0027"
-down_revision: str | None = "0026"
+revision: str = "0028"
+down_revision: str | None = "0027"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

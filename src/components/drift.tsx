@@ -14,9 +14,12 @@ import { barHeights, ringRotations } from "@/lib/ring";
 // name without one) as the Feather glyph. Layout flips by itself in RTL; only direction-carrying icons (chevrons,
 // arrows) need the flip below. Those use the fixed-direction symbols (chevron.right), which iOS does not mirror itself.
 
-export type IconName = ComponentProps<typeof Feather>["name"];
+type FeatherName = ComponentProps<typeof Feather>["name"];
+// A few symbols Feather has no glyph for: SF Symbols on iOS, the closest Feather glyph elsewhere.
+const EXTRA = { "fork-knife": ["fork.knife", "coffee"], dumbbell: ["dumbbell", "zap"], pills: ["pills", "plus-square"] } as const satisfies Record<string, [SFSymbol, FeatherName]>;
+export type IconName = FeatherName | keyof typeof EXTRA;
 
-const sfSymbols: Partial<Record<IconName, SFSymbol>> = {
+const sfSymbols: Partial<Record<FeatherName, SFSymbol>> = {
   activity: "waveform.path.ecg",
   "alert-circle": "exclamationmark.circle",
   "alert-triangle": "exclamationmark.triangle",
@@ -88,9 +91,10 @@ const sfSymbols: Partial<Record<IconName, SFSymbol>> = {
 };
 
 export function Icon({ name, size = 16, color = colors.inkMuted }: { name: IconName; size?: number; color?: Color }) {
-  const symbol = process.env.EXPO_OS === "ios" ? sfSymbols[name] : undefined;
+  const extra = name in EXTRA ? EXTRA[name as keyof typeof EXTRA] : null;
+  const symbol = process.env.EXPO_OS === "ios" ? (extra ? extra[0] : sfSymbols[name as FeatherName]) : undefined;
   if (symbol) return <SymbolView name={symbol} size={size} tintColor={color} weight="medium" accessibilityElementsHidden importantForAccessibility="no" />;
-  return <Feather name={name} size={size} color={color} />;
+  return <Feather name={extra ? extra[1] : (name as FeatherName)} size={size} color={color} />;
 }
 
 // Press feedback: a control dims while it is held. pressFade is for a Pressable's style; inside Link asChild (whose Slot

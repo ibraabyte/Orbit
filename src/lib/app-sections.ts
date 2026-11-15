@@ -133,7 +133,7 @@ const en = {
   sectionsCount: (off: number) => (off ? `${digits(off)} off` : "All on"),
   insideHealth: "Inside Health",
   offWithHealth: "Off with Health",
-  names: { health: "Health", food: "Food", exercises: "Exercises & gym", whoop: "WHOOP", medications: "Medications", finance: "Finance", habits: "Habits", library: "Saver", vehicles: "Car", documents: "Documents", shipments: "Shipments", media: "Movies & TV" } as Record<SectionKey, string>,
+  names: { health: "Health", food: "Food", exercises: "Exercises & gym", whoop: "Body metrics", medications: "Medications", finance: "Finance", habits: "Habits", library: "Saver", vehicles: "Car", documents: "Documents", shipments: "Shipments", media: "Movies & TV" } as Record<SectionKey, string>,
   details: {
     health: "Body, sleep, goals and everything below",
     food: "Calories, meals, groceries",
@@ -159,7 +159,7 @@ const ar: typeof en = {
   sectionsCount: (off: number) => (off ? `${digits(off)} مقفول` : "كلها شغالة"),
   insideHealth: "داخل الصحة",
   offWithHealth: "مقفول مع الصحة",
-  names: { health: "الصحة", food: "الأكل", exercises: "التمارين والنادي", whoop: "WHOOP", medications: "الأدوية", finance: "المالية", habits: "العادات", library: "الحافظة", vehicles: "السيارة", documents: "الوثائق", shipments: "الشحنات", media: "الأفلام والمسلسلات" },
+  names: { health: "الصحة", food: "الأكل", exercises: "التمارين والنادي", whoop: "مؤشرات الجسم", medications: "الأدوية", finance: "المالية", habits: "العادات", library: "الحافظة", vehicles: "السيارة", documents: "الوثائق", shipments: "الشحنات", media: "الأفلام والمسلسلات" },
   details: {
     health: "الجسم والنوم والأهداف وكل اللي تحتها",
     food: "السعرات والوجبات والمشتريات",
