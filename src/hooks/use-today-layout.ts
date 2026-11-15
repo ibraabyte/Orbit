@@ -2,8 +2,9 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSyncExternalStore } from "react";
 import { defaultLayout, moveCard, normalizeLayout, withHidden, type TodayCard, type TodayLayout } from "@/lib/today-layout";
 
-const key = "orbit.today.layout";
-const oldHiddenKey = "orbit.today.hidden";
+// v2 came with the 2026-11 design: its order starts fresh, the cards hidden before stay hidden.
+const key = "orbit.today.layout.v2";
+const oldKeys = ["orbit.today.layout", "orbit.today.hidden"];
 
 // One copy for the whole app, so Today changes the moment the Customize sheet does.
 let current: TodayLayout = defaultLayout;
@@ -22,8 +23,18 @@ function save(next: TodayLayout) {
 
 const loading = (async () => {
   try {
-    const saved = (await AsyncStorage.getItem(key)) ?? (await AsyncStorage.getItem(oldHiddenKey));
+    const saved = await AsyncStorage.getItem(key);
     if (saved) current = normalizeLayout(JSON.parse(saved));
+    else
+      for (const old of oldKeys) {
+        const value = await AsyncStorage.getItem(old);
+        if (value) {
+          // Only cards that look the same as before keep being hidden; the redesigned ones show again.
+          const same: TodayCard[] = ["brief", "dayplan", "digest", "meds", "workout", "week"];
+          current = { ...defaultLayout, hidden: normalizeLayout(JSON.parse(value)).hidden.filter((card) => same.includes(card)) };
+          break;
+        }
+      }
   } catch {
     // A broken saved value falls back to the default order with nothing hidden.
   }
