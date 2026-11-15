@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orbit Logo Reveal</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0A0A0B; }
+  body { display: grid; place-items: center; }
+  #logo { width: min(60vmin, 420px); height: auto; overflow: visible; }
+
+  /* Mask wipe: a thick ring stroke draws clockwise from the thin tail to the round head. */
+  #logo .wipe {
+    stroke-dasharray: 1; stroke-dashoffset: 1;
+    animation: draw 1.3s cubic-bezier(.55, 0, .25, 1) forwards;
+  }
+  /* Settle: tiny overshoot the moment the head lands. */
+  #logo .mark {
+    transform-box: view-box; transform-origin: 50% 50%;
+    animation: settle .3s ease-out 1.3s both;
+  }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes settle { 0%, 100% { transform: scale(1); } 45% { transform: scale(1.04); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    #logo .wipe { animation: none; stroke-dashoffset: 0; }
+    #logo .mark { animation: none; }
+  }
+</style>
+</head>
+<body>
+<svg id="logo" viewBox="0 0 256 256" role="img" aria-label="Orbit">
+  <defs>
+    <mask id="reveal" maskUnits="userSpaceOnUse" x="0" y="0" width="256" height="256">
+      <!-- Ring centred on the mark (128,128), r=84, width 76 covers the whole band incl. the head cap.
+           Starts at -25° (just behind the tail) and runs clockwise. -->
+      <path class="wipe" d="M204.13 92.5A84 84 0 1 1 51.87 163.5A84 84 0 1 1 204.13 92.5"
+            fill="none" stroke="#fff" stroke-width="76" pathLength="1"/>
+    </mask>
+  </defs>
+  <g class="mark">
+    <path mask="url(#reveal)" fill="#D6BE8C" d="M232.32 100.05A108 108 0 1 1 204.37 51.63A25.5 25.5 0 0 1 168.31 87.69C158.64 78.02 145.77 71.32 131.82 69.69C117.88 68.05 103.07 71.44 90.83 79.56C78.58 87.67 69.01 100.49 64.78 115.42C60.54 130.35 61.71 147.29 68.69 162.25C75.66 177.2 88.43 190.02 104.52 197.18C120.6 204.34 139.9 205.71 157.89 200.16C175.88 194.62 192.4 182.13 202.98 164.98C213.56 147.82 219.03 125.84 214.45 104.84A9.25 9.25 0 0 1 232.32 100.05Z"/>
+  </g>
+</svg>
+<script>
+  // Freeze harness: ?t=1.1 pins that moment (keeps each element's own delay).
+  const t = new URLSearchParams(location.search).get("t");
+  if (t !== null) {
+    const T = parseFloat(t);
+    document.querySelectorAll("#logo .wipe, #logo .mark").forEach(el => {
+      const base = parseFloat(getComputedStyle(el).animationDelay) || 0;
+      el.style.animationDelay = (base - T) + "s";
+      el.style.animationPlayState = "paused";
+    });
+  }
+  window.__ready = true;
+</script>
+</body>
+</html>

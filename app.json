@@ -45,9 +45,6 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/brand/night/symbol-sand-1024.png",
-          "imageWidth": 120,
-          "resizeMode": "contain",
           "backgroundColor": "#0A0A0B"
         }
       ],

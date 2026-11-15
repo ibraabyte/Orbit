@@ -13,10 +13,11 @@ import { DarkTheme, DefaultTheme, router, Stack, ThemeProvider, usePathname } fr
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import * as Updates from "expo-updates";
 import { Appearance, AppState, DevSettings, Text, View } from "react-native";
 import { AppLock } from "@/components/app-lock";
+import { LaunchMark } from "@/components/launch-mark";
 import { OverlayProvider } from "@/components/overlays";
 import { SectionOffCover } from "@/components/section-off";
 import { Loading, stackTitle } from "@/components/screen";
@@ -72,6 +73,16 @@ const routePath = (name: string) => "/" + name.replace(/\/?index$/, "");
 
 export default function RootLayout() {
   const [session, setSession] = useState<AppSession | null | undefined>(undefined);
+  // The logo draws itself over whatever is loading underneath, then fades to the app. It sits last in a fragment on
+  // both the loading and the ready screen, so the switch between them doesn't restart it.
+  const [intro, setIntro] = useState(true);
+  const endIntro = useCallback(() => setIntro(false), []);
+  const withIntro = (node: ReactNode) => (
+    <>
+      {node}
+      {intro && <LaunchMark onDone={endIntro} />}
+    </>
+  );
   // The native header and back button read light or dark from the navigation theme, so it follows the phone's setting.
   const palette = usePalette();
   const dark = useScheme() === "dark";
@@ -124,7 +135,7 @@ export default function RootLayout() {
   }
 
   if (session === undefined || (!fontsLoaded && !fontError)) {
-    return (
+    return withIntro(
       <View style={{ flex: 1, justifyContent: "center", backgroundColor: colors.shell }}>
         <Loading />
       </View>
@@ -162,7 +173,7 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 
-  return (
+  return withIntro(
     // Gesture Handler needs one root view around the app (swipe to complete a task).
     <GestureHandlerRootView style={{ flex: 1 }}>
       <ShareIntentProvider options={{ disabled: shareDisabled, resetOnBackground: true }}>
