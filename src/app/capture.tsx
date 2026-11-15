@@ -352,6 +352,9 @@ export default function Capture() {
           submitBehavior="blurAndSubmit"
           onSubmitEditing={() => void submit()}
           returnKeyType="send"
+          // A plain note, not a form: no AutoFill bubble over it.
+          textContentType="none"
+          autoComplete="off"
           editable={!busy && !listening && !cloud.transcribing}
         />
       </View>
