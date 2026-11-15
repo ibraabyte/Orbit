@@ -20,7 +20,14 @@ from app.schemas.tasks import (
 from app.services.tasks import add_steps, complete_task, ensure_list, reminder_for, reschedule_reminder
 
 
+def _place_named(task: Task) -> None:
+    # Clearing the place's name clears the Google place it came from too.
+    if task.place_name is None:
+        task.place_id = None
+
+
 def _created(db: Session, task: Task, list_name: str | None = None, steps: list[str] | None = None) -> None:
+    _place_named(task)
     if list_name:
         task.list_id = ensure_list(db, task.user_id, list_name).id
     if steps:
@@ -35,6 +42,7 @@ def _updated(task: Task, fields: set[str], list_name: str | None = None) -> None
     assert db is not None
     if list_name:
         task.list_id = ensure_list(db, task.user_id, list_name).id
+    _place_named(task)
     if "reminder_at" in fields:
         reschedule_reminder(db, task)
 

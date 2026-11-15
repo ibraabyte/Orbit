@@ -1,4 +1,4 @@
-"""Per-user connections to outside services that use an API key: Seerr, 17TRACK, the AIs and the voice model.
+"""Per-user connections to outside services that use an API key: Seerr, 17TRACK, Google Maps, the AIs and the voice model.
 
 WHOOP has its own table (OAuth tokens, sync state). Keys here are encrypted (app.security.encrypt_secret), are
 never sent back to the app, and go with the account (on delete cascade).
@@ -14,7 +14,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base, created_at, updated_at
 
 # 17track: the user's own 17TRACK API key for following shipments (app/services/tracking_api.py).
-SERVICE_PROVIDERS = ("seerr", "17track")
+# google_maps: the user's own Google Maps Platform key, for travel times and place search (app/services/maps_api.py).
+SERVICE_PROVIDERS = ("seerr", "17track", "google_maps")
 _providers_sql = ", ".join(f"'{p}'" for p in SERVICE_PROVIDERS)
 AI_PROVIDERS = ("anthropic", "openai", "gemini", "openrouter")
 _ai_providers_sql = ", ".join(f"'{p}'" for p in AI_PROVIDERS)
