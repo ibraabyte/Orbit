@@ -188,7 +188,7 @@ const ar: typeof en = {
   gmailConnecting: "يربط…",
   gmailLinked: "مربوط",
   gmailRelink: "يحتاج ربط",
-  gmailConnected: (email: string) => `مربوط: ${email}`,
+  gmailConnected: (email: string) => `مربوط: \u2068${email}\u2069`,
   gmailDisconnect: "افصل Gmail",
   gmailDisconnected: "انفصل Gmail. اللي لقاه باقي.",
   gmailNotSetUp: "حساب Google مو مضبوط في الخادم للحين.",
