@@ -7,11 +7,14 @@ import { nextEpisode, type WatchDraft } from "@/lib/watchlist";
 export function useWatchlist(userId: string) {
   const [items, setItems] = useState<WatchItem[]>([]);
   const [available, setAvailable] = useState(true);
+  // true once a load has worked, so callers can compare against the real list rather than the empty start.
+  const [loaded, setLoaded] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       setItems(await getApi().get<WatchItem[]>("/watch-items"));
       setAvailable(true);
+      setLoaded(true);
     } catch {
       setAvailable(false);
       setItems([]);
@@ -40,5 +43,5 @@ export function useWatchlist(userId: string) {
   const watchedOne = useCallback((item: WatchItem, newSeason = false) => update(item.id, { status: "watching", ...nextEpisode(item, newSeason) }), [update]);
   const remove = useCallback((id: string) => run(() => getApi().delete(`/watch-items/${encodeURIComponent(id)}`)), [run]);
 
-  return { items, available, refresh, save, update, watchedOne, remove };
+  return { items, available, loaded, refresh, save, update, watchedOne, remove };
 }

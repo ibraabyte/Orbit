@@ -29,16 +29,20 @@ from app.routers import (
     gmail,
     integrations,
     legal,
+    maps,
     medications,
     plan,
     profile,
     saver,
+    shipments,
     subscriptions,
     tasks,
     training,
+    travel,
     whoop,
 )
 from app.services import saver_jobs
+from app.services.shipments import scheduler as shipments_scheduler
 from app.services.whoop_sync import scheduler
 
 
@@ -56,9 +60,12 @@ def _integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Background WHOOP sync; does nothing unless WHOOP is configured.
     scheduler.start()
+    # Background shipment updates (17TRACK, shipping emails); only for users who linked a 17TRACK key.
+    shipments_scheduler.start()
     # Saver items left half-done by a restart get a Try again button instead of waiting forever.
     saver_jobs.recover()
     yield
+    shipments_scheduler.stop()
     scheduler.stop()
 
 
@@ -90,6 +97,9 @@ def create_app() -> FastAPI:
         whoop.router,
         gmail.router,
         subscriptions.router,
+        maps.router,
+        shipments.router,
+        travel.router,
         apple_health.router,
         food.foods,
         food.router,

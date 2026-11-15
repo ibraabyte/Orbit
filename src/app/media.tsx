@@ -1,19 +1,21 @@
 import * as Haptics from "expo-haptics";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Alert, Text, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import * as WebBrowser from "expo-web-browser";
+import { Alert, Share, Text, View } from "react-native";
 import { Card, EmptyState, ListRow, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
-import { Chip, openDiscover, openTitle, Poster, PosterGrid, PosterRail, SeeAll } from "@/components/seerr-parts";
+import { CastCard, Chip, openDiscover, openTitle, Poster, PosterGrid, PosterRail, SeeAll } from "@/components/seerr-parts";
 import { BleedRow, Button, Screen } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatDate, t } from "@/lib/i18n";
-import { DISCOVER_ROWS, mt, seerrTitle, type DiscoverRow, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult } from "@/lib/seerr";
+import { canManageUsers, DEFAULT_SLIDERS, mt, planWatchlistSync, syncToSeerr, NETWORKS, seerrTitle, sliderRail, sliderTitle, STUDIOS, visibleSliders, type Rail, type SeerrClient, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult, type SeerrSlider } from "@/lib/seerr";
 import type { WatchItem } from "@/lib/types";
-import { groupWatchItems, progressLabel } from "@/lib/watchlist";
+import { groupWatchItems, progressLabel, watchDraftFromSeerr } from "@/lib/watchlist";
 import { space } from "@/components/theme";
 
 export default function Media() {
@@ -36,7 +38,17 @@ function Connect({ connect, error }: { connect: (url: string, apiKey: string) =>
 type Genre = { id: number; name: string };
 type Pending = { request: SeerrRequest; title: string; posterPath?: string | null };
 
-// Like Seerr's own Discover page: search, request counts, rows of posters, genres, then your watch list.
+// The posters one of Seerr's rails shows. Genre, studio and network rails are chips and load nothing here.
+function railItems(client: SeerrClient, rail: Rail): Promise<SeerrResult[]> | null {
+  if (rail.kind === "posters") return client.discover(rail.list).then((body) => body.results);
+  if (rail.kind === "recentlyAdded") return client.recentlyAdded();
+  if (rail.kind === "recentRequests") return client.recentRequests();
+  if (rail.kind === "watchlist") return client.watchlist();
+  return null;
+}
+
+// Like Seerr's own Discover page: search, request counts, then the rails the admin arranged in Seerr (same order),
+// then your watch list.
 function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   const client = seerr.client!;
   const { sheet } = useOverlays();
@@ -46,8 +58,9 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   // Opened from a saved movie in the saver: start with its title searched.
   const { q } = useLocalSearchParams<{ q?: string }>();
   const [query, setQuery] = useState(q ?? "");
-  const [search, setSearch] = useState<{ text: string; page: number; pages: number; results: SeerrResult[] } | null>(null);
-  const [rows, setRows] = useState<Partial<Record<DiscoverRow, SeerrResult[]>>>({});
+  const [search, setSearch] = useState<{ text: string; page: number; pages: number; results: SeerrResult[]; people: SeerrResult[]; collections: SeerrResult[] } | null>(null);
+  const [sliders, setSliders] = useState<SeerrSlider[]>([]);
+  const [rails, setRails] = useState<Record<number, SeerrResult[]>>({});
   const [genres, setGenres] = useState<{ movie: Genre[]; tv: Genre[] }>({ movie: [], tv: [] });
   const [counts, setCounts] = useState<SeerrCounts | null>(null);
   const [pending, setPending] = useState<Pending[]>([]);
@@ -58,7 +71,17 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
     setLoading(true);
     try {
       const body = await client.searchPage(text.trim(), page);
-      setSearch((before) => ({ text: text.trim(), page: body.page, pages: body.totalPages, results: page > 1 && before ? [...before.results, ...body.results] : body.results }));
+      setSearch((before) => {
+        const keep = page > 1 && before ? before : null;
+        return {
+          text: text.trim(),
+          page: body.page,
+          pages: body.totalPages,
+          results: keep ? [...keep.results, ...body.results] : body.results,
+          people: keep ? [...keep.people, ...body.people] : body.people,
+          collections: keep ? [...keep.collections, ...body.collections] : body.collections
+        };
+      });
     } catch (error) {
       Alert.alert("Seerr", error instanceof Error ? error.message : t.tryAgain);
     } finally {
@@ -71,7 +94,22 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
     setLoading(true);
     const quiet = <T,>(work: Promise<T>) => work.catch(() => null);
     await Promise.all([
-      ...DISCOVER_ROWS.map((row) => quiet(client.discover({ row }).then((body) => setRows((before) => ({ ...before, [row]: body.results }))))),
+      quiet(
+        client
+          .sliders()
+          .catch(() => DEFAULT_SLIDERS)
+          .then((all) => {
+            const shown = visibleSliders(all);
+            setSliders(shown);
+            return Promise.all(
+              shown.map((slider) => {
+                const rail = sliderRail(slider);
+                const work = rail ? railItems(client, rail) : null;
+                return work ? quiet(work.then((items) => setRails((before) => ({ ...before, [slider.id]: items })))) : null;
+              })
+            );
+          })
+      ),
       quiet(Promise.all([client.genres("movie"), client.genres("tv")]).then(([movie, tv]) => setGenres({ movie, tv }))),
       quiet(client.counts().then(setCounts)),
       seerr.isAdmin
@@ -97,6 +135,30 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
     if (q) void runSearch(q);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- first load only; search runs on submit
   }, [client, seerr.isAdmin]);
+
+  // Once per visit, once Orbit's list has loaded: bring Seerr's watchlist and Orbit's watch list together (each title
+  // once per direction, remembered on this phone).
+  const synced = useRef(false);
+  useEffect(() => {
+    if (synced.current || !watchlist.loaded) return;
+    synced.current = true;
+    const storeKey = `orbit.seerr.watchlist-known.${userId}`;
+    void (async () => {
+      try {
+        const [seerrList, saved] = await Promise.all([client.watchlist(), AsyncStorage.getItem(storeKey).catch(() => null)]);
+        const plan = planWatchlistSync(seerrList, watchlist.items, new Set(saved ? (JSON.parse(saved) as string[]) : []));
+        for (const entry of plan.toOrbit) {
+          const draft = watchDraftFromSeerr(entry, "want");
+          if (draft) await watchlist.save(draft).catch(() => undefined);
+        }
+        for (const entry of plan.toSeerr) await syncToSeerr(client, entry.media_type, entry.tmdb_id, entry.title, entry.status);
+        await AsyncStorage.setItem(storeKey, JSON.stringify([...plan.known])).catch(() => undefined);
+      } catch {
+        // Seerr's watchlist missing (older server): nothing to bring together.
+        synced.current = false;
+      }
+    })();
+  }, [watchlist.loaded, watchlist.items, watchlist.save, client, userId]);
 
   // Back from a title: its request and list buttons may have changed things here.
   useFocusEffect(
@@ -126,8 +188,8 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
               { label: t.nextSeason, run: () => void act(() => watchlist.watchedOne(item, true)) }
             ]
           : []),
-        { label: t.finished, run: () => void act(() => watchlist.update(item.id, { status: "done" })) },
-        { label: t.remove, destructive: true, run: () => void act(() => watchlist.remove(item.id)) }
+        { label: t.finished, run: () => void act(async () => (await watchlist.update(item.id, { status: "done" }), await syncToSeerr(client, item.media_type, item.tmdb_id, item.title, "done"))) },
+        { label: t.remove, destructive: true, run: () => void act(async () => (await watchlist.remove(item.id), await syncToSeerr(client, item.media_type, item.tmdb_id, item.title, null))) }
       ]
     });
 
@@ -152,10 +214,22 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
     >
       {seerr.error ? <EmptyState>{seerr.error}</EmptyState> : null}
       {search ? (
-        <Card title={t.results}>
-          {search.results.length ? <PosterGrid items={search.results} /> : <EmptyState>{loading ? `${t.loading}…` : mt.nothingFound}</EmptyState>}
-          {search.page < search.pages ? <Button variant="outline" title={mt.loadMore} disabled={loading} onPress={() => runSearch(search.text, search.page + 1)} /> : null}
-        </Card>
+        <>
+          {search.people.length ? (
+            <Card title={mt.people}>
+              <BleedRow>
+                {search.people.map((person) => (
+                  <CastCard key={person.id} person={{ id: person.id, name: person.name ?? "", profilePath: person.profilePath }} />
+                ))}
+              </BleedRow>
+            </Card>
+          ) : null}
+          <PosterRail title={mt.collections} items={search.collections} />
+          <Card title={t.results}>
+            {search.results.length ? <PosterGrid items={search.results} /> : <EmptyState>{loading ? `${t.loading}…` : mt.nothingFound}</EmptyState>}
+            {search.page < search.pages ? <Button variant="outline" title={mt.loadMore} disabled={loading} onPress={() => runSearch(search.text, search.page + 1)} /> : null}
+          </Card>
+        </>
       ) : (
         <>
           <Card title={seerr.isAdmin ? mt.allRequests : mt.myRequests} action={<SeeAll onPress={() => openRequests()} />}>
@@ -187,27 +261,66 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
               ))}
             </Card>
           ) : null}
-          {DISCOVER_ROWS.map((row) => (
-            <PosterRail key={row} title={mt.rows[row]} items={rows[row] ?? []} onSeeAll={() => openDiscover({ row })} empty={rows[row] ? undefined : <EmptyState>{`${t.loading}…`}</EmptyState>} />
-          ))}
-          {(["movie", "tv"] as SeerrMediaType[]).map((kind) =>
-            genres[kind].length ? (
-              <Card key={kind} title={kind === "tv" ? mt.tvGenres : mt.movieGenres}>
-                <BleedRow>
-                  {genres[kind].map((genre) => (
-                    <Chip key={genre.id} label={genre.name} onPress={() => openDiscover({ row: "genre", kind, genreId: genre.id }, genre.name)} />
-                  ))}
-                </BleedRow>
-              </Card>
-            ) : null
-          )}
+          {sliders.map((slider) => {
+            const rail = sliderRail(slider);
+            const title = sliderTitle(slider);
+            if (!rail) return null;
+            if (rail.kind === "genres") {
+              const kind: SeerrMediaType = rail.media;
+              return genres[kind].length ? (
+                <Card key={slider.id} title={title}>
+                  <BleedRow>
+                    {genres[kind].map((genre) => (
+                      <Chip key={genre.id} label={genre.name} onPress={() => openDiscover({ row: "genre", kind, genreId: genre.id }, genre.name)} />
+                    ))}
+                  </BleedRow>
+                </Card>
+              ) : null;
+            }
+            if (rail.kind === "studios" || rail.kind === "networks") {
+              const row = rail.kind === "studios" ? "studio" : "network";
+              return (
+                <Card key={slider.id} title={title}>
+                  <BleedRow>
+                    {(rail.kind === "studios" ? STUDIOS : NETWORKS).map((company) => (
+                      <Chip key={company.id} label={company.name} onPress={() => openDiscover({ row, id: company.id }, company.name)} />
+                    ))}
+                  </BleedRow>
+                </Card>
+              );
+            }
+            const seeAll = rail.kind === "posters" ? () => openDiscover(rail.list, title) : rail.kind === "recentRequests" ? () => openRequests() : undefined;
+            // Recently added and the watchlist are often empty; they stay hidden then, like on Seerr.
+            const waiting = rails[slider.id] ? undefined : rail.kind === "posters" ? <EmptyState>{`${t.loading}…`}</EmptyState> : undefined;
+            return <PosterRail key={slider.id} title={title} items={rails[slider.id] ?? []} onSeeAll={seeAll} empty={waiting} />;
+          })}
         </>
       )}
       {lists.watching.length ? <Card title={t.watching}>{lists.watching.map((item) => watchRow(item, <RowButton label={t.nextEp} onPress={() => watched(item)} />, progressLabel(item)))}</Card> : null}
-      {lists.want.length ? <Card title={t.wantToWatch}>{lists.want.map((item) => watchRow(item, <RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(item.id))} />))}</Card> : null}
+      {lists.want.length ? <Card title={t.wantToWatch}>{lists.want.map((item) => watchRow(item, <RowButton outline label={t.remove} onPress={() => act(async () => (await watchlist.remove(item.id), await syncToSeerr(client, item.media_type, item.tmdb_id, item.title, null)))} />))}</Card> : null}
       {lists.done.length ? <Card title={t.watched}>{lists.done.map((item) => watchRow(item))}</Card> : null}
       {!watchlist.available ? <EmptyState>{t.error}</EmptyState> : null}
+      {canManageUsers(seerr.user) ? <Button variant="outline" title={mt.users} onPress={() => router.push("/users")} /> : null}
+      {seerr.isAdmin && seerr.webhookPath ? <PushSetup link={`${(process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "")}${seerr.webhookPath}`} serverUrl={seerr.serverUrl} /> : null}
       <Button variant="outline" title={mt.disconnectSeerr} onPress={() => sheet({ title: mt.disconnectSeerr, detail: seerr.serverUrl ?? undefined, options: [{ label: t.disconnect, destructive: true, run: () => void seerr.disconnect() }] })} />
     </Screen>
+  );
+}
+
+
+// Seerr's own push needs its web app; instead Seerr's webhook calls Orbit, and Orbit pushes to this phone.
+// Only an admin can change Seerr's notification settings, so only they see this.
+function PushSetup({ link, serverUrl }: { link: string; serverUrl: string | null }) {
+  return (
+    <Card title={mt.pushTitle} style={{ gap: space.md, paddingVertical: space.lg }}>
+      <Text style={type.rowSubtitle}>{mt.pushSteps}</Text>
+      <Text selectable style={type.rowTitle}>
+        {link}
+      </Text>
+      <View style={{ flexDirection: "row", gap: space.sm, flexWrap: "wrap" }}>
+        <RowButton icon="share" label={mt.shareLink} onPress={() => void Share.share({ message: link })} />
+        {serverUrl ? <RowButton outline label={`${mt.openSeerrSettings} ↗`} onPress={() => void WebBrowser.openBrowserAsync(`${serverUrl}/settings/notifications/webhook`)} /> : null}
+      </View>
+    </Card>
   );
 }

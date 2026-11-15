@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import { type } from "@/components/drift";
 import { Chip } from "@/components/seerr-parts";
 import {
+  canManageRequests,
   canRequest4k,
   canRequestAdvanced,
   chosenService,
@@ -27,6 +28,21 @@ export function useRequestOptions(client: SeerrClient | null, kind: SeerrMediaTy
   const may4k = canRequest4k(user, kind);
   const [services, setServices] = useState<Loaded<SeerrService[]>>("loading");
   const [details, setDetails] = useState<Record<number, Loaded<SeerrServiceDetails>>>({});
+  // People who manage requests can ask on another user's behalf, like in Seerr.
+  const manages = user ? canManageRequests(user) : false;
+  const [users, setUsers] = useState<SeerrUser[]>([]);
+
+  useEffect(() => {
+    if (!client || !manages) return setUsers([]);
+    let live = true;
+    client
+      .users()
+      .then((list) => live && setUsers(list))
+      .catch(() => live && setUsers([]));
+    return () => {
+      live = false;
+    };
+  }, [client, manages]);
 
   useEffect(() => {
     if (!client || !user) return;
@@ -44,7 +60,7 @@ export function useRequestOptions(client: SeerrClient | null, kind: SeerrMediaTy
 
   const list = Array.isArray(services) ? services : [];
   const offer4k = may4k && servicesFor(list, true).length > 0;
-  const hasOptions = offer4k || (advanced && list.length > 0) || (advanced && services === "failed");
+  const hasOptions = offer4k || (advanced && list.length > 0) || (advanced && services === "failed") || users.length > 1;
 
   const loadDetails = useCallback(
     (serverId: number) => {
@@ -58,7 +74,7 @@ export function useRequestOptions(client: SeerrClient | null, kind: SeerrMediaTy
     [client, advanced, details, kind]
   );
 
-  return { advanced, offer4k, hasOptions, services, list, details, loadDetails };
+  return { advanced, offer4k, hasOptions, services, list, details, loadDetails, users, myId: user?.id ?? null };
 }
 
 export type RequestOptionsState = ReturnType<typeof useRequestOptions>;
@@ -95,8 +111,8 @@ export function RequestOptions({
     <View style={{ gap: space.md }}>
       {options.offer4k ? (
         <Group label={mt.quality}>
-          {allowStandard ? <Chip label={mt.standard} selected={!choice.is4k} onPress={() => onChange({ is4k: false, serverId: null, profileId: null, rootFolder: null })} /> : null}
-          {allow4k ? <Chip label={mt.fourK} selected={choice.is4k} onPress={() => onChange({ is4k: true, serverId: null, profileId: null, rootFolder: null })} /> : null}
+          {allowStandard ? <Chip label={mt.standard} selected={!choice.is4k} onPress={() => onChange({ ...choice, is4k: false, serverId: null, profileId: null, rootFolder: null })} /> : null}
+          {allow4k ? <Chip label={mt.fourK} selected={choice.is4k} onPress={() => onChange({ ...choice, is4k: true, serverId: null, profileId: null, rootFolder: null })} /> : null}
         </Group>
       ) : null}
 
@@ -127,6 +143,19 @@ export function RequestOptions({
             .map((folder) => (
               <Chip key={folder.id} label={`\u2068${folder.path}\u2069`} selected={choice.rootFolder === folder.path} onPress={() => onChange({ ...choice, serverId: server?.id ?? null, rootFolder: folder.path })} />
             ))}
+        </Group>
+      ) : null}
+
+      {options.users.length > 1 ? (
+        <Group label={mt.requestFor}>
+          {options.users.map((person) => (
+            <Chip
+              key={person.id}
+              label={person.id === options.myId ? mt.me : (person.displayName ?? `#${person.id}`)}
+              selected={(choice.userId ?? options.myId) === person.id}
+              onPress={() => onChange({ ...choice, userId: person.id === options.myId ? null : person.id })}
+            />
+          ))}
         </Group>
       ) : null}
 

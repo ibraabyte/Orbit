@@ -1,5 +1,6 @@
 import { digits, isArabic } from "@/lib/i18n";
 import { localDateKey } from "@/lib/insights";
+import type { Position, TravelPrefs } from "@/lib/maps";
 import { pt, type DayKind } from "@/lib/plan";
 import { prayerNamesAr, prayerNamesEn, type PrayerName, type PrayerTime } from "@/lib/prayer-times";
 
@@ -7,7 +8,7 @@ import { prayerNamesAr, prayerNamesEn, type PrayerName, type PrayerTime } from "
 // Shapes mirror backend/app/routers/assistant.py (DayPlanReply) and backend/app/services/day_plan.py.
 // /assistant/day/draft is the rules plan (no AI, nothing sent); /assistant/day asks the person's own AI.
 
-export type BlockKind = "prayer" | "reminder" | "appointment" | "task" | "workout" | "break";
+export type BlockKind = "prayer" | "reminder" | "appointment" | "travel" | "task" | "workout" | "break";
 export type DayBlock = {
   start: string;
   end: string;
@@ -25,14 +26,19 @@ const pad = (value: number) => String(value).padStart(2, "0");
 /** A local wall-clock time as the server reads it: "HH:MM", Western digits. */
 export const hhmm = (at: Date) => `${pad(at.getHours())}:${pad(at.getMinutes())}`;
 
-/** What the phone sends: the day, the clock now and today's prayer times. The location stays on the phone. */
-export function dayPlanBody(prayers: PrayerTime[], now: Date, locale: "en" | "ar") {
+/** Only with Google Maps linked: where the phone is and how the person travels, to time the way to appointments. */
+export type DayTravel = { origin: Position; prefs: TravelPrefs };
+
+/** What the phone sends: the day, the clock now and today's prayer times. The location stays on the phone, unless
+ * Google Maps is linked and an appointment today has a place (then it goes along to time the way there; not kept). */
+export function dayPlanBody(prayers: PrayerTime[], now: Date, locale: "en" | "ar", travel?: DayTravel | null) {
   const day = localDateKey(now);
   return {
     date: day,
     locale,
     now: hhmm(now),
-    prayers: prayers.filter((prayer) => localDateKey(prayer.at) === day).map((prayer) => ({ name: prayer.name, at: hhmm(prayer.at) }))
+    prayers: prayers.filter((prayer) => localDateKey(prayer.at) === day).map((prayer) => ({ name: prayer.name, at: hhmm(prayer.at) })),
+    ...(travel ? { origin: travel.origin, travel_mode: travel.prefs.mode, buffer_minutes: travel.prefs.buffer } : {})
   };
 }
 
@@ -86,7 +92,7 @@ const en = {
   sleep: (hours: string) => `Sleep ${hours} h`,
   noWhoop: "No WHOOP recovery today yet, so the plan assumes a normal day.",
   restDay: "Recovery is low: your workout plan says rest today.",
-  kinds: { prayer: "Prayer", reminder: "Reminder", appointment: "Appointment", task: "Task", workout: "Workout", break: "Break" } as Record<BlockKind, string>,
+  kinds: { prayer: "Prayer", reminder: "Reminder", appointment: "Appointment", travel: "Way there", task: "Task", workout: "Workout", break: "Break" } as Record<BlockKind, string>,
   breakTitle: "Short break",
   prayer: (name: string) => `${name} prayer`,
   hint: "A new plan every morning, the first time you open Today."
@@ -114,7 +120,7 @@ const ar: typeof en = {
   sleep: (hours: string) => `النوم ${hours} ساعة`,
   noWhoop: "ما وصل تعافي اليوم من WHOOP للحين، فالخطة على يوم عادي.",
   restDay: "تعافيك منخفض: خطة التمارين تقول ارتاح اليوم.",
-  kinds: { prayer: "صلاة", reminder: "تذكير", appointment: "موعد", task: "مهمة", workout: "تمرين", break: "استراحة" },
+  kinds: { prayer: "صلاة", reminder: "تذكير", appointment: "موعد", travel: "الطريق للموعد", task: "مهمة", workout: "تمرين", break: "استراحة" },
   breakTitle: "استراحة قصيرة",
   prayer: (name: string) => `صلاة ${name}`,
   hint: "خطة جديدة كل صباح، أول ما تفتح شاشة اليوم."

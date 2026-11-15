@@ -170,7 +170,7 @@ const FIELD_NAMES: Record<string, [string, string]> = {
   servings: ["Servings", "الحصص"], serving_label: ["Serving", "الحصة"], serving_grams: ["Grams per serving", "غرام للحصة"], brand: ["Brand", "الماركة"], barcode: ["Barcode", "الباركود"]
 };
 // Ids are shown as the item they point at (the action's label) or not at all.
-const HIDDEN_FIELDS = new Set(["habit_id", "task_id", "card_id", "list_id", "food_id", "tags"]);
+const HIDDEN_FIELDS = new Set(["habit_id", "task_id", "card_id", "list_id", "food_id", "tags", "place_id"]);
 
 const MEAL_TYPES: Record<string, [string, string]> = {
   breakfast: ["Breakfast", "فطور"], lunch: ["Lunch", "غداء"], dinner: ["Dinner", "عشاء"], snack: ["Snack", "سناك"], other: ["Other", "أخرى"]

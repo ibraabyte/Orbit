@@ -54,6 +54,7 @@ TABLES: list[tuple[str, type[m.Base], Any]] = [
     ("habit_logs", m.HabitLog, m.HabitLog.logged_at),
     ("vehicles", m.Vehicle, m.Vehicle.created_at),
     ("documents", m.Document, m.Document.expires_on),
+    ("shipments", m.Shipment, m.Shipment.created_at),
     ("watch_items", m.WatchItem, m.WatchItem.created_at),
     ("gym_equipment", m.GymEquipment, m.GymEquipment.equipment),
     ("injuries", m.Injury, m.Injury.created_at),

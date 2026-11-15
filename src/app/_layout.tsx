@@ -27,7 +27,7 @@ import { clearDashboardCache, DashboardDataProvider } from "@/hooks/use-dashboar
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { clearWidget } from "@/hooks/use-widget-sync";
 import { hasServer, watchSession, type AppSession } from "@/lib/backend";
-import { t } from "@/lib/i18n";
+import { isArabic, t } from "@/lib/i18n";
 
 const configured = hasServer();
 // Sharing into Orbit needs the native share extension, which Expo Go doesn't have.
@@ -54,8 +54,8 @@ const nativeHeader = {
 
 // Sections opened from More get a large title that shrinks into the bar as you scroll. Screens one step further in
 // (one task, a form, a picker) keep the small title.
-const sectionScreens = ["accounts", "ask", "cards", "finance", "investments", "obligations", "subscriptions", "food", "habits", "health", "integrations", "library", "notifications", "media", "discover", "requests", "sections", "settings", "tasks", "vehicles", "whoop", "exercises/index", "gym", "injuries", "week", "training", "body", "plan", "medications", "phone-calls", "documents"];
-const detailScreens = ["day-plan", "saved/[id]", "ai-provider", "ai-features", "health-goals", "person", "task/[id]", "exercises/[id]", "workout", "plan-day", "phone-call"];
+const sectionScreens = ["accounts", "ask", "cards", "finance", "investments", "obligations", "subscriptions", "food", "habits", "health", "integrations", "library", "notifications", "media", "discover", "requests", "sections", "settings", "tasks", "vehicles", "whoop", "exercises/index", "gym", "injuries", "week", "training", "body", "plan", "medications", "phone-calls", "documents", "shipments", "travel", "maps"];
+const detailScreens = ["day-plan", "saved/[id]", "ai-provider", "ai-features", "health-goals", "person", "collection", "credits", "users", "seerr-user", "task/[id]", "exercises/[id]", "workout", "plan-day", "phone-call", "twilio"];
 // Self-contained tasks (add a food, pick an exercise, edit a medication) open as a sheet over what you were doing, with
 // Cancel in its header and swipe-down to close; on Android they push as before.
 const sheetScreens = ["food-add", "food-photo", "food-scan", "workout-pick", "plan-setup", "medication-edit", "document-edit"];
@@ -70,6 +70,9 @@ const sheetHeader = {
 const searchScreens = ["library", "media", "exercises/index"];
 const headerSearch = { placement: "stacked", hideWhenScrolling: false } as const;
 const routePath = (name: string) => "/" + name.replace(/\/?index$/, "");
+// In Arabic, back is a swipe from the right edge. iOS's own back swipe stays on the left edge even when the app is
+// right to left, so Arabic uses react-native-screens' push and edge swipe, which follow the stack's direction.
+const arabicSwipe = isArabic ? ({ animation: "simple_push", animationMatchesGesture: true } as const) : {};
 
 export default function RootLayout() {
   const [session, setSession] = useState<AppSession | null | undefined>(undefined);
@@ -144,7 +147,7 @@ export default function RootLayout() {
 
   const stack = (
     <ThemeProvider value={theme}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.shell } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.shell }, ...arabicSwipe }}>
         <Stack.Protected guard={Boolean(session)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.sheet } }} />

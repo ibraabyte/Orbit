@@ -18,6 +18,9 @@ import { formatDate, formatNumber, t, isArabic } from "@/lib/i18n";
 // The iPad sidebar keeps the groups.
 const big = ["tasks", "health", "finance", "habits"];
 
+const HOME = ["vehicles", "documents", "shipments"];
+const LEISURE = ["travel", "media"];
+
 export default function More() {
   const { data } = useDashboardData();
   const status = useSectionStatus();
@@ -118,10 +121,15 @@ export default function More() {
   // Every other section, in three grouped lists, each row with its live line (a sand icon when it needs a look).
   const rest = shown.filter((item) => !big.includes(item.key) && item.key !== "ask" && item.key !== "settings");
   const inside = (list: Section[]) => rest.filter((item) => list.some((other) => other.key === item.key));
+  // The rest in three small groups. Connections is left out: it has its own tile in Settings.
+  const pick = (keys: string[]) => rest.filter((item) => keys.includes(item.key));
+  const placed = [...insideHealth, ...insideFinance].map((item) => item.key).concat(HOME, LEISURE, "integrations");
   const tileGroups: [string, Section[]][] = [
     [mt.bodyGroup, inside(insideHealth)],
     [mt.moneyGroup, inside(insideFinance)],
-    [mt.lifeGroup, rest.filter((item) => !insideHealth.concat(insideFinance).some((other) => other.key === item.key))]
+    [mt.toolsGroup, rest.filter((item) => !placed.includes(item.key))],
+    [mt.homeGroup, pick(HOME)],
+    [mt.leisureGroup, pick(LEISURE)]
   ];
 
   return (

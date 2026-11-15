@@ -38,13 +38,16 @@ DAY_NAMES = {
 }
 
 
-def user_today(db: Session, user_id: uuid.UUID) -> date:
+def user_zone(db: Session, user_id: uuid.UUID) -> ZoneInfo:
     profile = db.get(Profile, user_id)
     try:
-        zone = ZoneInfo(profile.timezone) if profile and profile.timezone else UTC
+        return ZoneInfo(profile.timezone) if profile and profile.timezone else ZoneInfo("UTC")
     except (KeyError, ValueError):
-        zone = UTC
-    return datetime.now(zone).date()
+        return ZoneInfo("UTC")
+
+
+def user_today(db: Session, user_id: uuid.UUID) -> date:
+    return datetime.now(user_zone(db, user_id)).date()
 
 
 def _plan_out(plan: TrainingPlan) -> dict[str, Any]:

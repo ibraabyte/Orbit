@@ -14,7 +14,10 @@ import { isArabic, t } from "@/lib/i18n";
 import { mt } from "@/lib/seerr";
 import { contentWidth, showsSidebar } from "@/lib/sidebar";
 import { dx } from "@/lib/documents";
+import { tx } from "@/lib/travel";
 import { rx } from "@/lib/medications";
+import { mx } from "@/lib/maps";
+import { sx } from "@/lib/shipments";
 import { st } from "@/lib/subscriptions";
 import { pt } from "@/lib/plan";
 import { tt } from "@/lib/training";
@@ -64,6 +67,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/health": { title: t.health, hint: "weight 82 · slept 7h q4 · workout 40m run" },
   "/health-goals": { title: ht.goals },
   "/whoop": { title: t.whoop },
+  "/twilio": { title: "Twilio" },
   "/food": { title: t.food, hint: "buy milk · plan dinner salmon @friday" },
   "/food-add": { title: t.addFood },
   "/food-scan": { title: t.scanBarcode },
@@ -78,6 +82,9 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/habits": { title: t.habits, hint: "habit read 20 min daily" },
   "/vehicles": { title: t.car },
   "/documents": { title: dx.documents },
+  "/shipments": { title: sx.shipments },
+  "/maps": { title: mx.maps },
+  "/travel": { title: tx.travel },
   "/media": { title: t.movies },
   "/requests": { title: mt.requests },
   "/ask": { title: t.askOrbit },

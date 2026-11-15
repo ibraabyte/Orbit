@@ -1,7 +1,7 @@
 import { router } from "expo-router";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { Badge, Card, Chevron, pressedFade, type } from "@/components/drift";
+import { Avatar, Badge, Card, Chevron, pressedFade, type } from "@/components/drift";
 import { BleedRow, CONTENT_MAX_WIDTH } from "@/components/screen";
 import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { mediaBadge, mt, posterUrl, seerrName, seerrYear, type DiscoverList, type SeerrCast, type SeerrMediaType, type SeerrResult, type StatusBadge } from "@/lib/seerr";
@@ -10,11 +10,15 @@ import { contentWidth } from "@/lib/sidebar";
 
 // The Movies & TV pieces: posters, poster rows and grids, cast faces. Built from the shared theme only.
 
-export const openTitle = (kind: SeerrMediaType, id: number) => router.push({ pathname: "/title", params: { kind, id: String(id) } });
+// edit: a waiting request on that title to open for editing.
+export const openTitle = (kind: SeerrMediaType, id: number, edit?: number) => router.push({ pathname: "/title", params: { kind, id: String(id), ...(edit ? { edit: String(edit) } : {}) } });
 export const openPerson = (id: number) => router.push({ pathname: "/person", params: { id: String(id) } });
+export const openCollection = (id: number) => router.push({ pathname: "/collection", params: { id: String(id) } });
+export const openSeerrUser = (id: number) => router.push({ pathname: "/seerr-user", params: { id: String(id) } });
+export const openCredits = (kind: SeerrMediaType, id: number) => router.push({ pathname: "/credits", params: { kind, id: String(id) } });
+// The list travels as JSON; the Discover screen checks it before using it.
 export function openDiscover(list: DiscoverList, name?: string) {
-  const params = list.row === "genre" ? { row: list.row, kind: list.kind, genre: String(list.genreId), name: name ?? "" } : { row: list.row };
-  router.push({ pathname: "/discover", params });
+  router.push({ pathname: "/discover", params: { list: JSON.stringify(list), name: name ?? "" } });
 }
 
 const POSTER_RATIO = 1.5;
@@ -47,7 +51,7 @@ export function PosterCard({ item, width, onPress }: { item: SeerrResult; width:
   const year = seerrYear(item);
   return (
     <Pressable
-      onPress={onPress ?? (() => (item.mediaType === "movie" || item.mediaType === "tv") && openTitle(item.mediaType, item.id))}
+      onPress={onPress ?? (() => (item.mediaType === "collection" ? openCollection(item.id) : (item.mediaType === "movie" || item.mediaType === "tv") && openTitle(item.mediaType, item.id)))}
       accessibilityRole="button"
       accessibilityLabel={[name, year, badge?.label].filter(Boolean).join(", ")}
       style={({ pressed }) => [{ width, gap: space.sm }, pressed && { opacity: 0.7 }]}
@@ -64,7 +68,7 @@ export function PosterCard({ item, width, onPress }: { item: SeerrResult; width:
         <Text style={type.rowTitle} numberOfLines={2}>
           {name}
         </Text>
-        <Text style={type.rowSubtitle}>{[year, item.mediaType === "tv" ? mt.series : mt.movie].filter(Boolean).join(" · ")}</Text>
+        <Text style={type.rowSubtitle}>{[year, item.mediaType === "tv" ? mt.series : item.mediaType === "collection" ? mt.collection : mt.movie].filter(Boolean).join(" · ")}</Text>
       </View>
     </Pressable>
   );
@@ -132,6 +136,13 @@ export function CastCard({ person }: { person: SeerrCast }) {
       ) : null}
     </Pressable>
   );
+}
+
+/** A Seerr user's picture, or their first letter when there is none or it doesn't load. */
+export function UserAvatar({ uri, name, size = 40 }: { uri: string | null; name: string; size?: number }) {
+  const [broken, setBroken] = useState(false);
+  if (!uri || broken) return <Avatar name={name || "?"} size={size} />;
+  return <Image source={{ uri }} onError={() => setBroken(true)} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: colors.surfaceInset }} accessibilityIgnoresInvertColors />;
 }
 
 /** A pill to tap: a genre, a filter. */

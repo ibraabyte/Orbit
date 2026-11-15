@@ -8,7 +8,7 @@ import { blockRange, blockTitle, dp, energyLine, isNow, upcomingBlocks, type Blo
 import { t } from "@/lib/i18n";
 import type { Task } from "@/lib/types";
 
-const icons: Record<BlockKind, IconName> = { prayer: "moon", reminder: "bell", appointment: "calendar", task: "check-square", workout: "activity", break: "coffee" };
+const icons: Record<BlockKind, IconName> = { prayer: "moon", reminder: "bell", appointment: "calendar", travel: "navigation", task: "check-square", workout: "activity", break: "coffee" };
 
 // A task's block is still to do while the task is open; one finished (here or elsewhere) shows ticked.
 const taskOpen = (block: DayBlock, tasks: Task[]) => (block.task_id ? tasks.some((task) => task.id === block.task_id && task.status === "open") : false);

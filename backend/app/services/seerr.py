@@ -5,6 +5,8 @@ inside the server's own network (localhost, 10.x, 192.168.x, the database contai
 account could use Orbit to reach things that aren't meant to be public.
 """
 
+import hashlib
+import hmac
 import ipaddress
 import re
 import socket
@@ -12,6 +14,8 @@ from typing import Any
 from urllib.parse import quote, urlsplit
 
 import httpx2 as httpx
+
+from app.config import get_settings
 
 # Replaced in tests with httpx2.MockTransport (and `resolve` with a fake).
 transport: httpx.BaseTransport | None = None
@@ -29,13 +33,21 @@ ALLOWED: list[tuple[str, re.Pattern[str]]] = [
         ("GET", r"discover/trending"),
         ("GET", r"discover/(movies|tv)(/upcoming)?"),
         ("GET", r"discover/(movies|tv)/genre/\d+"),
+        ("GET", r"discover/movies/studio/\d+"),
+        ("GET", r"discover/tv/network/\d+"),
+        ("GET", r"discover/watchlist"),
         ("GET", r"genres/(movie|tv)"),
+        # The rails the admin arranged in Seerr, what arrived on the media server last, and streaming services.
+        ("GET", r"settings/discover"),
+        ("GET", r"media"),
+        ("GET", r"watchproviders/(movies|tv)"),
         # One title: details, its seasons and episodes, ratings, and what is like it.
         ("GET", r"(movie|tv)/\d+"),
         ("GET", r"(movie|tv)/\d+/(recommendations|similar)"),
         ("GET", r"movie/\d+/ratings"),
         ("GET", r"tv/\d+/season/\d+"),
         ("GET", r"person/\d+(/combined_credits)?"),
+        ("GET", r"collection/\d+"),
         # Requests. Seerr itself decides who may see, approve, retry or cancel which request.
         ("GET", r"request"),
         ("GET", r"request/count"),
@@ -43,7 +55,25 @@ ALLOWED: list[tuple[str, re.Pattern[str]]] = [
         ("POST", r"request/\d+/(approve|decline)"),
         ("POST", r"request/\d+/retry"),
         ("DELETE", r"request/\d+"),
+        # Changing a waiting request (Seerr allows it only while it waits), and the users to ask on behalf of.
+        ("PUT", r"request/\d+"),
+        ("GET", r"user"),
+        # Seerr's users page: one user, their requests and watchlist, permissions (Seerr's bulk change, which touches
+        # nothing else), and deleting a user. Seerr checks "Manage users" itself.
+        ("GET", r"user/\d+(/requests|/watchlist)?"),
+        ("PUT", r"user"),
+        # Never the owner (user 1), whatever Seerr would say.
+        ("DELETE", r"user/(?!1\b)\d+"),
         ("GET", r"user/\d+/quota"),
+        # Managing one title, for people Seerr lets manage requests: mark it available, clear what Seerr knows, remove
+        # it from Radarr/Sonarr, and the blocklist. Seerr checks the permission itself.
+        ("POST", r"media/\d+/available"),
+        ("DELETE", r"media/\d+(/file)?"),
+        ("POST", r"blocklist"),
+        ("DELETE", r"blocklist/\d+"),
+        # Seerr's own watchlist, kept in step with Orbit's watch list.
+        ("POST", r"watchlist"),
+        ("DELETE", r"watchlist/\d+"),
         # Advanced request options: the Radarr/Sonarr servers Seerr sends to, and one server's quality profiles and
         # folders. Seerr answers these without the servers' keys, and decides itself who may use them in a request.
         ("GET", r"service/(radarr|sonarr)"),
@@ -145,3 +175,60 @@ def call(
         return response.status_code, response.json()
     except ValueError as exc:
         raise SeerrError("That server didn't answer like Seerr does.") from exc
+
+
+# Seerr's webhook: Seerr calls Orbit when something happens to a request or an issue, and Orbit tells the phone.
+# The address carries the user's id and a signature made from the server's secret, so nobody can guess another
+# user's address and no extra key has to be stored.
+def webhook_signature(user_id: object) -> str:
+    secret = get_settings().jwt_secret.encode()
+    return hmac.new(secret, f"orbit:seerr-webhook:{user_id}".encode(), hashlib.sha256).hexdigest()[:40]
+
+
+def webhook_path(user_id: object) -> str:
+    return f"/integrations/seerr/webhook/{user_id}/{webhook_signature(user_id)}"
+
+
+# Seerr's notification types (the default JSON payload's "notification_type") → (Arabic, English) headline.
+HEADLINES: dict[str, tuple[str, str]] = {
+    "MEDIA_PENDING": ("طلب جديد ينتظر موافقتك", "New request waiting for you"),
+    "MEDIA_AUTO_REQUESTED": ("طلب تلقائي جديد", "New automatic request"),
+    "MEDIA_APPROVED": ("قُبل الطلب", "Request approved"),
+    "MEDIA_AUTO_APPROVED": ("قُبل الطلب", "Request approved"),
+    "MEDIA_AVAILABLE": ("جاهز للمشاهدة", "Ready to watch"),
+    "MEDIA_DECLINED": ("رُفض الطلب", "Request declined"),
+    "MEDIA_FAILED": ("تعذّر تنزيل الطلب", "Request failed"),
+    "ISSUE_CREATED": ("بلاغ جديد", "New issue"),
+    "ISSUE_COMMENT": ("تعليق جديد على بلاغ", "New comment on an issue"),
+    "ISSUE_RESOLVED": ("حُلّ البلاغ", "Issue resolved"),
+    "ISSUE_REOPENED": ("أُعيد فتح البلاغ", "Issue reopened"),
+    "TEST_NOTIFICATION": ("تنبيهات Seerr تعمل", "Seerr notifications work"),
+}
+
+
+def _text(value: Any, limit: int = 200) -> str:
+    return value.strip()[:limit] if isinstance(value, str) else ""
+
+
+def notification(payload: dict[str, Any]) -> tuple[dict[str, tuple[str, str]], dict[str, Any]] | None:
+    """Seerr's webhook body → texts for push.send and the screen a tap opens. None for something not worth a push."""
+    kind = _text(payload.get("notification_type"), 40)
+    subject = _text(payload.get("subject"))
+    if kind not in HEADLINES and not subject:
+        return None
+    ar, en = HEADLINES.get(kind, (subject, subject))
+    if kind == "TEST_NOTIFICATION":
+        body_ar, body_en = "وصل التنبيه التجريبي إلى جوالك.", "The test notification reached your phone."
+    else:
+        requested = payload.get("request") if isinstance(payload.get("request"), dict) else {}
+        by = _text(requested.get("requestedBy_username"), 80) if kind == "MEDIA_PENDING" else ""
+        body_ar = " · ".join(part for part in (subject, f"طلبه {by}" if by else "") if part) or ar
+        body_en = " · ".join(part for part in (subject, f"by {by}" if by else "") if part) or en
+    media = payload.get("media") if isinstance(payload.get("media"), dict) else {}
+    kind_of_media, tmdb_id = media.get("media_type"), str(media.get("tmdbId") or "")
+    data = (
+        {"url": f"/title?kind={kind_of_media}&id={tmdb_id}"}
+        if kind_of_media in ("movie", "tv") and tmdb_id.isdigit()
+        else {"url": "/media"}
+    )
+    return {"ar": (ar, body_ar), "en": (en, body_en)}, data

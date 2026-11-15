@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canRequest, canRequest4k, canRequestAdvanced, chosenService, createSeerrClient, DEFAULT_CHOICE, requestBody, seasonRows, serverSeerrCall, servicesFor, type SeerrService } from "@/lib/seerr";
+import { canRequest, canRequest4k, canRequestAdvanced, chosenService, createSeerrClient, DEFAULT_CHOICE, requestBody, seasonRows, serverSeerrCall, servicesFor, type SeerrService, choiceFrom } from "@/lib/seerr";
 
 const radarr: SeerrService[] = [
   { id: 0, name: "Radarr", is4k: false, isDefault: false, activeProfileId: 4, activeDirectory: "/movies" },
@@ -38,7 +38,7 @@ describe("request quality options", () => {
   it("sends only what was picked, and the advanced fields only when allowed", () => {
     expect(requestBody("movie", 7, "all")).toEqual({ mediaType: "movie", mediaId: 7 });
     expect(requestBody("tv", 5, [1, 2])).toEqual({ mediaType: "tv", mediaId: 5, seasons: [1, 2] });
-    const picked = { is4k: true, serverId: 2, profileId: 9, rootFolder: "/movies-4k" };
+    const picked = { is4k: true, serverId: 2, profileId: 9, rootFolder: "/movies-4k", userId: null };
     expect(requestBody("movie", 7, "all", picked, true)).toEqual({ mediaType: "movie", mediaId: 7, is4k: true, serverId: 2, profileId: 9, rootFolder: "/movies-4k" });
     expect(requestBody("movie", 7, "all", picked, false)).toEqual({ mediaType: "movie", mediaId: 7, is4k: true });
     expect(requestBody("tv", 5, "all", { ...DEFAULT_CHOICE, serverId: 1, profileId: 3 }, true)).toEqual({ mediaType: "tv", mediaId: 5, seasons: "all", serverId: 1, profileId: 3 });
@@ -70,5 +70,15 @@ describe("request quality options", () => {
     };
     expect(seasonRows(series).map((row) => row.requestable)).toEqual([false, true]);
     expect(seasonRows(series, true).map((row) => row.requestable)).toEqual([true, false]);
+  });
+});
+
+describe("editing and asking for someone else", () => {
+  it("sends who the request is for, and starts an edit from what the request was sent with", () => {
+    expect(requestBody("movie", 7, "all", { ...DEFAULT_CHOICE, userId: 4 })).toEqual({ mediaType: "movie", mediaId: 7, userId: 4 });
+    const request = { is4k: true, serverId: 2, profileId: 9, rootFolder: "/tv", requestedBy: { id: 4 } };
+    expect(choiceFrom(request, 1)).toEqual({ is4k: true, serverId: 2, profileId: 9, rootFolder: "/tv", userId: 4 });
+    // Your own request: no one else to name.
+    expect(choiceFrom({ ...request, requestedBy: { id: 1 } }, 1).userId).toBeNull();
   });
 });

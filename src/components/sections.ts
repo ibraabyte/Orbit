@@ -11,19 +11,21 @@ import { foodSummary } from "@/lib/food";
 import { formatNumber, isArabic, t } from "@/lib/i18n";
 import { documentsDueSoon, dx } from "@/lib/documents";
 import { dosesOnDay, rx } from "@/lib/medications";
+import { sx } from "@/lib/shipments";
 import { px } from "@/lib/phone-calls";
+import { tx } from "@/lib/travel";
 
 // The sections listed on More, and in the iPad sidebar.
 export type Section = { key: string; href: Href; label: string; icon: IconName };
 
 const section = (key: string, label: string, icon: IconName): Section => ({ key, href: `/${key}` as Href, label, icon });
-export const manage = [section("tasks", t.tasks, "check-square"), section("phone-calls", px.calls, "agent")];
+export const manage = [section("tasks", t.tasks, "check-square"), section("travel", tx.travel, "plane"), section("phone-calls", px.calls, "agent")];
 // Food, Exercises and WHOOP live inside Health now; they can still be pinned for one tap.
 export const logs = [section("health", t.health, "heart"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "saver")];
 export const insideHealth = [section("food", t.food, "fork-knife"), section("exercises", et.exercises, "dumbbell"), section("whoop", t.whoop, "activity"), section("medications", rx.medications, "pills")];
 // Money places, investments, cards and installments live inside Finance; they can be pinned the same way.
 export const insideFinance = [section("accounts", t.moneyPlaces, "wallet"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
-export const home = [section("vehicles", t.car, "truck"), section("documents", dx.documents, "file-text"), section("media", t.movies, "film")];
+export const home = [section("vehicles", t.car, "truck"), section("documents", dx.documents, "file-text"), section("shipments", sx.shipments, "package"), section("media", t.movies, "film")];
 const ask = section("ask", t.askOrbit, "message-circle");
 export const system = [section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
 // Ask Orbit leads: it is the assistant, not a setting. Tasks sit with the logs rather than in a group of one.
@@ -65,7 +67,7 @@ const en = {
   searchPh: "Find a section or ask Orbit", askThis: (q: string) => `Ask Orbit: “${q}”`, today: (n: string) => `${n} today`,
   places: (n: string) => `${n} places`, holdings: (n: string) => `${n} holdings`, cardsN: (n: string) => `${n} cards`, activeN: (n: string) => `${n} active`,
   workoutsWeek: (n: string) => `${n} workouts this week`, medsN: (n: string) => `${n} medicines`, mealsToday: (n: string) => `${n} meals today`,
-  bodyGroup: "Health", moneyGroup: "Money", lifeGroup: "Life & home", searchAsk: "Ask Orbit, or find a section",
+  bodyGroup: "Health", moneyGroup: "Money", toolsGroup: "Your tools", homeGroup: "Home", leisureGroup: "Travel & fun", searchAsk: "Ask Orbit, or find a section",
   spentToday: "spent today", minLeft: (n: string) => `${n} min left this week`, targetMet: "Weekly target met", thisWeek: "this week", noMatch: "No section by that name"
 };
 const ar: typeof en = {
@@ -76,7 +78,7 @@ const ar: typeof en = {
   searchPh: "ابحث عن قسم أو اسأل Orbit", askThis: (q) => `اسأل Orbit: «${q}»`, today: (n) => `${n} اليوم`,
   places: (n) => `${n} أماكن`, holdings: (n) => `${n} استثمارات`, cardsN: (n) => `${n} بطاقات`, activeN: (n) => `${n} نشطة`,
   workoutsWeek: (n) => `${n} تمارين هالأسبوع`, medsN: (n) => `${n} أدوية`, mealsToday: (n) => `${n} وجبات اليوم`,
-  bodyGroup: "الصحة", moneyGroup: "الفلوس", lifeGroup: "الحياة والبيت", searchAsk: "اسأل Orbit أو ابحث عن قسم",
+  bodyGroup: "الصحة", moneyGroup: "الفلوس", toolsGroup: "أدواتك", homeGroup: "البيت", leisureGroup: "السفر والترفيه", searchAsk: "اسأل Orbit أو ابحث عن قسم",
   spentToday: "صرفت اليوم", minLeft: (n) => `باقي ${n} دقيقة هالأسبوع`, targetMet: "خلصت هدف الأسبوع", thisWeek: "هالأسبوع", noMatch: "ما فيه قسم بهالاسم"
 };
 export const mt = isArabic ? ar : en;

@@ -5,10 +5,14 @@ API key once (PUT), the key is kept encrypted, and the app then goes through /in
 never has to live on the phone. AI: the user picks a provider and saves their own key the same way. WHOOP connects
 with its own OAuth flow in app/routers/whoop.py. Voice: an optional speech-to-text model with the user's own key;
 the assistant's mic recordings go through /integrations/voice/transcribe and only the text comes back.
+Push: the app registers the phone (PUT /integrations/push), and Seerr's webhook (the address in the Seerr status)
+turns Seerr's news into notifications on that phone.
 """
 
 import base64
 import binascii
+import hmac
+import uuid
 from datetime import datetime
 from typing import Annotated, Any, Literal
 
@@ -20,12 +24,12 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.deps import Db, UserId
-from app.models import AiConnection, Profile, ServiceConnection, User, VoiceConnection, WhoopConnection
+from app.models import AiConnection, Profile, PushDevice, ServiceConnection, User, VoiceConnection, WhoopConnection
 from app.models.integrations import AI_CHOICES, AI_PROVIDERS, VOICE_PROVIDERS
 from app.routers.apple_health import AppleHealthStatus, apple_health_status
 from app.routers.chatgpt import ChatgptStatus
 from app.security import decrypt_secret, encrypt_secret
-from app.services import chatgpt_auth, feature_models, seerr, voice_stt, whoop_ai, whoop_api
+from app.services import chatgpt_auth, feature_models, push, seerr, voice_stt, whoop_ai, whoop_api
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -42,6 +46,13 @@ class SeerrStatus(BaseModel):
     url: str | None = None
     account_name: str | None = None
     connected_at: datetime | None = None
+    # Path under Orbit's address for Seerr's webhook (Settings › Notifications › Webhook in Seerr).
+    webhook_path: str | None = None
+
+
+class PushRegister(BaseModel):
+    token: str = Field(pattern=r"^Expo(nent)?PushToken\[[A-Za-z0-9_-]{8,200}\]$")
+    language: Literal["ar", "en"] = "en"
 
 
 class AiStatus(BaseModel):
@@ -207,7 +218,13 @@ def _seerr_row(db: Session, user_id) -> ServiceConnection | None:
 def _seerr_status(row: ServiceConnection | None) -> SeerrStatus:
     if row is None:
         return SeerrStatus(connected=False)
-    return SeerrStatus(connected=True, url=row.url, account_name=row.account_name, connected_at=row.created_at)
+    return SeerrStatus(
+        connected=True,
+        url=row.url,
+        account_name=row.account_name,
+        connected_at=row.created_at,
+        webhook_path=seerr.webhook_path(row.user_id),
+    )
 
 
 def _is_admin(db: Session, user_id) -> bool:
@@ -460,7 +477,7 @@ def disconnect_seerr(user_id: UserId, db: Db):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.api_route("/seerr/api/{path:path}", methods=["GET", "POST", "DELETE"], include_in_schema=False)
+@router.api_route("/seerr/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE"], include_in_schema=False)
 def seerr_proxy(path: str, request: Request, user_id: UserId, db: Db, body: Annotated[dict[str, Any] | None, Body()] = None) -> Any:
     """The app's Seerr calls (search, trending, requests, approve...), sent on with this user's saved key."""
     method = request.method
@@ -477,7 +494,7 @@ def seerr_proxy(path: str, request: Request, user_id: UserId, db: Db, body: Anno
             method,
             path,
             params=list(request.query_params.multi_items()),
-            json=body if method == "POST" else None,
+            json=body if method in ("POST", "PUT") else None,
             allow_private=_is_admin(db, user_id),
         )
     except seerr.SeerrError as exc:
@@ -490,3 +507,27 @@ def seerr_proxy(path: str, request: Request, user_id: UserId, db: Db, body: Anno
     if code == 204 or data is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     return JSONResponse(data, status_code=code)
+
+
+@router.put("/push", status_code=status.HTTP_204_NO_CONTENT)
+def register_push(body: PushRegister, user_id: UserId, db: Db):
+    """This phone gets this account's notifications. A phone signed in to someone else before moves over."""
+    device = db.get(PushDevice, body.token)
+    if device is None:
+        db.add(PushDevice(token=body.token, user_id=user_id, language=body.language))
+    else:
+        device.user_id, device.language = user_id, body.language
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/seerr/webhook/{owner}/{signature}", status_code=status.HTTP_204_NO_CONTENT, include_in_schema=False)
+def seerr_webhook(owner: uuid.UUID, signature: str, db: Db, body: Annotated[dict[str, Any] | None, Body()] = None):
+    """Called by the user's Seerr server, not the app: no sign-in, the signed address says whose it is."""
+    if not hmac.compare_digest(signature, seerr.webhook_signature(owner)) or _seerr_row(db, owner) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found.")
+    found = seerr.notification(body or {})
+    if found:
+        texts, data = found
+        push.send(db, owner, texts, data)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

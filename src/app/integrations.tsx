@@ -5,7 +5,7 @@ import { AppleHealthTile } from "@/components/apple-health-card";
 import { ConnectionTile, IconMark, LogoMark, PickRow, ProviderGrid, ProviderMark, TileGrid, type Pick } from "@/components/ai-provider-parts";
 import { BankSmsCard } from "@/components/bank-sms-card";
 import { GmailCard } from "@/components/gmail-card";
-import { Card, EmptyState, Icon, ListRow, type } from "@/components/drift";
+import { Card, EmptyState, Icon, IconTile, ListRow, type } from "@/components/drift";
 import { colors } from "@/components/theme";
 import { PROVIDERS } from "@/lib/ai-providers";
 import { Loading, Screen } from "@/components/screen";
@@ -16,7 +16,10 @@ import { digits, t } from "@/lib/i18n";
 import { AI_CHOICE_NAMES, aiChoicesOf, integrationsApi, seerrState, VOICE_PROVIDER_NAMES, whoopState, type AiChoiceName, type IntegrationsOverview } from "@/lib/integrations";
 import { getApi } from "@/lib/backend";
 import { callsApi, px, type PhoneSetup } from "@/lib/phone-calls";
+import { mapsApi, mx, type MapsStatus } from "@/lib/maps";
+import { shipmentsApi, sx, type TrackingStatus } from "@/lib/shipments";
 import { hunterApi, type GmailStatus } from "@/lib/subscriptions";
+import { travelApi, tx, type TravelKey } from "@/lib/travel";
 
 // How many features picked their own model under Advanced, or nothing when all use the defaults.
 function featureCount(overview: IntegrationsOverview): string | null {
@@ -34,6 +37,9 @@ export default function Integrations() {
   const [saving, setSaving] = useState(false);
   const [phone, setPhone] = useState<PhoneSetup | null>(null);
   const [gmail, setGmail] = useState<GmailStatus | null>(null);
+  const [tracking, setTracking] = useState<TrackingStatus | null>(null);
+  const [maps, setMaps] = useState<MapsStatus | null>(null);
+  const [travelKey, setTravelKey] = useState<TravelKey | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -45,6 +51,9 @@ export default function Integrations() {
       const nextPhone = await callsApi.setup(getApi()).catch(() => null);
       setPhone((current) => nextPhone ?? current);
       setGmail(await hunterApi.gmailStatus(getApi()).catch(() => null));
+      setTracking(await shipmentsApi.overview(getApi()).then((found) => found.tracking).catch(() => null));
+      setMaps(await mapsApi.status(getApi()).catch(() => null));
+      setTravelKey(await travelApi.overview(getApi()).then((found) => found.key).catch(() => null));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
     } finally {
@@ -136,6 +145,21 @@ export default function Integrations() {
         {!seerr.ready ? <Loading /> : seerr.connected ? null : <SeerrConnectForm connect={(url, key) => seerr.connect(url, key).then(load)} />}
       </Card>
 
+      {/* Travel prices come through the person's own SerpApi key; the key is pasted on the Travel page. */}
+      <Card title={tx.travel}>
+        <TileGrid>
+          <ConnectionTile
+            wide
+            mark={<IconTile name="plane" />}
+            name="SerpApi"
+            badge={travelKey?.connected ? "check" : null}
+            icons={["plane", "bed"]}
+            label={`SerpApi, ${travelKey?.connected ? tx.keyLinked : tx.keyConnect}`}
+            onPress={() => router.push("/travel")}
+          />
+        </TileGrid>
+      </Card>
+
       <Card title={px.calls}>
         <TileGrid>
           <ConnectionTile
@@ -145,11 +169,40 @@ export default function Integrations() {
             badge={phone?.connected ? "check" : null}
             icons={["phone-outgoing"]}
             label={`Twilio, ${phone?.connected ? px.connected : px.notConnected}`}
-            onPress={() => router.push("/phone-calls")}
+            onPress={() => router.push("/twilio")}
           />
         </TileGrid>
       </Card>
 
+      {/* Shipments follow through the person's own 17TRACK key; the key is pasted on the Shipments page. */}
+      <Card title={sx.shipments}>
+        <TileGrid>
+          <ConnectionTile
+            wide
+            mark={<IconTile name="package" />}
+            name="17TRACK"
+            badge={!tracking?.connected ? null : tracking.last_error ? "alert" : "check"}
+            icons={["package", "truck"]}
+            label={`17TRACK, ${tracking?.connected ? sx.trackingLinked : sx.trackingConnect}`}
+            onPress={() => router.push("/shipments")}
+          />
+        </TileGrid>
+      </Card>
+
+      {/* Leave-time alerts use the person's own Google Maps key, pasted on the Google Maps page. */}
+      <Card title={mx.maps}>
+        <TileGrid>
+          <ConnectionTile
+            wide
+            mark={<IconTile name="navigation" />}
+            name="Google Maps"
+            badge={maps?.connected ? "check" : null}
+            icons={["map-pin", "clock"]}
+            label={`Google Maps, ${maps?.connected ? mx.linked : mx.connect}`}
+            onPress={() => router.push("/maps")}
+          />
+        </TileGrid>
+      </Card>
 
       <BankSmsCard />
     </Screen>

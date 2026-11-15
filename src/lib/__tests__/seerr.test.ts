@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl } from "@/lib/seerr";
+import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER, collectionToRequest, streamingIn, avatarUrl, flipPermission, canManageUsers, planWatchlistSync } from "@/lib/seerr";
 
 // A stand-in for Orbit's API client: records the calls the app would send to the server.
 function fakeServer(responses: Record<string, unknown>) {
@@ -72,7 +72,7 @@ describe("seerr details", () => {
       [`GET ${base}/person/31/combined_credits`]: { cast: [{ id: 1, mediaType: "movie", releaseDate: "2001-01-01" }, { id: 2, mediaType: "tv", firstAirDate: "2020-01-01" }], crew: [{ id: 1, mediaType: "movie" }] },
       [`POST ${base}/request`]: { id: 9, status: 1 },
       [`POST ${base}/request/9/retry`]: { id: 9, status: 2 },
-      [`GET ${base}/request?take=20&skip=40&filter=processing&sort=added`]: { pageInfo: { pages: 3, page: 3, results: 41 }, results: [] }
+      [`GET ${base}/request?take=20&skip=40&filter=processing&sort=added&mediaType=all`]: { pageInfo: { pages: 3, page: 3, results: 41 }, results: [] }
     });
     const upcoming = await seerr.discover({ row: "upcomingMovies" }, 2);
     expect(upcoming.results.map((item) => [item.id, item.mediaType])).toEqual([[5, "movie"], [6, "movie"]]);
@@ -153,5 +153,130 @@ describe("seerr details", () => {
     expect(quotaLine({ limit: 5, used: 2, days: 7 }, "movie")).toBe("3 of 5 movie requests left · every 7 days");
     expect(quotaLine({ limit: 0 }, "tv")).toBeNull();
     expect(quotaLine(undefined, "tv")).toBeNull();
+  });
+});
+
+describe("seerr language", () => {
+  it("asks Seerr for Arabic on reads only, and keeps a language already named", () => {
+    expect(withLanguage("GET", "search?query=dune&page=1", "ar")).toBe("search?query=dune&page=1&language=ar");
+    expect(withLanguage("GET", "movie/7", "ar")).toBe("movie/7?language=ar");
+    expect(withLanguage("GET", "movie/7?language=en", "ar")).toBe("movie/7?language=en");
+    expect(withLanguage("POST", "request", "ar")).toBe("request");
+    expect(withLanguage("GET", "movie/7", null)).toBe("movie/7");
+  });
+});
+
+describe("seerr discover rails and filters", () => {
+  it("never sends the display language to discover/movies or discover/tv, where Seerr reads it as original language", () => {
+    expect(withLanguage("GET", "discover/movies?page=1", "ar")).toBe("discover/movies?page=1");
+    expect(withLanguage("GET", "discover/tv", "ar")).toBe("discover/tv");
+    expect(withLanguage("GET", "discover/movies/genre/18?page=1", "ar")).toBe("discover/movies/genre/18?page=1&language=ar");
+  });
+
+  it("builds each rail the way Seerr's Discover page does", () => {
+    expect(sliderRail({ type: SLIDER.popularMovies })).toEqual({ kind: "posters", list: { row: "movies" } });
+    expect(sliderRail({ type: SLIDER.studios })).toEqual({ kind: "studios" });
+    expect(sliderRail({ type: SLIDER.tvKeyword, data: "210024" })).toEqual({ kind: "posters", list: { row: "filtered", kind: "tv", filters: { keywords: "210024" } } });
+    expect(sliderRail({ type: SLIDER.movieStreaming, data: "SA,8|337" })).toEqual({ kind: "posters", list: { row: "filtered", kind: "movie", filters: { watchRegion: "SA", watchProviders: "8|337" } } });
+    expect(sliderRail({ type: SLIDER.network, data: "213" })).toEqual({ kind: "posters", list: { row: "network", id: 213 } });
+    expect(sliderRail({ type: SLIDER.movieGenre, data: "" })).toBeNull();
+    expect(sliderRail({ type: 99 })).toBeNull();
+    expect(visibleSliders([{ id: 1, type: 4, enabled: true, order: 2 }, { id: 2, type: 5, enabled: false, order: 0 }, { id: 3, type: 9, enabled: true, order: 1 }]).map((slider) => slider.id)).toEqual([3, 1]);
+  });
+
+  it("puts filters on movies and series with Seerr's names for each kind's dates", () => {
+    expect(filteredPath("movie", { genre: "18,35", from: "2010-01-01", to: "2019-12-31" })).toBe("discover/movies?genre=18%2C35&primaryReleaseDateGte=2010-01-01&primaryReleaseDateLte=2019-12-31");
+    expect(filteredPath("tv", { from: "2020-01-01", watchProviders: "8|337" })).toBe("discover/tv?watchProviders=8%7C337&firstAirDateGte=2020-01-01");
+    expect(withFilters({ row: "upcomingMovies" }, { genre: "18" })).toEqual({ row: "upcomingMovies" });
+    expect(withFilters({ row: "network", id: 213 }, {})).toEqual({ row: "network", id: 213 });
+    expect(withFilters({ row: "network", id: 213 }, { sortBy: "vote_average.desc" })).toEqual({ row: "filtered", kind: "tv", filters: { network: "213", sortBy: "vote_average.desc" } });
+    // Switching off the genre a list came with drops it from the query.
+    expect(withFilters({ row: "genre", kind: "movie", genreId: 18 }, { genre: undefined })).toEqual({ row: "filtered", kind: "movie", filters: {} });
+  });
+
+  it("only takes list shapes it knows from a link", () => {
+    expect(parseList(JSON.stringify({ row: "studio", id: 2 }))).toEqual({ row: "studio", id: 2 });
+    expect(parseList(JSON.stringify({ row: "filtered", kind: "tv", filters: { genre: "18", evil: 5 } }))).toEqual({ row: "filtered", kind: "tv", filters: { genre: "18" } });
+    expect(parseList(JSON.stringify({ row: "studio", id: "x" }))).toBeNull();
+    expect(parseList("not json")).toBeNull();
+  });
+
+  it("loads the admin's rails, and titles for lists that only carry ids", async () => {
+    const base = "/integrations/seerr/api";
+    const answers: Record<string, unknown> = {
+      [`GET ${base}/settings/discover`]: [],
+      [`GET ${base}/media?filter=allavailable&take=15&sort=mediaAdded`]: { results: [{ mediaType: "movie", tmdbId: 7 }, { mediaType: "music", tmdbId: 1 }, { mediaType: "tv", tmdbId: 404 }] },
+      [`GET ${base}/movie/7`]: { id: 7, title: "Made Up" }
+    };
+    const call = <T,>(method: string, path: string) => (`${method} ${path}` in answers ? Promise.resolve(answers[`${method} ${path}`] as T) : Promise.reject(new Error(path)));
+    const seerr = createSeerrClient(serverSeerrCall({ request: call } as never, null));
+    expect((await seerr.sliders()).length).toBe(12);
+    expect(await seerr.recentlyAdded()).toEqual([{ id: 7, title: "Made Up", mediaType: "movie" }]);
+  });
+});
+
+describe("seerr search and collections", () => {
+  it("splits search into titles, people and collections, and fills a collection's films", async () => {
+    const base = "/integrations/seerr/api";
+    const answers: Record<string, unknown> = {
+      [`GET ${base}/search?query=dune&page=1`]: {
+        page: 1,
+        totalPages: 1,
+        results: [{ id: 1, mediaType: "movie", title: "Dune" }, { id: 2, mediaType: "person", name: "Made Up Actor" }, { id: 3, mediaType: "collection", title: "Dune Collection" }]
+      },
+      [`GET ${base}/collection/3`]: { id: 3, name: "Dune Collection", overview: "Both films.", parts: [{ id: 1, title: "Dune", mediaInfo: { status: 5 } }, { id: 4, title: "Dune: Part Two" }] }
+    };
+    const call = <T,>(method: string, path: string) => (`${method} ${path}` in answers ? Promise.resolve(answers[`${method} ${path}`] as T) : Promise.reject(new Error(path)));
+    const seerr = createSeerrClient(serverSeerrCall({ request: call } as never, null));
+    const found = await seerr.searchPage("dune");
+    expect([found.results, found.people, found.collections].map((list) => list.map((item) => item.id))).toEqual([[1], [2], [3]]);
+    const collection = await seerr.collection(3);
+    expect(collection.parts.every((part) => part.mediaType === "movie")).toBe(true);
+    // Only the film that isn't on the server yet gets asked for.
+    expect(collectionToRequest(collection.parts).map((part) => part.id)).toEqual([4]);
+  });
+});
+
+describe("seerr title extras", () => {
+  it("lists the subscriptions it streams on here, best known first", () => {
+    const details = { watchProviders: [{ iso_3166_1: "US", flatrate: [{ id: 1, name: "Elsewhere" }] }, { iso_3166_1: "SA", link: "https://example.com/watch", flatrate: [{ id: 9, name: "Second", displayPriority: 5 }, { id: 8, name: "First", displayPriority: 1 }], buy: [{ id: 2, name: "Store" }] }] };
+    expect(streamingIn(details)).toEqual({ link: "https://example.com/watch", providers: [{ id: 8, name: "First", displayPriority: 1 }, { id: 9, name: "Second", displayPriority: 5 }] });
+    expect(streamingIn({}).providers).toEqual([]);
+  });
+
+  it("never offers a request for a blocklisted title, but does for a deleted one", () => {
+    expect(canRequest({ mediaType: "movie", mediaInfo: { status: 6 } })).toBe(false);
+    expect(canRequest({ mediaType: "movie", mediaInfo: { status: 7 } })).toBe(true);
+    expect(mediaBadge(6)?.glyph).toBe("⊘");
+  });
+});
+
+describe("seerr users", () => {
+  it("finds avatars on the Seerr server, switches one permission, and knows who manages users", () => {
+    expect(avatarUrl("/avatarproxy/abc", "https://seerr.example.com")).toBe("https://seerr.example.com/avatarproxy/abc");
+    expect(avatarUrl("https://plex.tv/users/1/avatar", "https://seerr.example.com")).toBe("https://plex.tv/users/1/avatar");
+    expect(avatarUrl(null, "https://seerr.example.com")).toBeNull();
+    expect(flipPermission(32, 128)).toBe(160);
+    expect(flipPermission(160, 128)).toBe(32);
+    expect(canManageUsers({ permissions: 8 })).toBe(true);
+    expect(canManageUsers({ permissions: 2 })).toBe(true);
+    expect(canManageUsers({ permissions: 16 | 32 })).toBe(false);
+  });
+});
+
+describe("seerr watchlist sync", () => {
+  it("brings each title over once in each direction, and leaves Orbit's done and removed ones alone", () => {
+    const seerrList = [{ id: 1, mediaType: "movie" as const, title: "On both" }, { id: 2, mediaType: "tv" as const, name: "Only in Seerr" }, { id: 3, mediaType: "movie" as const, title: "Done in Orbit" }, { id: 4, mediaType: "movie" as const, title: "Removed in Orbit" }];
+    const orbit = [
+      { tmdb_id: 1, media_type: "movie" as const, status: "want" as const, title: "On both" },
+      { tmdb_id: 3, media_type: "movie" as const, status: "done" as const, title: "Done in Orbit" },
+      { tmdb_id: 5, media_type: "tv" as const, status: "watching" as const, title: "Only in Orbit" }
+    ];
+    const plan = planWatchlistSync(seerrList, orbit, new Set(["movie-4"]));
+    expect(plan.toOrbit.map((item) => item.id)).toEqual([2]);
+    expect(plan.toSeerr.map((item) => item.tmdb_id)).toEqual([5]);
+    // Next time nothing moves, even if a list changes back.
+    const again = planWatchlistSync(seerrList, orbit.filter((item) => item.tmdb_id !== 5), plan.known);
+    expect([again.toOrbit, again.toSeerr]).toEqual([[], []]);
   });
 });

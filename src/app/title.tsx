@@ -1,13 +1,13 @@
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, CheckItem, EmptyState, Icon, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { RequestOptions, useRequestOptions } from "@/components/request-options";
-import { CastCard, Chip, FactRows, openDiscover, Poster, PosterRail, StatusPill } from "@/components/seerr-parts";
+import { CastCard, Chip, FactRows, openCollection, openCredits, openDiscover, Poster, PosterRail, SeeAll, StatusPill } from "@/components/seerr-parts";
 import { BleedRow, Button, CONTENT_MAX_WIDTH } from "@/components/screen";
 import { colors, fonts, lineHeights, radius, shadow, space, textSize, usePalette } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -17,6 +17,7 @@ import { digits, formatDate, t } from "@/lib/i18n";
 import {
   backdropUrl,
   canRequest,
+  choiceFrom,
   DEFAULT_CHOICE,
   factLine,
   factRows,
@@ -29,6 +30,8 @@ import {
   seasonRows,
   seerrName,
   seerrPageUrl,
+  streamingIn,
+  syncToSeerr,
   topCast,
   trailerUrl,
   type SeerrDetails,
@@ -47,7 +50,7 @@ type Episodes = SeerrEpisode[] | "loading" | "failed";
 // One movie or series, like its page in Seerr: backdrop, poster, facts, request (by season for a series), trailer,
 // play, cast, seasons with episodes, and what's like it. Opened from anywhere in Movies & TV.
 export default function Title() {
-  const params = useLocalSearchParams<{ kind: SeerrMediaType; id: string }>();
+  const params = useLocalSearchParams<{ kind: SeerrMediaType; id: string; edit?: string }>();
   const kind: SeerrMediaType = params.kind === "tv" ? "tv" : "movie";
   const tmdbId = Number(params.id);
   const insets = useSafeAreaInsets();
@@ -69,7 +72,31 @@ export default function Title() {
   // A movie request being set up (quality picked) before it's sent. A series uses `picking` for the same.
   const [composing, setComposing] = useState(false);
   const [choice, setChoice] = useState<RequestChoice>(DEFAULT_CHOICE);
+  // A waiting request being changed (seasons, server, profile, folder, or whose it is) instead of a new one.
+  const [editing, setEditing] = useState<SeerrRequest | null>(null);
   const options = useRequestOptions(client, kind, seerr.user);
+
+  const startEdit = (request: SeerrRequest) => {
+    setEditing(request);
+    setChoice(choiceFrom(request, seerr.user?.id ?? null));
+    if (kind === "tv") setPicking(new Set((request.seasons ?? []).map((season) => season.seasonNumber)));
+    else setComposing(true);
+  };
+  const stopEditing = () => {
+    setEditing(null);
+    setPicking(null);
+    setComposing(false);
+  };
+
+  // Opened from "Edit request" on the Requests screen: start editing once the title (and its requests) has loaded.
+  const editAsked = useRef(false);
+  useEffect(() => {
+    if (editAsked.current || !params.edit || !item || !seerr.user) return;
+    editAsked.current = true;
+    const request = item.mediaInfo?.requests?.find((entry) => entry.id === Number(params.edit) && entry.status === 1);
+    if (request) startEdit(request);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once, when everything it needs is there
+  }, [item, seerr.user, params.edit]);
 
   const load = useCallback(async () => {
     if (!client) return;
@@ -97,6 +124,7 @@ export default function Title() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setPicking(null);
       setComposing(false);
+      setEditing(null);
       await load();
     } catch (error) {
       Alert.alert("Seerr", error instanceof Error ? error.message : t.tryAgain);
@@ -152,10 +180,19 @@ export default function Title() {
   const facts = factRows(item, (day) => formatDate(day, { day: "numeric", month: "short", year: "numeric" }));
   const onList = watchlist.items.find((row) => row.tmdb_id === tmdbId && row.media_type === kind);
   const listChoices: [WatchStatus, string][] = [["want", t.wantToWatch], ["watching", t.watching], ["done", t.watched]];
-  const setListStatus = (next: WatchStatus) => act(() => (onList ? watchlist.update(onList.id, { status: next }) : watchlist.save(watchDraftFromSeerr(item, next)!)));
+  // Seerr's watchlist follows Orbit's: want and watching are on it, done is off it.
+  const setListStatus = (next: WatchStatus) =>
+    act(async () => {
+      await (onList ? watchlist.update(onList.id, { status: next }) : watchlist.save(watchDraftFromSeerr(item, next)!));
+      if (client) await syncToSeerr(client, kind, tmdbId, name, next);
+    });
 
   // Sent with the picked quality; without options it's one tap, like before.
-  const send = (seasonList: number[] | "all") => act(() => client!.request(kind, tmdbId, seasonList, choice, options.advanced));
+  const send = (seasonList: number[] | "all") =>
+    act(() => (editing ? client!.editRequest(editing.id, kind, tmdbId, seasonList, { ...choice, userId: choice.userId ?? seerr.user?.id ?? null }, options.advanced) : client!.request(kind, tmdbId, seasonList, choice, options.advanced)));
+  // While editing, the request's own seasons can be picked too (Seerr counts them as taken).
+  const editingSeasons = new Set((editing?.seasons ?? []).map((season) => season.seasonNumber));
+  const pickable = (season: { seasonNumber: number; requestable: boolean }) => season.requestable || editingSeasons.has(season.seasonNumber);
   const startRequest = () => {
     const first: RequestChoice = { ...DEFAULT_CHOICE, is4k: !standard.ok && fourK.ok };
     setChoice(first);
@@ -171,7 +208,8 @@ export default function Title() {
     if (picking && next.is4k !== choice.is4k) setPicking(new Set((next.is4k ? fourK : standard).free));
     setChoice(next);
   };
-  const optionsPanel = options.hasOptions ? <RequestOptions options={options} choice={choice} onChange={changeChoice} allowStandard={standard.ok} allow4k={fourK.ok} /> : null;
+  // An edit keeps its quality (Seerr doesn't change it), so only that one is offered.
+  const optionsPanel = options.hasOptions ? <RequestOptions options={options} choice={choice} onChange={changeChoice} allowStandard={editing ? !editing.is4k : standard.ok} allow4k={editing ? Boolean(editing.is4k) : fourK.ok} /> : null;
   const flipPick = (seasonNumber: number) =>
     setPicking((before) => {
       const next = new Set(before);
@@ -180,6 +218,7 @@ export default function Title() {
       return next;
     });
 
+  const streaming = streamingIn(item);
   const open = (url: string) => void WebBrowser.openBrowserAsync(url).catch(() => Linking.openURL(url));
   const links = [
     trailer ? { label: `▶ ${mt.trailer}`, url: trailer } : null,
@@ -197,6 +236,7 @@ export default function Title() {
         <View style={{ gap: space.sm }}>
           <RowButton icon="check" label={mt.approve} disabled={busy} onPress={() => act(() => client!.approve(request.id))} />
           <RowButton outline label={mt.decline} disabled={busy} onPress={() => act(() => client!.decline(request.id))} />
+          <RowButton outline label={mt.editRequest} disabled={busy || Boolean(editing)} onPress={() => startEdit(request)} />
         </View>
       }
     />
@@ -232,6 +272,7 @@ export default function Title() {
           <View style={{ gap: space.sm }}>
             {play ? <Button variant="primary" title={`▶ ${mt.play}`} onPress={() => void Linking.openURL(play).catch(() => open(play))} /> : null}
             {requestable && !picking && !composing ? <Button variant={play ? "outline" : "primary"} disabled={busy || !client} title={!standard.ok ? mt.request4k : kind === "tv" && status === 4 ? mt.requestMore : kind === "tv" && seasons.length ? mt.requestSeasons : mt.request} onPress={startRequest} /> : null}
+            {mine && !editing ? <Button variant="outline" disabled={busy} title={mt.editRequest} onPress={() => startEdit(mine)} /> : null}
             {mine ? <Button variant="outline" disabled={busy} title={mt.cancelRequest} onPress={() => sheet({ title: mt.cancelRequestTitle, detail: name, options: [{ label: mt.cancelRequest, destructive: true, run: () => void act(() => client!.cancel(mine.id)) }] })} /> : null}
           </View>
 
@@ -247,8 +288,8 @@ export default function Title() {
             <Card title={mt.requestOptions}>
               {optionsPanel}
               <View style={{ gap: space.sm, paddingTop: space.xs }}>
-                <Button variant="primary" disabled={busy} title={choice.is4k ? mt.request4k : mt.request} onPress={() => send("all")} />
-                <Button variant="outline" title={t.cancel} onPress={() => setComposing(false)} />
+                <Button variant="primary" disabled={busy} title={editing ? mt.saveRequest : choice.is4k ? mt.request4k : mt.request} onPress={() => send("all")} />
+                <Button variant="outline" title={t.cancel} onPress={stopEditing} />
               </View>
             </Card>
           ) : null}
@@ -266,7 +307,7 @@ export default function Title() {
                   <View key={season.seasonNumber}>
                     <ListRow
                       leading={
-                        picking && season.requestable ? (
+                        picking && pickable(season) ? (
                           <CheckItem checked={picking.has(season.seasonNumber)} onPress={() => flipPick(season.seasonNumber)} label={season.name ?? `${mt.season} ${season.seasonNumber}`} />
                         ) : (
                           <Poster path={season.posterPath} title={String(season.seasonNumber)} width={36} />
@@ -275,7 +316,7 @@ export default function Title() {
                       title={season.name ?? `${mt.season} ${season.seasonNumber}`}
                       badges={badge ? <StatusPill badge={badge} /> : undefined}
                       subtitle={[season.episodeCount ? mt.episodes(season.episodeCount) : null, season.airDate?.slice(0, 4)].filter(Boolean).join(" · ")}
-                      onPress={() => (picking && season.requestable ? flipPick(season.seasonNumber) : void toggleSeason(season.seasonNumber))}
+                      onPress={() => (picking && pickable(season) ? flipPick(season.seasonNumber) : void toggleSeason(season.seasonNumber))}
                       trailing={picking ? undefined : <Icon name={shown ? "chevron-up" : "chevron-down"} size={16} color={colors.inkFaint} />}
                     />
                     {shown && !picking ? (
@@ -307,8 +348,8 @@ export default function Title() {
               {picking && optionsPanel ? <View style={styles.pickOptions}>{optionsPanel}</View> : null}
               {picking ? (
                 <View style={{ gap: space.sm, paddingTop: space.sm }}>
-                  <Button variant="primary" disabled={busy || picking.size === 0} title={`${picking.size === requestableSeasons.length && picking.size > 1 ? `${mt.request} · ${mt.requestAll}` : mt.requestPicked(picking.size)}${choice.is4k ? ` · ${mt.fourK}` : ""}`} onPress={() => send([...picking].sort((a, b) => a - b))} />
-                  <Button variant="outline" title={t.cancel} onPress={() => setPicking(null)} />
+                  <Button variant="primary" disabled={busy || picking.size === 0} title={editing ? mt.saveRequest : `${picking.size === requestableSeasons.length && picking.size > 1 ? `${mt.request} · ${mt.requestAll}` : mt.requestPicked(picking.size)}${choice.is4k ? ` · ${mt.fourK}` : ""}`} onPress={() => send([...picking].sort((a, b) => a - b))} />
+                  <Button variant="outline" title={t.cancel} onPress={stopEditing} />
                 </View>
               ) : null}
             </Card>
@@ -330,6 +371,16 @@ export default function Title() {
             </Card>
           ) : null}
 
+          {streaming.providers.length ? (
+            <Card title={mt.streamingOn}>
+              <BleedRow>
+                {streaming.providers.map((provider) => (
+                  <Chip key={provider.id} label={provider.name} onPress={() => (streaming.link ? open(streaming.link) : undefined)} />
+                ))}
+              </BleedRow>
+            </Card>
+          ) : null}
+
           {item.genres?.length ? (
             <BleedRow>
               {item.genres.map((genre) => (
@@ -344,8 +395,24 @@ export default function Title() {
             </Card>
           ) : null}
 
+          {item.keywords?.length ? (
+            <Card title={mt.keywords}>
+              <BleedRow>
+                {item.keywords.map((keyword) => (
+                  <Chip key={keyword.id} label={keyword.name} onPress={() => openDiscover({ row: "filtered", kind, filters: { keywords: String(keyword.id) } }, keyword.name)} />
+                ))}
+              </BleedRow>
+            </Card>
+          ) : null}
+
+          {item.collection ? (
+            <Card title={mt.collection}>
+              <ListRow leading={<Poster path={item.collection.posterPath} title={item.collection.name} width={36} />} title={item.collection.name} onPress={() => openCollection(item.collection!.id)} />
+            </Card>
+          ) : null}
+
           {cast.length ? (
-            <Card title={mt.cast}>
+            <Card title={mt.cast} action={<SeeAll onPress={() => openCredits(kind, tmdbId)} />}>
               <BleedRow>
                 {cast.map((person) => (
                   <CastCard key={person.id} person={person} />
@@ -360,10 +427,12 @@ export default function Title() {
                 {listChoices.map(([value, label]) => (
                   <Chip key={value} label={label} selected={onList?.status === value} onPress={() => void setListStatus(value)} />
                 ))}
-                {onList ? <RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(onList.id))} /> : null}
+                {onList ? <RowButton outline label={t.remove} onPress={() => act(async () => (await watchlist.remove(onList.id), client ? await syncToSeerr(client, kind, tmdbId, name, null) : undefined))} /> : null}
               </View>
             </Card>
           ) : null}
+
+          {seerr.isAdmin ? <Manage seerr={seerr} kind={kind} item={item} act={act} open={open} busy={busy} /> : null}
 
           <PosterRail title={mt.recommended} items={recommended} />
           <PosterRail title={mt.similar} items={similar} />
@@ -404,3 +473,32 @@ const styles = StyleSheet.create({
   rating: { flex: 1, gap: space.xs, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, padding: space.md, alignItems: "flex-start" },
   ratingValue: { fontFamily: fonts.medium, fontSize: textSize.title3, color: colors.ink },
 });
+
+// Seerr's "Manage" panel, for people who manage requests: open it in Radarr/Sonarr, mark it available, clear what
+// Seerr knows, remove it from the server, and the blocklist. The ones that delete things ask first.
+function Manage({ seerr, kind, item, act, open, busy }: { seerr: ReturnType<typeof useSeerr>; kind: SeerrMediaType; item: SeerrDetails; act: (work: () => Promise<unknown>) => Promise<void>; open: (url: string) => void; busy: boolean }) {
+  const client = seerr.client;
+  const { sheet } = useOverlays();
+  if (!client) return null;
+  const mediaId = item.mediaInfo?.id;
+  const status = item.mediaInfo?.status;
+  const name = seerrName(item);
+  const confirm = (title: string, detail: string, run: () => Promise<unknown>) => sheet({ title, detail: `${name}\n${detail}`, options: [{ label: title, destructive: true, run: () => void act(run) }] });
+  const seasons = kind === "tv" ? (item.seasons ?? []).map((season) => season.seasonNumber).filter((number) => number !== 0) : undefined;
+  return (
+    <Card title={mt.manage} style={{ gap: space.md }}>
+      <Text style={type.rowSubtitle}>{mt.manageHint}</Text>
+      <View style={styles.links}>
+        {item.mediaInfo?.serviceUrl ? <RowButton outline label={`${mt.openInService(kind)} ↗`} onPress={() => open(item.mediaInfo!.serviceUrl!)} /> : null}
+        {mediaId && status !== 5 && status !== 6 ? <RowButton outline label={mt.markAvailable} disabled={busy} onPress={() => void act(() => client.markAvailable(mediaId, seasons))} /> : null}
+        {status === 6 ? (
+          <RowButton outline label={mt.removeBlocklist} disabled={busy} onPress={() => void act(() => client.unblocklist(kind, item.id))} />
+        ) : seerr.user ? (
+          <RowButton outline label={mt.addBlocklist} disabled={busy} onPress={() => confirm(mt.addBlocklist, mt.addBlocklistDetail, () => client.blocklist(kind, item.id, name, seerr.user!.id))} />
+        ) : null}
+        {mediaId ? <RowButton outline label={mt.clearData} disabled={busy} onPress={() => confirm(mt.clearData, mt.clearDataDetail, () => client.clearData(mediaId))} /> : null}
+        {mediaId && (status === 3 || status === 4 || status === 5) ? <RowButton outline label={mt.removeFiles(kind)} disabled={busy} onPress={() => confirm(mt.removeFiles(kind), mt.removeFilesDetail, () => client.removeFiles(mediaId))} /> : null}
+      </View>
+    </Card>
+  );
+}

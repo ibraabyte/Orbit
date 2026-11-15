@@ -1,5 +1,6 @@
 import type { ApiClient } from "@/lib/api";
 import { digits, isArabic } from "@/lib/i18n";
+import type { WatchItem, WatchStatus } from "@/lib/types";
 
 // Seerr (Overseerr / Jellyseerr) API client and the pieces the Movies & TV screens build on. Same /api/v1 for all.
 // The server URL and API key are entered in the app once and kept, encrypted, on Orbit's server for this account.
@@ -8,7 +9,8 @@ import { digits, isArabic } from "@/lib/i18n";
 export type SeerrConfig = { url: string; apiKey: string };
 export type SeerrMediaType = "movie" | "tv";
 
-// mediaInfo.status: what the server has. 6 is "blocklisted" (Jellyseerr) or "deleted" (newer Overseerr).
+// mediaInfo.status: what the server has. In Seerr 6 is "blocklisted" (never requested again) and 7 is "deleted"
+// (gone from the server, can be asked for again).
 export type MediaStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 // request.status: what happened to the ask. 4 failed, 5 completed (Jellyseerr).
 export type RequestStatus = 1 | 2 | 3 | 4 | 5;
@@ -18,7 +20,7 @@ export const REQUEST_STATUS = { 1: "Waiting for approval", 2: "Approved", 3: "De
 
 export type SeerrResult = {
   id: number;
-  mediaType: SeerrMediaType | "person";
+  mediaType: SeerrMediaType | "person" | "collection";
   title?: string;
   name?: string;
   releaseDate?: string;
@@ -43,6 +45,9 @@ export type SeerrMediaInfo = {
   mediaUrl?: string | null;
   plexUrl?: string | null;
   iOSPlexUrl?: string | null;
+  // For people who manage requests: the title's page in Radarr or Sonarr.
+  serviceUrl?: string | null;
+  serviceUrl4k?: string | null;
 };
 
 export type SeerrCast = { id: number; name: string; character?: string; profilePath?: string | null; order?: number };
@@ -77,7 +82,16 @@ export type SeerrDetails = SeerrResult & {
   relatedVideos?: SeerrVideo[];
   externalIds?: { imdbId?: string | null };
   imdbId?: string | null;
+  keywords?: { id: number; name: string }[];
+  // Where it streams, per country (TMDB, from JustWatch).
+  watchProviders?: { iso_3166_1: string; link?: string; flatrate?: SeerrProvider[]; buy?: SeerrProvider[] }[];
+  // A movie in a series of films (TMDB collection).
+  collection?: { id: number; name: string; posterPath?: string | null; backdropPath?: string | null } | null;
 };
+
+// A TMDB collection: the films of one series, oldest first.
+export type SeerrCollection = { id: number; name: string; overview?: string; posterPath?: string | null; backdropPath?: string | null; parts: SeerrResult[] };
+export type SeerrSearchPage = { page: number; totalPages: number; results: SeerrResult[]; people: SeerrResult[]; collections: SeerrResult[] };
 
 export type SeerrRatings = { criticsScore?: number; criticsRating?: string; audienceScore?: number; audienceRating?: string; url?: string };
 
@@ -104,6 +118,10 @@ export type SeerrRequest = {
   media: { tmdbId: number; status: MediaStatus; mediaType: SeerrMediaType };
   seasons?: { seasonNumber: number; status?: RequestStatus }[];
   requestedBy?: { id?: number; displayName?: string };
+  // What the request was sent with (advanced requests): the Radarr/Sonarr server, quality profile and folder.
+  serverId?: number | null;
+  profileId?: number | null;
+  rootFolder?: string | null;
   modifiedBy?: { id?: number; displayName?: string } | null;
 };
 
@@ -113,10 +131,27 @@ export type SeerrCounts = { total?: number; movie?: number; tv?: number; pending
 export type SeerrQuotaPart = { days?: number; limit?: number; used?: number; remaining?: number; restricted?: boolean };
 export type SeerrQuota = { movie?: SeerrQuotaPart; tv?: SeerrQuotaPart };
 
-export type SeerrUser = { id: number; displayName?: string; permissions: number };
+// avatar: a full address or a path on the Seerr server. email shows only to people who manage users.
+// userType: 1 Plex, 2 Seerr's own account, 3 Jellyfin, 4 Emby.
+export type SeerrUser = {
+  id: number;
+  displayName?: string;
+  permissions: number;
+  avatar?: string | null;
+  email?: string | null;
+  userType?: number;
+  requestCount?: number;
+  createdAt?: string;
+  movieQuotaLimit?: number | null;
+  tvQuotaLimit?: number | null;
+};
+export type SeerrUserPage = { pageInfo: { pages: number; page: number; results: number }; results: SeerrUser[] };
+export const USER_SORTS = ["displayname", "requests", "created"] as const;
+export type UserSort = (typeof USER_SORTS)[number];
 
 // Seerr's permission bits.
 const ADMIN = 2;
+const MANAGE_USERS = 8;
 const MANAGE_REQUESTS = 16;
 const REQUEST_4K = 1024;
 const REQUEST_4K_MOVIE = 2048;
@@ -129,20 +164,255 @@ export type SeerrService = { id: number; name: string; is4k: boolean; isDefault:
 export type SeerrServiceDetails = { server: SeerrService; profiles: { id: number; name: string }[]; rootFolders: { id: number; path: string; freeSpace?: number }[] };
 
 // What the person picked before sending a request. null = let Seerr use the server's default.
-export type RequestChoice = { is4k: boolean; serverId: number | null; profileId: number | null; rootFolder: string | null };
-export const DEFAULT_CHOICE: RequestChoice = { is4k: false, serverId: null, profileId: null, rootFolder: null };
+// userId: who the request is for, when someone who manages requests asks on another user's behalf. null: yourself.
+export type RequestChoice = { is4k: boolean; serverId: number | null; profileId: number | null; rootFolder: string | null; userId: number | null };
+export const DEFAULT_CHOICE: RequestChoice = { is4k: false, serverId: null, profileId: null, rootFolder: null, userId: null };
 
-export const REQUEST_FILTERS = ["all", "pending", "processing", "available", "failed"] as const;
+// A waiting request opened for editing starts from what it was sent with.
+export function choiceFrom(request: Pick<SeerrRequest, "is4k" | "serverId" | "profileId" | "rootFolder" | "requestedBy">, myId: number | null): RequestChoice {
+  const owner = request.requestedBy?.id ?? null;
+  return { is4k: Boolean(request.is4k), serverId: request.serverId ?? null, profileId: request.profileId ?? null, rootFolder: request.rootFolder ?? null, userId: owner !== null && owner !== myId ? owner : null };
+}
+
+// Seerr's request filters ("approved" is the same list as "processing" on the server, so it's left out).
+export const REQUEST_FILTERS = ["all", "pending", "processing", "available", "unavailable", "failed", "completed", "deleted"] as const;
+export const REQUEST_SORTS = ["added", "modified"] as const;
+export type RequestSort = (typeof REQUEST_SORTS)[number];
+export type RequestKind = "all" | SeerrMediaType;
 export type RequestFilter = (typeof REQUEST_FILTERS)[number];
 
 // The rows on the Movies & TV screen, each with a "see all" list.
 export const DISCOVER_ROWS = ["trending", "movies", "tv", "upcomingMovies", "upcomingTv"] as const;
 export type DiscoverRow = (typeof DISCOVER_ROWS)[number];
-export type DiscoverList = { row: DiscoverRow } | { row: "genre"; kind: SeerrMediaType; genreId: number };
+// Seerr's discover filters (its /discover/movies and /discover/tv). from/to are dates (YYYY-MM-DD); language is the
+// title's original language, not the language the text comes back in.
+export type DiscoverFilters = Partial<
+  Record<"sortBy" | "genre" | "keywords" | "studio" | "network" | "language" | "from" | "to" | "voteAverageGte" | "voteCountGte" | "withRuntimeGte" | "withRuntimeLte" | "watchProviders" | "watchRegion", string>
+>;
+export type DiscoverList =
+  | { row: DiscoverRow }
+  | { row: "genre"; kind: SeerrMediaType; genreId: number }
+  | { row: "studio"; id: number }
+  | { row: "network"; id: number }
+  | { row: "search"; query: string }
+  | { row: "filtered"; kind: SeerrMediaType; filters: DiscoverFilters };
+
+// Where streaming services are looked up. ponytail: fixed to Saudi Arabia; read Seerr's region setting if Orbit
+// ever has users elsewhere.
+export const WATCH_REGION = "SA";
+export type SeerrProvider = { id: number; name: string; logoPath?: string | null; displayPriority?: number };
+
+// Seerr's Discover page is a list of rails the admin arranges (Settings › Discover). Same numbers as Seerr's
+// DiscoverSliderType; 13 and up are rails the admin made, with their own title and data.
+export const SLIDER = {
+  recentlyAdded: 1, recentRequests: 2, watchlist: 3, trending: 4, popularMovies: 5, movieGenres: 6, upcomingMovies: 7, studios: 8, popularTv: 9, tvGenres: 10,
+  upcomingTv: 11, networks: 12, movieKeyword: 13, movieGenre: 14, tvKeyword: 15, tvGenre: 16, search: 17, studio: 18, network: 19, movieStreaming: 20, tvStreaming: 21
+} as const;
+export type SeerrSlider = { id: number; type: number; title?: string | null; enabled: boolean; isBuiltIn?: boolean; data?: string | null; order?: number };
+// Seerr's own defaults, for servers too old to have Settings › Discover.
+export const DEFAULT_SLIDERS: SeerrSlider[] = Array.from({ length: 12 }, (_, index) => ({ id: -(index + 1), type: index + 1, enabled: true, isBuiltIn: true, order: index }));
+
+export type Rail =
+  | { kind: "posters"; list: DiscoverList }
+  | { kind: "recentlyAdded" | "recentRequests" | "watchlist" | "studios" | "networks" }
+  | { kind: "genres"; media: SeerrMediaType };
+
+export function visibleSliders(sliders: SeerrSlider[]) {
+  return sliders.filter((slider) => slider.enabled).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+// What one of Seerr's rails shows, the way Seerr's own Discover page builds it. null: a kind Orbit doesn't know.
+export function sliderRail(slider: Pick<SeerrSlider, "type" | "data">): Rail | null {
+  const data = slider.data?.trim() ?? "";
+  const filtered = (kind: SeerrMediaType, filters: DiscoverFilters): Rail => ({ kind: "posters", list: { row: "filtered", kind, filters } });
+  const [region, providers] = data.split(",");
+  switch (slider.type) {
+    case SLIDER.recentlyAdded: return { kind: "recentlyAdded" };
+    case SLIDER.recentRequests: return { kind: "recentRequests" };
+    case SLIDER.watchlist: return { kind: "watchlist" };
+    case SLIDER.trending: return { kind: "posters", list: { row: "trending" } };
+    case SLIDER.popularMovies: return { kind: "posters", list: { row: "movies" } };
+    case SLIDER.movieGenres: return { kind: "genres", media: "movie" };
+    case SLIDER.upcomingMovies: return { kind: "posters", list: { row: "upcomingMovies" } };
+    case SLIDER.studios: return { kind: "studios" };
+    case SLIDER.popularTv: return { kind: "posters", list: { row: "tv" } };
+    case SLIDER.tvGenres: return { kind: "genres", media: "tv" };
+    case SLIDER.upcomingTv: return { kind: "posters", list: { row: "upcomingTv" } };
+    case SLIDER.networks: return { kind: "networks" };
+    case SLIDER.movieKeyword: return data ? filtered("movie", { keywords: data }) : null;
+    case SLIDER.tvKeyword: return data ? filtered("tv", { keywords: data }) : null;
+    case SLIDER.movieGenre: return data ? filtered("movie", { genre: data }) : null;
+    case SLIDER.tvGenre: return data ? filtered("tv", { genre: data }) : null;
+    case SLIDER.search: return data ? { kind: "posters", list: { row: "search", query: data } } : null;
+    case SLIDER.studio: return Number(data) ? { kind: "posters", list: { row: "studio", id: Number(data) } } : null;
+    case SLIDER.network: return Number(data) ? { kind: "posters", list: { row: "network", id: Number(data) } } : null;
+    case SLIDER.movieStreaming: return providers ? filtered("movie", { watchRegion: region, watchProviders: providers }) : null;
+    case SLIDER.tvStreaming: return providers ? filtered("tv", { watchRegion: region, watchProviders: providers }) : null;
+    default: return null;
+  }
+}
+
+const BUILT_IN_TITLES: Record<number, keyof typeof en.rows> = {
+  [SLIDER.recentlyAdded]: "recentlyAdded", [SLIDER.recentRequests]: "recentRequests", [SLIDER.watchlist]: "watchlist", [SLIDER.trending]: "trending",
+  [SLIDER.popularMovies]: "movies", [SLIDER.movieGenres]: "movieGenres", [SLIDER.upcomingMovies]: "upcomingMovies", [SLIDER.studios]: "studios",
+  [SLIDER.popularTv]: "tv", [SLIDER.tvGenres]: "tvGenres", [SLIDER.upcomingTv]: "upcomingTv", [SLIDER.networks]: "networks"
+};
+
+export function sliderTitle(slider: Pick<SeerrSlider, "type" | "title">) {
+  const builtIn = BUILT_IN_TITLES[slider.type];
+  return slider.title?.trim() || (builtIn ? mt.rows[builtIn] : mt.rows.filtered);
+}
+
+// Seerr's own studio and network rails (same TMDB ids and order as its Discover page).
+export const STUDIOS = [
+  { id: 2, name: "Disney" }, { id: 127928, name: "20th Century Studios" }, { id: 34, name: "Sony Pictures" }, { id: 174, name: "Warner Bros. Pictures" },
+  { id: 33, name: "Universal" }, { id: 4, name: "Paramount" }, { id: 3, name: "Pixar" }, { id: 521, name: "DreamWorks" }, { id: 420, name: "Marvel Studios" },
+  { id: 9993, name: "DC" }, { id: 41077, name: "A24" }
+];
+export const NETWORKS = [
+  { id: 213, name: "Netflix" }, { id: 2739, name: "Disney+" }, { id: 1024, name: "Prime Video" }, { id: 2552, name: "Apple TV+" }, { id: 453, name: "Hulu" },
+  { id: 49, name: "HBO" }, { id: 4353, name: "Discovery+" }, { id: 2, name: "ABC" }, { id: 19, name: "FOX" }, { id: 359, name: "Cinemax" }, { id: 174, name: "AMC" },
+  { id: 67, name: "Showtime" }, { id: 318, name: "Starz" }, { id: 71, name: "The CW" }, { id: 6, name: "NBC" }, { id: 16, name: "CBS" }, { id: 4330, name: "Paramount+" },
+  { id: 4, name: "BBC One" }, { id: 56, name: "Cartoon Network" }, { id: 80, name: "Adult Swim" }, { id: 13, name: "Nickelodeon" }, { id: 3353, name: "Peacock" }
+];
+
+// The lists that take filters, and what they already filter by. Upcoming, trending and search don't.
+export function filterBase(list: DiscoverList): { kind: SeerrMediaType; filters: DiscoverFilters } | null {
+  switch (list.row) {
+    case "movies": return { kind: "movie", filters: {} };
+    case "tv": return { kind: "tv", filters: {} };
+    case "genre": return { kind: list.kind, filters: { genre: String(list.genreId) } };
+    case "studio": return { kind: "movie", filters: { studio: String(list.id) } };
+    case "network": return { kind: "tv", filters: { network: String(list.id) } };
+    case "filtered": return { kind: list.kind, filters: list.filters };
+    default: return null;
+  }
+}
+
+// The list with the user's choices on top (a choice left empty switches the list's own filter off). With no choices
+// it stays the same list, so it keeps its own path.
+export function withFilters(list: DiscoverList, choices: DiscoverFilters): DiscoverList {
+  const base = filterBase(list);
+  if (!base || !Object.keys(choices).length) return list;
+  const filters = Object.fromEntries(Object.entries({ ...base.filters, ...choices }).filter(([, value]) => value)) as DiscoverFilters;
+  return { row: "filtered", kind: base.kind, filters };
+}
+
+// Seerr's /discover/movies and /discover/tv with filters. Their dates have different names for movies and series.
+export function filteredPath(kind: SeerrMediaType, filters: DiscoverFilters) {
+  const { from, to, ...rest } = filters;
+  const dates = kind === "tv" ? { firstAirDateGte: from, firstAirDateLte: to } : { primaryReleaseDateGte: from, primaryReleaseDateLte: to };
+  const query = Object.entries({ ...rest, ...dates })
+    .filter((entry): entry is [string, string] => Boolean(entry[1]))
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join("&");
+  return `discover/${kind === "tv" ? "tv" : "movies"}${query ? `?${query}` : ""}`;
+}
+
+// Where it streams in Saudi Arabia (subscriptions only, like Seerr's "Currently streaming on"), and the page to watch.
+// After a change to Orbit's watch list: the same on Seerr's, quietly (Orbit's list is the one that counts).
+export function syncToSeerr(client: SeerrClient, kind: SeerrMediaType, tmdbId: number, title: string, status: WatchStatus | null) {
+  return (onSeerrWatchlist(status) ? client.watchlistAdd(kind, tmdbId, title) : client.watchlistRemove(kind, tmdbId)).catch(() => undefined);
+}
+
+export function streamingIn(details: Pick<SeerrDetails, "watchProviders">, region = WATCH_REGION) {
+  const here = details.watchProviders?.find((entry) => entry.iso_3166_1 === region);
+  return { link: here?.link ?? null, providers: [...(here?.flatrate ?? [])].sort((a, b) => (a.displayPriority ?? 99) - (b.displayPriority ?? 99)) };
+}
+
+// Orbit's watch list and Seerr's watchlist: "want" and "watching" in Orbit are on Seerr's watchlist; "done" or
+// removed is off it. Each title is brought over once in each direction ("known" remembers which), so taking
+// something off one list doesn't keep bringing it back from the other.
+export const watchKey = (kind: SeerrMediaType, tmdbId: number) => `${kind}-${tmdbId}`;
+export const onSeerrWatchlist = (status: WatchStatus | null) => status === "want" || status === "watching";
+
+export function planWatchlistSync(seerrList: SeerrResult[], orbit: Pick<WatchItem, "tmdb_id" | "media_type" | "status" | "title">[], known: Set<string>) {
+  const inSeerr = new Set(seerrList.filter(isMedia).map((item) => watchKey(item.mediaType, item.id)));
+  const inOrbit = new Set(orbit.map((item) => watchKey(item.media_type, item.tmdb_id)));
+  const wanted = orbit.filter((item) => onSeerrWatchlist(item.status));
+  return {
+    // To Orbit, as "want": on Seerr's list, not in Orbit at all, never brought over before.
+    toOrbit: seerrList.filter((item): item is SeerrResult & { mediaType: SeerrMediaType } => isMedia(item) && !inOrbit.has(watchKey(item.mediaType, item.id)) && !known.has(watchKey(item.mediaType, item.id))),
+    // To Seerr: wanted in Orbit, not on Seerr's list, never sent before.
+    toSeerr: wanted.filter((item) => !inSeerr.has(watchKey(item.media_type, item.tmdb_id)) && !known.has(watchKey(item.media_type, item.tmdb_id))),
+    known: new Set([...known, ...inSeerr, ...wanted.map((item) => watchKey(item.media_type, item.tmdb_id))])
+  };
+}
+
+// The films of a collection Seerr would take a request for: not on the server, not asked for yet.
+export function collectionToRequest(parts: SeerrResult[]) {
+  return parts.filter((part) => canRequest(part));
+}
+
+// A list that came in a link (the Discover screen's params): only the shapes above, with real ids.
+export function parseList(raw: string | undefined): DiscoverList | null {
+  try {
+    const list = JSON.parse(raw ?? "") as Record<string, unknown>;
+    const kind = list.kind === "movie" || list.kind === "tv" ? list.kind : null;
+    const id = Number(list.id);
+    if (DISCOVER_ROWS.includes(list.row as DiscoverRow)) return { row: list.row as DiscoverRow };
+    if (list.row === "genre" && kind && Number(list.genreId) > 0) return { row: "genre", kind, genreId: Number(list.genreId) };
+    if ((list.row === "studio" || list.row === "network") && id > 0) return { row: list.row, id };
+    if (list.row === "search" && typeof list.query === "string" && list.query.trim()) return { row: "search", query: list.query };
+    if (list.row === "filtered" && kind && list.filters && typeof list.filters === "object") {
+      const filters = Object.fromEntries(Object.entries(list.filters).filter(([, value]) => typeof value === "string")) as DiscoverFilters;
+      return { row: "filtered", kind, filters };
+    }
+  } catch {
+    // Not JSON: fall through.
+  }
+  return null;
+}
+
+export function listTitle(list: DiscoverList, name?: string) {
+  if (list.row === "genre") return [name || mt.rows.genre, list.kind === "tv" ? mt.series : mt.movie].join(" · ");
+  if (list.row === "studio" || list.row === "network" || list.row === "search" || list.row === "filtered") return name || mt.rows[list.row];
+  return mt.rows[list.row];
+}
 
 export function normalizeSeerrUrl(url: string) {
   const trimmed = url.trim().replace(/\/+$/, "").replace(/\/api\/v1$/, "");
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+export function canManageUsers(user: Pick<SeerrUser, "permissions"> | null) {
+  return user ? (user.permissions & (ADMIN | MANAGE_USERS)) !== 0 : false;
+}
+
+// The permissions Seerr's user page lets an admin switch, in its order. Admin includes all the others. Issue
+// permissions are left out, like the issues section.
+export const USER_PERMISSIONS = [
+  { key: "admin", bit: ADMIN },
+  { key: "manageUsers", bit: MANAGE_USERS },
+  { key: "manageRequests", bit: MANAGE_REQUESTS },
+  { key: "advanced", bit: REQUEST_ADVANCED },
+  { key: "viewRequests", bit: 16384 },
+  { key: "recentView", bit: 67108864 },
+  { key: "watchlistView", bit: 134217728 },
+  { key: "manageBlocklist", bit: 268435456 },
+  { key: "request", bit: 32 },
+  { key: "requestMovie", bit: 262144 },
+  { key: "requestTv", bit: 524288 },
+  { key: "autoApprove", bit: 128 },
+  { key: "autoApproveMovie", bit: 256 },
+  { key: "autoApproveTv", bit: 512 },
+  { key: "request4k", bit: REQUEST_4K },
+  { key: "request4kMovie", bit: REQUEST_4K_MOVIE },
+  { key: "request4kTv", bit: REQUEST_4K_TV },
+  { key: "autoApprove4k", bit: 32768 },
+  { key: "autoRequest", bit: 8388608 }
+] as const;
+export type PermissionKey = (typeof USER_PERMISSIONS)[number]["key"];
+
+export function flipPermission(permissions: number, bit: number) {
+  return permissions ^ bit;
+}
+
+// Avatars are often a path on the Seerr server (its avatar proxy or a default picture).
+export function avatarUrl(avatar: string | null | undefined, serverUrl: string | null) {
+  if (!avatar) return null;
+  if (/^https?:\/\//.test(avatar)) return avatar;
+  return serverUrl ? `${serverUrl}${avatar.startsWith("/") ? "" : "/"}${avatar}` : null;
 }
 
 export function canManageRequests(user: Pick<SeerrUser, "permissions">) {
@@ -176,6 +446,7 @@ export function requestBody(kind: SeerrMediaType, tmdbId: number, seasons: numbe
   const body: Record<string, unknown> = { mediaType: kind, mediaId: tmdbId };
   if (kind === "tv") body.seasons = seasons;
   if (choice.is4k) body.is4k = true;
+  if (choice.userId !== null) body.userId = choice.userId;
   if (advanced && (choice.serverId !== null || choice.profileId !== null || choice.rootFolder !== null)) {
     if (choice.serverId !== null) body.serverId = choice.serverId;
     if (choice.profileId !== null) body.profileId = choice.profileId;
@@ -229,7 +500,8 @@ export function mediaBadge(status: MediaStatus | undefined): StatusBadge | null 
   if (status === 4) return { label: mt.status.partial, glyph: "◐", tone: "accent" };
   if (status === 3) return { label: mt.status.processing, glyph: "↓", tone: "accent" };
   if (status === 2) return { label: mt.status.pending, glyph: "◷", tone: "neutral" };
-  if (status === 6 || status === 7) return { label: mt.status.removed, glyph: "×", tone: "neutral" };
+  if (status === 6) return { label: mt.status.blocklisted, glyph: "⊘", tone: "neutral" };
+  if (status === 7) return { label: mt.status.removed, glyph: "×", tone: "neutral" };
   return null;
 }
 
@@ -244,7 +516,7 @@ export function requestBadge(status: RequestStatus): StatusBadge {
 // A title can be asked for when the server has nothing yet (or only part of a series).
 export function canRequest(item: Pick<SeerrResult, "mediaType" | "mediaInfo">, is4k = false) {
   const status = is4k ? item.mediaInfo?.status4k : item.mediaInfo?.status;
-  return !status || status === 1 || status === 6 || status === 7 || (item.mediaType === "tv" && status === 4);
+  return !status || status === 1 || status === 7 || (item.mediaType === "tv" && status === 4);
 }
 
 export type SeasonRow = SeerrSeason & { status: MediaStatus | undefined; requested: boolean; requestable: boolean };
@@ -335,7 +607,7 @@ export function factLine(details: SeerrDetails) {
 
 const money = (value: number) => digits(`$${value >= 1e9 ? `${(value / 1e9).toFixed(1)}B` : value >= 1e6 ? `${Math.round(value / 1e6)}M` : value.toLocaleString("en")}`);
 
-function languageName(code: string | undefined) {
+export function languageName(code: string | undefined) {
   if (!code) return null;
   try {
     return new Intl.DisplayNames([isArabic ? "ar" : "en"], { type: "language" }).of(code) ?? code;
@@ -375,40 +647,108 @@ export function personCredits(cast: SeerrCredit[] = [], crew: SeerrCredit[] = []
 }
 
 // One Seerr API call: method, path under /api/v1 (no leading slash), optional JSON body.
-export type SeerrCall = <T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown) => Promise<T>;
+export type SeerrCall = <T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown) => Promise<T>;
 
 // The app never talks to Seerr itself: Orbit's server holds the user's key (encrypted) and passes these calls on
 // for that account only (backend/app/routers/integrations.py).
-export function serverSeerrCall(api: Pick<ApiClient, "request">): SeerrCall {
-  return <T,>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown) => api.request<T>(method, `/integrations/seerr/api/${path}`, body);
+export function serverSeerrCall(api: Pick<ApiClient, "request">, language = isArabic ? "ar" : null): SeerrCall {
+  return <T,>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown) => api.request<T>(method, `/integrations/seerr/api/${withLanguage(method, path, language)}`, body);
+}
+
+// Seerr gives titles, overviews and genres in the language asked for (from TMDB). A path that already names one keeps it.
+export function withLanguage(method: string, path: string, language: string | null) {
+  // On /discover/movies and /discover/tv, Seerr reads "language" as the original language (a filter), and the text
+  // comes in the Seerr account's own display language instead.
+  if (!language || method !== "GET" || /[?&]language=/.test(path) || /^discover\/(movies|tv)(\?|$)/.test(path)) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}language=${language}`;
+}
+
+// TMDB has no Arabic overview or biography for many titles and people: fill an empty one from English.
+async function withEnglish<T>(call: SeerrCall, path: string, item: T, field: keyof T): Promise<T> {
+  if (!isArabic || item[field]) return item;
+  const english = await call<T>("GET", `${path}?language=en`).catch(() => null);
+  return english?.[field] ? { ...item, [field]: english[field] } : item;
 }
 
 function discoverPath(list: DiscoverList) {
   if (list.row === "genre") return `discover/${list.kind === "tv" ? "tv" : "movies"}/genre/${list.genreId}`;
+  if (list.row === "studio") return `discover/movies/studio/${list.id}`;
+  if (list.row === "network") return `discover/tv/network/${list.id}`;
+  if (list.row === "search") return `search?query=${encodeURIComponent(list.query)}`;
+  if (list.row === "filtered") return filteredPath(list.kind, list.filters);
   return { trending: "discover/trending", movies: "discover/movies", tv: "discover/tv", upcomingMovies: "discover/movies/upcoming", upcomingTv: "discover/tv/upcoming" }[list.row];
 }
 
 // Discover lists of one kind come back without mediaType on some Seerr versions.
 function kindOf(list: DiscoverList): SeerrMediaType | null {
-  if (list.row === "genre") return list.kind;
+  if (list.row === "genre" || list.row === "filtered") return list.kind;
+  if (list.row === "studio") return "movie";
+  if (list.row === "network") return "tv";
   if (list.row === "movies" || list.row === "upcomingMovies") return "movie";
   if (list.row === "tv" || list.row === "upcomingTv") return "tv";
   return null;
 }
 
+type MediaRef = { mediaType: SeerrMediaType; tmdbId: number };
+
 export function createSeerrClient(call: SeerrCall) {
+  // Lists that only carry TMDB ids (recently added, requests, watchlist): fetch each title for its name and poster.
+  const titles = (refs: MediaRef[]) =>
+    Promise.all(
+      refs
+        .filter((ref) => (ref.mediaType === "movie" || ref.mediaType === "tv") && ref.tmdbId)
+        .map((ref) => call<SeerrDetails>("GET", `${ref.mediaType}/${ref.tmdbId}`).then((item) => ({ ...item, mediaType: ref.mediaType }), () => null))
+    ).then((items) => uniqueResults(items.filter((item): item is SeerrDetails & { mediaType: SeerrMediaType } => item !== null)));
   const page = <T extends SeerrResult>(path: string, kind: SeerrMediaType | null = null) =>
     call<SeerrPage<T>>("GET", path).then((body) => ({ ...body, results: uniqueResults(body.results.map((item) => (kind && !item.mediaType ? { ...item, mediaType: kind } : item)).filter(isMedia)) }));
   return {
     status: () => call<{ version: string }>("GET", "status"),
     me: () => call<SeerrUser>("GET", "auth/me"),
     search: (query: string, pageNumber = 1) => page(`search?query=${encodeURIComponent(query)}&page=${pageNumber}`).then((body) => body.results),
-    searchPage: (query: string, pageNumber = 1) => page(`search?query=${encodeURIComponent(query)}&page=${pageNumber}`),
+    // Like Seerr's search: titles, and the people and collections that match too.
+    searchPage: (query: string, pageNumber = 1): Promise<SeerrSearchPage> =>
+      call<SeerrPage<SeerrResult>>("GET", `search?query=${encodeURIComponent(query)}&page=${pageNumber}`).then((body) => ({
+        page: body.page,
+        totalPages: body.totalPages,
+        results: uniqueResults(body.results.filter(isMedia)),
+        people: uniqueResults(body.results.filter((item) => item.mediaType === "person")),
+        collections: uniqueResults(body.results.filter((item) => item.mediaType === "collection"))
+      })),
+    collection: (collectionId: number) =>
+      call<SeerrCollection>("GET", `collection/${collectionId}`)
+        .then((item) => withEnglish(call, `collection/${collectionId}`, item, "overview"))
+        .then((item) => ({ ...item, parts: uniqueResults((item.parts ?? []).map((part) => ({ ...part, mediaType: "movie" as const }))) })),
     trending: () => page("discover/trending").then((body) => body.results),
-    discover: (list: DiscoverList, pageNumber = 1) => page(`${discoverPath(list)}?page=${pageNumber}`, kindOf(list)),
+    discover: (list: DiscoverList, pageNumber = 1) => {
+      const path = discoverPath(list);
+      return page(`${path}${path.includes("?") ? "&" : "?"}page=${pageNumber}`, kindOf(list));
+    },
+    sliders: () => call<SeerrSlider[]>("GET", "settings/discover").then((sliders) => (Array.isArray(sliders) && sliders.length ? sliders : DEFAULT_SLIDERS)),
+    // What arrived on the media server last (Plex, Jellyfin or Emby), newest first.
+    recentlyAdded: (take = 15) => call<{ results: MediaRef[] }>("GET", `media?filter=allavailable&take=${take}&sort=mediaAdded`).then((body) => titles(body.results)),
+    recentRequests: (take = 10) =>
+      call<SeerrRequestPage>("GET", `request?take=${take}&filter=all&sort=added`).then((body) => titles(body.results.map((request) => ({ mediaType: request.type, tmdbId: request.media.tmdbId })))),
+    // Seerr's watchlist: the Plex watchlist, or the one kept in Seerr itself.
+    watchlist: () => call<{ results: MediaRef[] }>("GET", "discover/watchlist").then((body) => titles(body.results ?? [])),
+    providers: (kind: SeerrMediaType) =>
+      call<SeerrProvider[]>("GET", `watchproviders/${kind === "tv" ? "tv" : "movies"}?watchRegion=${WATCH_REGION}`).then((list) => [...list].sort((a, b) => (a.displayPriority ?? 99) - (b.displayPriority ?? 99))),
     genres: (kind: SeerrMediaType) => call<{ id: number; name: string }[]>("GET", `genres/${kind}`),
     requests: (take = 20, filter: RequestFilter = "all") => call<SeerrRequestPage>("GET", `request?take=${take}&filter=${filter}&sort=added`).then((body) => body.results),
-    requestPage: (filter: RequestFilter, skip = 0, take = 20) => call<SeerrRequestPage>("GET", `request?take=${take}&skip=${skip}&filter=${filter}&sort=added`),
+    requestPage: (filter: RequestFilter, skip = 0, take = 20, sort: RequestSort = "added", kind: RequestKind = "all") =>
+      call<SeerrRequestPage>("GET", `request?take=${take}&skip=${skip}&filter=${filter}&sort=${sort}&mediaType=${kind}`),
+    // Changes a waiting request: its seasons, server, profile, folder, or whose it is. Seerr only allows it while waiting.
+    editRequest: (requestId: number, mediaType: SeerrMediaType, tmdbId: number, seasons: number[] | "all", choice: RequestChoice, advanced = false) =>
+      call<SeerrRequest>("PUT", `request/${requestId}`, requestBody(mediaType, tmdbId, seasons, choice, advanced)),
+    // Seerr's users, for asking on someone's behalf (people who manage requests or users).
+    users: () => call<{ results: SeerrUser[] }>("GET", "user?take=100&sort=displayname").then((body) => body.results ?? []),
+    userPage: (query: string, sort: UserSort = "displayname", skip = 0, take = 25) =>
+      call<SeerrUserPage>("GET", `user?take=${take}&skip=${skip}&sort=${sort}${sort === "displayname" ? "&sortDirection=asc" : ""}${query.trim() ? `&q=${encodeURIComponent(query.trim())}` : ""}`),
+    user: (userId: number) => call<SeerrUser>("GET", `user/${userId}`),
+    userRequests: (userId: number, take = 20) => call<SeerrRequestPage>("GET", `user/${userId}/requests?take=${take}`),
+    userWatchlist: (userId: number) => call<{ results: MediaRef[] }>("GET", `user/${userId}/watchlist`).then((body) => titles(body.results ?? [])),
+    // Seerr's own bulk change, so only the permissions are touched (changing one user also rewrites the username).
+    setPermissions: (userId: number, permissions: number) => call<SeerrUser[]>("PUT", "user", { ids: [String(userId)], permissions }),
+    deleteUser: (userId: number) => call<SeerrUser>("DELETE", `user/${userId}`),
     counts: () => call<SeerrCounts>("GET", "request/count"),
     pendingCount: () => call<SeerrCounts>("GET", "request/count").then((body) => body.pending),
     quota: (userId: number) => call<SeerrQuota>("GET", `user/${userId}/quota`),
@@ -420,13 +760,28 @@ export function createSeerrClient(call: SeerrCall) {
     services: (mediaType: SeerrMediaType) => call<SeerrService[]>("GET", `service/${mediaType === "tv" ? "sonarr" : "radarr"}`),
     service: (mediaType: SeerrMediaType, serverId: number) => call<SeerrServiceDetails>("GET", `service/${mediaType === "tv" ? "sonarr" : "radarr"}/${serverId}`),
     // Requests carry only a TMDB id; this fetches the name and poster to show with them.
-    details: (mediaType: SeerrMediaType, tmdbId: number) => call<SeerrDetails>("GET", `${mediaType}/${tmdbId}`).then((item) => ({ ...item, mediaType })),
+    details: (mediaType: SeerrMediaType, tmdbId: number) =>
+      call<SeerrDetails>("GET", `${mediaType}/${tmdbId}`).then((item) => withEnglish(call, `${mediaType}/${tmdbId}`, { ...item, mediaType }, "overview")),
     season: (tmdbId: number, seasonNumber: number) => call<SeerrSeason & { episodes?: SeerrEpisode[] }>("GET", `tv/${tmdbId}/season/${seasonNumber}`),
     ratings: (tmdbId: number) => call<SeerrRatings>("GET", `movie/${tmdbId}/ratings`),
     recommendations: (mediaType: SeerrMediaType, tmdbId: number) => page(`${mediaType}/${tmdbId}/recommendations`, mediaType).then((body) => body.results),
     similar: (mediaType: SeerrMediaType, tmdbId: number) => page(`${mediaType}/${tmdbId}/similar`, mediaType).then((body) => body.results),
-    person: (personId: number) => call<SeerrPerson>("GET", `person/${personId}`),
+    person: (personId: number) => call<SeerrPerson>("GET", `person/${personId}`).then((item) => withEnglish(call, `person/${personId}`, item, "biography")),
     personCredits: (personId: number) => call<{ cast?: SeerrCredit[]; crew?: SeerrCredit[] }>("GET", `person/${personId}/combined_credits`).then((body) => personCredits(body.cast, body.crew)),
+    // Managing a title (people who manage requests). mediaId is Seerr's own id (mediaInfo.id), not the TMDB id.
+    markAvailable: (mediaId: number, seasons?: number[]) =>
+      call<SeerrMediaInfo>("POST", `media/${mediaId}/available`, { is4k: false, ...(seasons ? { seasons: seasons.map((seasonNumber) => ({ seasonNumber })) } : {}) }),
+    // Forgets what Seerr knows about the title (its requests and status). The files stay.
+    clearData: (mediaId: number) => call<void>("DELETE", `media/${mediaId}`),
+    // Removes the title from Radarr or Sonarr, files included.
+    removeFiles: (mediaId: number) => call<void>("DELETE", `media/${mediaId}/file?is4k=false`),
+    // Seerr's own watchlist (Seerr accounts, Jellyfin, Emby; a Plex account's comes from Plex). Already there, or
+    // already gone, is fine: the caller only wants the end state.
+    watchlistAdd: (mediaType: SeerrMediaType, tmdbId: number, title: string) => call<void>("POST", "watchlist", { tmdbId, mediaType, title }),
+    watchlistRemove: (mediaType: SeerrMediaType, tmdbId: number) => call<void>("DELETE", `watchlist/${tmdbId}?mediaType=${mediaType}`),
+    // Blocklisted titles can't be requested and stop showing in Discover.
+    blocklist: (mediaType: SeerrMediaType, tmdbId: number, title: string, userId: number) => call<void>("POST", "blocklist", { tmdbId, mediaType, title, user: userId }),
+    unblocklist: (mediaType: SeerrMediaType, tmdbId: number) => call<void>("DELETE", `blocklist/${tmdbId}?mediaType=${mediaType}`),
     approve: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/approve`),
     decline: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/decline`),
     retry: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/retry`),
@@ -447,7 +802,17 @@ const en = {
   seasons: "seasons",
   minutes: "min",
   hours: "h",
-  rows: { trending: "Trending", movies: "Popular movies", tv: "Popular series", upcomingMovies: "Coming soon · movies", upcomingTv: "Coming soon · series", genre: "Genre" } as Record<DiscoverRow | "genre", string>,
+  rows: {
+    trending: "Trending", movies: "Popular movies", tv: "Popular series", upcomingMovies: "Coming soon · movies", upcomingTv: "Coming soon · series", genre: "Genre",
+    studio: "Studio", network: "Network", search: "Search", filtered: "Results", recentlyAdded: "Recently added", recentRequests: "Recent requests",
+    watchlist: "Your Seerr watchlist", studios: "Studios", networks: "Networks", movieGenres: "Movie genres", tvGenres: "Series genres"
+  } as Record<DiscoverRow | "genre" | "studio" | "network" | "search" | "filtered" | "recentlyAdded" | "recentRequests" | "watchlist" | "studios" | "networks" | "movieGenres" | "tvGenres", string>,
+  filter: {
+    show: "Filters", hide: "Hide filters", clear: "Clear filters", sort: "Sort", genres: "Genres", years: "Years", rating: "Rating", runtime: "Length",
+    language: "Original language", streaming: "Streaming in Saudi Arabia",
+    sorts: { popular: "Most popular", newest: "Newest", rating: "Highest rated", title: "A–Z" },
+    runtimes: { short: "Under 90 min", medium: "90–150 min", long: "Over 150 min" }
+  },
   seeAll: "See all",
   loadMore: "Load more",
   nothingFound: "Nothing found. Try another name.",
@@ -458,8 +823,34 @@ const en = {
   allRequests: "All requests",
   awaiting: "Awaiting approval",
   requestsEmpty: "No requests here.",
-  filters: { all: "All", pending: "Waiting", processing: "Downloading", available: "Available", failed: "Failed" } as Record<RequestFilter, string>,
-  status: { available: "Available", partial: "Partly available", processing: "Downloading", pending: "Requested", removed: "Removed" },
+  filters: { all: "All", pending: "Waiting", processing: "Downloading", available: "Available", unavailable: "Not on the server yet", failed: "Failed", completed: "Completed", deleted: "Deleted" } as Record<RequestFilter, string>,
+  requestSorts: { added: "Newest", modified: "Last changed" } as Record<RequestSort, string>,
+  requestKinds: { all: "Movies and series", movie: "Movies", tv: "Series" } as Record<RequestKind, string>,
+  users: "Users",
+  userSorts: { displayname: "Name", requests: "Most requests", created: "Newest" } as Record<UserSort, string>,
+  searchUsers: "Search users",
+  userTypes: { 1: "Plex", 2: "Seerr account", 3: "Jellyfin", 4: "Emby" } as Record<number, string>,
+  roleAdmin: "Admin",
+  roleUser: "User",
+  requestCount: (count: number) => (count === 1 ? "1 request" : `${count} requests`),
+  joined: (day: string) => `Joined ${day}`,
+  recentRequests: "Recent requests",
+  permissions: "Permissions",
+  adminHasAll: "An admin has every permission.",
+  savePermissions: "Save permissions",
+  deleteUser: "Delete user",
+  deleteUserDetail: "Their account and requests are removed from Seerr. This can't be undone.",
+  permissionNames: {
+    admin: "Admin", manageUsers: "Manage users", manageRequests: "Manage requests", advanced: "Advanced requests", viewRequests: "See all requests",
+    recentView: "See recently added", watchlistView: "See watchlists", manageBlocklist: "Manage the blocklist", request: "Request", requestMovie: "Request movies",
+    requestTv: "Request series", autoApprove: "Auto-approve", autoApproveMovie: "Auto-approve movies", autoApproveTv: "Auto-approve series", request4k: "Request 4K",
+    request4kMovie: "Request 4K movies", request4kTv: "Request 4K series", autoApprove4k: "Auto-approve 4K", autoRequest: "Auto-request from watchlist"
+  } as Record<PermissionKey, string>,
+  editRequest: "Edit request",
+  saveRequest: "Save changes",
+  requestFor: "Request for",
+  me: "Me",
+  status: { available: "Available", partial: "Partly available", processing: "Downloading", pending: "Requested", removed: "Removed", blocklisted: "Blocklisted" },
   requestStatus: { pending: "Waiting for approval", approved: "Approved", declined: "Declined", failed: "Failed", completed: "Completed" },
   request: "Request",
   requestMore: "Request more seasons",
@@ -513,7 +904,32 @@ const en = {
   facts: { status: "Status", released: "Released", firstAired: "First aired", lastAired: "Last aired", nextEpisode: "Next episode", episodes: "Episodes", director: "Director", createdBy: "Created by", studio: "Studio", network: "Network", language: "Original language", originalTitle: "Original title", budget: "Budget", revenue: "Box office" },
   releaseStatus: { Released: "Released", "Post Production": "Post production", "In Production": "In production", Planned: "Planned", Rumored: "Rumored", Canceled: "Canceled", "Returning Series": "Still running", Ended: "Ended", Pilot: "Pilot" } as Record<string, string>,
   watchList: "My watch list",
-  disconnectSeerr: "Disconnect Seerr"
+  disconnectSeerr: "Disconnect Seerr",
+  people: "People",
+  collections: "Collections",
+  collection: "Collection",
+  requestMovies: (count: number) => (count === 1 ? "Request 1 movie" : `Request ${count} movies`),
+  requestedMovies: (count: number) => (count === 1 ? "Requested 1 movie." : `Requested ${count} movies.`),
+  allRequested: "Every movie here is on the server or already requested.",
+  streamingOn: "Streaming in Saudi Arabia",
+  keywords: "Keywords",
+  fullCredits: "Cast and crew",
+  crew: "Crew",
+  manage: "Manage",
+  manageHint: "Changes here are made on your Seerr server.",
+  openInService: (kind: SeerrMediaType): string => (kind === "tv" ? "Open in Sonarr" : "Open in Radarr"),
+  markAvailable: "Mark as available",
+  clearData: "Clear data",
+  clearDataDetail: "Seerr forgets this title's requests and status. The files stay on the server.",
+  removeFiles: (kind: SeerrMediaType): string => (kind === "tv" ? "Remove from Sonarr" : "Remove from Radarr"),
+  removeFilesDetail: "Removes it from the server, files included. This can't be undone.",
+  addBlocklist: "Add to blocklist",
+  addBlocklistDetail: "It can't be requested, and stops showing in Discover.",
+  removeBlocklist: "Remove from blocklist",
+  pushTitle: "Notifications on your phone",
+  pushSteps: "In Seerr, open Settings › Notifications › Webhook. Turn it on, paste this link as the Webhook URL, pick the notifications you want, then Save. Tap Test to try it.",
+  shareLink: "Share link",
+  openSeerrSettings: "Open Seerr settings"
 };
 
 const ar: typeof en = {
@@ -526,7 +942,17 @@ const ar: typeof en = {
   seasons: "مواسم",
   minutes: "د",
   hours: "س",
-  rows: { trending: "الرائج", movies: "أفلام مشهورة", tv: "مسلسلات مشهورة", upcomingMovies: "قريبًا · أفلام", upcomingTv: "قريبًا · مسلسلات", genre: "تصنيف" },
+  rows: {
+    trending: "الرائج", movies: "أفلام مشهورة", tv: "مسلسلات مشهورة", upcomingMovies: "قريبًا · أفلام", upcomingTv: "قريبًا · مسلسلات", genre: "تصنيف",
+    studio: "استوديو", network: "قناة", search: "بحث", filtered: "النتائج", recentlyAdded: "أُضيف مؤخرًا", recentRequests: "طلبات حديثة",
+    watchlist: "قائمة مشاهدتك في Seerr", studios: "الاستوديوهات", networks: "القنوات والمنصات", movieGenres: "تصنيفات الأفلام", tvGenres: "تصنيفات المسلسلات"
+  },
+  filter: {
+    show: "الفلاتر", hide: "إخفاء الفلاتر", clear: "امسح الفلاتر", sort: "الترتيب", genres: "التصنيفات", years: "السنوات", rating: "التقييم", runtime: "المدة",
+    language: "اللغة الأصلية", streaming: "منصات البث في السعودية",
+    sorts: { popular: "الأشهر", newest: "الأحدث", rating: "الأعلى تقييمًا", title: "أبجديًا" },
+    runtimes: { short: "أقل من 90 دقيقة", medium: "من 90 إلى 150 دقيقة", long: "أكثر من 150 دقيقة" }
+  },
   seeAll: "الكل",
   loadMore: "عرض المزيد",
   nothingFound: "ما لقينا شي. جرّب اسمًا ثانيًا.",
@@ -537,8 +963,34 @@ const ar: typeof en = {
   allRequests: "كل الطلبات",
   awaiting: "تنتظر الموافقة",
   requestsEmpty: "لا توجد طلبات هنا.",
-  filters: { all: "الكل", pending: "تنتظر", processing: "يتحمّل", available: "متوفر", failed: "فشل" },
-  status: { available: "متوفر", partial: "متوفر جزئيًا", processing: "يتحمّل", pending: "مطلوب", removed: "محذوف" },
+  filters: { all: "الكل", pending: "تنتظر", processing: "يتحمّل", available: "متوفر", unavailable: "غير متوفر بعد", failed: "فشل", completed: "مكتمل", deleted: "محذوف" },
+  requestSorts: { added: "الأحدث", modified: "آخر تعديل" },
+  requestKinds: { all: "أفلام ومسلسلات", movie: "أفلام", tv: "مسلسلات" },
+  users: "المستخدمون",
+  userSorts: { displayname: "الاسم", requests: "الأكثر طلبًا", created: "الأحدث" },
+  searchUsers: "ابحث عن مستخدم",
+  userTypes: { 1: "Plex", 2: "حساب Seerr", 3: "Jellyfin", 4: "Emby" },
+  roleAdmin: "مدير",
+  roleUser: "مستخدم",
+  requestCount: (count: number) => (count === 1 ? "طلب واحد" : count === 2 ? "طلبان" : count <= 10 ? `${digits(String(count))} طلبات` : `${digits(String(count))} طلبًا`),
+  joined: (day: string) => `انضم ${day}`,
+  recentRequests: "طلبات حديثة",
+  permissions: "الصلاحيات",
+  adminHasAll: "المدير عنده كل الصلاحيات.",
+  savePermissions: "احفظ الصلاحيات",
+  deleteUser: "احذف المستخدم",
+  deleteUserDetail: "يُحذف حسابه وطلباته من Seerr. لا يمكن التراجع.",
+  permissionNames: {
+    admin: "مدير", manageUsers: "إدارة المستخدمين", manageRequests: "إدارة الطلبات", advanced: "طلبات متقدمة", viewRequests: "رؤية كل الطلبات",
+    recentView: "رؤية المضاف مؤخرًا", watchlistView: "رؤية قوائم المشاهدة", manageBlocklist: "إدارة قائمة الحظر", request: "الطلب", requestMovie: "طلب الأفلام",
+    requestTv: "طلب المسلسلات", autoApprove: "موافقة تلقائية", autoApproveMovie: "موافقة تلقائية للأفلام", autoApproveTv: "موافقة تلقائية للمسلسلات", request4k: "طلب 4K",
+    request4kMovie: "طلب أفلام 4K", request4kTv: "طلب مسلسلات 4K", autoApprove4k: "موافقة تلقائية لـ4K", autoRequest: "طلب تلقائي من قائمة المشاهدة"
+  },
+  editRequest: "عدّل الطلب",
+  saveRequest: "احفظ التغييرات",
+  requestFor: "الطلب باسم",
+  me: "أنا",
+  status: { available: "متوفر", partial: "متوفر جزئيًا", processing: "يتحمّل", pending: "مطلوب", removed: "محذوف", blocklisted: "محظور" },
   requestStatus: { pending: "ينتظر الموافقة", approved: "تمت الموافقة", declined: "مرفوض", failed: "فشل", completed: "اكتمل" },
   request: "اطلب",
   requestMore: "اطلب مواسم أخرى",
@@ -593,7 +1045,32 @@ const ar: typeof en = {
   facts: { status: "الحالة", released: "تاريخ العرض", firstAired: "أول عرض", lastAired: "آخر عرض", nextEpisode: "الحلقة الجاية", episodes: "الحلقات", director: "المخرج", createdBy: "من تأليف", studio: "الإنتاج", network: "القناة", language: "اللغة الأصلية", originalTitle: "الاسم الأصلي", budget: "الميزانية", revenue: "الإيرادات" },
   releaseStatus: { Released: "معروض", "Post Production": "في المونتاج", "In Production": "قيد التصوير", Planned: "مخطط له", Rumored: "إشاعة", Canceled: "ملغي", "Returning Series": "مستمر", Ended: "انتهى", Pilot: "حلقة تجريبية" },
   watchList: "قائمة مشاهدتي",
-  disconnectSeerr: "افصل Seerr"
+  disconnectSeerr: "افصل Seerr",
+  people: "أشخاص",
+  collections: "المجموعات",
+  collection: "مجموعة",
+  requestMovies: (count: number) => (count === 1 ? "اطلب فيلمًا واحدًا" : count === 2 ? "اطلب فيلمين" : count <= 10 ? `اطلب ${digits(String(count))} أفلام` : `اطلب ${digits(String(count))} فيلمًا`),
+  requestedMovies: (count: number) => (count === 1 ? "طُلب فيلم واحد." : count === 2 ? "طُلب فيلمان." : count <= 10 ? `طُلبت ${digits(String(count))} أفلام.` : `طُلب ${digits(String(count))} فيلمًا.`),
+  allRequested: "كل أفلام المجموعة موجودة أو مطلوبة.",
+  streamingOn: "منصات البث في السعودية",
+  keywords: "الكلمات المفتاحية",
+  fullCredits: "الممثلون وطاقم العمل",
+  crew: "طاقم العمل",
+  manage: "الإدارة",
+  manageHint: "التغييرات هنا تصير على سيرفر Seerr.",
+  openInService: (kind: SeerrMediaType) => (kind === "tv" ? "افتح في Sonarr" : "افتح في Radarr"),
+  markAvailable: "علّمه متوفرًا",
+  clearData: "امسح البيانات",
+  clearDataDetail: "ينسى Seerr طلبات هذا العنوان وحالته. الملفات تبقى على السيرفر.",
+  removeFiles: (kind: SeerrMediaType) => (kind === "tv" ? "احذفه من Sonarr" : "احذفه من Radarr"),
+  removeFilesDetail: "يُحذف من السيرفر مع ملفاته. لا يمكن التراجع.",
+  addBlocklist: "أضفه إلى قائمة الحظر",
+  addBlocklistDetail: "لن يمكن طلبه، ولن يظهر في الاكتشاف.",
+  removeBlocklist: "أزله من قائمة الحظر",
+  pushTitle: "التنبيهات على جوالك",
+  pushSteps: "في Seerr افتح Settings ثم Notifications ثم Webhook. فعّله، والصق هذا الرابط في Webhook URL، واختر التنبيهات التي تريدها، ثم احفظ. اضغط Test للتجربة.",
+  shareLink: "شارك الرابط",
+  openSeerrSettings: "افتح إعدادات Seerr"
 };
 
 export const mt = isArabic ? ar : en;

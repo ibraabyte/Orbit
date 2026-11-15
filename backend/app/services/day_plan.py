@@ -8,7 +8,9 @@ Two ways to build it, with the same shape out:
   from the database, never from the AI, and a block that runs into a prayer or another block is dropped. If nothing
   usable is left, the rules plan is used.
 
-Prayer times come from the phone, which works them out from its own location; the server never sees the location.
+Prayer times come from the phone, which works them out from its own location. Only when the user linked Google Maps
+does the phone also send where it is, and then only to time the way to today's appointments (app/services/leave_times.py);
+the way there becomes a "travel" block before the appointment. The position is not kept.
 Times are the user's local wall clock as "HH:MM", in the zone saved on their profile (the same one the brief uses).
 """
 
@@ -56,7 +58,7 @@ GREEN, YELLOW = 67, 34
 class Block:
     start: int
     end: int
-    kind: str  # prayer | reminder | appointment | task | workout | break
+    kind: str  # prayer | reminder | appointment | travel | task | workout | break
     title: str = ""
     task_id: uuid.UUID | None = None
     prayer: str | None = None
@@ -131,7 +133,16 @@ def _energy(db: Session, user_id: uuid.UUID, day: date, hidden: frozenset[str]) 
     return {"level": energy_level(score), "recovery": score, "sleep_hours": hours}
 
 
-def gather(db: Session, user_id: uuid.UUID, zone: ZoneInfo, day: date, now: int, prayers: list[tuple[str, int]]) -> Facts:
+def gather(
+    db: Session,
+    user_id: uuid.UUID,
+    zone: ZoneInfo,
+    day: date,
+    now: int,
+    prayers: list[tuple[str, int]],
+    travel: dict[uuid.UUID, int] | None = None,
+) -> Facts:
+    """travel: minutes to set aside before an appointment for the way there (with the time to spare), by task."""
     hidden = sections.hidden_for(db, user_id)
     start = max(DAY_START, -(-now // STEP) * STEP)
     begin = datetime.combine(day, time.min, zone)
@@ -160,10 +171,14 @@ def gather(db: Session, user_id: uuid.UUID, zone: ZoneInfo, day: date, now: int,
     flexible: list[tuple[Task, int, int | None]] = []
     for task in [*today, *late]:
         due = _local_minutes(task.due_at, zone) if task.due_at >= begin else None
-        # A task with a reminder today has a set time: it is an appointment at its due time.
-        if due is not None and task.reminder_at is not None and begin <= task.reminder_at < end:
+        # A task with a reminder today, or a place to be at, has a set time: it is an appointment at its due time.
+        reminded = task.reminder_at is not None and begin <= task.reminder_at < end
+        if due is not None and (reminded or (task.place_name is not None and due > 0)):
             if due + APPOINTMENT_MINUTES > start:
                 fixed.append(Block(due, min(due + APPOINTMENT_MINUTES, 24 * 60), "appointment", title=_cut(task.title), task_id=task.id))
+                way = (travel or {}).get(task.id)
+                if way and task.place_name and due > start:
+                    fixed.append(Block(max(0, due - way), due, "travel", title=_cut(task.place_name)))
             continue
         minutes = TASK_MINUTES.get(task.priority, TASK_MINUTES["normal"])
         if level == "low":

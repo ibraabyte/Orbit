@@ -33,6 +33,10 @@ class Task(Owned, Base):
         CheckConstraint("status in ('open', 'done', 'archived')", name="status"),
         CheckConstraint("priority in ('low', 'normal', 'high')", name="priority"),
         CheckConstraint("recurrence is null or recurrence in ('daily', 'weekly', 'monthly')", name="recurrence"),
+        CheckConstraint("char_length(place_name) between 1 and 160", name="place_name_length"),
+        CheckConstraint("char_length(place_id) between 1 and 300", name="place_id_length"),
+        # A Google place is always shown by a name.
+        CheckConstraint("place_id is null or place_name is not null", name="place_named"),
         # Lets child rows point at (id, user_id), so a row can only reference its owner's task.
         UniqueConstraint("id", "user_id"),
         # Deleting the list keeps the task and clears only list_id.
@@ -57,6 +61,10 @@ class Task(Owned, Base):
     reminder_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recurrence: Mapped[str | None] = mapped_column(Text)
     list_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # Where the appointment is, for the leave-time alert (app/services/leave_times.py): a name or address the user
+    # typed, and the Google place it was picked from, if any. Google allows keeping a place id; no coordinates are kept.
+    place_name: Mapped[str | None] = mapped_column(Text)
+    place_id: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime] = updated_at()
 
 
