@@ -1,18 +1,19 @@
 import * as Updates from "expo-updates";
 import { useEffect, useState } from "react";
-import { Alert, DevSettings, Switch, Text, View } from "react-native";
+import { router } from "expo-router";
+import { Alert, DevSettings, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
 import { resyncWidget } from "@/hooks/use-widget-sync";
-import { Avatar, Card, IconTile, ListRow, type } from "@/components/drift";
-import { ChoiceMenu, useOverlays } from "@/components/overlays";
-import { Button, Screen } from "@/components/screen";
-import { colors, currentAppearance, setAppearance, space, textSize, type AppearanceChoice } from "@/components/theme";
+import { Avatar, Card, Icon, ListRow, type } from "@/components/drift";
+import { useOverlays } from "@/components/overlays";
+import { Button, Screen, Segments } from "@/components/screen";
+import { colors, currentAppearance, fonts, radius, setAppearance, space, textSize, type AppearanceChoice } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSections } from "@/hooks/use-sections";
 import { clearAskConsent, loadAskConsent } from "@/hooks/use-ask-consent";
 import { st } from "@/lib/app-sections";
 import { getApi, signOut } from "@/lib/backend";
-import { currentNumerals, saveNumerals, t, toggleLanguage } from "@/lib/i18n";
+import { currentNumerals, isArabic, saveNumerals, t, toggleLanguage } from "@/lib/i18n";
 import { adminApi, type ServerSettings } from "@/lib/integrations";
 import type { Numerals } from "@/lib/numerals";
 
@@ -69,28 +70,60 @@ export default function Settings() {
   };
   const [look, setLook] = useState<AppearanceChoice>(currentAppearance);
   const lookLabel = { system: t.appearanceSystem, light: t.appearanceLight, dark: t.appearanceDark };
-  const lookChoices = (["system", "light", "dark"] as const).map((choice) => ({ label: lookLabel[choice], selected: choice === look, run: () => (setAppearance(choice), setLook(choice)) }));
-  const numeralsLabel = { arab: t.numeralsArab, latn: t.numeralsLatn };
-  const numeralChoices = (["arab", "latn"] as const).map((choice) => ({ label: numeralsLabel[choice], selected: choice === numerals, run: () => changeNumerals(choice) }));
 
   const track = { true: colors.accent, false: colors.hairline };
+  // The three places to go, as tiles.
+  const places = [
+    { href: "/sections", icon: "layers", label: st.sections },
+    { href: "/notifications", icon: "bell", label: t.notifications },
+    { href: "/integrations", icon: "link", label: t.integrations }
+  ] as const;
+  const language = isArabic ? "ar" : "en";
 
   return (
     <Screen>
-      <Card style={{ flexDirection: "row", alignItems: "center", gap: space.lg, paddingVertical: space.lg }}>
-        <Avatar name={name} size={48} dark />
-        <Text style={[type.title, { flex: 1, fontSize: textSize.callout }]}>{name}</Text>
-      </Card>
-      {/* Grouped lists, like the system Settings: where to go first, then this phone's preferences, then the server. */}
-      <Card list>
-        <ListRow first leading={<IconTile name="layers" />} title={st.sections} meta={st.sectionsCount(sectionsOff.length)} href="/sections" />
-        <ListRow leading={<IconTile name="bell" />} title={t.notifications} subtitle={t.notificationsDetail} href="/notifications" />
-        <ListRow leading={<IconTile name="link" />} title={t.integrations} subtitle={t.integrationsDetail} href="/integrations" />
+      {/* You, in the middle; then the places to go; then this phone's choices, changed right here. */}
+      <View style={styles.me}>
+        <Avatar name={name} size={76} dark />
+        <Text style={styles.name}>{name}</Text>
+        <Text style={type.rowSubtitle}>{st.sectionsCount(sectionsOff.length)}</Text>
+      </View>
+      <View style={styles.places}>
+        {places.map((place) => (
+          <Pressable key={place.href} onPress={() => router.push(place.href)} accessibilityRole="link" style={({ pressed }) => [styles.place, pressed && { opacity: 0.7 }]}>
+            <Icon name={place.icon} size={22} color={colors.link} />
+            <Text style={type.rowTitle} numberOfLines={1}>
+              {place.label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+      <Card>
+        <View style={styles.pick}>
+          <Text style={type.rowSubtitle}>{t.appearance}</Text>
+          <Segments options={["system", "light", "dark"] as const} labels={lookLabel} value={look} onChange={(choice) => (setAppearance(choice), setLook(choice))} />
+        </View>
+        <View style={styles.pick}>
+          <Text style={type.rowSubtitle}>{t.numerals}</Text>
+          <Segments options={["latn", "arab"] as const} labels={{ latn: "0123", arab: "٠١٢٣" }} value={numerals} onChange={changeNumerals} />
+        </View>
+        <View style={styles.pick}>
+          <Text style={type.rowSubtitle}>{t.languageShort}</Text>
+          <Segments
+            options={["ar", "en"] as const}
+            labels={{ ar: "العربية", en: "English" }}
+            value={language}
+            onChange={(next) => {
+              if (next === language) return;
+              const message = toggleLanguage();
+              if (message) toast(message);
+            }}
+          />
+        </View>
       </Card>
       <Card list>
         <ListRow
           first
-          leading={<IconTile name="lock" />}
           title={t.faceId}
           trailing={
             <Switch
@@ -104,37 +137,10 @@ export default function Settings() {
             />
           }
         />
-        <ListRow
-          leading={<IconTile name="globe" />}
-          title={t.language}
-          meta={t.langLabel}
-          chevron
-          onPress={() => {
-            const message = toggleLanguage();
-            if (message) toast(message);
-          }}
-        />
-        <ChoiceMenu fill title={t.appearance} choices={lookChoices}>
-          <ListRow leading={<IconTile name="moon" />} title={t.appearance} meta={lookLabel[look]} chevron />
-        </ChoiceMenu>
-        <ChoiceMenu fill title={t.numerals} choices={numeralChoices}>
-          <ListRow leading={<IconTile name="hash" />} title={t.numerals} meta={numeralsLabel[numerals]} chevron />
-        </ChoiceMenu>
-      </Card>
-      {askConsent ? (
-        <Card>
-          <Text style={type.rowTitle}>{t.askShare}</Text>
-          <Text style={type.rowSubtitle}>{t.askShareDetail.replace("{provider}", askConsent)}</Text>
-          <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />
-        </Card>
-      ) : null}
-      {server ? (
-        <Card list>
+        {server ? (
           <ListRow
-            first
-            leading={<IconTile name="user-plus" />}
             title={t.allowSignups}
-            subtitle={`${server.signups_forced_by_server ? t.signupsForced : server.signups_open ? t.signupsOpen : t.signupsClosed} · ${t.serverOnlyYou}`}
+            subtitle={server.signups_forced_by_server ? t.signupsForced : undefined}
             trailing={
               <Switch
                 accessibilityLabel={t.allowSignups}
@@ -145,9 +151,28 @@ export default function Settings() {
               />
             }
           />
+        ) : null}
+      </Card>
+      {askConsent ? (
+        <Card>
+          <Text style={type.rowTitle}>{t.askShare}</Text>
+          <Text style={type.rowSubtitle}>{t.askShareDetail.replace("{provider}", askConsent)}</Text>
+          <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />
         </Card>
       ) : null}
-      <Button title={t.signOut} onPress={() => void signOut()} />
+      <Pressable onPress={() => void signOut()} accessibilityRole="button" style={({ pressed }) => [styles.signOut, pressed && { opacity: 0.6 }]}>
+        <Text style={styles.signOutText}>{t.signOut}</Text>
+      </Pressable>
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  me: { alignItems: "center", gap: space.xs, paddingTop: space.sm, paddingBottom: space.xs },
+  name: { fontFamily: fonts.bold, fontSize: textSize.title3, color: colors.ink, marginTop: space.xs },
+  places: { flexDirection: "row", gap: space.sm },
+  place: { flex: 1, alignItems: "center", gap: space.sm, paddingVertical: space.lg, paddingHorizontal: space.sm, borderRadius: radius.card, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
+  pick: { gap: space.sm },
+  signOut: { alignItems: "center", paddingVertical: space.md },
+  signOutText: { fontFamily: fonts.semibold, fontSize: textSize.body, color: colors.dangerOnShell }
+});
