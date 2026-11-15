@@ -1,5 +1,6 @@
-import { Switch, Text, View } from "react-native";
-import { Card, IconTile, ListRow, type, type IconName } from "@/components/drift";
+import { View } from "react-native";
+import { ConnectionTile, TileGrid } from "@/components/ai-provider-parts";
+import { IconTile, type IconName } from "@/components/drift";
 import { GroupHeader, Screen } from "@/components/screen";
 import { colors, space } from "@/components/theme";
 import { useSections } from "@/hooks/use-sections";
@@ -16,45 +17,39 @@ const ICONS: Record<SectionKey, IconName> = {
   library: "saver",
   vehicles: "truck",
   documents: "file-text",
+  shipments: "package",
   media: "film"
 };
-const TOP: SectionKey[] = ["health", "finance", "habits", "library", "vehicles", "documents", "media"];
+const TOP: SectionKey[] = ["health", "finance", "habits", "library", "vehicles", "documents", "shipments", "media"];
 
-// Settings → Sections: one switch per part of Orbit. Off means hidden everywhere, never deleted.
+// Settings → Sections: one tile per part of Orbit. Off means hidden everywhere, never deleted.
 export default function Sections() {
   const { hidden, saved, setOn } = useSections();
   const healthOff = saved.includes("health");
-  const track = { true: colors.accent, false: colors.hairline };
 
-  const row = (key: SectionKey, first: boolean, underHealth = false) => {
+  // One tile per part: tap turns it on or off. Parts inside Health stay off and locked while Health is off.
+  const tile = (key: SectionKey, underHealth = false) => {
     const lockedOff = underHealth && healthOff;
+    const on = !hidden.has(key);
     return (
-      <ListRow
+      <ConnectionTile
         key={key}
-        first={first}
-        leading={<IconTile name={ICONS[key]} tone={hidden.has(key) ? "neutral" : "accent"} />}
-        title={st.names[key]}
-        subtitle={lockedOff ? st.offWithHealth : st.details[key]}
-        trailing={
-          <Switch
-            accessibilityLabel={st.names[key]}
-            trackColor={track}
-           
-            value={!hidden.has(key)}
-            disabled={lockedOff}
-            onValueChange={(next) => void setOn(key, next)}
-          />
-        }
+        mark={<IconTile name={ICONS[key]} size={36} tone={on ? "sand" : "neutral"} />}
+        name={st.names[key]}
+        badge={on ? "check" : null}
+        checked={on}
+        label={lockedOff ? `${st.names[key]}, ${st.offWithHealth}` : st.names[key]}
+        onPress={lockedOff ? undefined : () => void setOn(key, !on)}
       />
     );
   };
 
   return (
     <Screen title={st.sections}>
-      <Card list>{TOP.map((key, index) => row(key, index === 0))}</Card>
+      <TileGrid>{TOP.map((key) => tile(key))}</TileGrid>
       <View style={{ gap: space.sm }}>
         <GroupHeader label={st.insideHealth} />
-        <Card list>{INSIDE.health!.map((key, index) => row(key, index === 0, true))}</Card>
+        <TileGrid>{INSIDE.health!.map((key) => tile(key, true))}</TileGrid>
       </View>
     </Screen>
   );

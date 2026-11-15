@@ -32,6 +32,7 @@ const sfSymbols: Partial<Record<FeatherName, SFSymbol>> = {
   calendar: "calendar",
   camera: "camera",
   check: "checkmark",
+  "check-square": "checklist",
   "check-circle": "checkmark.circle",
   "chevron-down": "chevron.down",
   "chevron-left": "chevron.left",
@@ -43,6 +44,7 @@ const sfSymbols: Partial<Record<FeatherName, SFSymbol>> = {
   "credit-card": "creditcard",
   delete: "delete.left",
   "edit-3": "pencil",
+  "file-text": "doc.text",
   eye: "eye",
   "eye-off": "eye.slash",
   feather: "pencil.line",
@@ -64,6 +66,7 @@ const sfSymbols: Partial<Record<FeatherName, SFSymbol>> = {
   minus: "minus",
   moon: "moon",
   "more-horizontal": "ellipsis",
+  package: "shippingbox",
   "pie-chart": "chart.pie",
   play: "play",
   plus: "plus",
@@ -259,8 +262,8 @@ export function ListRow({
 }
 
 /** Square icon well, used as a ListRow's leading slot. */
-export function IconTile({ name, size = 32, tone = "neutral" }: { name: IconName; size?: number; tone?: "neutral" | "accent" | "urgent" }) {
-  const palette = { neutral: [colors.surfaceInset, colors.ink], accent: [colors.accentTint, colors.accentTintInk], urgent: [colors.urgent, colors.urgentInk] }[tone];
+export function IconTile({ name, size = 32, tone = "neutral" }: { name: IconName; size?: number; tone?: "neutral" | "sand" | "accent" | "urgent" }) {
+  const palette = { neutral: [colors.surfaceInset, colors.ink], sand: [colors.surfaceInset, colors.accentDeep], accent: [colors.accentTint, colors.accentTintInk], urgent: [colors.urgent, colors.urgentInk] }[tone];
   return (
     <View style={[styles.iconTile, { width: size, height: size, backgroundColor: palette[0] }]}>
       <View style={name === "arrow-right" ? flip : null}>

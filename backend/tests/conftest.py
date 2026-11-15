@@ -14,6 +14,7 @@ os.environ["ORBIT_DATABASE_URL"] = DATABASE_URL
 os.environ.setdefault("ORBIT_JWT_SECRET", "test-secret-that-is-long-enough-for-hs256-signing")
 # Tests drive WHOOP syncs themselves; no background thread.
 os.environ["ORBIT_WHOOP_SYNC_MINUTES"] = "0"
+os.environ["ORBIT_SHIPMENTS_SYNC_MINUTES"] = "0"
 # The saver's copies of videos and pictures go to a throwaway folder.
 os.environ["ORBIT_MEDIA_DIR"] = tempfile.mkdtemp(prefix="orbit-media-")
 

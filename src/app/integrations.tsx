@@ -16,6 +16,7 @@ import { digits, t } from "@/lib/i18n";
 import { AI_CHOICE_NAMES, aiChoicesOf, integrationsApi, seerrState, VOICE_PROVIDER_NAMES, whoopState, type AiChoiceName, type IntegrationsOverview } from "@/lib/integrations";
 import { getApi } from "@/lib/backend";
 import { callsApi, px, type PhoneSetup } from "@/lib/phone-calls";
+import { shipmentsApi, sx, type TrackingStatus } from "@/lib/shipments";
 import { hunterApi, type GmailStatus } from "@/lib/subscriptions";
 import { travelApi, tx, type TravelKey } from "@/lib/travel";
 
@@ -35,6 +36,7 @@ export default function Integrations() {
   const [saving, setSaving] = useState(false);
   const [phone, setPhone] = useState<PhoneSetup | null>(null);
   const [gmail, setGmail] = useState<GmailStatus | null>(null);
+  const [tracking, setTracking] = useState<TrackingStatus | null>(null);
   const [travelKey, setTravelKey] = useState<TravelKey | null>(null);
 
   const load = useCallback(async () => {
@@ -47,6 +49,7 @@ export default function Integrations() {
       const nextPhone = await callsApi.setup(getApi()).catch(() => null);
       setPhone((current) => nextPhone ?? current);
       setGmail(await hunterApi.gmailStatus(getApi()).catch(() => null));
+      setTracking(await shipmentsApi.overview(getApi()).then((found) => found.tracking).catch(() => null));
       setTravelKey(await travelApi.overview(getApi()).then((found) => found.key).catch(() => null));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -168,6 +171,20 @@ export default function Integrations() {
         </TileGrid>
       </Card>
 
+      {/* Shipments follow through the person's own 17TRACK key; the key is pasted on the Shipments page. */}
+      <Card title={sx.shipments}>
+        <TileGrid>
+          <ConnectionTile
+            wide
+            mark={<IconTile name="package" />}
+            name="17TRACK"
+            badge={!tracking?.connected ? null : tracking.last_error ? "alert" : "check"}
+            icons={["package", "truck"]}
+            label={`17TRACK, ${tracking?.connected ? sx.trackingLinked : sx.trackingConnect}`}
+            onPress={() => router.push("/shipments")}
+          />
+        </TileGrid>
+      </Card>
 
       <BankSmsCard />
     </Screen>

@@ -16,6 +16,7 @@ import { contentWidth, showsSidebar } from "@/lib/sidebar";
 import { dx } from "@/lib/documents";
 import { tx } from "@/lib/travel";
 import { rx } from "@/lib/medications";
+import { sx } from "@/lib/shipments";
 import { st } from "@/lib/subscriptions";
 import { pt } from "@/lib/plan";
 import { tt } from "@/lib/training";
@@ -79,6 +80,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/habits": { title: t.habits, hint: "habit read 20 min daily" },
   "/vehicles": { title: t.car },
   "/documents": { title: dx.documents },
+  "/shipments": { title: sx.shipments },
   "/travel": { title: tx.travel },
   "/media": { title: t.movies },
   "/requests": { title: mt.requests },
