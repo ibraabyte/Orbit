@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Text } from "react-native";
-import { AppleHealthCard } from "@/components/apple-health-card";
+import { AppleHealthTile } from "@/components/apple-health-card";
 import { ConnectionTile, IconMark, LogoMark, PickRow, ProviderGrid, ProviderMark, TileGrid, type Pick } from "@/components/ai-provider-parts";
 import { BankSmsCard } from "@/components/bank-sms-card";
 import { GmailCard } from "@/components/gmail-card";
@@ -105,23 +105,22 @@ export default function Integrations() {
         <TileGrid>
           <ConnectionTile
             wide
-            mark={<IconMark name="watch" />}
+            mark={<LogoMark source={require("../../assets/brand/ai/whoop.png")} />}
             name="WHOOP"
             badge={whoop.tone === "warning" ? "alert" : overview.whoop.connected ? "check" : null}
             icons={["heart", "moon", "activity"]}
             label={`WHOOP, ${whoop.label}, ${whoop.detail}`}
             onPress={overview.whoop.configured ? () => router.push("/whoop") : undefined}
           />
+          <AppleHealthTile status={overview.apple_health} onChange={load} />
         </TileGrid>
       </Card>
-
-      <AppleHealthCard status={overview.apple_health} onChange={load} />
 
       <Card title={t.pv.svcMedia}>
         <TileGrid>
           <ConnectionTile
             wide
-            mark={<IconMark name="film" />}
+            mark={<LogoMark source={require("../../assets/brand/ai/seerr.png")} />}
             name="Seerr"
             badge={seerr.connected ? "check" : null}
             icons={["film", "tv"]}

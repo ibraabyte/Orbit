@@ -2,7 +2,8 @@ import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import { Text } from "react-native";
-import { Badge, Card, IconTile, ListRow, type } from "@/components/drift";
+import { LogoMark } from "@/components/ai-provider-parts";
+import { Badge, Card, ListRow } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, ui } from "@/components/screen";
 import { colors } from "@/components/theme";
@@ -62,13 +63,13 @@ export function GmailCard({ status, onChange, returnPath }: { status: GmailStatu
       {notice ? <Text style={notice.ok ? { color: colors.success } : ui.error}>{notice.message}</Text> : null}
       {connected && status ? (
         <>
-          <ListRow first leading={<IconTile name="mail" />} title={st.gmailConnected(status.email ?? "")} subtitle={status.last_error ?? null} />
+          <ListRow first leading={<LogoMark source={require("../../assets/brand/ai/gmail.png")} />} title={st.gmailConnected(status.email ?? "")} subtitle={status.last_error ?? null} />
           {status.last_error ? <Button title={st.gmailConnect} disabled={busy} onPress={connect} /> : null}
           <Button variant="outline" title={st.gmailDisconnect} disabled={busy} onPress={disconnect} />
         </>
       ) : (
         <>
-          <Text style={type.rowSubtitle}>{status && !status.configured ? st.gmailNotSetUp : st.gmailIntro}</Text>
+          <ListRow first leading={<LogoMark source={require("../../assets/brand/ai/gmail.png")} />} title="Gmail" subtitle={status && !status.configured ? st.gmailNotSetUp : st.gmailIntro} />
           {status?.configured ? <Button title={busy ? st.gmailConnecting : st.gmailConnect} disabled={busy} onPress={connect} /> : null}
         </>
       )}
