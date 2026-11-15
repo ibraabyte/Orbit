@@ -1,6 +1,7 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Text } from "react-native";
+import { AppleHealthCard } from "@/components/apple-health-card";
 import { ProviderGrid } from "@/components/ai-provider-parts";
 import { BankSmsCard } from "@/components/bank-sms-card";
 import { Badge, Card, EmptyState, IconTile, ListRow, toneToBadge, type } from "@/components/drift";
@@ -84,6 +85,8 @@ export default function Integrations() {
           chevron={overview.whoop.configured}
         />
       </Card>
+
+      <AppleHealthCard status={overview.apple_health} onChange={load} />
 
       <Card title="Seerr" action={<Badge tone={toneToBadge(seerrNow.tone)}>{seerrNow.label}</Badge>}>
         {seerr.error ? <Text style={type.rowSubtitle}>{seerr.error}</Text> : null}
