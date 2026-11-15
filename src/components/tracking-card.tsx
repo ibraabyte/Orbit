@@ -68,7 +68,7 @@ export function TrackingCard({ status, onChange }: { status: TrackingStatus | nu
       {notice ? <Text style={notice.ok ? { color: colors.success } : ui.error}>{notice.message}</Text> : null}
       {connected && status ? (
         <>
-          <ListRow first leading={<IconTile name="package" />} title={sx.trackingLinked} subtitle={status.last_error ?? null} />
+          <ListRow first leading={<IconTile name="package" />} title="17TRACK" subtitle={status.last_error ?? sx.trackingConnected} />
           {status.last_error ? form : null}
           <Button variant="outline" title={sx.trackingDisconnect} disabled={busy} onPress={disconnect} />
         </>

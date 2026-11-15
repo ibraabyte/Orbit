@@ -201,8 +201,7 @@ function ShipmentList({ title, shipments, now, onOpen, muted }: { title: string;
                 </>
               ) : undefined
             }
-            meta={rowMeta(shipment) ?? undefined}
-            subtitle={rowLine(shipment, now)}
+            subtitle={[rowMeta(shipment), rowLine(shipment, now)].filter(Boolean).join("\n")}
             onPress={() => onOpen(shipment)}
             chevron
           />
