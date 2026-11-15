@@ -18,12 +18,12 @@ import { px } from "@/lib/phone-calls";
 export type Section = { key: string; href: Href; label: string; icon: IconName };
 
 const section = (key: string, label: string, icon: IconName): Section => ({ key, href: `/${key}` as Href, label, icon });
-export const manage = [section("tasks", t.tasks, "check-square"), section("phone-calls", px.calls, "phone-outgoing")];
+export const manage = [section("tasks", t.tasks, "check-square"), section("phone-calls", px.calls, "agent")];
 // Food, Exercises and WHOOP live inside Health now; they can still be pinned for one tap.
-export const logs = [section("health", t.health, "heart"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "bookmark")];
+export const logs = [section("health", t.health, "heart"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "saver")];
 export const insideHealth = [section("food", t.food, "fork-knife"), section("exercises", et.exercises, "dumbbell"), section("whoop", t.whoop, "activity"), section("medications", rx.medications, "pills")];
 // Money places, investments, cards and installments live inside Finance; they can be pinned the same way.
-export const insideFinance = [section("accounts", t.moneyPlaces, "briefcase"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
+export const insideFinance = [section("accounts", t.moneyPlaces, "wallet"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
 export const home = [section("vehicles", t.car, "truck"), section("documents", dx.documents, "file-text"), section("shipments", sx.shipments, "package"), section("media", t.movies, "film")];
 const ask = section("ask", t.askOrbit, "message-circle");
 export const system = [section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
@@ -112,7 +112,11 @@ export function useSectionStatus(): Record<string, SectionStatus | undefined> {
       habits: summary.activeHabitCount ? { caption: st.habits(n(summary.completedHabitCount), n(summary.activeHabitCount)) } : undefined,
       food: groceries ? { caption: st.toBuy(n(groceries)) } : summary.todayCalories ? { caption: st.kcal(n(summary.todayCalories)) } : undefined,
       medications: doses ? { caption: st.doses(n(doses)), alert: true } : data.medications.length ? { caption: st.medsN(n(data.medications.length)) } : undefined,
-      exercises: { caption: st.workoutsWeek(n(data.workouts.filter((workout) => now.getTime() - new Date(workout.logged_at).getTime() < 7 * 86_400_000).length)) },
+      // No workouts this week: no line, rather than "0 workouts".
+      ...(() => {
+        const week = data.workouts.filter((workout) => now.getTime() - new Date(workout.logged_at).getTime() < 7 * 86_400_000).length;
+        return week ? { exercises: { caption: st.workoutsWeek(n(week)) } } : {};
+      })(),
       accounts: data.moneyAccounts.length ? { caption: st.places(n(data.moneyAccounts.length)) } : undefined,
       investments: data.investments.length ? { caption: st.holdings(n(data.investments.length)) } : undefined,
       cards: data.cards.length ? { caption: st.cardsN(n(data.cards.length)) } : undefined,
