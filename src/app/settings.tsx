@@ -176,8 +176,8 @@ function PickRow<T extends string>({ icon, title, options, value, onChange, firs
           const on = option.key === value;
           return (
             <Pressable key={option.key} onPress={() => onChange(option.key)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={option.label} style={({ pressed }) => [styles.pill, on && styles.pillOn, pressed && { opacity: 0.7 }]}>
-              {option.icon ? <Icon name={option.icon} size={15} color={on ? colors.accentInk : colors.inkMuted} /> : null}
-              <Text style={[styles.pillText, on && { color: colors.accentInk }]} numberOfLines={1}>
+              {option.icon ? <Icon name={option.icon} size={15} color={on ? colors.urgentInk : colors.inkMuted} /> : null}
+              <Text style={[styles.pillText, on && { color: colors.urgentInk }]} numberOfLines={1}>
                 {option.label}
               </Text>
             </Pressable>
@@ -197,8 +197,9 @@ const styles = StyleSheet.create({
   pickLine: { borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   pickHead: { flexDirection: "row", alignItems: "center", gap: space.md },
   pills: { flexDirection: "row", gap: space.sm },
-  pill: { flex: 1, minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.xs, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
-  pillOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  // Quiet beige pills; the picked one is dark, like the Tasks card.
+  pill: { flex: 1, minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.xs, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
+  pillOn: { backgroundColor: colors.urgent },
   pillText: { fontFamily: fonts.medium, fontSize: textSize.subheadline, color: colors.ink },
   signOut: { alignItems: "center", paddingVertical: space.md },
   signOutText: { fontFamily: fonts.semibold, fontSize: textSize.body, color: colors.dangerOnShell }
