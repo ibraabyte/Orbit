@@ -102,7 +102,7 @@ export default function Health() {
     { href: "/injuries", icon: "alert-circle", title: et.injuries, subtitle: ht.injuriesDetail, meta: live.injuries ? ht.activeInjuries(live.injuries) : undefined },
     { href: "/body", icon: "maximize", title: tt.measurements, subtitle: tt.measurementsDetail },
     { href: "/medications", icon: "plus-square", title: rx.medications, subtitle: rx.medicationsDetail, meta: medsMeta },
-    { href: "/whoop", icon: "watch", title: t.whoop, subtitle: ht.whoopDetail, meta: whoop?.connected ? (recovery === null ? undefined : `${Math.round(recovery)}%`) : whoop?.configured ? ht.whoopConnect : undefined }
+    { href: "/whoop", icon: "activity", title: t.whoop, subtitle: ht.whoopDetail, meta: whoop?.connected ? (recovery === null ? undefined : `${Math.round(recovery)}%`) : whoop?.configured ? ht.whoopConnect : undefined }
   ];
   const sections = allSections.filter((section) => !pathHidden(String(section.href), hidden));
 
