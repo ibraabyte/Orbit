@@ -111,7 +111,11 @@ export function useSectionStatus(): Record<string, SectionStatus | undefined> {
       habits: summary.activeHabitCount ? { caption: st.habits(n(summary.completedHabitCount), n(summary.activeHabitCount)) } : undefined,
       food: groceries ? { caption: st.toBuy(n(groceries)) } : summary.todayCalories ? { caption: st.kcal(n(summary.todayCalories)) } : undefined,
       medications: doses ? { caption: st.doses(n(doses)), alert: true } : data.medications.length ? { caption: st.medsN(n(data.medications.length)) } : undefined,
-      exercises: { caption: st.workoutsWeek(n(data.workouts.filter((workout) => now.getTime() - new Date(workout.logged_at).getTime() < 7 * 86_400_000).length)) },
+      // No workouts this week: no line, rather than "0 workouts".
+      ...(() => {
+        const week = data.workouts.filter((workout) => now.getTime() - new Date(workout.logged_at).getTime() < 7 * 86_400_000).length;
+        return week ? { exercises: { caption: st.workoutsWeek(n(week)) } } : {};
+      })(),
       accounts: data.moneyAccounts.length ? { caption: st.places(n(data.moneyAccounts.length)) } : undefined,
       investments: data.investments.length ? { caption: st.holdings(n(data.investments.length)) } : undefined,
       cards: data.cards.length ? { caption: st.cardsN(n(data.cards.length)) } : undefined,

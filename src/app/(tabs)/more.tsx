@@ -10,7 +10,7 @@ import { openTasks, summarizeDashboard, weeklySummary } from "@/lib/dashboard";
 import { isPastDue } from "@/lib/dates";
 import { formatMoney } from "@/lib/finance";
 import { completedHabitsToday } from "@/lib/habits";
-import { formatDate, formatNumber, t } from "@/lib/i18n";
+import { formatDate, formatNumber, t, isArabic } from "@/lib/i18n";
 
 // More, bento ("E" on the design canvas): Ask Orbit on top, which also finds a section by name, then Tasks as the
 // big dark card with what is late, Health's weekly ring and today's spending beside it, Habits' week as dots, and
@@ -211,7 +211,8 @@ const plain = { backgroundColor: colors.surface, borderWidth: 1, borderColor: co
 const styles = StyleSheet.create({
   // Like the system search field: filled, no border, the magnifier at the start.
   search: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 44, paddingHorizontal: space.md, borderRadius: 12, borderCurve: "continuous", backgroundColor: colors.surfaceInset },
-  searchInput: { flex: 1, minHeight: 40, fontFamily: fonts.regular, fontSize: textSize.body, color: colors.ink },
+  // Starts at the reading side: right in Arabic.
+  searchInput: { flex: 1, minHeight: 40, fontFamily: fonts.regular, fontSize: textSize.body, color: colors.ink, textAlign: isArabic ? "right" : "left", writingDirection: isArabic ? "rtl" : "ltr" },
   row: { flexDirection: "row", gap: space.md },
   column: { flex: 1, flexBasis: 0, gap: space.md },
   spread: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm },
