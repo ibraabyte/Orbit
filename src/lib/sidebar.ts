@@ -42,6 +42,7 @@ const parents: Record<string, string> = {
   cards: "finance",
   obligations: "finance",
   task: "tasks",
+  "document-edit": "documents",
   // The Seerr pages under Movies & TV.
   title: "media",
   discover: "media",

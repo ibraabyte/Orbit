@@ -15,9 +15,10 @@ const ICONS: Record<SectionKey, IconName> = {
   habits: "repeat",
   library: "bookmark",
   vehicles: "truck",
+  documents: "file-text",
   media: "film"
 };
-const TOP: SectionKey[] = ["health", "finance", "habits", "library", "vehicles", "media"];
+const TOP: SectionKey[] = ["health", "finance", "habits", "library", "vehicles", "documents", "media"];
 
 // Settings → Sections: one switch per part of Orbit. Off means hidden everywhere, never deleted.
 export default function Sections() {

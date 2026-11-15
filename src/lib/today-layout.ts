@@ -1,7 +1,7 @@
 // Which cards Today shows and in what order, below the prayer card (which always comes first).
 // Saved on the device only. Before this, only a list of hidden cards was saved (orbit.today.hidden); it is read once.
 
-export const TODAY_CARDS = ["brief", "dayplan", "digest", "attention", "upnext", "meds", "workout", "week", "quick", "health"] as const;
+export const TODAY_CARDS = ["brief", "dayplan", "digest", "attention", "upnext", "meds", "docs", "workout", "week", "quick", "health"] as const;
 export type TodayCard = (typeof TODAY_CARDS)[number];
 export type TodayLayout = { order: TodayCard[]; hidden: TodayCard[] };
 

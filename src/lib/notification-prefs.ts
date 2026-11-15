@@ -2,20 +2,20 @@ import { NINE_AM, type AlertTime } from "@/lib/finance";
 import type { PrayerName } from "@/lib/prayer-times";
 
 // Every kind of alert the phone schedules on its own. The morning brief keeps its own setting (lib/morning-brief).
-export type NotificationKind = "prayer" | "reminders" | "medications" | "medStock" | "bills" | "installments" | "car" | "budget" | "rest";
-export const NOTIFICATION_KINDS: NotificationKind[] = ["prayer", "reminders", "medications", "medStock", "bills", "installments", "car", "budget", "rest"];
+export type NotificationKind = "prayer" | "reminders" | "medications" | "medStock" | "bills" | "installments" | "car" | "documents" | "budget" | "rest";
+export const NOTIFICATION_KINDS: NotificationKind[] = ["prayer", "reminders", "medications", "medStock", "bills", "installments", "car", "documents", "budget", "rest"];
 export const PRAYER_NAMES: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
 export type NotificationPrefs = {
   kinds: Record<NotificationKind, boolean>;
   // Which of the five prayers alert, when prayer alerts are on.
   prayers: Record<PrayerName, boolean>;
-  // When bill, installment and car heads-ups go out on their day.
+  // When bill, installment, car and document heads-ups go out on their day.
   headsUp: AlertTime;
 };
 
 export const NOTIFICATION_DEFAULT: NotificationPrefs = {
-  kinds: { prayer: true, reminders: true, medications: true, medStock: true, bills: true, installments: true, car: true, budget: true, rest: true },
+  kinds: { prayer: true, reminders: true, medications: true, medStock: true, bills: true, installments: true, car: true, documents: true, budget: true, rest: true },
   prayers: { fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true },
   headsUp: NINE_AM
 };
@@ -30,6 +30,7 @@ export const NOTIFICATION_SECTION: Record<NotificationKind, string | null> = {
   installments: "finance",
   budget: "finance",
   car: "vehicles",
+  documents: "documents",
   rest: "exercises"
 };
 

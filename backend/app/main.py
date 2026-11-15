@@ -21,6 +21,7 @@ from app.routers import (
     calls,
     chatgpt,
     dashboard,
+    documents,
     domains,
     exercises,
     export,
@@ -107,6 +108,7 @@ def create_app() -> FastAPI:
         *training.ROUTERS,
         *plan.ROUTERS,
         *medications.ROUTERS,
+        documents.router,
     ):
         app.include_router(router)
     return app

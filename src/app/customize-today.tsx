@@ -5,6 +5,7 @@ import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { useSections } from "@/hooks/use-sections";
 import { useTodayLayout } from "@/hooks/use-today-layout";
 import { dp } from "@/lib/day-plan";
+import { dx } from "@/lib/documents";
 import { t } from "@/lib/i18n";
 import { rx } from "@/lib/medications";
 import { pt } from "@/lib/plan";
@@ -17,6 +18,7 @@ const labels: Record<TodayCard, string> = {
   attention: t.attention,
   upnext: t.nextUp,
   meds: rx.todayDoses,
+  docs: dx.soon,
   workout: pt.todayWorkout,
   week: t.weekSummary,
   quick: t.quick,
@@ -29,7 +31,7 @@ const labels: Record<TodayCard, string> = {
 export default function CustomizeToday() {
   const { layout, shown, setShown, move } = useTodayLayout();
   const { on } = useSections();
-  const inUse = (card: TodayCard) => (card === "health" ? on("health") : card === "workout" ? on("exercises") : card === "meds" ? on("medications") : true);
+  const inUse = (card: TodayCard) => (card === "health" ? on("health") : card === "workout" ? on("exercises") : card === "meds" ? on("medications") : card === "docs" ? on("documents") : true);
   const cards = layout.order.filter(inUse);
   const track = { true: colors.accent, false: colors.hairline };
 

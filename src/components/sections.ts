@@ -9,6 +9,7 @@ import { et } from "@/lib/exercises";
 import { financeSummary, formatMoney } from "@/lib/finance";
 import { foodSummary } from "@/lib/food";
 import { formatNumber, isArabic, t } from "@/lib/i18n";
+import { documentsDueSoon, dx } from "@/lib/documents";
 import { dosesOnDay, rx } from "@/lib/medications";
 import { px } from "@/lib/phone-calls";
 
@@ -22,7 +23,7 @@ export const logs = [section("health", t.health, "activity"), section("finance",
 export const insideHealth = [section("food", t.food, "coffee"), section("exercises", et.exercises, "zap"), section("whoop", t.whoop, "watch"), section("medications", rx.medications, "plus-square")];
 // Money places, investments, cards and installments live inside Finance; they can be pinned the same way.
 export const insideFinance = [section("accounts", t.moneyPlaces, "briefcase"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
-export const home = [section("vehicles", t.car, "truck"), section("media", t.movies, "film")];
+export const home = [section("vehicles", t.car, "truck"), section("documents", dx.documents, "file-text"), section("media", t.movies, "film")];
 const ask = section("ask", t.askOrbit, "message-circle");
 export const system = [section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];
 // Ask Orbit leads: it is the assistant, not a setting. Tasks sit with the logs rather than in a group of one.
@@ -49,6 +50,8 @@ export function useSectionCounts(): Record<string, number> {
     food: foodSummary(data).neededGroceries.length,
     finance: financeSummary(data).overdueBills.length,
     // Doses due now or missed today, still unanswered.
+    // Papers expired or expiring within a month.
+    documents: documentsDueSoon(data.documents).length,
     medications: dosesOnDay(data.medications, data.medicationDoses, new Date()).filter((entry) => entry.state === "due" || entry.state === "missed").length
   };
 }

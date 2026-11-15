@@ -25,6 +25,7 @@ export const emptyData: DashboardData = {
   habitLogs: [],
   medications: [],
   medicationDoses: [],
+  documents: [],
   expenses: [],
   bills: [],
   budgets: [],

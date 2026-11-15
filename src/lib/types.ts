@@ -447,6 +447,23 @@ export type MedicationDose = {
   updated_at: string;
 };
 
+export type DocumentKind = "national_id" | "iqama" | "passport" | "driving_license" | "health_insurance" | "visa" | "other";
+
+// An official paper and the day it expires (backend/app/models/documents.py). holder is whose it is when not the
+// user's own; remind_days are the heads-ups before expires_on (0 is the day itself), furthest first.
+export type OfficialDocument = {
+  id: string;
+  user_id: string;
+  kind: DocumentKind;
+  name: string | null;
+  holder: string | null;
+  expires_on: string;
+  remind_days: number[];
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type DashboardData = {
   profile: Profile | null;
   tasks: Task[];
@@ -467,6 +484,7 @@ export type DashboardData = {
   habitLogs: HabitLog[];
   medications: Medication[];
   medicationDoses: MedicationDose[];
+  documents: OfficialDocument[];
   expenses: Expense[];
   bills: Bill[];
   budgets: Budget[];

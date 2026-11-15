@@ -42,6 +42,7 @@ export const EXPORT_TABLES = [
   { name: "habits", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "habit_logs", ownerColumn: "user_id", orderColumn: "logged_at", ascending: true },
   { name: "vehicles", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
+  { name: "documents", ownerColumn: "user_id", orderColumn: "expires_on", ascending: true },
   { name: "watch_items", ownerColumn: "user_id", orderColumn: "created_at", ascending: true },
   { name: "gym_equipment", ownerColumn: "user_id", orderColumn: "equipment", ascending: true },
   { name: "injuries", ownerColumn: "user_id", orderColumn: "created_at", ascending: true }

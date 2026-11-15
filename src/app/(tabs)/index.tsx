@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { Fragment, useMemo, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Badge, Card, CardLink, Chevron, CountBadge, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
+import { DOCUMENT_ICONS, DocumentBadge, documentSubtitle } from "@/components/document-ui";
 import { DoseRow } from "@/components/medication-ui";
 import { DayPlanCard } from "@/components/day-plan";
 import { MorningBriefCard } from "@/components/morning-brief-card";
@@ -36,6 +37,7 @@ import { formatClock24, formatDate, formatIn, formatNumber, isArabic, t } from "
 import { prayerNamesEn, type PrayerTime } from "@/lib/prayer-times";
 import { buildRail, type RailEntry } from "@/lib/rail";
 import { dayMuscles, pt, recoveryLine } from "@/lib/plan";
+import { daysLeft, documentsDueSoon, documentTitle, dx } from "@/lib/documents";
 import { dosesOnDay, rx } from "@/lib/medications";
 import { formatSleepDuration } from "@/lib/sleep";
 import { cardLabel, moneyDueSoon, type MoneyDue } from "@/lib/wealth";
@@ -251,6 +253,17 @@ export default function Today() {
     </Card>
   ) : null;
 
+  // Papers expired or expiring within a month; the card stays away while everything is valid.
+  const docsDue = show("docs") && on("documents") ? documentsDueSoon(data.documents, now) : [];
+  const docsCard = docsDue.length ? (
+    <Card title={dx.soon} action={<CardLink href="/documents" label={dx.documents} />}>
+      {docsDue.slice(0, 4).map((document, index) => {
+        const left = daysLeft(document, now);
+        return <ListRow key={document.id} first={index === 0} href="/documents" leading={<IconTile name={DOCUMENT_ICONS[document.kind]} tone="urgent" />} title={documentTitle(document)} badges={<DocumentBadge left={left} />} subtitle={documentSubtitle(document, left)} />;
+      })}
+    </Card>
+  ) : null;
+
   // Health shows once something is logged today (food, a workout, sleep); before that it would be a row of zeros.
   // With Food off, the card keeps workouts and sleep and drops the calorie ring.
   const foodOn = on("food");
@@ -293,6 +306,7 @@ export default function Today() {
     attention: attentionCard ?? clearCard,
     upnext: nextCard,
     meds: medsCard,
+    docs: docsCard,
     workout: workoutCard,
     week: friday && show("week") ? <WeeklySummaryCard state={week.state} retry={() => void week.refresh()} /> : null,
     quick: quickTiles,

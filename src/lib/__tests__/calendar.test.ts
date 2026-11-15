@@ -123,6 +123,7 @@ const data: DashboardData = {
   habitLogs: [],
   medications: [],
   medicationDoses: [],
+  documents: [],
   budgets: [],
   cards: [],
   moneyAccounts: [],
