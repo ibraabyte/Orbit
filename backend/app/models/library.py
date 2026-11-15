@@ -21,6 +21,9 @@ class Capture(Owned, Base):
         CheckConstraint("analysis_status in ('none', 'pending', 'done', 'failed', 'no_ai')", name="analysis_status"),
         CheckConstraint("char_length(analysis) <= 4000", name="analysis_length"),
         CheckConstraint("char_length(content_text) <= 8000", name="content_text_length"),
+        CheckConstraint("char_length(transcript) <= 8000", name="transcript_length"),
+        CheckConstraint("char_length(place) <= 200", name="place_length"),
+        CheckConstraint("cardinality(ingredients) <= 40", name="ingredients_count"),
         CheckConstraint("cardinality(labels) <= 20", name="labels_count"),
         UniqueConstraint("id", "user_id"),
         Index("captures_user_created_idx", "user_id", text("created_at desc")),
@@ -47,6 +50,11 @@ class Capture(Owned, Base):
     # The post's own words: a tweet's text, a video's caption, or text shared on its own.
     content_text: Mapped[str | None] = mapped_column(Text)
     author: Mapped[str | None] = mapped_column(Text)
+    # What is said in its video, from the user's own voice model (Integrations > Voice). None without one.
+    transcript: Mapped[str | None] = mapped_column(Text)
+    # What the AI found to act on: the one place it is about (for a map search) and a recipe's ingredients.
+    place: Mapped[str | None] = mapped_column(Text)
+    ingredients: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, server_default="{}")
     # none = never analysed (saved before this), pending = working on it, no_ai = no AI connected.
     analysis_status: Mapped[str] = mapped_column(Text, nullable=False, server_default="none")
     analysis_error: Mapped[str | None] = mapped_column(Text)

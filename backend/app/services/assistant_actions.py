@@ -25,7 +25,7 @@ from app import models as m
 from app.schemas import domains as s
 from app.schemas import food as food_schemas
 from app.schemas.tasks import ReminderCreate, ReminderUpdate, TaskCreate, TaskListCreate, TaskListUpdate, TaskUpdate
-from app.services import sections
+from app.services import saver_ai, sections
 from app.services.agent import Call, Tool
 
 MAX_ACTIONS = 12
@@ -88,8 +88,10 @@ def _kinds() -> dict[str, Kind]:
              m.Habit.created_at.asc(), (m.Habit.archived_at.is_(None),)),
         Kind("habit_log", "one time a habit was done (create one to mark a habit done)", m.HabitLog, s.HabitLogCreate, None, "note",
              ("habit_id", "logged_at"), 20, m.HabitLog.logged_at.desc(), (), {"habit_id": "habit"}),
-        Kind("note", "a saved note or link", m.Capture, s.CaptureCreate, s.CaptureUpdate, "title", ("type", "url"), 10,
-             m.Capture.created_at.desc()),
+        Kind("note", "something kept in the Saver: a link, video, post, picture or text shared from any app, with a summary "
+             "and tags. status want = still to see, done = seen. find_items looks inside them (what the AI saw, what is said "
+             "in the video), so use it to answer questions about what the user saved", m.Capture, s.CaptureCreate,
+             s.CaptureUpdate, "title", ("type", "category", "status", "summary", "labels", "url"), 10, m.Capture.created_at.desc()),
         Kind("money_account", "a place money is kept (bank, wallet, cash) with its balance", m.MoneyAccount, s.MoneyAccountCreate,
              s.MoneyAccountUpdate, "name", ("kind", "balance", "currency"), 20, m.MoneyAccount.created_at.asc()),
         Kind("investment", "an investment with what was put in and what it is worth now", m.Investment, s.InvestmentCreate,
@@ -225,6 +227,22 @@ def _show(run: Run, kind: Kind, row: Any) -> dict[str, Any]:
     return shown
 
 
+SAVED_TEXT_MAX = 500
+
+
+def _terms(text: str) -> list[str]:
+    return [term.strip() for term in text.split(",") if term.strip()][:12]
+
+
+def _show_saved(run: Run, row: m.Capture) -> dict[str, Any]:
+    """A saved item found by find_items: its card, plus what is in it so the AI can answer from it. Never the user's note."""
+    shown = _show(run, KINDS["note"], row)
+    for name, value in (("what_is_in_it", row.analysis), ("post_text", row.content_text), ("said_in_video", row.transcript)):
+        if value:
+            shown[name] = value if len(value) <= SAVED_TEXT_MAX else value[: SAVED_TEXT_MAX - 1] + "…"
+    return shown
+
+
 def _owned(kind: Kind, user_id: uuid.UUID, *conditions: ColumnElement[bool]):
     return select(kind.model).where(kind.model.user_id == user_id, *kind.where, *conditions)
 
@@ -261,7 +279,9 @@ def tools(hidden: frozenset[str] = frozenset()) -> list[Tool]:
     return [
         Tool(
             "find_items",
-            "Search this user's items of one kind by name or title, for one that isn't in the items list. Returns refs.",
+            "Search this user's items of one kind by name or title, for one that isn't in the items list. Returns refs. "
+            "For note (the Saver) it also searches inside each item; give several words or synonyms, Arabic and English, "
+            "separated by commas, like: مطعم, restaurant, مطاعم الرياض.",
             {"type": "object", "properties": {"kind": kind, "text": {"type": "string"}}, "required": ["kind", "text"]},
         ),
         Tool(
@@ -406,6 +426,8 @@ def handle(run: Run, call: Call) -> str:
             return _result(error=f"A {kind.name} has no name to search; use the items list.")
         if not text:
             return _result(error="Say what to look for.")
+        if kind.name == "note":
+            return _result(items=[_show_saved(run, row) for row in saver_ai.find(run.db, run.user_id, _terms(text), FIND_LIMIT)])
         column = getattr(kind.model, kind.label)
         rows = run.db.scalars(
             _owned(kind, run.user_id, column.ilike(f"%{text}%")).order_by(kind.order, kind.model.id).limit(FIND_LIMIT)

@@ -345,6 +345,25 @@ def for_ai(image: Path, content_type: str) -> tuple[bytes, str] | None:
     return None
 
 
+# Small enough for every voice model (OpenAI and Groq take up to 25 MB): 10 minutes of 32 kbps mono is about 2.4 MB.
+SPEECH_SECONDS = 600
+
+
+def speech_audio(video: Path) -> bytes | None:
+    """The video's sound as a small MP3 for speech to text: mono, 16 kHz, the first SPEECH_SECONDS.
+    None without ffmpeg or when the video has no sound."""
+    if not has_ffmpeg():
+        return None
+    with tempfile.TemporaryDirectory() as work:
+        out = Path(work) / "speech.mp3"
+        command = ["ffmpeg", "-v", "error", "-i", str(video), "-vn", "-t", str(SPEECH_SECONDS)]
+        command += ["-ac", "1", "-ar", "16000", "-b:a", "32k", "-y", str(out)]
+        # ponytail: under 1 KB is a header with no sound; good enough to skip silent clips' empty files.
+        if _run(command, timeout=120) and out.is_file() and out.stat().st_size > 1024:
+            return out.read_bytes()
+    return None
+
+
 def poster_from(video: Path, dest: Path) -> bool:
     return (
         has_ffmpeg()

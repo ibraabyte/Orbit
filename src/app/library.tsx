@@ -2,8 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
 import { useShareIntentContext } from "expo-share-intent";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native";
-import { Card, EmptyState, Icon, type } from "@/components/drift";
+import { Image, Linking, Pressable, Share, StyleSheet, Text, View } from "react-native";
+import { Card, EmptyState, Icon, RowButton, type } from "@/components/drift";
 import { Chip } from "@/components/exercise-ui";
 import { useOverlays, type SheetOption } from "@/components/overlays";
 import { BleedRow, Button, ErrorState, Input, Loading, Screen, Segments } from "@/components/screen";
@@ -21,12 +21,14 @@ import {
   isWorking,
   posterOf,
   replaced,
+  savedAsText,
   sharedFiles,
   sharedLink,
   sharedText,
   siteLabel,
   st,
   STATUS_FILTERS,
+  tagList,
   videoOf,
   withSaved,
   type SaveResult,
@@ -53,6 +55,8 @@ export default function Saver() {
   const [category, setCategory] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusFilter>("want");
   const [query, setQuery] = useState("");
+  // A collection: one tag picked, gathering items from every category.
+  const [tag, setTag] = useState<string | null>(null);
   const [ownCategories, setOwnCategories] = useState<string[]>([]);
   // A new category's name being typed: for the filter row (null id) or to move one link into it.
   const [naming, setNaming] = useState<{ forId: string | null; name: string } | null>(null);
@@ -244,7 +248,8 @@ export default function Saver() {
   const categories = categoryList(all, ownCategories);
   const counts = categoryCounts(all, status);
   const smartShown = smart && smart.query === query.trim() ? inOrder(all, smart.ids) : null;
-  const shown = smartShown ?? filterSaved(all, { category, status, query });
+  const tags = tagList(all);
+  const shown = smartShown ?? filterSaved(all, { category, status, query, tag });
 
   const moveTo = (item: SavedItem) =>
     sheet({
@@ -308,6 +313,14 @@ export default function Saver() {
         <Chip label={st.newCategory} icon="plus" on={false} onPress={() => setNaming({ forId: null, name: "" })} />
       </BleedRow>
 
+      {tags.length || tag ? (
+        <BleedRow>
+          {(tag && !tags.includes(tag) ? [tag, ...tags] : tags).map((name) => (
+            <Chip key={name} label={name} icon="tag" on={tag === name} onPress={() => setTag(tag === name ? null : name)} />
+          ))}
+        </BleedRow>
+      ) : null}
+
       {naming ? (
         <View style={styles.saveRow}>
           <Input value={naming.name} onChangeText={(name) => setNaming({ ...naming, name })} placeholder={st.newCategoryBody} maxLength={40} autoFocus returnKeyType="done" onSubmitEditing={finishNaming} style={{ flex: 1 }} />
@@ -336,15 +349,23 @@ export default function Saver() {
         <Card>
           {!shown.length ? <EmptyState icon="bookmark">{smartShown ? st.smartNone : !all.length ? st.empty : query.trim() ? st.emptySearch : st.emptyFilter}</EmptyState> : null}
           {shown.map((item) => (
-            <SavedRow key={item.id} item={item} onPress={() => router.push(`/saved/${item.id}`)} onMore={() => actions(item)} onToggle={() => void update(item.id, { status: item.status === "want" ? "done" : "want" })} />
+            <SavedRow
+              key={item.id}
+              item={item}
+              onPress={() => router.push(`/saved/${item.id}`)}
+              onMore={() => actions(item)}
+              onToggle={() => void update(item.id, { status: item.status === "want" ? "done" : "want" })}
+              onTag={(label) => setTag(tag === label ? null : label)}
+            />
           ))}
         </Card>
       ) : null}
+      {items && shown.length ? <RowButton label={st.shareList(shown.length)} outline onPress={() => void Share.share({ message: savedAsText(shown) })} /> : null}
     </Screen>
   );
 }
 
-function SavedRow({ item, onPress, onMore, onToggle }: { item: SavedItem; onPress: () => void; onMore: () => void; onToggle: () => void }) {
+function SavedRow({ item, onPress, onMore, onToggle, onTag }: { item: SavedItem; onPress: () => void; onMore: () => void; onToggle: () => void; onTag: (label: string) => void }) {
   const site = siteLabel(item);
   const done = item.status === "done";
   const poster = posterOf(item);
@@ -378,9 +399,11 @@ function SavedRow({ item, onPress, onMore, onToggle }: { item: SavedItem; onPres
         {item.labels.length ? (
           <View style={styles.tags}>
             {item.labels.slice(0, 4).map((label) => (
-              <Text key={label} style={styles.tag} numberOfLines={1}>
-                {label}
-              </Text>
+              <Pressable key={label} onPress={() => onTag(label)} hitSlop={4} accessibilityRole="button" accessibilityLabel={label}>
+                <Text style={styles.tag} numberOfLines={1}>
+                  {label}
+                </Text>
+              </Pressable>
             ))}
           </View>
         ) : null}

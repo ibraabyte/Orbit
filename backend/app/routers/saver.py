@@ -261,25 +261,7 @@ def search(body: s.CaptureSearchIn, user_id: UserId, db: Db, ai: AiPick = None):
         terms = saver_ai.expand(access, body.query)
     except whoop_ai.InsightUnavailable as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
-    scored: list[tuple[int, uuid.UUID]] = []
-    for row in db.scalars(select(m.Capture).where(m.Capture.user_id == user_id).order_by(m.Capture.created_at.desc()).limit(2000)):
-        fields = (
-            row.title,
-            row.summary,
-            row.analysis,
-            row.search_terms,
-            row.content_text,
-            row.note,
-            row.author,
-            row.site_name,
-            row.url,
-            " ".join(row.labels),
-        )
-        points = saver_ai.score(saver_ai.fold(" ".join(value for value in fields if value)), terms)
-        if points:
-            scored.append((points, row.id))
-    scored.sort(key=lambda pair: -pair[0])
-    return SearchOut(ids=[capture for _, capture in scored[:60]], terms=terms)
+    return SearchOut(ids=[row.id for row in saver_ai.find(db, user_id, terms, 60)], terms=terms)
 
 
 @router.delete("/{capture_id}", status_code=status.HTTP_204_NO_CONTENT)

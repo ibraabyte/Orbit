@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Expense, Meal, Profile, Task, User
+from app.models import Capture, Expense, Meal, Profile, Task, User
 from app.services import whoop_ai
 from tests.conftest import bearer, sign_up
 
@@ -116,6 +116,37 @@ def test_items_go_by_ref_and_never_with_ids_or_notes(client: TestClient, ready: 
     }
     db.refresh(task)
     assert task.due_at is None
+
+
+def test_saved_items_are_found_by_what_is_inside_them(client: TestClient, ready: dict, db: Session, script: Script):
+    """ "Which restaurant did I save from TikTok?": the word is only in what the AI saw or what was said in the video."""
+    other = bearer(sign_up(client, email="other@example.com"))
+    client.post("/captures", json={"title": "Their restaurant", "summary": "مطعم"}, headers=other)
+    db.add_all(
+        [
+            Capture(
+                user_id=me(db),
+                type="video",
+                title="IMG_0001",
+                category="place",
+                labels=["أكل"],
+                analysis="مقطع في مطعم برجر في حي الملقا اسمه Made Up Burger.",
+                transcript="جربوا البرجر عندهم، الموقع في الملقا",
+                note="secret plan for the weekend",
+            ),
+            Capture(user_id=me(db), title="Leg day", summary="Squats."),
+        ]
+    )
+    db.commit()
+    script.append({"tool_calls": [call("find_items", kind="note", text="مطعم, restaurant, برجر")]})
+    script.append({"content": "لقيته: Made Up Burger في الملقا."})
+    body = act(client, ready, "وش المطعم اللي حفظته من تيك توك؟").json()
+    assert body["actions"] == [] and "Made Up Burger" in body["reply"]
+    [found] = tool_results(script.seen[1])[0]["items"]
+    assert found["title"] == "IMG_0001" and found["category"] == "place" and found["labels"] == ["أكل"]
+    assert "Made Up Burger" in found["what_is_in_it"] and "الملقا" in found["said_in_video"]
+    sent = json.dumps(script.seen, ensure_ascii=False)
+    assert "secret plan" not in sent and "Their restaurant" not in sent
 
 
 def test_a_bad_proposal_goes_back_to_the_ai_to_fix(client: TestClient, ready: dict, script: Script):

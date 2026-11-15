@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addTag, categoryCounts, categoryLabel, categoryList, filterSaved, findLink, fold, inOrder, isWorking, megabytes, picturesOf, posterOf, sharedFiles, sharedLink, sharedText, siteLabel, videoOf, withSaved } from "@/lib/saver";
+import { addTag, categoryCounts, mapsLink, savedAsText, tagList, categoryLabel, categoryList, filterSaved, findLink, fold, inOrder, isWorking, megabytes, picturesOf, posterOf, sharedFiles, sharedLink, sharedText, siteLabel, videoOf, withSaved } from "@/lib/saver";
 import type { Capture, SavedMedia } from "@/lib/types";
 
 function saved(overrides: Partial<Capture>): Capture {
@@ -20,6 +20,9 @@ function saved(overrides: Partial<Capture>): Capture {
     analysis: null,
     search_terms: null,
     content_text: null,
+    transcript: null,
+    place: null,
+    ingredients: [],
     author: null,
     analysis_status: "none",
     analysis_error: null,
@@ -89,7 +92,8 @@ describe("saver", () => {
   it("finds an item by what the AI saw in it, its tags, the post's text and its search words", () => {
     const rows = [
       saved({ id: "cook", title: "IMG_0001", labels: ["طبخ"], analysis: "Rice and chicken in one pot.", search_terms: "kabsa · وصفة · recipe" }),
-      saved({ id: "tweet", title: "Tweet", content_text: "Morning run by the corniche", author: "Made Up" })
+      saved({ id: "tweet", title: "Tweet", content_text: "Morning run by the corniche", author: "Made Up" }),
+      saved({ id: "talk", title: "TikTok", transcript: "حطوا الرز بعد ما يغلي المرق" })
     ];
     const find = (query: string) => filterSaved(rows, { category: null, status: "all", query }).map((row) => row.id);
     expect(find("طبخ")).toEqual(["cook"]);
@@ -97,6 +101,7 @@ describe("saver", () => {
     expect(find("one pot")).toEqual(["cook"]);
     expect(find("corniche")).toEqual(["tweet"]);
     expect(find("made up")).toEqual(["tweet"]);
+    expect(find("المرق")).toEqual(["talk"]); // Only said in the video
     expect(find("الطبخ")).toEqual(["cook"]); // "the cooking" finds the "cooking" tag
   });
 
@@ -149,5 +154,22 @@ describe("saver", () => {
     expect(inOrder(rows, ["c", "gone", "a"]).map((row) => row.id)).toEqual(["c", "a"]);
     expect(megabytes(5 * 1024 * 1024 + 300000)).toBe("5.3");
     expect(megabytes(null)).toBeNull();
+  });
+
+  it("gathers a collection by tag from any category, ignoring how the tag was typed", () => {
+    const rows = [
+      saved({ id: "hotel", category: "place", labels: ["سفرة دبي", "فنادق"] }),
+      saved({ id: "clip", category: "video", labels: ["سفره دبي"] }),
+      saved({ id: "gym", labels: ["نادي"] })
+    ];
+    expect(filterSaved(rows, { category: null, status: "all", query: "", tag: "سفرة دبي" }).map((row) => row.id)).toEqual(["hotel", "clip"]);
+    expect(tagList(rows)).toEqual(["سفرة دبي", "فنادق", "نادي"]);
+  });
+
+  it("opens the place in the phone's own maps and shares a list as text", () => {
+    expect(mapsLink(" Made Up Burger, Riyadh ", "ios")).toBe("https://maps.apple.com/?q=Made%20Up%20Burger%2C%20Riyadh");
+    expect(mapsLink("مطعم", "android")).toBe("https://www.google.com/maps/search/?api=1&query=%D9%85%D8%B7%D8%B9%D9%85");
+    const text = savedAsText([saved({ title: "Kabsa", url: "https://example.com/k", summary: "Quick kabsa." }), saved({ title: "Idea", url: null })]);
+    expect(text).toBe("• Kabsa\n  https://example.com/k\n  Quick kabsa.\n\n• Idea");
   });
 });

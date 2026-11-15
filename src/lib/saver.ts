@@ -65,6 +65,14 @@ const en = {
   noTags: "No tags yet.",
   whatsInIt: "What's in it",
   postText: "The post's text",
+  spoken: "What's said in it",
+  makeTask: "Make it a task",
+  madeTask: "Added to your tasks",
+  openMap: "Open in Maps",
+  ingredients: "Ingredients",
+  addToGroceries: "Add to the shopping list",
+  addedGroceries: (n: number) => `${digits(n)} added to the shopping list`,
+  shareList: (n: number) => `Share this list (${digits(n)})`,
   yourNote: "Your note",
   editNote: "Edit note",
   notePlaceholder: "Why you saved it",
@@ -129,6 +137,14 @@ const ar: typeof en = {
   noTags: "ما فيه تاجات للحين.",
   whatsInIt: "وش فيه",
   postText: "نص المنشور",
+  spoken: "الكلام في المقطع",
+  makeTask: "حوّله لمهمة",
+  madeTask: "انضاف للمهام",
+  openMap: "افتحه في الخرائط",
+  ingredients: "المكونات",
+  addToGroceries: "أضفها لقائمة المشتريات",
+  addedGroceries: (n: number) => `انضاف ${digits(n)} لقائمة المشتريات`,
+  shareList: (n: number) => `شارك القائمة (${digits(n)})`,
   yourNote: "ملاحظتك",
   editNote: "عدّل الملاحظة",
   notePlaceholder: "ليش حفظته",
@@ -199,10 +215,15 @@ export function fold(text: string) {
   return folds.reduce((value, [pattern, to]) => value.replace(pattern, to), text.toLowerCase());
 }
 
-export function filterSaved<T extends Capture>(captures: T[], { category, status, query }: { category: string | null; status: StatusFilter; query: string }) {
+export function filterSaved<T extends Capture>(
+  captures: T[],
+  { category, status, query, tag = null }: { category: string | null; status: StatusFilter; query: string; tag?: string | null }
+) {
   const words = fold(query).split(/\s+/).filter(Boolean);
+  const tagKey = tag ? fold(tag) : null;
   return captures.filter((capture) => {
     if (category && capture.category !== category) return false;
+    if (tagKey && !(capture.labels ?? []).some((label) => fold(label) === tagKey)) return false;
     if (status !== "all" && capture.status !== status) return false;
     if (!words.length) return true;
     const haystack = fold(
@@ -216,6 +237,7 @@ export function filterSaved<T extends Capture>(captures: T[], { category, status
         ...(capture.labels ?? []),
         capture.analysis,
         capture.content_text,
+        capture.transcript,
         capture.search_terms,
         capture.author
       ]
@@ -315,4 +337,33 @@ export function megabytes(bytes: number | null) {
   if (!bytes) return null;
   const mb = bytes / (1024 * 1024);
   return digits(mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10);
+}
+
+// Collections are tags: one tag (like "Dubai trip") gathers items from any category.
+
+/** The user's tags, most used first (then by name), each once ignoring case. */
+export function tagList(captures: Pick<Capture, "labels">[], limit = 12) {
+  const counts = new Map<string, { label: string; count: number }>();
+  for (const label of captures.flatMap((capture) => capture.labels ?? [])) {
+    const key = fold(label);
+    const found = counts.get(key);
+    counts.set(key, { label: found?.label ?? label, count: (found?.count ?? 0) + 1 });
+  }
+  return [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, limit)
+    .map((entry) => entry.label);
+}
+
+/** A map search for the place: Apple Maps on iPhone, Google Maps elsewhere (both open the app when it's there). */
+export function mapsLink(place: string, os: string) {
+  const query = encodeURIComponent(place.trim());
+  return os === "ios" ? `https://maps.apple.com/?q=${query}` : `https://www.google.com/maps/search/?api=1&query=${query}`;
+}
+
+/** The items as plain text to share (WhatsApp, Notes, Mail): title, then its link and summary. */
+export function savedAsText(captures: Pick<Capture, "title" | "url" | "summary">[]) {
+  return captures
+    .map((capture) => [`• ${capture.title}`, capture.url, capture.summary].filter(Boolean).join("\n  "))
+    .join("\n\n");
 }

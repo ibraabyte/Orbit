@@ -117,6 +117,11 @@ export type Capture = {
   analysis: string | null;
   search_terms: string | null;
   content_text: string | null;
+  // What is said in its video, from the user's voice model; null without one.
+  transcript: string | null;
+  // What the AI found to act on: the one place it is about (for a map search) and a recipe's ingredients.
+  place: string | null;
+  ingredients: string[];
   author: string | null;
   analysis_status: "none" | "pending" | "done" | "failed" | "no_ai";
   analysis_error: string | null;
