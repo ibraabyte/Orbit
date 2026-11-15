@@ -224,8 +224,8 @@ export const captureStarterKinds = ["meal", "expense", "sleep", "workout", "weig
 const locale = isArabic ? "ar-SA-u-ca-gregory" : "en-GB";
 
 const NUMERALS_KEY = "orbit.numerals";
-/** What each language used before the setting existed: Arabic digits in Arabic, Western in English. */
-export const defaultNumerals: Numerals = isArabic ? "arab" : "latn";
+/** Western digits (0123) unless Arabic ones are picked in Settings, in both languages. */
+export const defaultNumerals: Numerals = "latn";
 
 // Read synchronously so the first frame already has the right digits. Locked keychain or web: the default.
 function savedNumerals(): Numerals {
