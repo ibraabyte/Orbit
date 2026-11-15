@@ -54,6 +54,8 @@ const sfSymbols: Partial<Record<IconName, SFSymbol>> = {
   "map-pin": "mappin",
   maximize: "arrow.up.left.and.arrow.down.right",
   "message-circle": "bubble.left",
+  phone: "phone",
+  star: "star.fill",
   mic: "mic",
   minus: "minus",
   moon: "moon",

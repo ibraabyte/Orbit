@@ -17,10 +17,6 @@ export type ProviderModel = { id: string; name: string | null; kind: ModelKind }
 export type Provider = {
   id: ProviderId;
   name: string;
-  // A simple letter mark on the company's colour. Not their logo.
-  mark: string;
-  color: string;
-  ink: string;
   roles: Role[];
   // Where the user makes a key.
   keyUrl: string;
@@ -29,12 +25,12 @@ export type Provider = {
 };
 
 export const PROVIDERS: Record<ProviderId, Provider> = {
-  openai: { id: "openai", name: "OpenAI", mark: "O", color: "#10A37F", ink: "#FFFFFF", roles: ["text", "speech", "call"], keyUrl: "https://platform.openai.com/api-keys", account: "chatgpt" },
-  anthropic: { id: "anthropic", name: "Claude", mark: "C", color: "#D97757", ink: "#FFFFFF", roles: ["text"], keyUrl: "https://console.anthropic.com/settings/keys" },
-  gemini: { id: "gemini", name: "Gemini", mark: "G", color: "#4285F4", ink: "#FFFFFF", roles: ["text"], keyUrl: "https://aistudio.google.com/apikey" },
-  openrouter: { id: "openrouter", name: "OpenRouter", mark: "OR", color: "#6467F2", ink: "#FFFFFF", roles: ["text"], keyUrl: "https://openrouter.ai/settings/keys", account: "openrouter" },
-  groq: { id: "groq", name: "Groq", mark: "gq", color: "#F55036", ink: "#FFFFFF", roles: ["speech"], keyUrl: "https://console.groq.com/keys" },
-  elevenlabs: { id: "elevenlabs", name: "ElevenLabs", mark: "11", color: "#F2F2F2", ink: "#0A0A0B", roles: ["speech", "call"], keyUrl: "https://elevenlabs.io/app/settings/api-keys" }
+  openai: { id: "openai", name: "OpenAI", roles: ["text", "speech", "call"], keyUrl: "https://platform.openai.com/api-keys", account: "chatgpt" },
+  anthropic: { id: "anthropic", name: "Claude", roles: ["text"], keyUrl: "https://console.anthropic.com/settings/keys" },
+  gemini: { id: "gemini", name: "Gemini", roles: ["text"], keyUrl: "https://aistudio.google.com/apikey" },
+  openrouter: { id: "openrouter", name: "OpenRouter", roles: ["text"], keyUrl: "https://openrouter.ai/settings/keys", account: "openrouter" },
+  groq: { id: "groq", name: "Groq", roles: ["speech"], keyUrl: "https://console.groq.com/keys" },
+  elevenlabs: { id: "elevenlabs", name: "ElevenLabs", roles: ["speech", "call"], keyUrl: "https://elevenlabs.io/app/settings/api-keys" }
 };
 
 export const isProviderId = (value: unknown): value is ProviderId => typeof value === "string" && (PROVIDER_IDS as readonly string[]).includes(value);
@@ -97,6 +93,13 @@ export const roleLabel = (role: Role) => ({ text: t.pv.roleText, speech: t.pv.ro
 export const rolesLine = (provider: Provider) => provider.roles.map(roleLabel).join(isArabic ? "، " : ", ");
 
 // A company's models of one kind matching what was typed, the first `limit` of them, and how many more there are.
+// Whose mark a model shows: the company's own, or for OpenRouter the maker in the id ("anthropic/claude-…").
+const MAKERS: Record<string, ProviderId> = { anthropic: "anthropic", openai: "openai", google: "gemini" };
+export function modelMaker(provider: ProviderId, model: string | null): ProviderId {
+  if (provider !== "openrouter" || !model) return provider;
+  return MAKERS[model.split("/")[0]!.toLowerCase()] ?? "openrouter";
+}
+
 export function filterModels(models: ProviderModel[], kind: ModelKind, query: string, limit = 30): { shown: ProviderModel[]; more: number } {
   const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const found = models.filter((model) => model.kind === kind && words.every((word) => `${model.id} ${model.name ?? ""}`.toLowerCase().includes(word)));

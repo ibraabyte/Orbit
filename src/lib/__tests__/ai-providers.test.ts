@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterModels, firstModel, isProviderId, openrouterResult, PROVIDER_IDS, PROVIDERS, providersApi, providerState, providerSummary, type ProviderModel } from "@/lib/ai-providers";
+import { filterModels, firstModel, modelMaker, isProviderId, openrouterResult, PROVIDER_IDS, PROVIDERS, providersApi, providerState, providerSummary, type ProviderModel } from "@/lib/ai-providers";
 import type { FeatureStatus } from "@/lib/feature-models";
 import type { IntegrationsOverview } from "@/lib/integrations";
 
@@ -44,11 +44,11 @@ const models: ProviderModel[] = [
 ];
 
 describe("the AI companies", () => {
-  it("lists every company once with a mark and a key page", () => {
+  it("lists every company once with a name and a key page", () => {
     expect(PROVIDER_IDS).toHaveLength(6);
     for (const id of PROVIDER_IDS) {
       expect(PROVIDERS[id].id).toBe(id);
-      expect(PROVIDERS[id].mark.length).toBeGreaterThan(0);
+      expect(PROVIDERS[id].name.length).toBeGreaterThan(0);
       expect(PROVIDERS[id].keyUrl.startsWith("https://")).toBe(true);
     }
     expect(isProviderId("groq")).toBe(true);
@@ -112,5 +112,15 @@ describe("the AI companies", () => {
       ["/integrations/providers/groq/models", { api_key: "made-up-key-123" }],
       ["/integrations/providers/groq/models", {}]
     ]);
+  });
+});
+
+describe("a model's mark", () => {
+  it("is the company's own, or the maker in an OpenRouter id", () => {
+    expect(modelMaker("anthropic", "claude-opus-5-5")).toBe("anthropic");
+    expect(modelMaker("openrouter", "anthropic/claude-opus-5-5")).toBe("anthropic");
+    expect(modelMaker("openrouter", "google/gemini-3-pro")).toBe("gemini");
+    expect(modelMaker("openrouter", "meta-llama/llama-4")).toBe("openrouter");
+    expect(modelMaker("openrouter", null)).toBe("openrouter");
   });
 });
