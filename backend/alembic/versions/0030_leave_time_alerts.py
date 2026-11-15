@@ -9,9 +9,9 @@ One existing check is widened: service_connections.provider also allows 'google_
 Platform key, encrypted). No existing row or column is changed or removed.
 
 Downgrading drops the two columns (the places typed on tasks are lost) and removes linked Google Maps keys before
-narrowing the check back to Seerr and 17TRACK.
+narrowing the check back to Seerr, 17TRACK and SerpApi.
 
-Comes after 0028 (order tracker).
+Comes after 0029 (travel assistant).
 """
 
 from collections.abc import Sequence
@@ -19,8 +19,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0029"
-down_revision: str | None = "0028"
+revision: str = "0030"
+down_revision: str | None = "0029"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -33,14 +33,16 @@ def upgrade() -> None:
     op.create_check_constraint(op.f("tasks_place_named_check"), "tasks", "place_id is null or place_name is not null")
     op.drop_constraint(op.f("service_connections_provider_check"), "service_connections", type_="check")
     op.create_check_constraint(
-        op.f("service_connections_provider_check"), "service_connections", "provider in ('seerr', '17track', 'google_maps')"
+        op.f("service_connections_provider_check"), "service_connections", "provider in ('seerr', '17track', 'serpapi', 'google_maps')"
     )
 
 
 def downgrade() -> None:
     op.execute("delete from service_connections where provider = 'google_maps'")
     op.drop_constraint(op.f("service_connections_provider_check"), "service_connections", type_="check")
-    op.create_check_constraint(op.f("service_connections_provider_check"), "service_connections", "provider in ('seerr', '17track')")
+    op.create_check_constraint(
+        op.f("service_connections_provider_check"), "service_connections", "provider in ('seerr', '17track', 'serpapi')"
+    )
     op.drop_constraint(op.f("tasks_place_named_check"), "tasks", type_="check")
     op.drop_constraint(op.f("tasks_place_id_length_check"), "tasks", type_="check")
     op.drop_constraint(op.f("tasks_place_name_length_check"), "tasks", type_="check")

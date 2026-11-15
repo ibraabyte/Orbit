@@ -14,6 +14,7 @@ import { isArabic, t } from "@/lib/i18n";
 import { mt } from "@/lib/seerr";
 import { contentWidth, showsSidebar } from "@/lib/sidebar";
 import { dx } from "@/lib/documents";
+import { tx } from "@/lib/travel";
 import { rx } from "@/lib/medications";
 import { mx } from "@/lib/maps";
 import { sx } from "@/lib/shipments";
@@ -82,6 +83,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/documents": { title: dx.documents },
   "/shipments": { title: sx.shipments },
   "/maps": { title: mx.maps },
+  "/travel": { title: tx.travel },
   "/media": { title: t.movies },
   "/requests": { title: mt.requests },
   "/ask": { title: t.askOrbit },

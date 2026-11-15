@@ -19,6 +19,7 @@ import { callsApi, px, type PhoneSetup } from "@/lib/phone-calls";
 import { mapsApi, mx, type MapsStatus } from "@/lib/maps";
 import { shipmentsApi, sx, type TrackingStatus } from "@/lib/shipments";
 import { hunterApi, type GmailStatus } from "@/lib/subscriptions";
+import { travelApi, tx, type TravelKey } from "@/lib/travel";
 
 // How many features picked their own model under Advanced, or nothing when all use the defaults.
 function featureCount(overview: IntegrationsOverview): string | null {
@@ -38,6 +39,7 @@ export default function Integrations() {
   const [gmail, setGmail] = useState<GmailStatus | null>(null);
   const [tracking, setTracking] = useState<TrackingStatus | null>(null);
   const [maps, setMaps] = useState<MapsStatus | null>(null);
+  const [travelKey, setTravelKey] = useState<TravelKey | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -51,6 +53,7 @@ export default function Integrations() {
       setGmail(await hunterApi.gmailStatus(getApi()).catch(() => null));
       setTracking(await shipmentsApi.overview(getApi()).then((found) => found.tracking).catch(() => null));
       setMaps(await mapsApi.status(getApi()).catch(() => null));
+      setTravelKey(await travelApi.overview(getApi()).then((found) => found.key).catch(() => null));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
     } finally {
@@ -140,6 +143,21 @@ export default function Integrations() {
           />
         </TileGrid>
         {!seerr.ready ? <Loading /> : seerr.connected ? null : <SeerrConnectForm connect={(url, key) => seerr.connect(url, key).then(load)} />}
+      </Card>
+
+      {/* Travel prices come through the person's own SerpApi key; the key is pasted on the Travel page. */}
+      <Card title={tx.travel}>
+        <TileGrid>
+          <ConnectionTile
+            wide
+            mark={<IconTile name="plane" />}
+            name="SerpApi"
+            badge={travelKey?.connected ? "check" : null}
+            icons={["plane", "bed"]}
+            label={`SerpApi, ${travelKey?.connected ? tx.keyLinked : tx.keyConnect}`}
+            onPress={() => router.push("/travel")}
+          />
+        </TileGrid>
       </Card>
 
       <Card title={px.calls}>
