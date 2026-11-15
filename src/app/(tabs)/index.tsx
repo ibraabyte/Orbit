@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Badge, Card, CardLink, Chevron, CountBadge, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { DoseRow } from "@/components/medication-ui";
+import { DayPlanCard } from "@/components/day-plan";
 import { MorningBriefCard } from "@/components/morning-brief-card";
 import { WeeklySummaryCard } from "@/components/weekly-summary";
 import { useOverlays } from "@/components/overlays";
@@ -13,6 +14,7 @@ import { TaskRow } from "@/components/task-row";
 import { colors, fonts, radius } from "@/components/theme";
 import { useAppleHealth } from "@/hooks/use-apple-health";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
+import { useDayPlan } from "@/hooks/use-day-plan";
 import { useMorningBrief } from "@/hooks/use-morning-brief";
 import { useNow } from "@/hooks/use-now";
 import { usePlanToday } from "@/hooks/use-plan-today";
@@ -26,6 +28,7 @@ import { eventHidden, pathHidden } from "@/lib/app-sections";
 import { getApi } from "@/lib/backend";
 import { buildCalendarDays } from "@/lib/calendar";
 import { buildDailyBrief, openTasks, summarizeDashboard } from "@/lib/dashboard";
+import { dp } from "@/lib/day-plan";
 import { isPastDue } from "@/lib/dates";
 import { formatMoney, nextBillDueDate } from "@/lib/finance";
 import { foodSummary } from "@/lib/food";
@@ -42,6 +45,7 @@ const hiddenKey = "orbit.today.hidden";
 // "upnext" is the Next up card. The old "next" id (from before the rail) is ignored, so an old saved choice cannot hide it.
 const optional = [
   ["brief", t.morningBrief],
+  ["dayplan", dp.short],
   ["week", t.weekSummary],
   ["money", t.moneyDue],
   ["digest", t.digest],
@@ -76,6 +80,8 @@ export default function Today() {
   // Not asked until the saved choice of hidden sections is read, so a hidden brief is never fetched.
   const [choicesRead, setChoicesRead] = useState(false);
   const brief = useMorningBrief(choicesRead && show("brief"));
+  // The day laid out in time around the prayers and WHOOP's energy; made once each morning.
+  const dayPlan = useDayPlan(prayersToday, choicesRead && show("dayplan"));
   // The weekly summary is a Friday card; on other days it is one tap away in the assistant.
   const friday = isFriday(now);
   const week = useWeeklySummary(choicesRead && show("week") && friday);
@@ -317,6 +323,7 @@ export default function Today() {
             {prayerCard}
             <CaptureHint hint={t.capturePh} />
             {show("brief") ? <MorningBriefCard state={brief.state} data={data} retry={() => void brief.refresh()} /> : null}
+            {show("dayplan") ? <DayPlanCard state={dayPlan.state} now={now} tasks={data.tasks} retry={() => void dayPlan.refresh()} onDone={(taskId) => void complete(taskId)} /> : null}
             {friday && show("week") ? <WeeklySummaryCard state={week.state} retry={() => void week.refresh()} /> : null}
             {digestCard}
             {wide ? null : quickTiles}
