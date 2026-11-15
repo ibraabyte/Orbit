@@ -1,10 +1,11 @@
 import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
-import { Alert, Linking, Platform, Switch, Text, View } from "react-native";
-import { Card, Chevron, type } from "@/components/drift";
+import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { ConnectionTile, IconMark, TileGrid } from "@/components/ai-provider-parts";
+import { Card, Chevron, type, type IconName } from "@/components/drift";
 import { ChoiceMenu } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
-import { colors, space } from "@/components/theme";
+import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { loadMorningSettings, saveMorningSettings } from "@/hooks/use-morning-brief";
 import { loadNotificationPrefs, saveNotificationPrefs } from "@/hooks/use-notification-prefs";
 import { useSections } from "@/hooks/use-sections";
@@ -29,7 +30,6 @@ function Setting({ label, detail, first, inset, children }: { label: string; det
   );
 }
 
-const track = { true: colors.accent, false: colors.hairline };
 const clockAt = (hour: number, minute: number) => formatClock(new Date(2000, 0, 1, hour, minute));
 const prayerName = isArabic ? prayerNamesAr : prayerNamesEn;
 
@@ -64,14 +64,21 @@ export default function NotificationsScreen() {
     }
   };
 
-  // A kind whose section is switched off in Settings → Sections is quiet whatever its switch says, so it shows off and locked.
-  const toggle = (kind: NotificationKind, label: string, detail?: string, first?: boolean) => {
+  // One tile per alert: tap turns it on or off. A kind whose section is off in Settings → Sections stays off and locked.
+  const tile = (kind: NotificationKind, icon: IconName, name: string) => {
     const section = NOTIFICATION_SECTION[kind] as SectionKey | null;
     const quiet = section !== null && !sections.on(section);
+    const on = !quiet && prefs.kinds[kind];
     return (
-      <Setting first={first} label={label} detail={quiet ? st.quietWithSection(st.names[section!]) : detail}>
-        <Switch accessibilityLabel={label} trackColor={track} value={quiet ? false : prefs.kinds[kind]} disabled={quiet} onValueChange={(on) => void change({ ...prefs, kinds: { ...prefs.kinds, [kind]: on } })} />
-      </Setting>
+      <ConnectionTile
+        key={kind}
+        mark={<IconMark name={icon} color={on ? colors.accentDeep : colors.inkMuted} />}
+        name={name}
+        badge={on ? "check" : null}
+        checked={on}
+        label={quiet ? `${name}, ${st.quietWithSection(st.names[section!])}` : name}
+        onPress={quiet ? undefined : () => void change({ ...prefs, kinds: { ...prefs.kinds, [kind]: !on } })}
+      />
     );
   };
 
@@ -96,54 +103,72 @@ export default function NotificationsScreen() {
           <Button variant="outline" title={t.notifOpenSettings} onPress={() => void Linking.openSettings()} />
         </Card>
       ) : null}
-      <Card title={t.notifGroupDay} list>
-        {toggle("prayer", t.notifPrayer, t.prayerSource, true)}
-        {prefs.kinds.prayer
-          ? PRAYER_NAMES.map((name) => (
-              <Setting key={name} inset label={prayerName[name]}>
-                <Switch accessibilityLabel={`${t.notifPrayer}, ${prayerName[name]}`} trackColor={track} value={prefs.prayers[name]} onValueChange={(on) => void change({ ...prefs, prayers: { ...prefs.prayers, [name]: on } })} />
-              </Setting>
-            ))
-          : null}
-        {toggle("reminders", t.notifReminders, t.notifRemindersDetail)}
-        <Setting label={t.morningAlert} detail={t.morningAlertDetail}>
-          <Switch accessibilityLabel={t.morningAlert} trackColor={track} value={morning.enabled} onValueChange={(on) => void changeMorning({ ...morning, enabled: on })} />
-        </Setting>
-        {morning.enabled ? (
-          <ChoiceMenu fill title={t.morningAlertTime} choices={morningTimes}>
-            <View accessible accessibilityRole="button" accessibilityLabel={`${t.morningAlertTime}, ${clockAt(morning.hour, morning.minute)}`}>
-              <Setting inset label={t.morningAlertTime}>
-                <Text style={type.rowSubtitle}>{clockAt(morning.hour, morning.minute)}</Text>
-                <Chevron />
-              </Setting>
+      <TileGrid>
+        {tile("prayer", "moon", t.notifPrayer)}
+        {tile("reminders", "check-square", t.notifReminders)}
+        <ConnectionTile
+          mark={<IconMark name="sun" color={morning.enabled ? colors.accentDeep : colors.inkMuted} />}
+          name={t.morningAlert}
+          badge={morning.enabled ? "check" : null}
+          checked={morning.enabled}
+          label={t.morningAlert}
+          onPress={() => void changeMorning({ ...morning, enabled: !morning.enabled })}
+        />
+        {tile("medications", "pills", rx.notifDoses)}
+        {tile("medStock", "package", rx.notifStock)}
+        {tile("bills", "credit-card", t.notifBills)}
+        {tile("installments", "calendar", t.notifInstallments)}
+        {tile("car", "truck", t.notifCar)}
+        {tile("documents", "file-text", dx.notif)}
+        {tile("budget", "pie-chart", t.notifBudget)}
+        {tile("rest", "clock", t.notifRest)}
+      </TileGrid>
+      {prefs.kinds.prayer || morning.enabled || moneyOn ? (
+        <Card list>
+          {prefs.kinds.prayer ? (
+            <View style={styles.prayers} accessibilityLabel={t.notifPrayer}>
+              {PRAYER_NAMES.map((name) => {
+                const on = prefs.prayers[name];
+                return (
+                  <Pressable key={name} onPress={() => void change({ ...prefs, prayers: { ...prefs.prayers, [name]: !on } })} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel={`${t.notifPrayer}, ${prayerName[name]}`} style={({ pressed }) => [styles.pill, on && styles.pillOn, pressed && { opacity: 0.7 }]}>
+                    <Text style={[styles.pillText, on && { color: colors.urgentInk }]} numberOfLines={1}>
+                      {prayerName[name]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
-          </ChoiceMenu>
-        ) : null}
-      </Card>
-      <Card title={rx.medications} list>
-        {toggle("medications", rx.notifDoses, rx.notifDosesDetail, true)}
-        {toggle("medStock", rx.notifStock, rx.notifStockDetail)}
-      </Card>
-      <Card title={t.notifGroupMoney} list>
-        {toggle("bills", t.notifBills, t.notifDayBefore, true)}
-        {toggle("installments", t.notifInstallments, t.notifDayBefore)}
-        {toggle("car", t.notifCar, t.notifCarDetail)}
-        {toggle("documents", dx.notif, dx.notifDetail)}
-        {moneyOn ? (
-          <ChoiceMenu fill title={t.notifHeadsUpTime} choices={headsUpTimes}>
-            <View accessible accessibilityRole="button" accessibilityLabel={`${t.notifHeadsUpTime}, ${clockAt(prefs.headsUp.hour, prefs.headsUp.minute)}`}>
-              <Setting label={t.notifHeadsUpTime} detail={t.notifHeadsUpDetail}>
-                <Text style={type.rowSubtitle}>{clockAt(prefs.headsUp.hour, prefs.headsUp.minute)}</Text>
-                <Chevron />
-              </Setting>
-            </View>
-          </ChoiceMenu>
-        ) : null}
-        {toggle("budget", t.notifBudget, t.notifBudgetDetail)}
-      </Card>
-      <Card title={t.notifGroupWorkout} list>
-        {toggle("rest", t.notifRest, t.notifRestDetail, true)}
-      </Card>
+          ) : null}
+          {morning.enabled ? (
+            <ChoiceMenu fill title={t.morningAlertTime} choices={morningTimes}>
+              <View accessible accessibilityRole="button" accessibilityLabel={`${t.morningAlert}, ${clockAt(morning.hour, morning.minute)}`}>
+                <Setting first={!prefs.kinds.prayer} label={t.morningAlert}>
+                  <Text style={type.rowSubtitle}>{clockAt(morning.hour, morning.minute)}</Text>
+                  <Chevron />
+                </Setting>
+              </View>
+            </ChoiceMenu>
+          ) : null}
+          {moneyOn ? (
+            <ChoiceMenu fill title={t.notifHeadsUpTime} choices={headsUpTimes}>
+              <View accessible accessibilityRole="button" accessibilityLabel={`${t.notifHeadsUpTime}, ${clockAt(prefs.headsUp.hour, prefs.headsUp.minute)}`}>
+                <Setting first={!prefs.kinds.prayer && !morning.enabled} label={t.notifHeadsUpTime}>
+                  <Text style={type.rowSubtitle}>{clockAt(prefs.headsUp.hour, prefs.headsUp.minute)}</Text>
+                  <Chevron />
+                </Setting>
+              </View>
+            </ChoiceMenu>
+          ) : null}
+        </Card>
+      ) : null}
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  prayers: { flexDirection: "row", gap: space.xs, paddingVertical: space.md },
+  // Same pills as Settings: quiet beige, dark when on.
+  pill: { flex: 1, minHeight: 36, alignItems: "center", justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
+  pillOn: { backgroundColor: colors.urgent },
+  pillText: { fontFamily: fonts.medium, fontSize: textSize.footnote, color: colors.ink }
+});

@@ -446,7 +446,7 @@ const en = {
   couldNotSave: "Couldn't save. Try again.",
   notifDoses: "Dose reminders",
   notifDosesDetail: "At each dose's time, again after 30 minutes if not marked",
-  notifStock: "Running low",
+  notifStock: "Medication running low",
   notifStockDetail: "When a medication reaches the number you set"
 };
 
@@ -532,7 +532,7 @@ const ar: typeof en = {
   couldNotSave: "ما انحفظ. جرّب مرة ثانية.",
   notifDoses: "تذكير الجرعات",
   notifDosesDetail: "في وقت كل جرعة، ومرة ثانية بعد ٣٠ دقيقة إذا ما سجلتها",
-  notifStock: "قرب يخلص",
+  notifStock: "الدواء قرب يخلص",
   notifStockDetail: "لما يوصل الدواء للعدد اللي حددته"
 };
 

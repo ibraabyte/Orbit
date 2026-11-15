@@ -84,7 +84,8 @@ export function IconMark({ name, size = 36, color = colors.ink }: { name: IconNa
 // One connection: its mark, name, a badge (connected, default, needs attention) and small icons for what it brings.
 // Connected tiles are warm and solid; one not connected yet is an outline with a dimmed mark and a "+".
 // wide: the only tile in its card, laid out as one full-width row instead of half a row.
-export function ConnectionTile({ mark, name, badge, icons = [], label, onPress, wide }: { mark: ReactNode; name: string; badge: "star" | "check" | "alert" | null; icons?: IconName[]; label: string; onPress?: () => void; wide?: boolean }) {
+// checked: the tile is an on/off switch (Notifications, Sections), read out as one.
+export function ConnectionTile({ mark, name, badge, icons = [], label, onPress, wide, checked }: { mark: ReactNode; name: string; badge: "star" | "check" | "alert" | null; icons?: IconName[]; label: string; onPress?: () => void; wide?: boolean; checked?: boolean }) {
   const on = badge !== null;
   const corner = (
     <View style={[styles.on, !on && styles.off]}>
@@ -104,7 +105,7 @@ export function ConnectionTile({ mark, name, badge, icons = [], label, onPress, 
     </>
   );
   return (
-    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole="button" accessibilityLabel={label} style={({ pressed }) => [styles.tile, wide && styles.wide, on ? styles.tileOn : styles.tileOff, pressed && { opacity: 0.75 }]}>
+    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole={checked === undefined ? "button" : "switch"} accessibilityState={checked === undefined ? undefined : { checked, disabled: !onPress }} accessibilityLabel={label} style={({ pressed }) => [styles.tile, wide && styles.wide, on ? styles.tileOn : styles.tileOff, pressed && { opacity: 0.75 }]}>
       {wide ? (
         <>
           <View style={!on && { opacity: 0.55 }}>{mark}</View>
