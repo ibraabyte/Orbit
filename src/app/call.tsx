@@ -3,10 +3,11 @@ import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Animated, Easing, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { initialWindowMetrics, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Icon, type } from "@/components/drift";
+import { OrbitMark } from "@/components/assistant-button";
+import { Icon } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { fonts, radius } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { elevenLabsAvailable, useVoiceCall, voiceCallAvailable } from "@/hooks/use-voice-call";
 import { actionRows, applyActions, kindName, opName, type ProposedAction } from "@/lib/assistant";
@@ -128,110 +129,95 @@ export default function Call() {
         ? t.callNeedsUpdate
         : null;
 
+  const live = onCall || phase === "ended";
   return (
     <View style={[styles.screen, { paddingTop: top, paddingBottom: bottom }]}>
       <View style={styles.header}>
-        <Text style={styles.title}>{t.callTitle}</Text>
-        <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={t.cancel} hitSlop={10}>
-          <Icon name="x" size={22} color={colors.onShellMuted} />
+        <Orb phase={phase} size={44} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={styles.name}>Orbit</Text>
+          <Text style={styles.meta}>{live ? `${phaseText[phase]}${onCall ? ` · ${digits(callClock(call.seconds))}` : ""}` : t.callTitle}</Text>
+        </View>
+        <Pressable onPress={close} accessibilityRole="button" accessibilityLabel={t.cancel} hitSlop={10} style={styles.closeButton}>
+          <Icon name="x" size={20} color={D.muted} />
         </Pressable>
       </View>
 
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        <View style={styles.stage}>
-          <Orb phase={phase} compact={onCall || phase === "ended"} />
-          {onCall || phase === "ended" ? <Text style={styles.phase}>{phaseText[phase]}</Text> : null}
-          {onCall ? <Text style={type.shellMeta}>{digits(callClock(call.seconds))}</Text> : null}
-        </View>
-
-        {onCall || phase === "ended" ? (
+        {live ? (
           <View style={styles.captions}>
             {shown.length ? (
               shown.map((caption) => (
-                <View key={caption.id} style={[styles.caption, caption.role === "user" ? styles.mine : styles.theirs]}>
-                  <Text style={type.shellMeta}>{caption.role === "user" ? t.callYou : t.callOrbit}</Text>
-                  <Text style={styles.captionText}>{caption.text}</Text>
+                <View key={caption.id} style={[styles.bubble, caption.role === "user" ? styles.mine : styles.theirs]} accessibilityLabel={`${caption.role === "user" ? t.callYou : t.callOrbit}: ${caption.text}`}>
+                  <Text style={[styles.bubbleText, caption.role !== "user" && { color: D.sand }]}>{caption.text}</Text>
                 </View>
               ))
             ) : phase !== "ended" ? (
-              <Text style={[type.shellMuted, { textAlign: "center" }]}>{t.callSayHello}</Text>
+              <Text style={styles.hint}>{t.callSayHello}</Text>
             ) : null}
           </View>
         ) : (
-          <View style={{ gap: 12 }}>
-            <Text style={type.shellMeta}>{t.callVoice}</Text>
+          <View style={{ gap: 16 }}>
+            <View style={styles.stage}>
+              <Orb phase={phase} size={148} />
+            </View>
             {voices.length ? (
-              <View style={styles.chips}>
-                {voices.map((option) => (
-                  <Pressable key={option.id} onPress={() => pickVoice(option.id)} accessibilityRole="tab" accessibilityState={{ selected: voice === option.id }} style={[styles.chip, voice === option.id && styles.chipOn]}>
-                    <Text style={[type.barLabel, voice === option.id && { color: colors.urgentInk }]} numberOfLines={1}>
-                      {option.name}
-                    </Text>
-                    {option.arabic ? <Text style={[styles.chipTag, voice === option.id && { color: colors.urgentInk }]}>{t.callArabic}</Text> : null}
-                  </Pressable>
-                ))}
+              <View style={{ gap: 10 }}>
+                <Text style={styles.meta}>{t.callVoice}</Text>
+                <View style={styles.chips}>
+                  {voices.map((option) => (
+                    <Pressable key={option.id} onPress={() => pickVoice(option.id)} accessibilityRole="tab" accessibilityState={{ selected: voice === option.id }} style={[styles.chip, voice === option.id && styles.chipOn]}>
+                      <Text style={[styles.chipText, voice === option.id && { color: D.bg }]} numberOfLines={1}>
+                        {option.name}
+                      </Text>
+                      {option.arabic ? <Text style={[styles.chipTag, voice === option.id && { color: D.bg }]}>{t.callArabic}</Text> : null}
+                    </Pressable>
+                  ))}
+                </View>
               </View>
             ) : null}
-            {provider === "elevenlabs" ? <Text style={type.shellMuted}>{voices.length ? null : t.callVoicesEmpty}</Text> : null}
-            <Text style={type.shellMuted}>{(provider === "elevenlabs" ? t.callCostEleven : t.callCost).replace("{n}", digits(MAX_CALL_SECONDS / 60))}</Text>
+            {provider === "elevenlabs" && !voices.length ? <Text style={styles.hint}>{t.callVoicesEmpty}</Text> : null}
+            <Text style={styles.hint}>{(provider === "elevenlabs" ? t.callCostEleven : t.callCost).replace("{n}", digits(MAX_CALL_SECONDS / 60))}</Text>
           </View>
         )}
-
-        {pending.length ? (
-          <View style={styles.card}>
-            <Text style={type.tileLabel}>{t.callChanges}</Text>
-            {pending.map((item) => (
-              <View key={item.key} style={styles.action}>
-                <View style={styles.actionHead}>
-                  <View style={styles.mark}>
-                    <Icon name={item.state === "saved" ? "check" : item.action.op === "delete" ? "trash-2" : item.action.op === "complete" ? "check-circle" : item.action.op === "update" ? "edit-2" : "plus"} size={14} color={colors.urgentInk} />
-                  </View>
-                  <Text style={[type.title, { flex: 1 }]} numberOfLines={1}>
-                    {opName(item.action.op, isArabic)} · {kindName(item.action.kind, isArabic)}
-                  </Text>
-                  {item.state === "saved" ? (
-                    <Text style={[type.pill, { color: colors.inkMuted }]}>{t.callSaved}</Text>
-                  ) : (
-                    <View style={styles.actionButtons}>
-                      <Pressable onPress={() => skip(item)} disabled={item.state === "saving"} accessibilityRole="button" hitSlop={8}>
-                        <Text style={[type.pill, { color: colors.inkMuted }]}>{t.assistantSkip}</Text>
-                      </Pressable>
-                      <Pressable onPress={() => void save(item)} disabled={item.state === "saving"} accessibilityRole="button" style={styles.save}>
-                        <Text style={[type.pill, { color: colors.accentInk }]}>{item.state === "saving" ? "…" : t.callSave}</Text>
-                      </Pressable>
-                    </View>
-                  )}
-                </View>
-                <Text style={[type.barValue, styles.auto]} numberOfLines={2}>
-                  {item.action.label}
-                </Text>
-                {item.state === "saved"
-                  ? null
-                  : actionRows(item.action, isArabic).slice(0, 4).map(([key, value]) => (
-                      <View key={key} style={styles.field}>
-                        <Text style={[type.rowSubtitle, { fontSize: 13 }]}>{key}</Text>
-                        <Text style={[type.barValue, { flexShrink: 1, fontSize: 13, textAlign: "right" }]}>{value}</Text>
-                      </View>
-                    ))}
+        {/* What the assistant wants to change, one card each, saved only on a tap. */}
+        {pending.map((item) => (
+          <View key={item.key} style={styles.card}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={styles.cardTitle} numberOfLines={2}>
+                {item.action.label}
+              </Text>
+              <Text style={styles.cardMeta} numberOfLines={1}>
+                {[`${opName(item.action.op, isArabic)} · ${kindName(item.action.kind, isArabic)}`, ...actionRows(item.action, isArabic).slice(0, 2).map(([, value]) => value)].join(" · ")}
+              </Text>
+            </View>
+            {item.state === "saved" ? (
+              <Icon name="check" size={20} color={D.sand} />
+            ) : (
+              <View style={styles.cardButtons}>
+                <Pressable onPress={() => skip(item)} disabled={item.state === "saving"} accessibilityRole="button" accessibilityLabel={t.assistantSkip} hitSlop={8}>
+                  <Icon name="x" size={18} color={D.muted} />
+                </Pressable>
+                <Pressable onPress={() => void save(item)} disabled={item.state === "saving"} accessibilityRole="button" style={styles.save}>
+                  <Text style={styles.saveText}>{item.state === "saving" ? "…" : t.callSave}</Text>
+                </Pressable>
               </View>
-            ))}
+            )}
           </View>
-        ) : null}
-
+        ))}
         {message ? <Text style={styles.error}>{message}</Text> : null}
         {!onCall && blocked ? (
           <Pressable onPress={() => (voiceCallAvailable ? router.push("/integrations") : undefined)} accessibilityRole={voiceCallAvailable ? "link" : "text"} style={styles.note}>
-            <Icon name="info" size={14} color={colors.onShellMuted} />
-            <Text style={[type.shellMuted, { flex: 1 }]}>{blocked}</Text>
+            <Icon name="info" size={14} color={D.muted} />
+            <Text style={[styles.hint, { flex: 1, textAlign: "auto" }]}>{blocked}</Text>
           </Pressable>
         ) : null}
       </ScrollView>
-
       {onCall ? (
         <View style={styles.controls}>
           <Control icon={call.muted ? "mic-off" : "mic"} label={call.muted ? t.callUnmute : t.callMute} on={call.muted} onPress={call.toggleMute} />
           <Pressable onPress={call.hangUp} accessibilityRole="button" accessibilityLabel={t.callEnd} style={styles.end}>
-            <Icon name="phone-off" size={26} color="#0a0a0b" />
+            <Icon name="x" size={28} color="#ffffff" />
           </Pressable>
           <Control icon={call.speaker ? "volume-2" : "volume-1"} label={t.callSpeaker} on={call.speaker} onPress={call.toggleSpeaker} />
         </View>
@@ -244,19 +230,17 @@ export default function Call() {
   );
 }
 
+// A round button: the label is read aloud, not shown.
 function Control({ icon, label, on, onPress }: { icon: "mic" | "mic-off" | "volume-2" | "volume-1"; label: string; on: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel={label} style={styles.control}>
-      <View style={[styles.controlDot, on && { backgroundColor: colors.onShell }]}>
-        <Icon name={icon} size={22} color={on ? colors.urgentInk : colors.onShell} />
-      </View>
-      <Text style={type.shellMeta}>{label}</Text>
+    <Pressable onPress={onPress} accessibilityRole="switch" accessibilityState={{ checked: on }} accessibilityLabel={label} style={[styles.controlDot, on && { backgroundColor: D.ink }]}>
+      <Icon name={icon} size={24} color={on ? D.bg : D.ink} />
     </Pressable>
   );
 }
 
-// Breathes slowly while listening, pulses faster while the assistant talks, holds still otherwise.
-function Orb({ phase, compact }: { phase: CallPhase; compact: boolean }) {
+// The Orbit mark on a sand circle with a glow: breathes slowly while listening, pulses faster while it talks.
+function Orb({ phase, size }: { phase: CallPhase; size: number }) {
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     const live = phase === "listening" || phase === "speaking" || phase === "thinking";
@@ -264,61 +248,59 @@ function Orb({ phase, compact }: { phase: CallPhase; compact: boolean }) {
       scale.setValue(1);
       return;
     }
-    const [size, ms] = phase === "speaking" ? [1.12, 420] : phase === "thinking" ? [1.05, 700] : [1.06, 1400];
+    const [grow, ms] = phase === "speaking" ? [1.14, 420] : phase === "thinking" ? [1.06, 700] : [1.08, 1400];
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(scale, { toValue: size, duration: ms, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+        Animated.timing(scale, { toValue: grow, duration: ms, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
         Animated.timing(scale, { toValue: 1, duration: ms, easing: Easing.inOut(Easing.quad), useNativeDriver: true })
       ])
     );
     loop.start();
     return () => loop.stop();
   }, [phase, scale]);
-  const lit = phase === "speaking";
-  // Smaller during a call, so the captions and the changes to save fit on the screen.
-  const [halo, core] = compact ? [124, 84] : [168, 112];
+  const halo = size * 1.5;
   return (
-    <View style={[styles.orbWrap, { width: halo, height: halo }]}>
-      <Animated.View style={[styles.orbHalo, { width: halo, height: halo, borderRadius: halo / 2, transform: [{ scale }] }, lit && { borderColor: colors.accent }]} />
-      <View style={[styles.orb, { width: core, height: core, borderRadius: core / 2 }, lit && { backgroundColor: colors.accent }]}>
-        <Icon name={phase === "ended" ? "phone-off" : phase === "connecting" ? "loader" : "phone"} size={compact ? 28 : 34} color={lit ? colors.accentInk : colors.accent} />
+    <View style={{ width: halo, height: halo, alignItems: "center", justifyContent: "center", margin: -(halo - size) / 2 }} accessibilityElementsHidden importantForAccessibility="no">
+      <Animated.View style={{ position: "absolute", width: halo, height: halo, borderRadius: halo / 2, backgroundColor: "rgba(214,190,140,0.14)", transform: [{ scale }] }} />
+      <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: phase === "ended" ? D.inset : D.sand, alignItems: "center", justifyContent: "center", boxShadow: phase === "ended" ? undefined : "0 0 28px rgba(214,190,140,0.45)" }}>
+        <OrbitMark size={size * 0.5} color={phase === "ended" ? D.muted : D.bg} />
       </View>
     </View>
   );
 }
 
+// The call is always dark, whatever the app's look, like the phone's own call screen.
+const D = { bg: "#0a0a0b", surface: "#131315", inset: "#1e1e21", ink: "#f2f0ea", muted: "#a39a8a", sand: "#d6be8c", tint: "#2a2418", hair: "#2a2a2e", danger: "#e5484d" };
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.shell },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 8, paddingBottom: 4 },
-  title: { fontFamily: fonts.bold, fontSize: 20, color: colors.onShell },
-  body: { padding: 20, gap: 16, flexGrow: 1 },
-  stage: { alignItems: "center", gap: 10, paddingVertical: 12 },
-  phase: { fontFamily: fonts.semibold, fontSize: 16, color: colors.onShell, textAlign: "center" },
-  orbWrap: { alignItems: "center", justifyContent: "center" },
-  orbHalo: { position: "absolute", borderWidth: 1.5, borderColor: colors.accentLine, backgroundColor: colors.accentTint },
-  orb: { alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.heroEdge },
-  captions: { gap: 8 },
-  caption: { maxWidth: "88%", paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.tile, gap: 2 },
-  mine: { alignSelf: "flex-end", backgroundColor: colors.surfaceInset },
-  theirs: { alignSelf: "flex-start", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline },
-  captionText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.onShell, writingDirection: "auto" },
+  screen: { flex: 1, backgroundColor: D.bg },
+  header: { flexDirection: "row", alignItems: "center", gap: 14, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8 },
+  name: { fontFamily: fonts.semibold, fontSize: 17, color: D.ink },
+  meta: { fontFamily: fonts.regular, fontSize: 13, color: D.muted },
+  closeButton: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: D.inset },
+  body: { paddingHorizontal: 18, paddingVertical: 16, gap: 10, flexGrow: 1, justifyContent: "flex-end" },
+  stage: { alignItems: "center", paddingVertical: 48 },
+  captions: { gap: 10 },
+  bubble: { maxWidth: "82%", paddingHorizontal: 14, paddingVertical: 10, borderRadius: 18 },
+  mine: { alignSelf: "flex-start", backgroundColor: D.inset },
+  theirs: { alignSelf: "flex-end", backgroundColor: D.tint },
+  bubbleText: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 23, color: D.ink, writingDirection: "auto" },
+  hint: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 20, color: D.muted, textAlign: "center" },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { minHeight: 34, maxWidth: "100%", paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
-  chipTag: { fontFamily: fonts.semibold, fontSize: 11, color: colors.accent },
-  chipOn: { backgroundColor: colors.urgent },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
-  action: { gap: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },
-  actionHead: { flexDirection: "row", alignItems: "center", gap: 8 },
-  actionButtons: { flexDirection: "row", alignItems: "center", gap: 14 },
-  mark: { width: 28, height: 28, borderRadius: radius.control, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
-  save: { minHeight: 30, paddingHorizontal: 14, justifyContent: "center", borderRadius: radius.pill, backgroundColor: colors.accent },
-  field: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  auto: { writingDirection: "auto" },
-  error: { fontFamily: fonts.semibold, fontSize: 13, color: colors.dangerOnShell },
+  chip: { minHeight: 36, maxWidth: "100%", paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: radius.pill, backgroundColor: D.inset },
+  chipOn: { backgroundColor: D.sand },
+  chipText: { fontFamily: fonts.medium, fontSize: 14, color: D.ink },
+  chipTag: { fontFamily: fonts.semibold, fontSize: 11, color: D.sand },
+  card: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 18, borderWidth: 1, borderColor: D.hair, backgroundColor: D.surface },
+  cardTitle: { fontFamily: fonts.semibold, fontSize: 15, color: D.ink, writingDirection: "auto" },
+  cardMeta: { fontFamily: fonts.regular, fontSize: 12, color: D.muted },
+  cardButtons: { flexDirection: "row", alignItems: "center", gap: 14 },
+  save: { height: 36, paddingHorizontal: 16, justifyContent: "center", borderRadius: 18, backgroundColor: D.sand },
+  saveText: { fontFamily: fonts.semibold, fontSize: 14, color: D.bg },
+  error: { fontFamily: fonts.semibold, fontSize: 13, color: D.danger },
   note: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
-  controls: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16, borderTopWidth: 1, borderTopColor: colors.hairline },
-  control: { alignItems: "center", gap: 6, minWidth: 72 },
-  controlDot: { width: 56, height: 56, borderRadius: 28, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceInset },
-  end: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", backgroundColor: colors.dangerOnShell },
+  controls: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 28, paddingTop: 12, paddingBottom: 16 },
+  controlDot: { width: 60, height: 60, borderRadius: 30, alignItems: "center", justifyContent: "center", backgroundColor: D.inset },
+  end: { width: 72, height: 72, borderRadius: 36, alignItems: "center", justifyContent: "center", backgroundColor: D.danger },
   footer: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 16 }
 });
