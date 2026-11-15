@@ -1,7 +1,8 @@
 import * as Haptics from "expo-haptics";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { Alert, Text, View } from "react-native";
+import * as WebBrowser from "expo-web-browser";
+import { Alert, Share, Text, View } from "react-native";
 import { Card, EmptyState, ListRow, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
@@ -207,7 +208,26 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
       {lists.want.length ? <Card title={t.wantToWatch}>{lists.want.map((item) => watchRow(item, <RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(item.id))} />))}</Card> : null}
       {lists.done.length ? <Card title={t.watched}>{lists.done.map((item) => watchRow(item))}</Card> : null}
       {!watchlist.available ? <EmptyState>{t.error}</EmptyState> : null}
+      {seerr.isAdmin && seerr.webhookPath ? <PushSetup link={`${(process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "")}${seerr.webhookPath}`} serverUrl={seerr.serverUrl} /> : null}
       <Button variant="outline" title={mt.disconnectSeerr} onPress={() => sheet({ title: mt.disconnectSeerr, detail: seerr.serverUrl ?? undefined, options: [{ label: t.disconnect, destructive: true, run: () => void seerr.disconnect() }] })} />
     </Screen>
+  );
+}
+
+
+// Seerr's own push needs its web app; instead Seerr's webhook calls Orbit, and Orbit pushes to this phone.
+// Only an admin can change Seerr's notification settings, so only they see this.
+function PushSetup({ link, serverUrl }: { link: string; serverUrl: string | null }) {
+  return (
+    <Card title={mt.pushTitle} style={{ gap: space.md, paddingVertical: space.lg }}>
+      <Text style={type.rowSubtitle}>{mt.pushSteps}</Text>
+      <Text selectable style={type.rowTitle}>
+        {link}
+      </Text>
+      <View style={{ flexDirection: "row", gap: space.sm, flexWrap: "wrap" }}>
+        <RowButton icon="share" label={mt.shareLink} onPress={() => void Share.share({ message: link })} />
+        {serverUrl ? <RowButton outline label={`${mt.openSeerrSettings} ↗`} onPress={() => void WebBrowser.openBrowserAsync(`${serverUrl}/settings/notifications/webhook`)} /> : null}
+      </View>
+    </Card>
   );
 }

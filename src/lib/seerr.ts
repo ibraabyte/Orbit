@@ -379,8 +379,21 @@ export type SeerrCall = <T>(method: "GET" | "POST" | "DELETE", path: string, bod
 
 // The app never talks to Seerr itself: Orbit's server holds the user's key (encrypted) and passes these calls on
 // for that account only (backend/app/routers/integrations.py).
-export function serverSeerrCall(api: Pick<ApiClient, "request">): SeerrCall {
-  return <T,>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown) => api.request<T>(method, `/integrations/seerr/api/${path}`, body);
+export function serverSeerrCall(api: Pick<ApiClient, "request">, language = isArabic ? "ar" : null): SeerrCall {
+  return <T,>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown) => api.request<T>(method, `/integrations/seerr/api/${withLanguage(method, path, language)}`, body);
+}
+
+// Seerr gives titles, overviews and genres in the language asked for (from TMDB). A path that already names one keeps it.
+export function withLanguage(method: string, path: string, language: string | null) {
+  if (!language || method !== "GET" || /[?&]language=/.test(path)) return path;
+  return `${path}${path.includes("?") ? "&" : "?"}language=${language}`;
+}
+
+// TMDB has no Arabic overview or biography for many titles and people: fill an empty one from English.
+async function withEnglish<T>(call: SeerrCall, path: string, item: T, field: keyof T): Promise<T> {
+  if (!isArabic || item[field]) return item;
+  const english = await call<T>("GET", `${path}?language=en`).catch(() => null);
+  return english?.[field] ? { ...item, [field]: english[field] } : item;
 }
 
 function discoverPath(list: DiscoverList) {
@@ -420,12 +433,13 @@ export function createSeerrClient(call: SeerrCall) {
     services: (mediaType: SeerrMediaType) => call<SeerrService[]>("GET", `service/${mediaType === "tv" ? "sonarr" : "radarr"}`),
     service: (mediaType: SeerrMediaType, serverId: number) => call<SeerrServiceDetails>("GET", `service/${mediaType === "tv" ? "sonarr" : "radarr"}/${serverId}`),
     // Requests carry only a TMDB id; this fetches the name and poster to show with them.
-    details: (mediaType: SeerrMediaType, tmdbId: number) => call<SeerrDetails>("GET", `${mediaType}/${tmdbId}`).then((item) => ({ ...item, mediaType })),
+    details: (mediaType: SeerrMediaType, tmdbId: number) =>
+      call<SeerrDetails>("GET", `${mediaType}/${tmdbId}`).then((item) => withEnglish(call, `${mediaType}/${tmdbId}`, { ...item, mediaType }, "overview")),
     season: (tmdbId: number, seasonNumber: number) => call<SeerrSeason & { episodes?: SeerrEpisode[] }>("GET", `tv/${tmdbId}/season/${seasonNumber}`),
     ratings: (tmdbId: number) => call<SeerrRatings>("GET", `movie/${tmdbId}/ratings`),
     recommendations: (mediaType: SeerrMediaType, tmdbId: number) => page(`${mediaType}/${tmdbId}/recommendations`, mediaType).then((body) => body.results),
     similar: (mediaType: SeerrMediaType, tmdbId: number) => page(`${mediaType}/${tmdbId}/similar`, mediaType).then((body) => body.results),
-    person: (personId: number) => call<SeerrPerson>("GET", `person/${personId}`),
+    person: (personId: number) => call<SeerrPerson>("GET", `person/${personId}`).then((item) => withEnglish(call, `person/${personId}`, item, "biography")),
     personCredits: (personId: number) => call<{ cast?: SeerrCredit[]; crew?: SeerrCredit[] }>("GET", `person/${personId}/combined_credits`).then((body) => personCredits(body.cast, body.crew)),
     approve: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/approve`),
     decline: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/decline`),
@@ -513,7 +527,11 @@ const en = {
   facts: { status: "Status", released: "Released", firstAired: "First aired", lastAired: "Last aired", nextEpisode: "Next episode", episodes: "Episodes", director: "Director", createdBy: "Created by", studio: "Studio", network: "Network", language: "Original language", originalTitle: "Original title", budget: "Budget", revenue: "Box office" },
   releaseStatus: { Released: "Released", "Post Production": "Post production", "In Production": "In production", Planned: "Planned", Rumored: "Rumored", Canceled: "Canceled", "Returning Series": "Still running", Ended: "Ended", Pilot: "Pilot" } as Record<string, string>,
   watchList: "My watch list",
-  disconnectSeerr: "Disconnect Seerr"
+  disconnectSeerr: "Disconnect Seerr",
+  pushTitle: "Notifications on your phone",
+  pushSteps: "In Seerr, open Settings › Notifications › Webhook. Turn it on, paste this link as the Webhook URL, pick the notifications you want, then Save. Tap Test to try it.",
+  shareLink: "Share link",
+  openSeerrSettings: "Open Seerr settings"
 };
 
 const ar: typeof en = {
@@ -593,7 +611,11 @@ const ar: typeof en = {
   facts: { status: "الحالة", released: "تاريخ العرض", firstAired: "أول عرض", lastAired: "آخر عرض", nextEpisode: "الحلقة الجاية", episodes: "الحلقات", director: "المخرج", createdBy: "من تأليف", studio: "الإنتاج", network: "القناة", language: "اللغة الأصلية", originalTitle: "الاسم الأصلي", budget: "الميزانية", revenue: "الإيرادات" },
   releaseStatus: { Released: "معروض", "Post Production": "في المونتاج", "In Production": "قيد التصوير", Planned: "مخطط له", Rumored: "إشاعة", Canceled: "ملغي", "Returning Series": "مستمر", Ended: "انتهى", Pilot: "حلقة تجريبية" },
   watchList: "قائمة مشاهدتي",
-  disconnectSeerr: "افصل Seerr"
+  disconnectSeerr: "افصل Seerr",
+  pushTitle: "التنبيهات على جوالك",
+  pushSteps: "في Seerr افتح Settings ثم Notifications ثم Webhook. فعّله، والصق هذا الرابط في Webhook URL، واختر التنبيهات التي تريدها، ثم احفظ. اضغط Test للتجربة.",
+  shareLink: "شارك الرابط",
+  openSeerrSettings: "افتح إعدادات Seerr"
 };
 
 export const mt = isArabic ? ar : en;

@@ -8,7 +8,8 @@ import { syncedAgo } from "@/lib/whoop";
 // (WHOOP tokens, the Seerr and AI keys) encrypted; the only server-wide pieces are WHOOP's app keys and the admin's AI key.
 // Shapes mirror backend/app/routers/integrations.py and admin.py.
 
-export type SeerrStatus = { connected: boolean; url: string | null; account_name: string | null; connected_at: string | null };
+// webhook_path: where Seerr sends its news (under Orbit's address); missing from older servers.
+export type SeerrStatus = { connected: boolean; url: string | null; account_name: string | null; connected_at: string | null; webhook_path?: string | null };
 
 export const AI_PROVIDERS = ["anthropic", "openai", "gemini", "openrouter"] as const;
 export type AiProvider = (typeof AI_PROVIDERS)[number];
@@ -88,6 +89,8 @@ export const integrationsApi = {
   seerr: (api: Api) => api.get<SeerrStatus>("/integrations/seerr"),
   connectSeerr: (api: Api, url: string, apiKey: string) => api.put<SeerrStatus>("/integrations/seerr", { url: url.trim(), api_key: apiKey.trim() }),
   disconnectSeerr: (api: Api) => api.delete("/integrations/seerr"),
+  // This phone gets the account's push notifications (Seerr's, for now), written in the phone's language.
+  registerPush: (api: Api, token: string, language: "ar" | "en") => api.put("/integrations/push", { token, language }),
   connectAi: (api: Api, { provider, model, apiKey, instructions }: AiConnectInput) =>
     // No api_key means "keep the saved one".
     api.put<AiStatus>("/integrations/ai", { provider, model: model.trim(), ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}), instructions: instructions.trim() }),

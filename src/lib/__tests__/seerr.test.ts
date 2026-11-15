@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl } from "@/lib/seerr";
+import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage } from "@/lib/seerr";
 
 // A stand-in for Orbit's API client: records the calls the app would send to the server.
 function fakeServer(responses: Record<string, unknown>) {
@@ -153,5 +153,15 @@ describe("seerr details", () => {
     expect(quotaLine({ limit: 5, used: 2, days: 7 }, "movie")).toBe("3 of 5 movie requests left · every 7 days");
     expect(quotaLine({ limit: 0 }, "tv")).toBeNull();
     expect(quotaLine(undefined, "tv")).toBeNull();
+  });
+});
+
+describe("seerr language", () => {
+  it("asks Seerr for Arabic on reads only, and keeps a language already named", () => {
+    expect(withLanguage("GET", "search?query=dune&page=1", "ar")).toBe("search?query=dune&page=1&language=ar");
+    expect(withLanguage("GET", "movie/7", "ar")).toBe("movie/7?language=ar");
+    expect(withLanguage("GET", "movie/7?language=en", "ar")).toBe("movie/7?language=en");
+    expect(withLanguage("POST", "request", "ar")).toBe("request");
+    expect(withLanguage("GET", "movie/7", null)).toBe("movie/7");
   });
 });

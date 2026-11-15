@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.models import ServiceConnection, User
 from app.security import decrypt_secret
-from app.services import seerr
+from app.services import push, seerr
 from tests.conftest import bearer, sign_up
 
 PASSWORD = "correct horse battery"
@@ -98,7 +98,7 @@ def test_env_switch_still_forces_sign_ups_open(client: TestClient, auth: dict):
 
 def test_overview_starts_empty(client: TestClient, auth: dict):
     body = client.get("/integrations", headers=auth).json()
-    assert body["seerr"] == {"connected": False, "url": None, "account_name": None, "connected_at": None}
+    assert body["seerr"] == {"connected": False, "url": None, "account_name": None, "connected_at": None, "webhook_path": None}
     assert body["whoop"]["connected"] is False
     assert set(body) == {"whoop", "apple_health", "seerr", "ai", "ais", "chatgpt", "voice", "features"}
     assert body["chatgpt"] == {"status": "not_connected"}
@@ -263,3 +263,62 @@ def test_every_table_belongs_to_a_user():
         owner = table.c.get("user_id") if "user_id" in table.c else table.c.get("id") if table.name == "profiles" else None
         assert owner is not None, f"{table.name} has no user_id"
         assert any(fk.column.table.name == "users" and fk.ondelete == "CASCADE" for fk in owner.foreign_keys), table.name
+
+
+PHONE = "ExponentPushToken[made-up-phone-0001]"
+
+
+def test_seerr_webhook_pushes_to_this_users_phones_in_their_language(
+    client: TestClient, auth: dict, fake_seerr, monkeypatch: pytest.MonkeyPatch
+):
+    sent: list[list[dict]] = []
+
+    def expo(request: httpx.Request) -> httpx.Response:
+        messages = json.loads(request.content)
+        sent.append(messages)
+        tickets = [
+            {"status": "error", "details": {"error": "DeviceNotRegistered"}}
+            if m["to"] == "ExponentPushToken[old-phone-0002]"
+            else {"status": "ok"}
+            for m in messages
+        ]
+        return httpx.Response(200, json={"data": tickets})
+
+    monkeypatch.setattr(push, "transport", httpx.MockTransport(expo))
+    path = client.put("/integrations/seerr", json={"url": "https://seerr.example.com", "api_key": KEY}, headers=auth).json()["webhook_path"]
+    assert client.put("/integrations/push", json={"token": PHONE, "language": "ar"}, headers=auth).status_code == 204
+    client.put("/integrations/push", json={"token": "ExponentPushToken[old-phone-0002]", "language": "en"}, headers=auth)
+    assert client.put("/integrations/push", json={"token": "not a token"}, headers=auth).status_code == 422
+
+    payload = {"notification_type": "MEDIA_AVAILABLE", "subject": "Made Up Movie (2026)", "media": {"media_type": "movie", "tmdbId": "7"}}
+    assert client.post(path, json=payload).status_code == 204
+    by_phone = {m["to"]: m for m in sent[0]}
+    assert by_phone[PHONE]["title"] == "جاهز للمشاهدة"
+    assert by_phone[PHONE]["body"] == "Made Up Movie (2026)"
+    assert by_phone[PHONE]["data"] == {"url": "/title?kind=movie&id=7"}
+    assert by_phone["ExponentPushToken[old-phone-0002]"]["title"] == "Ready to watch"
+
+    # Expo said the old phone is gone, so the next one only goes to the phone that's left.
+    client.post(path, json={"notification_type": "TEST_NOTIFICATION", "subject": "Test"})
+    assert [m["to"] for m in sent[1]] == [PHONE]
+
+    # A guessed address, or another user's id with this signature, gets nothing out.
+    assert client.post(path[:-4] + "0000", json=payload).status_code == 404
+    other = client.get("/auth/me", headers=second_user(client)).json()["id"]
+    assert client.post(path.replace(path.split("/")[-2], other), json=payload).status_code == 404
+    assert len(sent) == 2
+
+
+def test_new_request_names_who_asked():
+    texts, data = seerr.notification(
+        {
+            "notification_type": "MEDIA_PENDING",
+            "subject": "Made Up Show",
+            "media": {"media_type": "tv", "tmdbId": "9"},
+            "request": {"requestedBy_username": "Sara"},
+        }
+    )
+    assert texts["ar"] == ("طلب جديد ينتظر موافقتك", "Made Up Show · طلبه Sara")
+    assert texts["en"][1] == "Made Up Show · by Sara"
+    assert data == {"url": "/title?kind=tv&id=9"}
+    assert seerr.notification({}) is None

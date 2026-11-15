@@ -1,11 +1,30 @@
+import Constants from "expo-constants";
+import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getApi } from "@/lib/backend";
+import { isArabic } from "@/lib/i18n";
 import { integrationsApi, type SeerrStatus } from "@/lib/integrations";
 import { canManageRequests, createSeerrClient, serverSeerrCall, type SeerrConfig, type SeerrUser } from "@/lib/seerr";
 
 // Where older versions of the app kept the URL and key, on the phone only.
 const LEGACY_KEY = "orbit.seerr";
+
+// Once per launch: tell Orbit's server where to push Seerr's news (Seerr's webhook goes there). Fails quietly on a
+// simulator or when notifications are off; the next launch tries again.
+let pushRegistered = false;
+async function registerPush() {
+  if (pushRegistered) return;
+  pushRegistered = true;
+  try {
+    const { granted } = await Notifications.requestPermissionsAsync();
+    if (!granted) return;
+    const { data } = await Notifications.getExpoPushTokenAsync({ projectId: Constants.expoConfig?.extra?.eas?.projectId });
+    await integrationsApi.registerPush(getApi(), data, isArabic ? "ar" : "en");
+  } catch {
+    pushRegistered = false;
+  }
+}
 
 // Seerr is connected per account: the URL and key are saved on Orbit's server (key encrypted), so it works on every
 // phone you sign in on, and every call goes through the server with your key only.
@@ -40,6 +59,10 @@ export function useSeerr() {
     };
   }, []);
 
+  useEffect(() => {
+    if (status?.connected) void registerPush();
+  }, [status?.connected]);
+
   const client = useMemo(() => (status?.connected ? createSeerrClient(serverSeerrCall(getApi())) : null), [status?.connected, status?.url]);
 
   useEffect(() => {
@@ -71,6 +94,7 @@ export function useSeerr() {
     status,
     connected: Boolean(client),
     serverUrl: status?.url ?? null,
+    webhookPath: status?.webhook_path ?? null,
     client,
     user,
     isAdmin: user ? canManageRequests(user) : false,
