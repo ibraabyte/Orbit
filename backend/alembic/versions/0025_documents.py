@@ -5,7 +5,7 @@ the heads-ups before it). The number on the paper is not stored. Nothing existin
 
 Downgrading drops the table, so the papers saved in it are lost.
 
-Comes after 0023 (smart saver).
+Comes after 0024 (Apple Health).
 """
 
 from collections.abc import Sequence
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0024"
-down_revision: str | None = "0023"
+revision: str = "0025"
+down_revision: str | None = "0024"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
