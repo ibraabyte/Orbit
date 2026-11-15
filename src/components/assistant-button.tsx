@@ -1,7 +1,9 @@
 import * as Haptics from "expo-haptics";
+import { useRef } from "react";
 import { Image, Platform, Pressable, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { openCapture, useSidebar } from "@/components/screen";
+import { holdVoice } from "@/components/voice-hold";
 import { colors, radius, shadow, usePalette } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
@@ -26,6 +28,7 @@ const barBottom = capsuleBar ? -10 : 0;
 export function AssistantButton() {
   const insets = useSafeAreaInsets();
   const palette = usePalette();
+  const holding = useRef(false);
   if (useSidebar()) return null;
   return (
     <Pressable
@@ -33,12 +36,18 @@ export function AssistantButton() {
         if (process.env.EXPO_OS === "ios") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         openCapture();
       }}
-      // Hold: open straight into voice, listening at once.
+      // Hold: talk while holding (src/components/voice-hold.tsx); letting go sends it.
       onLongPress={() => {
         if (process.env.EXPO_OS === "ios") void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        openCapture(undefined, true);
+        holding.current = true;
+        holdVoice.begin();
       }}
-      delayLongPress={350}
+      onPressOut={() => {
+        if (!holding.current) return;
+        holding.current = false;
+        holdVoice.end();
+      }}
+      delayLongPress={300}
       accessibilityRole="button"
       accessibilityLabel={t.assistantTitle}
       accessibilityActions={[{ name: "longpress", label: t.micStart }]}

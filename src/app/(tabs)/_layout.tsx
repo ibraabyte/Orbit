@@ -1,6 +1,7 @@
 import { NativeTabs } from "expo-router/native-tabs";
 import { View } from "react-native";
 import { AssistantButton } from "@/components/assistant-button";
+import { VoiceHold } from "@/components/voice-hold";
 import { openCapture, useSidebar } from "@/components/screen";
 import { colors } from "@/components/theme";
 import { isArabic, t } from "@/lib/i18n";
@@ -29,6 +30,7 @@ export default function TabsLayout() {
         </NativeTabs.Trigger>
       </NativeTabs>
       <AssistantButton />
+      <VoiceHold />
     </View>
   );
 }
