@@ -1,4 +1,4 @@
-"""Per-user connections to outside services that use an API key: Seerr, the AIs and the voice model.
+"""Per-user connections to outside services that use an API key: Seerr, SerpApi, the AIs and the voice model.
 
 WHOOP has its own table (OAuth tokens, sync state). Keys here are encrypted (app.security.encrypt_secret), are
 never sent back to the app, and go with the account (on delete cascade).
@@ -13,7 +13,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, created_at, updated_at
 
-SERVICE_PROVIDERS = ("seerr",)
+# serpapi: the user's own SerpApi key for flight and hotel prices (app/services/travel_api.py).
+SERVICE_PROVIDERS = ("seerr", "serpapi")
 _providers_sql = ", ".join(f"'{p}'" for p in SERVICE_PROVIDERS)
 AI_PROVIDERS = ("anthropic", "openai", "gemini", "openrouter")
 _ai_providers_sql = ", ".join(f"'{p}'" for p in AI_PROVIDERS)

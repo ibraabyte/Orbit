@@ -36,6 +36,7 @@ from app.routers import (
     subscriptions,
     tasks,
     training,
+    travel,
     whoop,
 )
 from app.services import saver_jobs
@@ -90,6 +91,7 @@ def create_app() -> FastAPI:
         whoop.router,
         gmail.router,
         subscriptions.router,
+        travel.router,
         apple_health.router,
         food.foods,
         food.router,
