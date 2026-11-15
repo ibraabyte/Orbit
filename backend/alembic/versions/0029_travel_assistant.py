@@ -21,7 +21,9 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     op.drop_constraint(op.f("service_connections_provider_check"), "service_connections", type_="check")
-    op.create_check_constraint(op.f("service_connections_provider_check"), "service_connections", "provider in ('seerr', '17track', 'serpapi')")
+    op.create_check_constraint(
+        op.f("service_connections_provider_check"), "service_connections", "provider in ('seerr', '17track', 'serpapi')"
+    )
 
 
 def downgrade() -> None:
