@@ -87,7 +87,11 @@ export function IconMark({ name, size = 36, color = colors.ink }: { name: IconNa
 // checked: the tile is an on/off switch (Notifications, Sections), read out as one.
 export function ConnectionTile({ mark, name, badge, icons = [], label, onPress, wide, checked }: { mark: ReactNode; name: string; badge: "star" | "check" | "alert" | null; icons?: IconName[]; label: string; onPress?: () => void; wide?: boolean; checked?: boolean }) {
   const on = badge !== null;
-  const corner = (
+  const toggle = checked !== undefined;
+  // A switch tile: black check when on, an empty ring when off.
+  const corner = toggle ? (
+    <View style={[styles.on, on ? styles.onDark : styles.off]}>{on ? <Icon name="check" size={12} color={colors.urgentInk} /> : null}</View>
+  ) : (
     <View style={[styles.on, !on && styles.off]}>
       <Icon name={badge === "alert" ? "alert-circle" : (badge ?? "plus")} size={12} color={on ? colors.accentInk : colors.inkMuted} />
     </View>
@@ -105,7 +109,7 @@ export function ConnectionTile({ mark, name, badge, icons = [], label, onPress, 
     </>
   );
   return (
-    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole={checked === undefined ? "button" : "switch"} accessibilityState={checked === undefined ? undefined : { checked, disabled: !onPress }} accessibilityLabel={label} style={({ pressed }) => [styles.tile, wide && styles.wide, on ? styles.tileOn : styles.tileOff, pressed && { opacity: 0.75 }]}>
+    <Pressable onPress={onPress} disabled={!onPress} accessibilityRole={checked === undefined ? "button" : "switch"} accessibilityState={checked === undefined ? undefined : { checked, disabled: !onPress }} accessibilityLabel={label} style={({ pressed }) => [styles.tile, wide && styles.wide, on ? styles.tileOn : toggle ? styles.tileOffSolid : styles.tileOff, pressed && { opacity: 0.75 }]}>
       {wide ? (
         <>
           <View style={!on && { opacity: 0.55 }}>{mark}</View>
@@ -268,6 +272,8 @@ const styles = StyleSheet.create({
   tileTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 },
   on: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   off: { backgroundColor: "transparent", borderWidth: 1, borderColor: colors.hairline },
+  onDark: { backgroundColor: colors.urgent },
+  tileOffSolid: { borderColor: colors.hairline, backgroundColor: colors.surface, opacity: 0.7 },
   roles: { flexDirection: "row", gap: 8, paddingVertical: 2 },
   status: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted },
   field: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 10, paddingHorizontal: 12, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.field, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.hairline },

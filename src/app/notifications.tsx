@@ -1,8 +1,8 @@
 import * as Notifications from "expo-notifications";
 import { useEffect, useState } from "react";
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
-import { ConnectionTile, IconMark, TileGrid } from "@/components/ai-provider-parts";
-import { Card, Chevron, type, type IconName } from "@/components/drift";
+import { ConnectionTile, TileGrid } from "@/components/ai-provider-parts";
+import { Card, Chevron, IconTile, type, type IconName } from "@/components/drift";
 import { ChoiceMenu } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
 import { colors, fonts, radius, space, textSize } from "@/components/theme";
@@ -73,7 +73,7 @@ export default function NotificationsScreen() {
     return (
       <ConnectionTile
         key={kind}
-        mark={<IconMark name={icon} color={on ? colors.accentDeep : colors.inkMuted} />}
+        mark={<IconTile name={icon} size={36} tone={on ? "sand" : "neutral"} />}
         name={name}
         badge={on ? "check" : null}
         checked={on}
@@ -108,7 +108,7 @@ export default function NotificationsScreen() {
         {tile("prayer", "moon", t.notifPrayer)}
         {tile("reminders", "check-square", t.notifReminders)}
         <ConnectionTile
-          mark={<IconMark name="sun" color={morning.enabled ? colors.accentDeep : colors.inkMuted} />}
+          mark={<IconTile name="sun" size={36} tone={morning.enabled ? "sand" : "neutral"} />}
           name={t.morningAlert}
           badge={morning.enabled ? "check" : null}
           checked={morning.enabled}
