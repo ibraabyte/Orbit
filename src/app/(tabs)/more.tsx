@@ -165,8 +165,11 @@ export default function More() {
             <Link href="/habits" asChild>
               <Pressable accessibilityRole="link" accessibilityLabel={`${t.habits}, ${status.habits?.caption ?? ""}`} style={styles.habits}>
                 <View style={styles.spread}>
-                  <Text style={styles.title}>{t.habits}</Text>
-                  <Text style={styles.line}>{status.habits?.caption ?? mt.thisWeek}</Text>
+                  <View style={{ flexShrink: 1, gap: 2 }}>
+                    <Text style={styles.title}>{t.habits}</Text>
+                    <Text style={styles.line}>{status.habits?.caption ?? mt.thisWeek}</Text>
+                  </View>
+                  <IconTile name="repeat" size={30} tone="accent" />
                 </View>
                 <View style={styles.week}>
                   {week.map((day) => (
