@@ -16,7 +16,7 @@ import { barHeights, ringRotations } from "@/lib/ring";
 
 type FeatherName = ComponentProps<typeof Feather>["name"];
 // A few symbols Feather has no glyph for: SF Symbols on iOS, the closest Feather glyph elsewhere.
-const EXTRA = { wallet: ["wallet.bifold", "briefcase"], agent: ["person.wave.2", "phone-outgoing"], saver: ["tray.full", "bookmark"], "fork-knife": ["fork.knife", "coffee"], dumbbell: ["dumbbell", "zap"], pills: ["pills", "plus-square"] } as const satisfies Record<string, [SFSymbol, FeatherName]>;
+const EXTRA = { wallet: ["wallet.bifold", "briefcase"], agent: ["person.wave.2", "phone-outgoing"], saver: ["tray.full", "bookmark"], "fork-knife": ["fork.knife", "coffee"], dumbbell: ["dumbbell", "zap"], pills: ["pills", "plus-square"], plane: ["airplane", "send"], bed: ["bed.double", "home"] } as const satisfies Record<string, [SFSymbol, FeatherName]>;
 export type IconName = FeatherName | keyof typeof EXTRA;
 
 const sfSymbols: Partial<Record<FeatherName, SFSymbol>> = {

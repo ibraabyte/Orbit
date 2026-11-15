@@ -5,7 +5,7 @@ import { AppleHealthTile } from "@/components/apple-health-card";
 import { ConnectionTile, IconMark, LogoMark, PickRow, ProviderGrid, ProviderMark, TileGrid, type Pick } from "@/components/ai-provider-parts";
 import { BankSmsCard } from "@/components/bank-sms-card";
 import { GmailCard } from "@/components/gmail-card";
-import { Card, EmptyState, Icon, ListRow, type } from "@/components/drift";
+import { Card, EmptyState, Icon, IconTile, ListRow, type } from "@/components/drift";
 import { colors } from "@/components/theme";
 import { PROVIDERS } from "@/lib/ai-providers";
 import { Loading, Screen } from "@/components/screen";
@@ -17,6 +17,7 @@ import { AI_CHOICE_NAMES, aiChoicesOf, integrationsApi, seerrState, VOICE_PROVID
 import { getApi } from "@/lib/backend";
 import { callsApi, px, type PhoneSetup } from "@/lib/phone-calls";
 import { hunterApi, type GmailStatus } from "@/lib/subscriptions";
+import { travelApi, tx, type TravelKey } from "@/lib/travel";
 
 // How many features picked their own model under Advanced, or nothing when all use the defaults.
 function featureCount(overview: IntegrationsOverview): string | null {
@@ -34,6 +35,7 @@ export default function Integrations() {
   const [saving, setSaving] = useState(false);
   const [phone, setPhone] = useState<PhoneSetup | null>(null);
   const [gmail, setGmail] = useState<GmailStatus | null>(null);
+  const [travelKey, setTravelKey] = useState<TravelKey | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -45,6 +47,7 @@ export default function Integrations() {
       const nextPhone = await callsApi.setup(getApi()).catch(() => null);
       setPhone((current) => nextPhone ?? current);
       setGmail(await hunterApi.gmailStatus(getApi()).catch(() => null));
+      setTravelKey(await travelApi.overview(getApi()).then((found) => found.key).catch(() => null));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
     } finally {
@@ -134,6 +137,21 @@ export default function Integrations() {
           />
         </TileGrid>
         {!seerr.ready ? <Loading /> : seerr.connected ? null : <SeerrConnectForm connect={(url, key) => seerr.connect(url, key).then(load)} />}
+      </Card>
+
+      {/* Travel prices come through the person's own SerpApi key; the key is pasted on the Travel page. */}
+      <Card title={tx.travel}>
+        <TileGrid>
+          <ConnectionTile
+            wide
+            mark={<IconTile name="plane" />}
+            name="SerpApi"
+            badge={travelKey?.connected ? "check" : null}
+            icons={["plane", "bed"]}
+            label={`SerpApi, ${travelKey?.connected ? tx.keyLinked : tx.keyConnect}`}
+            onPress={() => router.push("/travel")}
+          />
+        </TileGrid>
       </Card>
 
       <Card title={px.calls}>

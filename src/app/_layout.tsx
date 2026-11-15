@@ -53,7 +53,7 @@ const nativeHeader = {
 
 // Sections opened from More get a large title that shrinks into the bar as you scroll. Screens one step further in
 // (one task, a form, a picker) keep the small title.
-const sectionScreens = ["accounts", "ask", "cards", "finance", "investments", "obligations", "subscriptions", "food", "habits", "health", "integrations", "library", "notifications", "media", "discover", "requests", "sections", "settings", "tasks", "vehicles", "whoop", "exercises/index", "gym", "injuries", "week", "training", "body", "plan", "medications", "phone-calls", "documents"];
+const sectionScreens = ["accounts", "ask", "cards", "finance", "investments", "obligations", "subscriptions", "food", "habits", "health", "integrations", "library", "notifications", "media", "discover", "requests", "sections", "settings", "tasks", "vehicles", "whoop", "exercises/index", "gym", "injuries", "week", "training", "body", "plan", "medications", "phone-calls", "documents", "travel"];
 const detailScreens = ["day-plan", "saved/[id]", "ai-provider", "ai-features", "health-goals", "person", "task/[id]", "exercises/[id]", "workout", "plan-day", "phone-call"];
 // Self-contained tasks (add a food, pick an exercise, edit a medication) open as a sheet over what you were doing, with
 // Cancel in its header and swipe-down to close; on Android they push as before.
