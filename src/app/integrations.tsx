@@ -41,7 +41,9 @@ export default function Integrations() {
       setOverview(await integrationsApi.overview(getApi()));
       setError(null);
       // The Twilio setup for calls made for you; an older server without it just leaves the tile unconnected.
-      setPhone(await callsApi.setup(getApi()).catch(() => null));
+      // A failed check keeps what was shown, so a slow server never flips Twilio to "not connected".
+      const nextPhone = await callsApi.setup(getApi()).catch(() => null);
+      setPhone((current) => nextPhone ?? current);
       setGmail(await hunterApi.gmailStatus(getApi()).catch(() => null));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -146,7 +148,7 @@ export default function Integrations() {
         </TileGrid>
       </Card>
 
-      <GmailCard status={gmail} onChange={load} returnPath="integrations" />
+      <GmailCard tile status={gmail} onChange={load} returnPath="integrations" />
 
       <BankSmsCard />
     </Screen>

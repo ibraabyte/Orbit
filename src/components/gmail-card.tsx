@@ -2,7 +2,7 @@ import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import { Text } from "react-native";
-import { LogoMark } from "@/components/ai-provider-parts";
+import { ConnectionTile, LogoMark, TileGrid } from "@/components/ai-provider-parts";
 import { Badge, Card, ListRow } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, ui } from "@/components/screen";
@@ -12,7 +12,7 @@ import { gmailResultMessage, hunterApi, st, type GmailStatus } from "@/lib/subsc
 
 // Read-only Gmail: link, see which address, unlink. Used on Integrations and on the subscription hunter.
 // returnPath is the screen Google's page comes back to (it also closes the sign-in sheet).
-export function GmailCard({ status, onChange, returnPath }: { status: GmailStatus | null; onChange: () => void | Promise<void>; returnPath: string }) {
+export function GmailCard({ status, onChange, returnPath, tile }: { status: GmailStatus | null; onChange: () => void | Promise<void>; returnPath: string; tile?: boolean }) {
   const { sheet } = useOverlays();
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; message: string } | null>(null);
@@ -56,6 +56,32 @@ export function GmailCard({ status, onChange, returnPath }: { status: GmailStatu
     });
 
   const connected = Boolean(status?.connected);
+
+  // On Connections: a tile like every other service, in an Email card that can hold more mail services later.
+  // Not linked: a tap links it. Linked: link again (when Google needs it) or unlink.
+  if (tile) {
+    const press = () => {
+      if (busy || !status?.configured) return;
+      if (!connected || status.last_error) return void connect();
+      sheet({ title: status.email ?? "Gmail", options: [{ label: st.gmailDisconnect, destructive: true, run: () => disconnect() }] });
+    };
+    return (
+      <Card title={st.email}>
+        {notice && !notice.ok ? <Text style={ui.error}>{notice.message}</Text> : null}
+        <TileGrid>
+          <ConnectionTile
+            wide
+            mark={<LogoMark source={require("../../assets/brand/ai/gmail.png")} />}
+            name="Gmail"
+            badge={!connected ? null : status?.last_error ? "alert" : "check"}
+            icons={["mail", "credit-card"]}
+            label={`Gmail, ${connected ? (status?.email ?? st.gmailLinked) : st.gmailConnect}`}
+            onPress={status?.configured ? press : undefined}
+          />
+        </TileGrid>
+      </Card>
+    );
+  }
   const badge = !status ? null : connected ? (status.last_error ? <Badge tone="urgent" glyph="!">{st.gmailRelink}</Badge> : <Badge tone="success">{st.gmailLinked}</Badge>) : null;
 
   return (

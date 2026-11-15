@@ -112,6 +112,7 @@ const en = {
   marked: "Saved.",
   // Gmail
   gmail: "Email (Gmail)",
+  email: "Email",
   gmailIntro: "Link Gmail to find receipts, renewals and free trials about to end. Orbit only reads, it never sends or deletes, and keeps only the sender, subject and price.",
   gmailConnect: "Link Gmail",
   gmailConnecting: "Linking…",
@@ -183,6 +184,7 @@ const ar: typeof en = {
   added: "انضاف للفواتير والاشتراكات.",
   marked: "تم الحفظ.",
   gmail: "البريد (Gmail)",
+  email: "البريد",
   gmailIntro: "اربط Gmail عشان يلقى الإيصالات والتجديدات والتجارب المجانية اللي قربت تخلص. Orbit يقرأ فقط، ما يرسل ولا يحذف، ويحفظ المرسل والعنوان والسعر بس.",
   gmailConnect: "اربط Gmail",
   gmailConnecting: "يربط…",
