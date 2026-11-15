@@ -2,10 +2,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { Icon, type } from "@/components/drift";
+import { OrbitMark } from "@/components/assistant-button";
+import { Icon, type, type IconName } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button } from "@/components/screen";
-import { colors, fonts, radius, space, textSize } from "@/components/theme";
+import { colors, fonts, radius, space, textSize, usePalette } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
 import { isFoodLine, speechOnPhone } from "@/lib/feature-models";
 import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
@@ -34,6 +35,9 @@ const kinds: Record<QuickAddDraft["kind"], [en: string, ar: string]> = {
   bill: ["Bill", "فاتورة"], habit: ["Habit", "عادة"]
 };
 
+// The shortcut words' icons, by what each one logs.
+const STARTER_ICONS: Record<(typeof captureStarterKinds)[number], IconName> = { meal: "coffee", expense: "credit-card", sleep: "moon", workout: "zap", weight: "activity", grocery: "shopping-cart", capture: "file-text" };
+
 function draftFields(draft: QuickAddDraft) {
   const rows: [string, string][] = [[isArabic ? "العنوان" : "Title", draft.title]];
   if (draft.amount) rows.push([isArabic ? "المبلغ" : "Amount", `${draft.amount} ${draft.currency}`]);
@@ -56,6 +60,7 @@ export default function Capture() {
   const params = useLocalSearchParams<{ text?: string; voice?: string }>();
   const { data, refresh, userId } = useDashboardData();
   const { toast } = useOverlays();
+  const palette = usePalette();
   const ai = useAiChoices("assistant");
   const [text, setText] = useState(params.text ?? "");
   const [busy, setBusy] = useState(false);
@@ -91,7 +96,9 @@ export default function Capture() {
   // A switched-off section takes nothing new: the line is not saved, and the assistant is told the same by the server.
   const { hidden } = useSections();
   const parsedOff = parsed ? kindHidden(parsed.draft.kind, hidden) : false;
-  const starters = captureStarters.filter((_, index) => !kindHidden(captureStarterKinds[index], hidden));
+  const starters = captureStarters
+    .map((word, index) => ({ word, kind: captureStarterKinds[index], icon: STARTER_ICONS[captureStarterKinds[index]] }))
+    .filter((starter) => !kindHidden(starter.kind, hidden));
   const gate = provider === null ? "no-ai" : askGate(provider, accepted);
   const chosen = answer ? answer.actions.filter((_, index) => !skipped.has(index)) : [];
   const total = mealTotal(chosen);
@@ -237,16 +244,27 @@ export default function Capture() {
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <View style={styles.header}>
-        <Text style={[styles.title, { flex: 1 }]}>{t.assistantTitle}</Text>
-        {/* A live voice call: talk and hear the answers, no send button. */}
-        <Pressable onPress={() => router.push("/call")} accessibilityRole="button" accessibilityLabel={t.callTitle} hitSlop={8} style={styles.call}>
-          <Icon name="phone" size={14} color={colors.accentInk} />
-          <Text style={[type.pill, { fontSize: 13, color: colors.accentInk }]}>{t.callButton}</Text>
-        </Pressable>
         <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={10}>
           <Text style={[type.pill, { fontSize: textSize.subheadline, color: colors.onShellMuted }]}>{t.cancel}</Text>
         </Pressable>
+        {/* A live voice call: talk and hear the answers, no send button. */}
+        <Pressable onPress={() => router.push("/call")} accessibilityRole="button" accessibilityLabel={t.callTitle} hitSlop={8} style={styles.call}>
+          <Icon name="phone" size={14} color={colors.ink} />
+          <Text style={[type.pill, { fontSize: 13, color: colors.ink }]}>{t.callButton}</Text>
+        </Pressable>
       </View>
+
+      {/* Nothing asked yet: the Orbit mark and one plain question. */}
+      {!answer ? (
+        <View style={styles.ask}>
+          <View style={styles.askMark}>
+            <OrbitMark size={26} color={palette.accentInk} />
+          </View>
+          <Text style={styles.title} accessibilityRole="header">
+            {t.assistantAsk}
+          </Text>
+        </View>
+      ) : null}
 
       {answer ? (
         <View style={styles.preview}>
@@ -320,7 +338,7 @@ export default function Capture() {
         </View>
       ) : null}
 
-      <View style={styles.inputRow}>
+      <View>
         <TextInput
           style={[styles.input, parsed && !parsed.validation.ok && { borderColor: colors.accentDeep }]}
           autoFocus={!answer && params.voice !== "1"}
@@ -336,8 +354,23 @@ export default function Capture() {
           returnKeyType="send"
           editable={!busy && !listening && !cloud.transcribing}
         />
+      </View>
+      {/* Shortcuts that start a line (with what they are for), and the mic. */}
+      <View style={styles.tools}>
+        {!answer && !text.trim() ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }} style={{ flex: 1 }}>
+            {starters.map(({ word, icon }) => (
+              <Pressable key={word} onPress={() => setText(word)} accessibilityRole="button" style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}>
+                <Icon name={icon} size={15} color={colors.accentDeep} />
+                <Text style={type.barLabel}>{word.trim()}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        ) : (
+          <View style={{ flex: 1 }} />
+        )}
         <Pressable onPress={toggleVoice} disabled={cloud.transcribing} accessibilityRole="button" accessibilityLabel={listening ? t.micStop : t.micStart} style={[styles.mic, listening && { backgroundColor: colors.accent }, cloud.transcribing && { opacity: 0.5 }]}>
-          <Icon name={listening ? "square" : cloud.transcribing ? "loader" : "mic"} size={20} color={listening ? colors.accentInk : colors.ink} />
+          <Icon name={listening ? "square" : cloud.transcribing ? "loader" : "mic"} size={22} color={listening ? colors.accentInk : colors.surface} />
         </Pressable>
       </View>
       <View style={[styles.chips, { alignItems: "center" }]}>
@@ -346,16 +379,6 @@ export default function Capture() {
         {cloud.transcribing ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micTranscribing}</Text> : null}
       </View>
       {voiceError ? <Text style={[type.shellMuted, { color: colors.dangerOnShell }]}>{voiceError}</Text> : null}
-
-      {!answer && !text.trim() ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }} style={{ flexGrow: 0 }}>
-          {starters.map((word) => (
-            <Pressable key={word} onPress={() => setText(word)} accessibilityRole="button" style={styles.chip}>
-              <Text style={type.barLabel}>{word.trim()}</Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-      ) : null}
 
       {parsed ? (
         <View style={styles.preview}>
@@ -450,18 +473,20 @@ export default function Capture() {
 const styles = StyleSheet.create({
   screen: { padding: space.xl, gap: space.md },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.lg },
-  call: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: space.xs, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.accent },
-  title: { fontFamily: fonts.bold, fontSize: textSize.title3, color: colors.onShell },
+  call: { minHeight: 34, flexDirection: "row", alignItems: "center", gap: space.xs, paddingHorizontal: space.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
+  ask: { gap: space.lg, paddingTop: space.lg },
+  askMark: { width: 52, height: 52, borderRadius: 16, borderCurve: "continuous", backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  title: { fontFamily: fonts.bold, fontSize: 30, lineHeight: 40, color: colors.onShell },
+  tools: { flexDirection: "row", alignItems: "center", gap: space.md },
   auto: { writingDirection: "auto" },
-  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: space.sm },
-  mic: { width: 52, height: 52, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceInset, borderWidth: 1, borderColor: colors.hairline },
+  mic: { width: 60, height: 60, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.ink, boxShadow: "0 12px 28px rgba(26,26,28,0.22)" },
   action: { gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
   total: { paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
   number: { width: 96, minHeight: 36, paddingHorizontal: space.md, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: textSize.subheadline, color: colors.ink, textAlign: "center" },
   note: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.sm },
-  input: { flex: 1, maxHeight: 140, paddingTop: space.lg, paddingBottom: space.lg, textAlignVertical: "top", writingDirection: "auto", minHeight: 52, paddingHorizontal: space.lg, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, backgroundColor: colors.field, fontFamily: fonts.medium, fontSize: textSize.body, color: colors.ink },
+  input: { maxHeight: 180, minHeight: 72, paddingVertical: space.sm, paddingHorizontal: 0, textAlignVertical: "top", writingDirection: "auto", borderBottomWidth: 1, borderColor: "transparent", fontFamily: fonts.medium, fontSize: 20, lineHeight: 30, color: colors.ink },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  chip: { minHeight: 34, paddingHorizontal: space.md, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: space.xs, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
+  chip: { minHeight: 38, paddingHorizontal: space.md, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: space.xs, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
   preview: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.sm },
   previewHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
   previewMark: { width: 28, height: 28, borderRadius: radius.control, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
