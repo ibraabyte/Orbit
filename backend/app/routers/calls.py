@@ -1,6 +1,7 @@
 """Calls the agent makes for the user: set up Twilio, plan a call, approve it, follow it, read the result.
 
 /calls/setup      the user's own Twilio account (SID, auth token, the number calls go out from) and the agent's voice.
+                  The agent talks through OpenAI or ElevenLabs, whichever the user picked for it in Integrations.
 POST /calls       turns what the user asked for into a plan (a draft). Nothing rings yet.
 PATCH /calls/{id} changes the plan while it is a draft.
 POST /calls/{id}/start   the user's approval: only this starts the call.
@@ -32,7 +33,7 @@ from app.deps import Db, UserId
 from app.models import PhoneCall, PhoneConnection, Profile
 from app.models.calls import ACTIVE_STATUSES, PHONE_PATTERN
 from app.security import decrypt_secret, encrypt_secret
-from app.services import feature_models, phone_agent, twilio
+from app.services import elevenlabs_call, feature_models, phone_agent, twilio, voice_call
 
 router = APIRouter(prefix="/calls", tags=["calls"])
 
@@ -50,16 +51,42 @@ def _phone(value: str) -> str:
     return digits
 
 
+Provider = Literal["openai", "elevenlabs"]
+
+
+def _provider(db: Session, user_id: uuid.UUID) -> Provider | None:
+    """Who talks on the phone: the user's pick for the phone agent while it is connected, else OpenAI, else ElevenLabs."""
+    effective = feature_models.state(db, user_id, "phone_agent").effective
+    if effective is None:
+        return None
+    return "elevenlabs" if effective == feature_models.ELEVENLABS else "openai"
+
+
+def _eleven_voice(voice: str) -> str | None:
+    """The saved voice, if it is an ElevenLabs one (else the agent's default voice)."""
+    return voice if voice not in phone_agent.VOICES and elevenlabs_call.VOICE_ID.match(voice) else None
+
+
+class VoiceOption(BaseModel):
+    id: str
+    name: str
+    arabic: bool
+
+
 class SetupStatus(BaseModel):
     connected: bool
     # Only the end of the SID, to tell accounts apart. The token never comes back.
     account_hint: str | None = None
     from_number: str | None = None
     voice: str = phone_agent.VOICES[0]
-    # The user's own OpenAI key is saved (Integrations > AI or Voice): the agent's voice needs it.
+    # The user's own OpenAI key is saved (Integrations > AI or Voice).
     openai: bool
+    # Who talks on the phone; None: neither an OpenAI key nor an ElevenLabs voice model is saved.
+    provider: Provider | None = None
     ready: bool
+    # OpenAI's voices, or with ElevenLabs the voices in the user's ElevenLabs account (Arabic first).
     voices: list[str] = list(phone_agent.VOICES)
+    voice_options: list[VoiceOption] = []
 
 
 class SetupIn(BaseModel):
@@ -67,7 +94,15 @@ class SetupIn(BaseModel):
     # Empty keeps the saved token (changing only the number or voice).
     auth_token: Annotated[str, StringConstraints(strip_whitespace=True, max_length=200)] = ""
     from_number: str
-    voice: Literal[phone_agent.VOICES] = phone_agent.VOICES[0]  # type: ignore[valid-type]
+    # One of OpenAI's voices, or an ElevenLabs voice id.
+    voice: str = phone_agent.VOICES[0]
+
+    @field_validator("voice")
+    @classmethod
+    def _voice(cls, value: str) -> str:
+        if value not in phone_agent.VOICES and not elevenlabs_call.VOICE_ID.match(value):
+            raise ValueError("Pick one of the voices shown.")
+        return value
 
     @field_validator("from_number")
     @classmethod
@@ -150,10 +185,25 @@ def _zone(db: Session, user_id: uuid.UUID) -> ZoneInfo:
 def _setup_status(db: Session, user_id: uuid.UUID) -> SetupStatus:
     row = db.get(PhoneConnection, user_id)
     has_openai = phone_agent.openai_key(db, user_id) is not None
+    provider = _provider(db, user_id)
+    voices: dict = {}
+    if provider == "elevenlabs":
+        try:
+            found = elevenlabs_call.voices(voice_call.elevenlabs_key(db, user_id) or "")
+        except elevenlabs_call.CallUnavailable:
+            found = []  # the agent's default voice
+        options = [VoiceOption(id=v.id, name=v.name, arabic=v.arabic) for v in found]
+        voices = {"voices": [v.id for v in found], "voice_options": options}
+    common = {"openai": has_openai, "provider": provider, **voices}
     if row is None:
-        return SetupStatus(connected=False, openai=has_openai, ready=False)
+        return SetupStatus(connected=False, ready=False, **common)
     return SetupStatus(
-        connected=True, account_hint=row.account_sid[-4:], from_number=row.from_number, voice=row.voice, openai=has_openai, ready=has_openai
+        connected=True,
+        account_hint=row.account_sid[-4:],
+        from_number=row.from_number,
+        voice=row.voice,
+        ready=provider is not None,
+        **common,
     )
 
 
@@ -287,8 +337,11 @@ def start_call(call_id: uuid.UUID, request: Request, user_id: UserId, db: Db):
     token = decrypt_secret(setup.auth_token) if setup else None
     if setup is None or not token:
         raise HTTPException(status.HTTP_409_CONFLICT, "Set up your Twilio account first.")
-    if phone_agent.openai_key(db, user_id) is None:
-        raise HTTPException(status.HTTP_409_CONFLICT, "Add your OpenAI key in Integrations first: the agent's voice uses it.")
+    if _provider(db, user_id) is None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT,
+            "Add your OpenAI key, or ElevenLabs as your voice model, in Integrations first: the agent's voice uses it.",
+        )
     active = db.scalar(select(func.count()).where(PhoneCall.user_id == user_id, PhoneCall.status.in_(ACTIVE_STATUSES)))
     if active:
         raise HTTPException(status.HTTP_409_CONFLICT, "Another call is still on the line. Wait for it to end.")
@@ -388,7 +441,7 @@ async def twilio_status(call_id: uuid.UUID, request: Request):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def _claim(call_id: str, key: str) -> tuple[PhoneCall, str, str, tuple[str, str], ZoneInfo, str] | None:
+def _claim(call_id: str, key: str) -> tuple[PhoneCall, Provider, str, str, tuple[str, str], ZoneInfo, str] | None:
     """The call this stream belongs to, if its one-time key matches. The key can't be used twice."""
     try:
         parsed = uuid.UUID(call_id)
@@ -404,7 +457,8 @@ def _claim(call_id: str, key: str) -> tuple[PhoneCall, str, str, tuple[str, str]
         ):
             return None
         setup = db.get(PhoneConnection, call.user_id)
-        api_key = phone_agent.openai_key(db, call.user_id)
+        provider = _provider(db, call.user_id)
+        api_key = voice_call.elevenlabs_key(db, call.user_id) if provider == "elevenlabs" else phone_agent.openai_key(db, call.user_id)
         token = decrypt_secret(setup.auth_token) if setup else None
         if setup is None or api_key is None or token is None:
             return None
@@ -413,7 +467,7 @@ def _claim(call_id: str, key: str) -> tuple[PhoneCall, str, str, tuple[str, str]
         db.commit()
         db.refresh(call)
         model = feature_models.realtime_model(db, call.user_id, "phone_agent")
-        return call, api_key, setup.voice, (setup.account_sid, token), _zone(db, call.user_id), model
+        return call, provider or "openai", api_key, setup.voice, (setup.account_sid, token), _zone(db, call.user_id), model
 
 
 def _save(call_id: uuid.UUID, result: phone_agent.Result) -> None:
@@ -447,7 +501,8 @@ async def call_stream(socket: WebSocket):
         if claimed is None:
             await socket.close(code=1008)
             return
-        call, api_key, voice, (account_sid, token), zone, model = claimed
+        call, provider, api_key, voice, (account_sid, token), zone, model = claimed
+        company = "ElevenLabs" if provider == "elevenlabs" else "OpenAI"
 
         async def hang_up_now() -> None:
             try:
@@ -455,12 +510,23 @@ async def call_stream(socket: WebSocket):
             except twilio.TwilioUnavailable:
                 phone_agent.log.warning("hanging up through Twilio failed")
 
-        setup = phone_agent.session_update(call, voice, zone, model)
+        stream_sid = str(start.get("streamSid", ""))
         try:
-            async with phone_agent.open_realtime(api_key, model) as ai:
-                result = await phone_agent.talk(socket, str(start.get("streamSid", "")), ai, setup, zone, hang_up_now)
+            if provider == "elevenlabs":
+                url = await asyncio.to_thread(phone_agent.eleven_url, call.user_id, api_key)
+                opening = phone_agent.eleven_start(call, zone, _eleven_voice(voice))
+                async with phone_agent.open_elevenlabs(url) as ai:
+                    result = await phone_agent.talk_elevenlabs(socket, stream_sid, ai, opening, zone, hang_up_now)
+            else:
+                # An ElevenLabs voice saved earlier means nothing to OpenAI: its first voice instead.
+                setup = phone_agent.session_update(call, voice if voice in phone_agent.VOICES else phone_agent.VOICES[0], zone, model)
+                async with phone_agent.open_realtime(api_key, model) as ai:
+                    result = await phone_agent.talk(socket, stream_sid, ai, setup, zone, hang_up_now)
+        except elevenlabs_call.CallUnavailable as exc:
+            result = phone_agent.Result(error=str(exc))
+            await hang_up_now()
         except (OSError, TimeoutError) as exc:
-            result = phone_agent.Result(error="Couldn't reach OpenAI from the server.")
+            result = phone_agent.Result(error=f"Couldn't reach {company} from the server.")
             phone_agent.log.warning("realtime connect failed: %s", type(exc).__name__)
             await hang_up_now()
         except Exception as exc:  # noqa: BLE001 - a refused key must still end the call cleanly.

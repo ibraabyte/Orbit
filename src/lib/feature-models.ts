@@ -72,7 +72,7 @@ export function choiceLabel(row: Pick<FeatureStatus, "kind">, choice: string, ov
 
 // The line under a feature's name: what it uses now, and whether its pick was removed.
 export function featureSummary(row: FeatureStatus, overview: IntegrationsOverview | null): string {
-  if (!row.effective) return row.kind === "realtime" ? (row.feature === "call" ? t.featureNeedsRealtime : t.featureNeedsOpenai) : t.featureNeedsAi;
+  if (!row.effective) return row.kind === "realtime" ? t.featureNeedsRealtime : t.featureNeedsAi;
   const now = choiceLabel(row, row.effective, overview);
   // Short names here, so the long line doesn't break inside a model name.
   if (row.stale && row.choice) return t.featureStale.replace("{name}", choiceLabel(row, row.choice, overview, true)).replace("{now}", choiceLabel(row, row.effective, overview, true));

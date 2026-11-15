@@ -19,8 +19,9 @@ from sqlalchemy.orm import Session
 
 from app.models import AiConnection, PhoneCall, PhoneConnection, Task
 from app.security import decrypt_secret, encrypt_secret
-from app.services import phone_agent, twilio
+from app.services import elevenlabs_call, phone_agent, twilio
 from tests.conftest import bearer, sign_up
+from tests.test_elevenlabs_call import ARABIC_VOICE, SIGNED_URL, FakeElevenLabs, add_elevenlabs
 
 SID = "AC" + "0" * 31 + "1"
 TOKEN = "made-up-twilio-token"
@@ -344,3 +345,106 @@ def test_live_call_books_and_makes_a_task(client: TestClient, auth: dict, twilio
     assert again["task_id"] == done["task_id"] and again["status"] == "ended" and again["duration_seconds"] == 95
     assert db.query(Task).count() == 1
     assert db.get(PhoneCall, uuid.UUID(call["id"])).stream_key is None
+
+
+@pytest.fixture
+def eleven(monkeypatch: pytest.MonkeyPatch) -> Iterator[FakeElevenLabs]:
+    fake = FakeElevenLabs()
+    monkeypatch.setattr(elevenlabs_call, "transport", httpx.MockTransport(fake.handler))
+    monkeypatch.setattr(elevenlabs_call, "_setups", {})
+    yield fake
+
+
+class FakeElevenSocket:
+    """Answers like an ElevenLabs agent's websocket: greets, hears them, books, says goodbye."""
+
+    def __init__(self, booked_at: str) -> None:
+        self.sent: list[dict] = []
+        self.out: asyncio.Queue[dict | None] = asyncio.Queue()
+        self.booked_at = booked_at
+
+    async def send(self, message: str) -> None:
+        event = json.loads(message)
+        self.sent.append(event)
+        put = self.out.put_nowait
+        if event.get("type") == "conversation_initiation_client_data":
+            put({"type": "audio", "audio_event": {"audio_base_64": "QUJD", "event_id": 1}})
+            put({"type": "agent_response", "agent_response_event": {"agent_response": "السلام عليكم، معك مساعد آلي"}})
+        elif "user_audio_chunk" in event and len([e for e in self.sent if "user_audio_chunk" in e]) == 1:
+            put({"type": "ping", "ping_event": {"event_id": 7, "ping_ms": 40}})
+            put({"type": "interruption", "interruption_event": {"event_id": 2}})
+            put({"type": "user_transcript", "user_transcription_event": {"user_transcript": "أبشر، الساعة أربع تناسبك؟"}})
+            args = {"outcome": "booked", "appointment_at": self.booked_at, "summary": "تم الحجز الساعة ٤ العصر."}
+            put({"type": "client_tool_call", "client_tool_call": {"tool_name": "finish_call", "tool_call_id": "t1", "parameters": args}})
+        elif event.get("type") == "client_tool_result":
+            put({"type": "audio", "audio_event": {"audio_base_64": "QkFJ", "event_id": 3}})
+            put({"type": "agent_response", "agent_response_event": {"agent_response": "شكراً، مع السلامة"}})
+
+    def __aiter__(self) -> AsyncIterator[str]:
+        return self._events()
+
+    async def _events(self) -> AsyncIterator[str]:
+        while (event := await self.out.get()) is not None:
+            yield json.dumps(event)
+
+
+def test_phone_agent_through_elevenlabs(
+    client: TestClient, auth: dict, twilio_api, db: Session, monkeypatch: pytest.MonkeyPatch, eleven: FakeElevenLabs
+):
+    user_id = _user_id(client, auth)
+    add_elevenlabs(db, user_id)
+    before = client.get("/calls/setup", headers=auth).json()
+    # No OpenAI key: the ElevenLabs voice model takes the calls, with its voices (Arabic first).
+    assert before["provider"] == "elevenlabs" and before["voice_options"][0] == {"id": ARABIC_VOICE, "name": "Rakan", "arabic": True}
+    body = {"account_sid": SID, "auth_token": TOKEN, "from_number": OWN_NUMBER, "voice": ARABIC_VOICE}
+    saved = client.put("/calls/setup", json=body, headers=auth)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["ready"] is True and saved.json()["voice"] == ARABIC_VOICE
+    assert client.put("/calls/setup", json={**body, "voice": "bad voice!"}, headers=auth).status_code == 422
+
+    call = _draft(client, auth)
+    assert client.post(f"/calls/{call['id']}/start", headers=auth).status_code == 200
+    twiml = dict(parse_qsl(next(r for r in twilio_api if r.url.path.endswith("/Calls.json")).content.decode()))["Twiml"]
+    stream_key = twiml.split('name="key" value="')[1].split('"')[0]
+    fake = FakeElevenSocket("2030-01-06T16:00")
+    urls: list[str] = []
+
+    @asynccontextmanager
+    async def fake_open(url: str):
+        urls.append(url)
+        yield fake
+
+    monkeypatch.setattr(phone_agent, "open_elevenlabs", fake_open)
+    start = {"event": "start", "start": {"streamSid": "MZ1", "customParameters": {"call_id": call["id"], "key": stream_key}}}
+    with client.websocket_connect("/calls/stream") as socket:
+        socket.send_json(start)
+        assert socket.receive_json() == {"event": "media", "media": {"payload": "QUJD"}, "streamSid": "MZ1"}
+        socket.send_json({"event": "media", "media": {"payload": "AAAA", "timestamp": "400"}})
+        assert socket.receive_json() == {"event": "clear", "streamSid": "MZ1"}
+        # After finish_call, each piece of the goodbye is followed by a mark; the last one played ends the call.
+        assert socket.receive_json() == {"event": "media", "media": {"payload": "QkFJ"}, "streamSid": "MZ1"}
+        assert socket.receive_json() == {"event": "mark", "mark": {"name": "goodbye-1"}, "streamSid": "MZ1"}
+        socket.send_json({"event": "mark", "mark": {"name": "goodbye-1"}})
+        socket.send_json({"event": "stop"})
+        with pytest.raises(Exception):  # noqa: B017 - closed by the server
+            socket.receive_json()
+
+    assert urls == [SIGNED_URL]
+    # A separate agent in the user's account, speaking phone audio, with finish_call as its tool.
+    agent = next(a for a in eleven.agents.values() if a["name"] == "Orbit phone agent")
+    assert agent["conversation_config"]["asr"]["user_input_audio_format"] == "ulaw_8000"
+    assert agent["conversation_config"]["tts"]["agent_output_audio_format"] == "ulaw_8000"
+    assert agent["platform_settings"]["privacy"]["record_voice"] is False
+    assert [t["name"] for t in eleven.tools.values()] == ["finish_call"]
+    init = fake.sent[0]["conversation_config_override"]
+    assert "Never pay" in init["agent"]["prompt"]["prompt"]
+    assert init["agent"]["first_message"].startswith("السلام عليكم، معك مساعد آلي") and init["agent"]["language"] == "ar"
+    assert init["tts"] == {"voice_id": ARABIC_VOICE}
+    assert {"type": "pong", "event_id": 7} in fake.sent
+    assert {"user_audio_chunk": "AAAA"} in fake.sent
+    assert dict(parse_qsl(twilio_api[-1].content.decode())) == {"Status": "completed"}
+
+    done = client.get(f"/calls/{call['id']}", headers=auth).json()
+    assert done["outcome"] == "booked" and done["appointment_at"].startswith("2030-01-06T13:00")
+    assert [line["who"] for line in done["transcript"]] == ["agent", "them", "agent"]
+    assert db.get(Task, uuid.UUID(done["task_id"])).title.startswith("موعد")

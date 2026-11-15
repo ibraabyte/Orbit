@@ -9,6 +9,10 @@ go in each call's overrides, which the phone sends when the call starts, and the
 For each call the server asks ElevenLabs for a conversation token (it starts one call, within minutes) and hands it to
 the phone with the call's overrides. The audio then goes between the phone and ElevenLabs over WebRTC, never through
 Orbit, and nothing of it is kept here.
+
+Phone calls (app.services.phone_agent) use a second agent, "Orbit phone agent", that hears and speaks phone audio
+(8 kHz mu-law) and has one tool, finish_call. There Twilio's audio goes through Orbit's server to ElevenLabs over a
+websocket opened with a signed URL; each call sends its own plan as overrides.
 """
 
 import hashlib
@@ -16,6 +20,7 @@ import json
 import re
 import threading
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -28,6 +33,9 @@ transport: httpx.BaseTransport | None = None
 
 API = "https://api.elevenlabs.io"
 AGENT_NAME = "Orbit assistant"
+PHONE_AGENT_NAME = "Orbit phone agent"
+# Twilio's phone audio, as is: ElevenLabs hears and speaks it without converting.
+PHONE_AUDIO = "ulaw_8000"
 AGENT_TAG = "orbit"
 # Ends the description of every tool Orbit makes, so they are told apart from the user's own tools of the same name.
 TOOL_MARK = " (Orbit)"
@@ -144,6 +152,19 @@ def tool_config(tool: Tool) -> dict[str, Any]:
     }
 
 
+_PLATFORM = {
+    # Only Orbit's server can start a call (with a token or a signed URL), and each call may set these four things.
+    "auth": {"enable_auth": True},
+    "overrides": {
+        "conversation_config_override": {
+            "agent": {"prompt": {"prompt": True}, "first_message": True, "language": True},
+            "tts": {"voice_id": True},
+        }
+    },
+    "privacy": {"record_voice": False},
+}
+
+
 def agent_config(tool_ids: list[str], base_prompt: str) -> dict[str, Any]:
     """The agent kept in the user's account. The prompt here is general: each call sends the real one as an override."""
     return {
@@ -154,17 +175,22 @@ def agent_config(tool_ids: list[str], base_prompt: str) -> dict[str, Any]:
             "tts": {"model_id": TTS_MODEL},
             "conversation": {"max_duration_seconds": MAX_SECONDS},
         },
-        "platform_settings": {
-            # Only Orbit's server can start a call (with a token), and each call may set these four things.
-            "auth": {"enable_auth": True},
-            "overrides": {
-                "conversation_config_override": {
-                    "agent": {"prompt": {"prompt": True}, "first_message": True, "language": True},
-                    "tts": {"voice_id": True},
-                }
-            },
-            "privacy": {"record_voice": False},
+        "platform_settings": _PLATFORM,
+    }
+
+
+def phone_agent_config(tool_ids: list[str], base_prompt: str, max_seconds: int) -> dict[str, Any]:
+    """The phone agent: the same, but it hears and speaks phone audio. Each call's first words come as an override."""
+    return {
+        "name": PHONE_AGENT_NAME,
+        "tags": [AGENT_TAG],
+        "conversation_config": {
+            "agent": {"language": "ar", "prompt": {"prompt": base_prompt, "tool_ids": tool_ids}},
+            "asr": {"user_input_audio_format": PHONE_AUDIO},
+            "tts": {"model_id": TTS_MODEL, "agent_output_audio_format": PHONE_AUDIO},
+            "conversation": {"max_duration_seconds": max_seconds},
         },
+        "platform_settings": _PLATFORM,
     }
 
 
@@ -180,23 +206,26 @@ def _pages(api_key: str, path: str, key: str, params: dict[str, Any]) -> list[di
     return found
 
 
-def _discover(api_key: str, names: set[str]) -> _Setup:
+def _discover(api_key: str, names: set[str], agent_name: str) -> _Setup:
     setup = _Setup()
     for item in _pages(api_key, "/v1/convai/tools", "tools", {}):
         config = item.get("tool_config") or {}
         name = config.get("name")
         if name in names and str(config.get("description", "")).endswith(TOOL_MARK) and name not in setup.tools and item.get("id"):
             setup.tools[name] = (str(item["id"]), None)
-    for agent in _pages(api_key, "/v1/convai/agents", "agents", {"search": AGENT_NAME}):
-        if agent.get("name") == AGENT_NAME and AGENT_TAG in (agent.get("tags") or []) and agent.get("agent_id"):
+    for agent in _pages(api_key, "/v1/convai/agents", "agents", {"search": agent_name}):
+        if agent.get("name") == agent_name and AGENT_TAG in (agent.get("tags") or []) and agent.get("agent_id"):
             setup.agent_id = str(agent["agent_id"])
             break
     return setup
 
 
-def _ensure(api_key: str, account: str, tools: list[Tool], base_prompt: str) -> str:
+Config = Callable[[list[str]], dict[str, Any]]
+
+
+def _ensure(api_key: str, account: str, tools: list[Tool], make_config: Config) -> str:
     """The agent's id, after making or updating it (and its tools) as needed."""
-    setup = _setups.get(account) or _discover(api_key, {tool.name for tool in tools})
+    setup = _setups.get(account) or _discover(api_key, {tool.name for tool in tools}, make_config([])["name"])
     for tool in tools:
         config = tool_config(tool)
         digest = _hash(config)
@@ -209,7 +238,7 @@ def _ensure(api_key: str, account: str, tools: list[Tool], base_prompt: str) -> 
         elif known[1] != digest:
             _request(api_key, "PATCH", f"/v1/convai/tools/{known[0]}", json={"tool_config": config})
             setup.tools[tool.name] = (known[0], digest)
-    config = agent_config([setup.tools[tool.name][0] for tool in tools], base_prompt)
+    config = make_config([setup.tools[tool.name][0] for tool in tools])
     digest = _hash(config)
     if setup.agent_id is None:
         made = _request(api_key, "POST", "/v1/convai/agents/create", json=config)
@@ -223,24 +252,44 @@ def _ensure(api_key: str, account: str, tools: list[Tool], base_prompt: str) -> 
     return setup.agent_id
 
 
-def start(user_id: uuid.UUID, api_key: str, tools: list[Tool], base_prompt: str) -> tuple[str, str]:
-    """(agent id, conversation token) for one call. Something removed in ElevenLabs is made again, once."""
-    account = _account(user_id, api_key)
+def _start(user_id: uuid.UUID, api_key: str, tools: list[Tool], make_config: Config, path: str, field_name: str) -> tuple[str, str]:
+    """(agent id, the field from `path`) for one call. Something removed in ElevenLabs is made again, once."""
+    account = f"{_account(user_id, api_key)}:{make_config([])['name']}"
     with _lock:
         for attempt in range(2):
             try:
-                agent_id = _ensure(api_key, account, tools, base_prompt)
-                body = _request(api_key, "GET", "/v1/convai/conversation/token", params={"agent_id": agent_id})
+                agent_id = _ensure(api_key, account, tools, make_config)
+                body = _request(api_key, "GET", path, params={"agent_id": agent_id})
             except _NotFound:
                 _setups.pop(account, None)
                 if attempt:
                     raise
                 continue
-            token = body.get("token")
-            if not isinstance(token, str) or not token:
+            value = body.get(field_name)
+            if not isinstance(value, str) or not value:
                 raise CallUnavailable("ElevenLabs sent an answer Orbit couldn't read.")
-            return agent_id, token
+            return agent_id, value
     raise CallUnavailable("ElevenLabs couldn't start the call. Try again later.")  # pragma: no cover
+
+
+def start(user_id: uuid.UUID, api_key: str, tools: list[Tool], base_prompt: str) -> tuple[str, str]:
+    """(agent id, conversation token) for one call in the app."""
+    return _start(user_id, api_key, tools, lambda ids: agent_config(ids, base_prompt), "/v1/convai/conversation/token", "token")
+
+
+def phone_url(user_id: uuid.UUID, api_key: str, tools: list[Tool], base_prompt: str, max_seconds: int) -> str:
+    """A signed websocket URL for one phone call (it works once, within minutes). The key stays on the server."""
+    _, url = _start(
+        user_id,
+        api_key,
+        tools,
+        lambda ids: phone_agent_config(ids, base_prompt, max_seconds),
+        "/v1/convai/conversation/get-signed-url",
+        "signed_url",
+    )
+    if not url.startswith("wss://"):
+        raise CallUnavailable("ElevenLabs sent an answer Orbit couldn't read.")
+    return url
 
 
 def overrides(prompt: str, locale: str, voice_id: str | None) -> dict[str, Any]:
