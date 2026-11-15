@@ -1,9 +1,9 @@
 import { router } from "expo-router";
 import type { ReactNode } from "react";
 import { Image, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { Badge, Card, Chevron, type } from "@/components/drift";
+import { Badge, Card, Chevron, pressedFade, type } from "@/components/drift";
 import { BleedRow, CONTENT_MAX_WIDTH } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { mediaBadge, mt, posterUrl, seerrName, seerrYear, type DiscoverList, type SeerrCast, type SeerrMediaType, type SeerrResult, type StatusBadge } from "@/lib/seerr";
 import { isArabic } from "@/lib/i18n";
 import { contentWidth } from "@/lib/sidebar";
@@ -50,7 +50,7 @@ export function PosterCard({ item, width, onPress }: { item: SeerrResult; width:
       onPress={onPress ?? (() => (item.mediaType === "movie" || item.mediaType === "tv") && openTitle(item.mediaType, item.id))}
       accessibilityRole="button"
       accessibilityLabel={[name, year, badge?.label].filter(Boolean).join(", ")}
-      style={({ pressed }) => [{ width, gap: 6 }, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [{ width, gap: space.sm }, pressed && { opacity: 0.7 }]}
     >
       <View>
         <Poster path={item.posterPath} title={name} width={width} />
@@ -60,7 +60,7 @@ export function PosterCard({ item, width, onPress }: { item: SeerrResult; width:
           </View>
         ) : null}
       </View>
-      <View style={{ gap: 1 }}>
+      <View style={{ gap: space.xxs }}>
         <Text style={type.rowTitle} numberOfLines={2}>
           {name}
         </Text>
@@ -73,7 +73,7 @@ export function PosterCard({ item, width, onPress }: { item: SeerrResult; width:
 /** Small "See all ›" in a section header. */
 export function SeeAll({ onPress, label = mt.seeAll }: { onPress: () => void; label?: string }) {
   return (
-    <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8} style={styles.seeAll}>
+    <Pressable onPress={onPress} accessibilityRole="link" hitSlop={8} style={({ pressed }) => [styles.seeAll, pressed && pressedFade]}>
       <Text style={type.link}>{label}</Text>
       <Chevron size={15} color={colors.link} />
     </Pressable>
@@ -122,7 +122,7 @@ export function CastCard({ person }: { person: SeerrCast }) {
   return (
     <Pressable onPress={() => openPerson(person.id)} accessibilityRole="button" accessibilityLabel={[person.name, person.character].filter(Boolean).join(", ")} style={({ pressed }) => [styles.cast, pressed && { opacity: 0.7 }]}>
       <Poster path={person.profilePath} title={person.name} width={72} round />
-      <Text style={[type.rowTitle, { fontSize: 12, lineHeight: 16, textAlign: "center" }]} numberOfLines={2}>
+      <Text style={[type.rowTitle, { fontSize: textSize.caption1, lineHeight: lineHeights.caption1, textAlign: "center" }]} numberOfLines={2}>
         {person.name}
       </Text>
       {person.character ? (
@@ -161,13 +161,13 @@ export function FactRows({ rows }: { rows: [string, string][] }) {
 const styles = StyleSheet.create({
   blank: { alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.hairline },
   blankLetter: { fontFamily: fonts.medium, color: colors.inkFaint },
-  corner: { position: "absolute", top: 6, end: 6, minWidth: 22, height: 22, borderRadius: radius.pill, paddingHorizontal: 5, alignItems: "center", justifyContent: "center", backgroundColor: colors.shell, borderWidth: 1, borderColor: colors.accent },
+  corner: { position: "absolute", top: space.sm, end: space.sm, minWidth: 22, height: 22, borderRadius: radius.pill, paddingHorizontal: space.xs, alignItems: "center", justifyContent: "center", backgroundColor: colors.shell, borderWidth: 1, borderColor: colors.accent },
   cornerFull: { backgroundColor: colors.urgent, borderColor: colors.urgent },
-  cornerGlyph: { fontFamily: fonts.bold, fontSize: 11, color: colors.accent },
-  seeAll: { flexDirection: "row", alignItems: "center", gap: 2, minHeight: 32 },
+  cornerGlyph: { fontFamily: fonts.bold, fontSize: textSize.caption2, color: colors.link },
+  seeAll: { flexDirection: "row", alignItems: "center", gap: space.xxs, minHeight: 32 },
   grid: { flexDirection: "row", flexWrap: "wrap" },
-  cast: { width: 84, alignItems: "center", gap: 4 },
-  chip: { minHeight: 34, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
+  cast: { width: 84, alignItems: "center", gap: space.xs },
+  chip: { minHeight: 34, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
   chipSelected: { backgroundColor: colors.urgent, borderColor: colors.urgent },
-  fact: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 9, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline }
+  fact: { flexDirection: "row", alignItems: "flex-start", gap: space.md, paddingVertical: space.sm, borderTopWidth: StyleSheet.hairlineWidth * 2, borderTopColor: colors.hairline }
 });

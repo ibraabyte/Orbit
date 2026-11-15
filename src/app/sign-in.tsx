@@ -1,4 +1,3 @@
-import Feather from "@expo/vector-icons/Feather";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import * as Linking from "expo-linking";
 import { Link } from "expo-router";
@@ -6,9 +5,9 @@ import * as WebBrowser from "expo-web-browser";
 import { useEffect, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { AuthHeader, AuthPage, authStyles as styles, Field } from "@/components/auth-panel";
-import { type } from "@/components/drift";
+import { Icon, type } from "@/components/drift";
 import { Button } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { getApi } from "@/lib/backend";
 import { t, toggleLanguage } from "@/lib/i18n";
 import { deviceTimeZone } from "@/lib/sign-up";
@@ -75,8 +74,8 @@ export default function SignIn() {
         }}
         style={{ writingDirection: "ltr" }}
         trailing={
-          <Pressable onPress={() => setReveal((value) => !value)} accessibilityRole="button" accessibilityLabel={reveal ? t.hidePassword : t.showPassword} hitSlop={8} style={{ paddingHorizontal: 14, minHeight: 48, justifyContent: "center" }}>
-            <Feather name={reveal ? "eye-off" : "eye"} size={18} color={colors.inkMuted} />
+          <Pressable onPress={() => setReveal((value) => !value)} accessibilityRole="button" accessibilityLabel={reveal ? t.hidePassword : t.showPassword} hitSlop={8} style={{ paddingHorizontal: space.lg, minHeight: 48, justifyContent: "center" }}>
+            <Icon name={reveal ? "eye-off" : "eye"} size={18} color={colors.inkMuted} />
           </Pressable>
         }
       />
@@ -87,9 +86,9 @@ export default function SignIn() {
           disabled={busy}
           accessibilityRole="button"
           accessibilityState={{ disabled: busy }}
-          style={({ pressed }) => ({ minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous", opacity: busy ? 0.45 : pressed ? 0.8 : 1 })}>
+          style={({ pressed }) => ({ minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.md, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, borderCurve: "continuous", opacity: busy ? 0.45 : pressed ? 0.8 : 1 })}>
           <FontAwesome name="google" size={18} color={colors.ink} />
-          <Text style={{ fontFamily: fonts.medium, fontSize: 14, color: colors.ink }}>{t.continueWithGoogle}</Text>
+          <Text style={{ fontFamily: fonts.medium, fontSize: textSize.subheadline, color: colors.ink }}>{t.continueWithGoogle}</Text>
         </Pressable>
       ) : null}
       {options.signupsOpen ? (
@@ -105,8 +104,8 @@ export default function SignIn() {
         }}
         accessibilityRole="button"
         accessibilityLabel={t.language}
-        style={({ pressed }) => ({ alignSelf: "center", flexDirection: "row", alignItems: "center", gap: 8, minHeight: 40, paddingHorizontal: 16, opacity: pressed ? 0.7 : 1 })}>
-        <Feather name="globe" size={14} color={colors.inkMuted} />
+        style={({ pressed }) => ({ alignSelf: "center", flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 40, paddingHorizontal: space.lg, opacity: pressed ? 0.7 : 1 })}>
+        <Icon name="globe" size={14} color={colors.inkMuted} />
         <Text style={[type.pill, { color: colors.inkMuted }]}>{t.langLabel}</Text>
       </Pressable>
     </AuthPage>

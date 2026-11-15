@@ -1,6 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useMemo, type ReactNode } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Badge, Card, CardLink, Chevron, CountBadge, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { DoseRow } from "@/components/medication-ui";
@@ -8,10 +7,10 @@ import { DayPlanCard } from "@/components/day-plan";
 import { MorningBriefCard } from "@/components/morning-brief-card";
 import { WeeklySummaryCard } from "@/components/weekly-summary";
 import { useOverlays } from "@/components/overlays";
-import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, Skeleton, TabHeader, useWide } from "@/components/screen";
+import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, Skeleton, TabHeader } from "@/components/screen";
 import { SwipeToDone } from "@/components/swipe-to-done";
 import { TaskRow } from "@/components/task-row";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { useAppleHealth } from "@/hooks/use-apple-health";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useDayPlan } from "@/hooks/use-day-plan";
@@ -21,6 +20,7 @@ import { usePlanToday } from "@/hooks/use-plan-today";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
 import { useReadiness } from "@/hooks/use-readiness";
 import { useSections } from "@/hooks/use-sections";
+import { useTodayLayout } from "@/hooks/use-today-layout";
 import { useWeeklySummary } from "@/hooks/use-weekly-summary";
 import { apiCompleteTask, apiUpdate } from "@/lib/api-actions";
 import { appHref } from "@/lib/app-href";
@@ -39,46 +39,28 @@ import { dayMuscles, pt, recoveryLine } from "@/lib/plan";
 import { dosesOnDay, rx } from "@/lib/medications";
 import { formatSleepDuration } from "@/lib/sleep";
 import { cardLabel, moneyDueSoon, type MoneyDue } from "@/lib/wealth";
+import type { TodayCard } from "@/lib/today-layout";
 import { isFriday } from "@/lib/weekly-summary";
-
-const hiddenKey = "orbit.today.hidden";
-// "upnext" is the Next up card. The old "next" id (from before the rail) is ignored, so an old saved choice cannot hide it.
-const optional = [
-  ["brief", t.morningBrief],
-  ["dayplan", dp.short],
-  ["week", t.weekSummary],
-  ["money", t.moneyDue],
-  ["digest", t.digest],
-  ["quick", t.quick],
-  ["upnext", t.nextUp],
-  ["workout", pt.todayWorkout],
-  ["meds", rx.todayDoses],
-  ["health", t.healthToday]
-] as const;
-type OptionalSection = (typeof optional)[number][0];
 
 const prayerName = (prayer: PrayerTime) => (isArabic ? prayer.label : prayerNamesEn[prayer.name]);
 const minutesUntil = (at: Date) => Math.max(0, Math.round((at.getTime() - Date.now()) / 60_000));
 
-// Today in Refined: the date and title, the next prayer on a sand-edged card, then cards: the brief, the digest,
-// quick numbers, what needs attention (overdue tasks, money due), what is next today (timed things still ahead), and
-// health. Readiness (WHOOP recovery) is one of the quick numbers. A card with nothing in it stays away, so the screen
+// Today in Refined: the date and title, the next prayer on a sand-edged card, the morning brief, the digest (without
+// what attention already lists), then what to do first: what needs attention (overdue tasks, money due) and what is
+// next today (timed things still ahead). Then quick numbers (no zeros) and health. Readiness (WHOOP recovery) is one of the quick numbers. A card with nothing in it stays away, so the screen
 // only holds what has something to say; when nothing needs doing, one small "all clear" card says so.
 export default function Today() {
   const { data, loading, error, refresh, act } = useDashboardData();
   const { next: prayer, today: prayersToday } = usePrayerTimes();
   const readiness = useReadiness();
   const apple = useAppleHealth().today;
-  const { sheet, toast } = useOverlays();
+  const { toast } = useOverlays();
   const now = useNow();
-  // iPad, two columns: the quick numbers move to the top of the right column, so both columns end at about the same height.
-  const wide = useWide();
-  const [hidden, setHidden] = useState<OptionalSection[]>([]);
-  const show = (section: OptionalSection) => !hidden.includes(section);
+  // Which cards show and in what order: set in the Customize sheet (src/app/customize-today.tsx).
+  const { layout, ready: choicesRead, shown: show } = useTodayLayout();
   // Sections switched off in Settings leave Today too (their data is kept).
   const { on, hidden: sectionsOff } = useSections();
-  // Not asked until the saved choice of hidden sections is read, so a hidden brief is never fetched.
-  const [choicesRead, setChoicesRead] = useState(false);
+  // Not asked until the saved choice of hidden cards is read, so a hidden brief is never fetched.
   const brief = useMorningBrief(choicesRead && show("brief"));
   // The day laid out in time around the prayers and WHOOP's energy; made once each morning.
   const dayPlan = useDayPlan(prayersToday, choicesRead && show("dayplan"));
@@ -88,19 +70,11 @@ export default function Today() {
   // Today's workout from the plan, while Exercises is on and the card isn't hidden.
   const planToday = usePlanToday(choicesRead && show("workout") && on("exercises"));
 
-  useEffect(() => {
-    AsyncStorage.getItem(hiddenKey)
-      .then((saved) => saved && setHidden(JSON.parse(saved)))
-      .catch(() => undefined)
-      .finally(() => setChoicesRead(true));
-  }, []);
-
   const rail = useMemo(
     () => buildRail((buildCalendarDays(data, 1, now)[0]?.events ?? []).filter((event) => !eventHidden(event.kind, sectionsOff)), prayersToday, now),
     [data, prayersToday, now, sectionsOff]
   );
   const summary = useMemo(() => summarizeDashboard(data), [data]);
-  const digest = useMemo(() => buildDailyBrief(data).filter((item) => !pathHidden(item.href, sectionsOff)).slice(0, 5), [data, sectionsOff]);
   const food = useMemo(() => foodSummary(data), [data]);
   const moneyDue = useMemo(() => moneyDueSoon(data), [data]);
   // Everything whose time has passed, today's too: Next up only shows what is still ahead.
@@ -110,23 +84,15 @@ export default function Today() {
   const calorieTarget = data.profile?.daily_calorie_target ?? null;
   const calorieShare = calorieTarget ? Math.min(1, summary.todayCalories / calorieTarget) : 0;
   const hasData = data.profile !== null || data.tasks.length > 0;
-  const money = show("money") && on("finance") ? moneyDue : [];
+  const money = show("attention") && on("finance") ? moneyDue : [];
   const attentionCount = overdue.length + money.length;
+  // The digest skips what the attention card already lists (overdue tasks, money due).
+  const shownElsewhere = [...(show("attention") && overdue.length ? ["overdue-tasks"] : []), ...(money.length ? ["overdue-bills", "overdue-installments"] : [])];
+  const digest = buildDailyBrief(data)
+    .filter((item) => !pathHidden(item.href, sectionsOff) && !shownElsewhere.includes(item.id))
+    .slice(0, 5);
   // What is still ahead today (not prayers: the next one has its own card).
   const upNext = rail.entries.filter((entry): entry is Extract<RailEntry, { kind: "event" }> => entry.kind === "event" && !entry.past).slice(0, 8);
-
-  const customize = () =>
-    sheet({
-      title: t.customize,
-      options: optional.filter(([id]) => (id === "money" ? on("finance") : id === "health" ? on("health") : id === "workout" ? on("exercises") : id === "meds" ? on("medications") : true)).map(([id, label]) => ({
-        label: `${show(id) ? "●" : "○"} ${label}`,
-        run: () => {
-          const next = show(id) ? [...hidden, id] : hidden.filter((item) => item !== id);
-          setHidden(next);
-          void AsyncStorage.setItem(hiddenKey, JSON.stringify(next)).catch(() => undefined);
-        }
-      }))
-    });
 
   // Paid: an installment is ticked off; a repeating bill moves to its next date, a one-off one is marked paid.
   const pay = (item: MoneyDue) => {
@@ -147,7 +113,7 @@ export default function Today() {
     return refresh();
   };
 
-  const header = <TabHeader kicker={formatDate(now, { weekday: "long", day: "numeric", month: "short" })} title={t.today} action={<HeaderButton icon="sliders" label={t.customize} onPress={customize} />} />;
+  const header = <TabHeader kicker={formatDate(now, { weekday: "long", day: "numeric", month: "short" })} title={t.today} />;
 
   if (!hasData) {
     return (
@@ -160,7 +126,7 @@ export default function Today() {
   const prayerCard = prayer ? (
     <Hero>
       <View style={styles.heroMark}>
-        <Icon name="moon" size={19} color={colors.accent} />
+        <Icon name="moon" size={19} color={colors.link} />
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={type.rowSubtitle}>{t.nextPrayer}</Text>
@@ -178,7 +144,7 @@ export default function Today() {
     const open = () => router.push(appHref(event.href));
     const row = (
       <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={`${t.railKinds[event.kind]}: ${event.title}, ${formatClock24(entry.at)}`} style={[styles.nextRow, index === 0 && { borderTopWidth: 0 }]}>
-        <Text style={[styles.nextTime, focus && { color: colors.accent }]}>{formatClock24(entry.at)}</Text>
+        <Text style={[styles.nextTime, focus && { color: colors.link }]}>{formatClock24(entry.at)}</Text>
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={type.rowTitle} numberOfLines={2}>
             {event.title}
@@ -191,7 +157,7 @@ export default function Today() {
     return <View key={entry.id}>{taskId && !focus ? <SwipeToDone onDone={() => void complete(taskId)}>{row}</SwipeToDone> : row}</View>;
   };
 
-  const attentionCard = attentionCount ? (
+  const attentionCard = show("attention") && attentionCount ? (
     <Card title={t.attention} action={<CardLink href="/tasks" label={t.tasks} />}>
       {overdue.map((task, index) => (
         <TaskRow key={task.id} task={task} first={index === 0} />
@@ -219,7 +185,7 @@ export default function Today() {
 
   // Nothing late and nothing timed for the rest of the day: one quiet card instead of two empty ones.
   const clearCard =
-    !attentionCard && !nextCard ? (
+    show("attention") && !attentionCard && !nextCard ? (
       <Card>
         <EmptyState icon="check" example={isArabic ? "ذكرني أتصل بأمي ٩ الليل" : "call mom 9pm"}>{`${t.allClear} · ${t.allClearBody}`}</EmptyState>
       </Card>
@@ -241,18 +207,17 @@ export default function Today() {
       </Card>
     ) : null;
 
-  const quickTiles = show("quick") ? (
-    <StatGrid columns={3}>
-      {[
-        <StatTile key="tasks" href="/tasks" label={t.openTasks} value={summary.openTaskCount} alert={summary.overdueTaskCount > 0} />,
-        <StatTile key="reminders" href="/tasks" label={t.dueReminders} value={summary.dueReminderCount} alert={summary.dueReminderCount > 0} />,
-        ...(readiness.value !== null && on("whoop") ? [<StatTile key="readiness" href="/whoop" label={t.readiness} value={formatNumber(readiness.value)} color={colors.accentDeep} />] : []),
-        ...(on("food") ? [<StatTile key="meals" href="/food" label={t.mealsPlanned} value={food.todayPlannedMeals} />] : []),
-        ...(on("finance") ? [<StatTile key="spent" href="/finance" label={t.spentToday} value={formatMoney(summary.todaySpending, currency)} />] : []),
-        ...(on("habits") ? [<StatTile key="habits" href="/habits" label={t.habitsDone} value={`${summary.completedHabitCount}/${summary.activeHabitCount}`} />] : [])
-      ]}
-    </StatGrid>
-  ) : null;
+  // A zero says nothing, so its tile stays away; with no tiles left, the row goes too.
+  const tiles = [
+    // Shown only when there are open tasks beyond the overdue ones the attention card lists.
+    ...(summary.openTaskCount > overdue.length ? [<StatTile key="tasks" href="/tasks" label={t.openTasks} value={summary.openTaskCount} alert={summary.overdueTaskCount > 0} />] : []),
+    ...(summary.dueReminderCount ? [<StatTile key="reminders" href="/tasks" label={t.dueReminders} value={summary.dueReminderCount} alert />] : []),
+    ...(readiness.value !== null && on("whoop") ? [<StatTile key="readiness" href="/whoop" label={t.readiness} value={formatNumber(readiness.value)} color={colors.accentDeep} />] : []),
+    ...(on("food") && food.todayPlannedMeals ? [<StatTile key="meals" href="/food" label={t.mealsPlanned} value={food.todayPlannedMeals} />] : []),
+    ...(on("finance") && summary.todaySpending ? [<StatTile key="spent" href="/finance" label={t.spentToday} value={formatMoney(summary.todaySpending, currency)} />] : []),
+    ...(on("habits") && summary.activeHabitCount ? [<StatTile key="habits" href="/habits" label={t.habitsDone} value={`${summary.completedHabitCount}/${summary.activeHabitCount}`} />] : [])
+  ];
+  const quickTiles = show("quick") && tiles.length ? <StatGrid columns={3}>{tiles}</StatGrid> : null;
 
   // The plan's workout for today until it's done; a rest day or no plan shows nothing.
   const workoutDay = show("workout") && on("exercises") ? planToday.day : null;
@@ -279,7 +244,7 @@ export default function Today() {
         <DoseRow key={entry.key} entry={entry} first={index === 0} />
       ))}
       {openDoses.length ? (
-        <View style={{ paddingTop: 10, alignItems: "flex-start" }}>
+        <View style={{ paddingTop: space.md, alignItems: "flex-start" }}>
           <CardLink href="/medications" label={rx.medications} />
         </View>
       ) : null}
@@ -295,9 +260,9 @@ export default function Today() {
   const healthLogged = (foodOn && summary.todayCalories > 0) || workoutToday > 0 || sleepToday > 0;
   const healthCard = show("health") && on("health") && healthLogged ? (
     <Card title={t.healthToday} action={<CardLink href="/health" label={t.health} />}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 14 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space.lg }}>
         {foodOn ? <RingGauge value={calorieShare} label={calorieTarget ? `${Math.round(calorieShare * 100)}%` : "–"} /> : null}
-        <View style={{ flex: 1, flexDirection: "row", gap: 8 }}>
+        <View style={{ flex: 1, flexDirection: "row", gap: space.sm }}>
           {foodOn ? (
             <View style={{ flex: 1 }}>
               <Metric label={t.calories} value={summary.todayCalories} unit={calorieTarget ? `/ ${calorieTarget}` : undefined} />
@@ -314,33 +279,47 @@ export default function Today() {
     </Card>
   ) : null;
 
-  // Phone: one column in Refined's order. iPad: the overview on one side, what to do on the other.
+  // The morning brief comes right after the prayer, even while it is still asking for AI or permission.
+  const briefCard = show("brief") ? <MorningBriefCard state={brief.state} data={data} retry={() => void brief.refresh()} /> : null;
+  // The capture line is a first-day hint; once something has been captured, the tab bar's button is enough.
+  const newcomer = !data.tasks.length && !data.expenses.length;
+
+  // Each card in the order chosen in Customize. With nothing late or ahead, the quiet "all clear" card takes the
+  // attention card's place.
+  const cards: Record<TodayCard, ReactNode> = {
+    brief: briefCard,
+    dayplan: show("dayplan") ? <DayPlanCard state={dayPlan.state} now={now} tasks={data.tasks} retry={() => void dayPlan.refresh()} onDone={(taskId) => void complete(taskId)} /> : null,
+    digest: digestCard,
+    attention: attentionCard ?? clearCard,
+    upnext: nextCard,
+    meds: medsCard,
+    workout: workoutCard,
+    week: friday && show("week") ? <WeeklySummaryCard state={week.state} retry={() => void week.refresh()} /> : null,
+    quick: quickTiles,
+    health: healthCard
+  };
+  const placed = (list: TodayCard[]) => list.map((card) => <Fragment key={card}>{cards[card]}</Fragment>);
+  // ponytail: on iPad quick numbers and health keep the second column, in their chosen order; the rest fill the first.
+  const side: TodayCard[] = ["quick", "health"];
+
+  // Phone: one column: the prayer, then the cards in the chosen order. iPad: the same, with quick numbers and health
+  // on the other side.
   return (
     <Screen wide header={header} banner={error ? <OfflineBanner message={t.offline} /> : undefined} refreshing={loading} onRefresh={reload}>
       <Columns
         left={
           <>
             {prayerCard}
-            <CaptureHint hint={t.capturePh} />
-            {show("brief") ? <MorningBriefCard state={brief.state} data={data} retry={() => void brief.refresh()} /> : null}
-            {show("dayplan") ? <DayPlanCard state={dayPlan.state} now={now} tasks={data.tasks} retry={() => void dayPlan.refresh()} onDone={(taskId) => void complete(taskId)} /> : null}
-            {friday && show("week") ? <WeeklySummaryCard state={week.state} retry={() => void week.refresh()} /> : null}
-            {digestCard}
-            {wide ? null : quickTiles}
+            {newcomer ? <CaptureHint hint={t.capturePh} /> : null}
+            {placed(layout.order.filter((card) => !side.includes(card)))}
           </>
         }
-        right={
-          <>
-            {wide ? quickTiles : null}
-            {attentionCard}
-            {nextCard}
-            {clearCard}
-            {medsCard}
-            {workoutCard}
-            {healthCard}
-          </>
-        }
+        right={<>{placed(layout.order.filter((card) => side.includes(card)))}</>}
       />
+      {/* Which cards Today shows and their order: set now and then, so it waits at the end instead of beside the title. */}
+      <View style={{ alignItems: "center", paddingTop: space.lg }}>
+        <HeaderButton icon="sliders" label={t.customize} onPress={() => router.push("/customize-today")} />
+      </View>
     </Screen>
   );
 }
@@ -352,9 +331,9 @@ function digestIcon(tone?: string | null) {
 }
 
 const styles = StyleSheet.create({
-  heroMark: { width: 40, height: 40, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: "rgba(232,200,144,0.1)", alignItems: "center", justifyContent: "center" },
-  heroValue: { fontFamily: fonts.semibold, fontSize: 18, lineHeight: 24, color: colors.ink },
-  heroIn: { fontFamily: fonts.medium, fontSize: 13, color: colors.accent },
-  nextRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 8, borderTopWidth: 1, borderTopColor: colors.surfaceInset, backgroundColor: colors.surface },
-  nextTime: { width: 52, fontFamily: fonts.semibold, fontSize: 12, color: colors.inkMuted, writingDirection: "ltr" }
+  heroMark: { width: 40, height: 40, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accentWash, alignItems: "center", justifyContent: "center" },
+  heroValue: { fontFamily: fonts.semibold, fontSize: textSize.headline, lineHeight: lineHeights.headline, color: colors.ink },
+  heroIn: { fontFamily: fonts.medium, fontSize: textSize.footnote, color: colors.link },
+  nextRow: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 52, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: colors.surfaceInset, backgroundColor: colors.surface },
+  nextTime: { width: 52, fontFamily: fonts.semibold, fontSize: textSize.caption1, color: colors.inkMuted, writingDirection: "ltr" }
 });

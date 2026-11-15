@@ -6,7 +6,7 @@ import { Card, EmptyState, ListRow, RowButton, StatGrid, StatTile, type } from "
 import { useOverlays } from "@/components/overlays";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
 import { Chip, openDiscover, openTitle, Poster, PosterGrid, PosterRail, SeeAll } from "@/components/seerr-parts";
-import { BleedRow, Button, Screen, SearchBar } from "@/components/screen";
+import { BleedRow, Button, Screen } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
@@ -14,6 +14,7 @@ import { formatDate, t } from "@/lib/i18n";
 import { DISCOVER_ROWS, mt, seerrTitle, type DiscoverRow, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult } from "@/lib/seerr";
 import type { WatchItem } from "@/lib/types";
 import { groupWatchItems, progressLabel } from "@/lib/watchlist";
+import { space } from "@/components/theme";
 
 export default function Media() {
   const seerr = useSeerr();
@@ -24,7 +25,7 @@ export default function Media() {
 function Connect({ connect, error }: { connect: (url: string, apiKey: string) => Promise<void>; error: string | null }) {
   return (
     <Screen>
-      <Card title={t.seerrConnect} style={{ gap: 12, paddingVertical: 16 }}>
+      <Card title={t.seerrConnect} style={{ gap: space.md, paddingVertical: space.lg }}>
         <Text style={type.rowSubtitle}>{error ?? t.seerrHint}</Text>
         <SeerrConnectForm connect={connect} />
       </Card>
@@ -136,17 +137,20 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   );
 
   return (
-    <Screen refreshing={loading} onRefresh={() => (search ? runSearch(search.text) : loadDiscover())}>
-      {seerr.error ? <EmptyState>{seerr.error}</EmptyState> : null}
-      <SearchBar
-        placeholder={t.searchMedia}
-        value={query}
-        onChangeText={(text) => {
+    <Screen
+      refreshing={loading}
+      onRefresh={() => (search ? runSearch(search.text) : loadDiscover())}
+      search={{
+        placeholder: t.searchMedia,
+        value: query,
+        onChangeText: (text) => {
           setQuery(text);
           if (!text.trim()) setSearch(null);
-        }}
-        onSubmitEditing={() => runSearch(query)}
-      />
+        },
+        onSubmit: (text) => runSearch(text)
+      }}
+    >
+      {seerr.error ? <EmptyState>{seerr.error}</EmptyState> : null}
       {search ? (
         <Card title={t.results}>
           {search.results.length ? <PosterGrid items={search.results} /> : <EmptyState>{loading ? `${t.loading}…` : mt.nothingFound}</EmptyState>}
@@ -174,7 +178,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
                   subtitle={[request.requestedBy?.displayName, formatDate(request.createdAt)].filter(Boolean).join(" · ")}
                   onPress={() => openTitle(request.type, request.media.tmdbId)}
                   trailing={
-                    <View style={{ flexDirection: "row", gap: 6 }}>
+                    <View style={{ flexDirection: "row", gap: space.sm }}>
                       <RowButton icon="check" label={mt.approve} onPress={() => act(() => client.approve(request.id))} />
                       <RowButton outline icon="x" label={mt.decline} onPress={() => act(() => client.decline(request.id))} />
                     </View>

@@ -9,6 +9,10 @@ to OpenAI Realtime with the user's own OpenAI key, and the AI's voice back to Tw
 the instructions below: it says first that it is an automated assistant calling for the user, it never pays or agrees
 to pay, and never gives out anything about the user except their name. When it is done it calls finish_call with the
 outcome, then says goodbye and Orbit hangs up. The words both sides said are kept with the call; the audio is not.
+
+When the user picked ElevenLabs for the phone agent (Integrations), the audio goes to an ElevenLabs agent in their
+account instead (app.services.elevenlabs_call), with the same instructions and tool. Orbit's server stays in the
+middle, so it still keeps the words and the outcome.
 """
 
 import asyncio
@@ -26,7 +30,8 @@ from sqlalchemy.orm import Session
 from starlette.websockets import WebSocketDisconnect
 
 from app import models as m
-from app.services import assistant, voice_call, whoop_ai
+from app.services import assistant, elevenlabs_call, voice_call, whoop_ai
+from app.services.agent import Tool
 
 log = logging.getLogger(__name__)
 
@@ -70,6 +75,11 @@ FINISH_TOOL = {
         "required": ["outcome", "summary"],
     },
 }
+
+
+FINISH = Tool(FINISH_TOOL["name"], FINISH_TOOL["description"], FINISH_TOOL["parameters"])
+# The ElevenLabs agent's own prompt; every call replaces it with instructions() for that call.
+ELEVEN_PROMPT = "You are an automated phone assistant. Each call gives you its goal and rules."
 
 
 def openai_key(db: Session, user_id: uuid.UUID) -> str | None:
@@ -161,9 +171,13 @@ def make_plan(db: Session, user_id: uuid.UUID, request: str, business_name: str 
     )
 
 
+def first_words(call: m.PhoneCall) -> str:
+    return f"{disclosure(call.caller_name, is_arabic(call.request))} {call.opening}"
+
+
 def instructions(call: m.PhoneCall, zone: ZoneInfo) -> str:
     arabic = is_arabic(call.request)
-    first = f"{disclosure(call.caller_name, arabic)} {call.opening}"
+    first = first_words(call)
     now = datetime.now(zone)
     who = call.caller_name or "the customer"
     language = (
@@ -218,6 +232,24 @@ def session_update(call: m.PhoneCall, voice: str, zone: ZoneInfo, model: str = M
     }
 
 
+def eleven_start(call: m.PhoneCall, zone: ZoneInfo, voice_id: str | None) -> dict[str, Any]:
+    """The ElevenLabs agent's settings for this call: the same instructions; the fixed first words are its first message."""
+    override: dict[str, Any] = {
+        "agent": {
+            "prompt": {"prompt": instructions(call, zone)},
+            "first_message": first_words(call),
+            "language": "ar" if is_arabic(call.request) else "en",
+        }
+    }
+    if voice_id:
+        override["tts"] = {"voice_id": voice_id}
+    return {"type": "conversation_initiation_client_data", "conversation_config_override": override}
+
+
+def eleven_url(user_id: uuid.UUID, api_key: str) -> str:
+    return elevenlabs_call.phone_url(user_id, api_key, [FINISH], ELEVEN_PROMPT, TIME_LIMIT_SECONDS)
+
+
 def appointment_time(value: Any, zone: ZoneInfo) -> datetime | None:
     if not isinstance(value, str) or not value.strip():
         return None
@@ -247,8 +279,17 @@ async def _openai(api_key: str, model: str) -> AsyncIterator[Realtime]:
         yield socket
 
 
-# Replaced in tests with a fake OpenAI.
+@asynccontextmanager
+async def _elevenlabs(signed_url: str) -> AsyncIterator[Realtime]:
+    from websockets.asyncio.client import connect
+
+    async with connect(signed_url, max_size=None) as socket:
+        yield socket
+
+
+# Replaced in tests with fakes.
 open_realtime: Callable[[str, str], Any] = _openai
+open_elevenlabs: Callable[[str], Any] = _elevenlabs
 
 
 @dataclass
@@ -262,6 +303,16 @@ class Result:
     def said(self, who: str, words: Any) -> None:
         if isinstance(words, str) and words.strip() and len(self.transcript) < TRANSCRIPT_MAX:
             self.transcript.append({"who": who, "text": words.strip()[:1000]})
+
+    def finished(self, args: Any, zone: ZoneInfo) -> None:
+        """finish_call's arguments. A booking without a readable time needs the user."""
+        args = args if isinstance(args, dict) else {}
+        outcome = args.get("outcome") if args.get("outcome") in m.calls.OUTCOMES else "needs_you"
+        moment = appointment_time(args.get("appointment_at"), zone)
+        if outcome == "booked" and moment is None:
+            outcome = "needs_you"
+        self.outcome, self.appointment_at = outcome, moment if outcome == "booked" else None
+        self.summary = _text(args.get("summary"), 1000)
 
 
 class Twilio(Protocol):
@@ -333,15 +384,9 @@ async def talk(twilio: Twilio, stream_sid: str, ai: Realtime, setup: dict[str, A
                 result.said("them", event.get("transcript"))
             elif kind == "response.function_call_arguments.done" and event.get("name") == "finish_call":
                 try:
-                    args = json.loads(event.get("arguments") or "{}")
+                    result.finished(json.loads(event.get("arguments") or "{}"), zone)
                 except ValueError:
-                    args = {}
-                outcome = args.get("outcome") if args.get("outcome") in m.calls.OUTCOMES else "needs_you"
-                moment = appointment_time(args.get("appointment_at"), zone)
-                if outcome == "booked" and moment is None:
-                    outcome = "needs_you"
-                result.outcome, result.appointment_at = outcome, moment if outcome == "booked" else None
-                result.summary = _text(args.get("summary"), 1000)
+                    result.finished({}, zone)
                 state["ending"] = True
                 await ai.send(
                     json.dumps(
@@ -376,6 +421,92 @@ async def talk(twilio: Twilio, stream_sid: str, ai: Realtime, setup: dict[str, A
     try:
         await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
         # OpenAI went away while the call is still on: don't leave them listening to silence.
+        if not listening.done():
+            await end()
+    finally:
+        for task in tasks + timers:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+    return result
+
+
+async def talk_elevenlabs(twilio: Twilio, stream_sid: str, ai: Realtime, start: dict[str, Any], zone: ZoneInfo, hang_up) -> Result:
+    """talk(), with an ElevenLabs agent: it speaks first (its first message), ElevenLabs cuts its own audio when they
+    talk over it, and finish_call comes as a client tool. After it, each piece of the goodbye is followed by a numbered
+    mark; when Twilio has played the latest one, Orbit hangs up."""
+    result = Result()
+    state = {"ending": False, "hung_up": False, "marks": 0}
+
+    async def send_twilio(event: dict[str, Any]) -> None:
+        await twilio.send_text(json.dumps({**event, "streamSid": stream_sid}))
+
+    async def end() -> None:
+        if not state["hung_up"]:
+            state["hung_up"] = True
+            await hang_up()
+
+    async def end_later() -> None:
+        await asyncio.sleep(GOODBYE_SECONDS)
+        await end()
+
+    timers: list[asyncio.Task] = []
+    await ai.send(json.dumps(start))
+
+    async def from_twilio() -> None:
+        while True:
+            try:
+                message = json.loads(await twilio.receive_text())
+            except WebSocketDisconnect:
+                return
+            event = message.get("event")
+            if event == "media":
+                await ai.send(json.dumps({"user_audio_chunk": (message.get("media") or {}).get("payload", "")}))
+            elif event == "mark" and state["marks"] and (message.get("mark") or {}).get("name") == f"goodbye-{state['marks']}":
+                await end()
+            elif event == "stop":
+                return
+
+    async def from_ai() -> None:
+        async for raw in ai:
+            event = json.loads(raw)
+            kind = event.get("type")
+            if kind == "audio":
+                audio = (event.get("audio_event") or {}).get("audio_base_64")
+                if audio:
+                    await send_twilio({"event": "media", "media": {"payload": audio}})
+                    if state["ending"]:
+                        state["marks"] += 1
+                        await send_twilio({"event": "mark", "mark": {"name": f"goodbye-{state['marks']}"}})
+            elif kind == "interruption":
+                await send_twilio({"event": "clear"})
+            elif kind == "ping":
+                await ai.send(json.dumps({"type": "pong", "event_id": (event.get("ping_event") or {}).get("event_id")}))
+            elif kind == "agent_response":
+                result.said("agent", (event.get("agent_response_event") or {}).get("agent_response"))
+            elif kind == "user_transcript":
+                result.said("them", (event.get("user_transcription_event") or {}).get("user_transcript"))
+            elif kind == "client_tool_call":
+                tool = event.get("client_tool_call") or {}
+                reply = {"type": "client_tool_result", "tool_call_id": tool.get("tool_call_id"), "is_error": False}
+                if tool.get("tool_name") != FINISH.name:
+                    await ai.send(json.dumps({**reply, "result": "No such tool.", "is_error": True}))
+                    continue
+                args = tool.get("parameters")
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except ValueError:
+                        args = {}
+                result.finished(args, zone)
+                state["ending"] = True
+                await ai.send(json.dumps({**reply, "result": json.dumps({"ok": True, "next": "Say a short goodbye now."})}))
+                timers.append(asyncio.create_task(end_later()))
+
+    listening = asyncio.create_task(from_twilio())
+    tasks = [listening, asyncio.create_task(from_ai())]
+    try:
+        await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        # ElevenLabs went away (or the call hit its limit) while the call is still on: hang up.
         if not listening.done():
             await end()
     finally:

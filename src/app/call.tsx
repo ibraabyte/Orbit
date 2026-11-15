@@ -159,7 +159,6 @@ export default function Call() {
           </View>
         ) : (
           <View style={{ gap: 12 }}>
-            <Text style={[type.body, styles.intro]}>{t.callIntro}</Text>
             <Text style={type.shellMeta}>{t.callVoice}</Text>
             {voices.length ? (
               <View style={styles.chips}>
@@ -173,7 +172,7 @@ export default function Call() {
                 ))}
               </View>
             ) : null}
-            {provider === "elevenlabs" ? <Text style={type.shellMuted}>{voices.length ? t.callVoicesHint : t.callVoicesEmpty}</Text> : null}
+            {provider === "elevenlabs" ? <Text style={type.shellMuted}>{voices.length ? null : t.callVoicesEmpty}</Text> : null}
             <Text style={type.shellMuted}>{(provider === "elevenlabs" ? t.callCostEleven : t.callCost).replace("{n}", digits(MAX_CALL_SECONDS / 60))}</Text>
           </View>
         )}
@@ -298,7 +297,6 @@ const styles = StyleSheet.create({
   orbWrap: { alignItems: "center", justifyContent: "center" },
   orbHalo: { position: "absolute", borderWidth: 1.5, borderColor: colors.accentLine, backgroundColor: colors.accentTint },
   orb: { alignItems: "center", justifyContent: "center", backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.heroEdge },
-  intro: { color: colors.onShell, writingDirection: "auto" },
   captions: { gap: 8 },
   caption: { maxWidth: "88%", paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.tile, gap: 2 },
   mine: { alignSelf: "flex-end", backgroundColor: colors.surfaceInset },

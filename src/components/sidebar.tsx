@@ -4,9 +4,10 @@ import { useRef, type ReactNode } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Glass, Icon, type, type IconName } from "@/components/drift";
+import { OrbitMark } from "@/components/assistant-button";
 import { openCapture, useSidebar } from "@/components/screen";
 import { useSectionCounts, useVisibleSections } from "@/components/sections";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, space, textSize, usePalette } from "@/components/theme";
 import { formatNumber, t } from "@/lib/i18n";
 import { activeKey, SIDEBAR_WIDTH, sidebarSteps } from "@/lib/sidebar";
 
@@ -33,6 +34,7 @@ function go(from: string, to: string) {
 
 function Sidebar() {
   const insets = useSafeAreaInsets();
+  const palette = usePalette();
   const path = usePathname();
   const counts = useSectionCounts();
   const { groups } = useVisibleSections();
@@ -44,7 +46,7 @@ function Sidebar() {
 
   return (
     <View style={[styles.rail, { paddingTop: insets.top + 8, paddingBottom: Math.max(12, insets.bottom) }]}>
-      <Glass tint="rgba(10,10,11,0.6)" style={styles.panel}>
+      <Glass tint={colors.glassTint} style={styles.panel}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Text style={styles.brand}>Orbit</Text>
           <Pressable
@@ -56,7 +58,7 @@ function Sidebar() {
             accessibilityLabel={t.assistantTitle}
             style={({ pressed }) => [styles.assistant, pressed && { opacity: 0.85 }]}
           >
-            <Icon name="mic" size={18} color={colors.accentInk} />
+            <OrbitMark size={20} color={palette.accentInk} />
             <Text style={styles.assistantText} numberOfLines={1}>
               {t.assistantTitle}
             </Text>
@@ -95,7 +97,7 @@ function Item({ icon, label, count, selected, onPress, tab }: { icon: IconName; 
       <Text style={[styles.itemText, { color: tint }]} numberOfLines={1}>
         {label}
       </Text>
-      {count ? <Text style={[type.badge, { color: colors.accent }]}>{formatNumber(count)}</Text> : null}
+      {count ? <Text style={[type.badge, { color: colors.link }]}>{formatNumber(count)}</Text> : null}
     </Pressable>
   );
 }
@@ -103,16 +105,16 @@ function Item({ icon, label, count, selected, onPress, tab }: { icon: IconName; 
 const styles = StyleSheet.create({
   layout: { flex: 1, flexDirection: "row", backgroundColor: colors.shell },
   main: { flex: 1 },
-  rail: { width: SIDEBAR_WIDTH, paddingStart: 12, paddingEnd: 4 },
-  panel: { flex: 1, borderRadius: 28, overflow: "hidden" },
-  content: { padding: 12, gap: 6 },
-  brand: { fontFamily: fonts.semibold, fontSize: 22, letterSpacing: -0.3, color: colors.ink, paddingHorizontal: 12, paddingTop: 6, paddingBottom: 10 },
-  assistant: { minHeight: 48, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 16, marginBottom: 8 },
-  assistantText: { fontFamily: fonts.semibold, fontSize: 14, color: colors.accentInk },
-  group: { gap: 0, paddingTop: 10 },
-  groupLabel: { paddingHorizontal: 12, paddingBottom: 4 },
-  item: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: 12, paddingStart: 10, paddingEnd: 12, borderRadius: radius.tile, borderCurve: "continuous" },
+  rail: { width: SIDEBAR_WIDTH, paddingStart: space.md, paddingEnd: space.xs },
+  panel: { flex: 1, borderRadius: radius.xxl, overflow: "hidden" },
+  content: { padding: space.md, gap: space.sm },
+  brand: { fontFamily: fonts.semibold, fontSize: textSize.title2, letterSpacing: -0.3, color: colors.ink, paddingHorizontal: space.md, paddingTop: space.sm, paddingBottom: space.md },
+  assistant: { minHeight: 48, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.sm, paddingHorizontal: space.lg, marginBottom: space.sm },
+  assistantText: { fontFamily: fonts.semibold, fontSize: textSize.subheadline, color: colors.accentInk },
+  group: { gap: 0, paddingTop: space.md },
+  groupLabel: { paddingHorizontal: space.md, paddingBottom: space.xs },
+  item: { minHeight: 44, flexDirection: "row", alignItems: "center", gap: space.md, paddingStart: space.md, paddingEnd: space.md, borderRadius: radius.tile, borderCurve: "continuous" },
   itemSelected: { backgroundColor: colors.accentTint },
-  mark: { width: 2, height: 18, borderRadius: 1, backgroundColor: "transparent" },
-  itemText: { flex: 1, fontFamily: fonts.medium, fontSize: 14 }
+  mark: { width: 2, height: 18, borderRadius: radius.pill, backgroundColor: "transparent" },
+  itemText: { flex: 1, fontFamily: fonts.medium, fontSize: textSize.subheadline }
 });

@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { Badge, Card, EmptyState, IconTile, ListRow, MoreButton, type } from "@/components/drift";
 import { Chip } from "@/components/exercise-ui";
-import { toDateKey, useOverlays } from "@/components/overlays";
+import { ChoiceMenu, toDateKey, useOverlays } from "@/components/overlays";
 import { Button, Input, Loading, Screen } from "@/components/screen";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, INJURY_JOINTS, INJURY_MUSCLES, label, sortInjuries, type Injury, type InjuryArea } from "@/lib/exercises";
 import { formatDate, t } from "@/lib/i18n";
+import { space } from "@/components/theme";
 
 // Injuries you're working around. Active ones change what Exercises suggests.
 export default function Injuries() {
@@ -53,11 +54,7 @@ export default function Injuries() {
       setNote("");
     });
 
-  const pickArea = () =>
-    sheet({
-      title: et.where,
-      options: [...INJURY_JOINTS, ...INJURY_MUSCLES].map((item) => ({ label: `${item === area ? "●" : "○"} ${label(item)}`, run: () => setArea(item) }))
-    });
+  const areaChoices = [...INJURY_JOINTS, ...INJURY_MUSCLES].map((item) => ({ label: label(item), selected: item === area, run: () => setArea(item) }));
 
   const pickSince = async () => {
     const picked = await pickDate(et.since, since);
@@ -86,11 +83,13 @@ export default function Injuries() {
 
   return (
     <Screen refreshing={loading} onRefresh={load}>
-      <Text style={[type.shellMuted, { paddingHorizontal: 4 }]}>{et.injuriesHint}</Text>
+      <Text style={[type.shellMuted, { paddingHorizontal: space.xs }]}>{et.injuriesHint}</Text>
 
       <Card title={et.addInjury}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-          <Chip label={`${et.where}: ${label(area)}`} icon="map-pin" on onPress={pickArea} />
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
+          <ChoiceMenu title={et.where} choices={areaChoices}>
+            <Chip label={`${et.where}: ${label(area)}`} icon="map-pin" on onPress={() => undefined} />
+          </ChoiceMenu>
           <Chip label={`${et.since}: ${formatDate(`${since}T12:00:00`)}`} icon="calendar" on={false} onPress={() => void pickSince()} />
         </View>
         <Input placeholder={et.notePh} value={note} onChangeText={setNote} maxLength={500} />

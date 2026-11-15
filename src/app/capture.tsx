@@ -2,11 +2,10 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { AiPicker } from "@/components/ai-picker";
 import { Icon, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { useAiChoices } from "@/hooks/use-ai-choices";
 import { isFoodLine, speechOnPhone } from "@/lib/feature-models";
 import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
@@ -53,7 +52,8 @@ function draftFields(draft: QuickAddDraft) {
 // Arabic or English. A plain quick-add line is saved at once with no AI; anything else goes to the person's own AI,
 // which prepares the changes, and nothing is saved until the person confirms them here.
 export default function Capture() {
-  const params = useLocalSearchParams<{ text?: string }>();
+  // voice=1: opened by holding the Orbit button, so the mic starts at once.
+  const params = useLocalSearchParams<{ text?: string; voice?: string }>();
   const { data, refresh, userId } = useDashboardData();
   const { toast } = useOverlays();
   const ai = useAiChoices("assistant");
@@ -68,13 +68,16 @@ export default function Capture() {
   // What the person is typing into a change's number, by the change's place in the list.
   const [typed, setTyped] = useState<Record<number, string>>({});
   const [accepted, setAccepted] = useState<string | null | undefined>(undefined);
-  const [voiceLang, setVoiceLang] = useState<VoiceLang>(defaultVoiceLang(isArabic));
+  // The phone listens in the app's language; the voice model tells the language by itself.
+  const voiceLang: VoiceLang = defaultVoiceLang(isArabic);
   const beforeVoice = useRef("");
   const voice = useVoice((spoken) => setText(withSpoken(beforeVoice.current, spoken)));
   // The user's own voice model, when they added one in Integrations; else the phone's speech to text above.
   const cloud = useCloudVoice((spoken) => setText(withSpoken(beforeVoice.current, spoken)));
   const [voiceModel, setVoiceModel] = useState<VoiceStatus | null>(null);
   const [voiceConsent, setVoiceConsent] = useState<string | null>(null);
+  const [voiceLoaded, setVoiceLoaded] = useState(false);
+  const autoVoice = useRef(params.voice === "1");
   const listening = voice.listening || cloud.recording;
   const voiceError = cloud.error ?? voice.error;
   const options = { defaultWeightUnit: data.profile?.weight_unit ?? "kg", defaultCurrency: data.expenses[0]?.currency ?? data.bills[0]?.currency ?? "SAR" };
@@ -92,7 +95,6 @@ export default function Capture() {
   const gate = provider === null ? "no-ai" : askGate(provider, accepted);
   const chosen = answer ? answer.actions.filter((_, index) => !skipped.has(index)) : [];
   const total = mealTotal(chosen);
-  const estimated = chosen.some((action) => action.kind === "meal" && action.op === "create" && action.fields.food_id == null);
 
   const edit = (index: number, value: string) => {
     setTyped((current) => ({ ...current, [index]: value }));
@@ -116,7 +118,8 @@ export default function Capture() {
     integrationsApi
       .voice(getApi())
       .then(setVoiceModel)
-      .catch(() => setVoiceModel(null));
+      .catch(() => setVoiceModel(null))
+      .finally(() => setVoiceLoaded(true));
   }, [userId]);
 
   const remember = (line: string) =>
@@ -201,7 +204,7 @@ export default function Capture() {
     // Speech to text set to the phone in Integrations keeps the recording on the phone.
     const provider = cloudVoiceAvailable && voiceModel?.connected && !speechOnPhone(ai.overview) ? voiceModel.provider : null;
     if (!provider) return void voice.start(voiceLang);
-    if (voiceConsented(voiceConsent, provider)) return void cloud.start(voiceLang);
+    if (voiceConsented(voiceConsent, provider)) return void cloud.start(null);
     // The recording leaves the phone, so ask once per provider. Saying no uses the phone this time and asks again next time.
     const name = VOICE_PROVIDER_NAMES[provider];
     Alert.alert(t.voiceConsentTitle.replace("{provider}", name), t.voiceConsentBody.replaceAll("{provider}", name), [
@@ -211,11 +214,19 @@ export default function Capture() {
         onPress: () => {
           setVoiceConsent(provider);
           void AsyncStorage.setItem(voiceConsentKey(userId), provider).catch(() => undefined);
-          void cloud.start(voiceLang);
+          void cloud.start(null);
         }
       }
     ]);
   };
+  // Once the voice model and the AI settings are known, a hold on the Orbit button starts listening by itself.
+  useEffect(() => {
+    if (!autoVoice.current || !voiceLoaded || !(ai.overview || ai.error)) return;
+    autoVoice.current = false;
+    toggleVoice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceLoaded, ai.overview, ai.error]);
+
   const startOver = () => {
     setAnswer(null);
     setHistory([]);
@@ -233,11 +244,9 @@ export default function Capture() {
           <Text style={[type.pill, { fontSize: 13, color: colors.accentInk }]}>{t.callButton}</Text>
         </Pressable>
         <Pressable onPress={() => router.back()} accessibilityRole="button" hitSlop={10}>
-          <Text style={[type.pill, { fontSize: 14, color: colors.onShellMuted }]}>{t.cancel}</Text>
+          <Text style={[type.pill, { fontSize: textSize.subheadline, color: colors.onShellMuted }]}>{t.cancel}</Text>
         </Pressable>
       </View>
-
-      <AiPicker choices={ai.choices} value={lineAi} onChange={ai.setPicked} onShell />
 
       {answer ? (
         <View style={styles.preview}>
@@ -268,7 +277,7 @@ export default function Capture() {
                   if (!key || off) return null;
                   return (
                     <View style={styles.field}>
-                      <Text style={[type.rowSubtitle, { fontSize: 13, alignSelf: "center" }]}>{fieldName(key, isArabic)}</Text>
+                      <Text style={[type.rowSubtitle, { fontSize: textSize.footnote, alignSelf: "center" }]}>{fieldName(key, isArabic)}</Text>
                       <TextInput
                         style={styles.number}
                         value={typed[index] ?? digits(String(action.fields[key] ?? ""))}
@@ -284,8 +293,8 @@ export default function Capture() {
                 })()}
                 {actionRows(action, isArabic, off ? null : editableField(action)).map(([key, value]) => (
                   <View key={key} style={styles.field}>
-                    <Text style={[type.rowSubtitle, { fontSize: 13 }]}>{key}</Text>
-                    <Text style={[type.barValue, { flexShrink: 1, fontSize: 13, textAlign: "right" }]}>{value}</Text>
+                    <Text style={[type.rowSubtitle, { fontSize: textSize.footnote }]}>{key}</Text>
+                    <Text style={[type.barValue, { flexShrink: 1, fontSize: textSize.footnote, textAlign: "right" }]}>{value}</Text>
                   </View>
                 ))}
               </View>
@@ -293,13 +302,12 @@ export default function Capture() {
           })}
           {total ? (
             <View style={[styles.field, styles.total]}>
-              <Text style={[type.title, { fontSize: 14 }]}>{t.assistantTotal}</Text>
-              <Text style={[type.barValue, { fontSize: 14 }]}>
+              <Text style={[type.title, { fontSize: textSize.subheadline }]}>{t.assistantTotal}</Text>
+              <Text style={[type.barValue, { fontSize: textSize.subheadline }]}>
                 {digits(`${total.calories.toLocaleString(isArabic ? "ar-SA-u-nu-latn" : "en-US")} ${t.kcal}`)}
               </Text>
             </View>
           ) : null}
-          {estimated ? <Text style={[type.rowSubtitle, { fontSize: 12 }]}>{t.assistantEstimate}</Text> : null}
           {answer.actions.length ? (
             <Button
               title={busy ? t.assistantThinking : chosen.length === 1 ? t.assistantConfirmOne : t.assistantConfirm.replace("{n}", digits(chosen.length))}
@@ -315,7 +323,7 @@ export default function Capture() {
       <View style={styles.inputRow}>
         <TextInput
           style={[styles.input, parsed && !parsed.validation.ok && { borderColor: colors.accentDeep }]}
-          autoFocus={!answer}
+          autoFocus={!answer && params.voice !== "1"}
           multiline
           placeholder={answer ? t.askPlaceholder : t.assistantPh}
           placeholderTextColor={colors.inkFaint}
@@ -332,13 +340,7 @@ export default function Capture() {
           <Icon name={listening ? "square" : cloud.transcribing ? "loader" : "mic"} size={20} color={listening ? colors.accentInk : colors.ink} />
         </Pressable>
       </View>
-      <View style={styles.chips}>
-        {(["ar-SA", "en-US"] as const).map((lang) => (
-          <Pressable key={lang} onPress={() => setVoiceLang(lang)} accessibilityRole="tab" accessibilityState={{ selected: voiceLang === lang }} style={[styles.chip, voiceLang === lang && styles.chipOn]}>
-            <Icon name="mic" size={11} color={voiceLang === lang ? colors.urgentInk : colors.inkMuted} />
-            <Text style={[type.barLabel, voiceLang === lang && { color: colors.urgentInk }]}>{lang === "ar-SA" ? t.voiceArabic : t.voiceEnglish}</Text>
-          </Pressable>
-        ))}
+      <View style={[styles.chips, { alignItems: "center" }]}>
         {voice.listening ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micListening}</Text> : null}
         {cloud.recording ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micRecording}</Text> : null}
         {cloud.transcribing ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micTranscribing}</Text> : null}
@@ -346,13 +348,13 @@ export default function Capture() {
       {voiceError ? <Text style={[type.shellMuted, { color: colors.dangerOnShell }]}>{voiceError}</Text> : null}
 
       {!answer && !text.trim() ? (
-        <View style={styles.chips}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }} style={{ flexGrow: 0 }}>
           {starters.map((word) => (
             <Pressable key={word} onPress={() => setText(word)} accessibilityRole="button" style={styles.chip}>
               <Text style={type.barLabel}>{word.trim()}</Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
       ) : null}
 
       {parsed ? (
@@ -367,8 +369,8 @@ export default function Capture() {
           {parsed.validation.ok
             ? draftFields(parsed.draft).map(([key, value]) => (
                 <View key={key} style={styles.field}>
-                  <Text style={[type.rowSubtitle, { fontSize: 14 }]}>{key}</Text>
-                  <Text style={[type.barValue, { flexShrink: 1, fontSize: 14, textAlign: "right" }]}>{value}</Text>
+                  <Text style={[type.rowSubtitle, { fontSize: textSize.subheadline }]}>{key}</Text>
+                  <Text style={[type.barValue, { flexShrink: 1, fontSize: textSize.subheadline, textAlign: "right" }]}>{value}</Text>
                 </View>
               ))
             : null}
@@ -398,8 +400,6 @@ export default function Capture() {
           <Icon name="cpu" size={14} color={colors.onShellMuted} />
           <Text style={[type.shellMuted, { flex: 1 }]}>{t.assistantNoAi}</Text>
         </Pressable>
-      ) : !answer && !text.trim() ? (
-        <Text style={type.shellMuted}>{t.assistantHint}</Text>
       ) : null}
 
       {!answer && !text.trim() ? (
@@ -418,12 +418,12 @@ export default function Capture() {
           <Text style={styles.recentText} numberOfLines={1}>
             {t.weekSummary}
           </Text>
-          <Text style={type.shellMeta}>{t.weekFridayHint}</Text>
+          <Icon name={isArabic ? "chevron-left" : "chevron-right"} size={14} color={colors.inkFaint} />
         </Pressable>
       ) : null}
 
       {!answer && !text.trim() && recent.length ? (
-        <View style={{ gap: 6 }}>
+        <View style={{ gap: space.sm }}>
           <Text style={type.shellMeta}>{t.recent}</Text>
           {recent.map((line) => (
             <Pressable key={line} onPress={() => setText(line)} accessibilityRole="button" style={styles.recent}>
@@ -436,7 +436,7 @@ export default function Capture() {
         </View>
       ) : null}
 
-      {failure ? <Text style={{ fontFamily: fonts.semibold, fontSize: 13, color: colors.dangerOnShell }}>{failure}</Text> : null}
+      {failure ? <Text style={{ fontFamily: fonts.semibold, fontSize: textSize.footnote, color: colors.dangerOnShell }}>{failure}</Text> : null}
 
       {parsed ? (
         <Button title={busy ? t.connecting : t.save} variant="primary" disabled={!parsed.validation.ok || busy} onPress={() => void quickAdd()} />
@@ -448,26 +448,25 @@ export default function Capture() {
 }
 
 const styles = StyleSheet.create({
-  screen: { padding: 20, gap: 12 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 14 },
-  call: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.accent },
-  title: { fontFamily: fonts.bold, fontSize: 20, color: colors.onShell },
+  screen: { padding: space.xl, gap: space.md },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.lg },
+  call: { minHeight: 32, flexDirection: "row", alignItems: "center", gap: space.xs, paddingHorizontal: space.md, borderRadius: radius.pill, backgroundColor: colors.accent },
+  title: { fontFamily: fonts.bold, fontSize: textSize.title3, color: colors.onShell },
   auto: { writingDirection: "auto" },
-  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
-  mic: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceInset, borderWidth: 1, borderColor: colors.hairline },
-  chipOn: { backgroundColor: colors.urgent },
-  action: { gap: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },
-  total: { paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.hairline },
-  number: { width: 96, minHeight: 36, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: 15, color: colors.ink, textAlign: "center" },
-  note: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
-  input: { flex: 1, maxHeight: 140, paddingTop: 14, paddingBottom: 14, textAlignVertical: "top", writingDirection: "auto", minHeight: 52, paddingHorizontal: 14, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, backgroundColor: colors.field, fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  chip: { minHeight: 34, paddingHorizontal: 12, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: 5, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
-  preview: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
-  previewHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  inputRow: { flexDirection: "row", alignItems: "flex-end", gap: space.sm },
+  mic: { width: 52, height: 52, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceInset, borderWidth: 1, borderColor: colors.hairline },
+  action: { gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
+  total: { paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
+  number: { width: 96, minHeight: 36, paddingHorizontal: space.md, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: textSize.subheadline, color: colors.ink, textAlign: "center" },
+  note: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.sm },
+  input: { flex: 1, maxHeight: 140, paddingTop: space.lg, paddingBottom: space.lg, textAlignVertical: "top", writingDirection: "auto", minHeight: 52, paddingHorizontal: space.lg, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, backgroundColor: colors.field, fontFamily: fonts.medium, fontSize: textSize.body, color: colors.ink },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  chip: { minHeight: 34, paddingHorizontal: space.md, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: space.xs, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
+  preview: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.sm },
+  previewHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
   previewMark: { width: 28, height: 28, borderRadius: radius.control, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
-  field: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  missing: { backgroundColor: colors.accentTint, borderRadius: radius.control, paddingHorizontal: 10, paddingVertical: 8 },
-  recent: { minHeight: 40, flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, backgroundColor: colors.surface, borderRadius: radius.control },
-  recentText: { flex: 1, fontFamily: fonts.regular, fontSize: 13, color: colors.ink }
+  field: { flexDirection: "row", justifyContent: "space-between", gap: space.md },
+  missing: { backgroundColor: colors.accentTint, borderRadius: radius.control, paddingHorizontal: space.md, paddingVertical: space.sm },
+  recent: { minHeight: 40, flexDirection: "row", alignItems: "center", gap: space.md, paddingHorizontal: space.md, backgroundColor: colors.surface, borderRadius: radius.control },
+  recentText: { flex: 1, fontFamily: fonts.regular, fontSize: textSize.footnote, color: colors.ink }
 });

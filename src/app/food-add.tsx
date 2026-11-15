@@ -20,6 +20,7 @@ import {
   type MealType
 } from "@/lib/food-log";
 import { t } from "@/lib/i18n";
+import { space } from "@/components/theme";
 
 type Mode = "search" | "new";
 
@@ -160,12 +161,12 @@ export default function FoodAdd() {
         </>
       ) : (
         <Card title={t.myFood}>
-          <View style={{ gap: 10 }}>
+          <View style={{ gap: space.md }}>
             {field("name", t.foodName)}
             {field("serving_label", t.servingLabel)}
             {field("serving_grams", t.servingGrams, true)}
             {field("calories", t.caloriesPerServing, true)}
-            <View style={{ flexDirection: "row", gap: 8 }}>
+            <View style={{ flexDirection: "row", gap: space.sm }}>
               <View style={{ flex: 1 }}>{field("protein_g", t.proteinG, true)}</View>
               <View style={{ flex: 1 }}>{field("carbs_g", t.carbsG, true)}</View>
               <View style={{ flex: 1 }}>{field("fat_g", t.fatG, true)}</View>

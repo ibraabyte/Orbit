@@ -6,8 +6,8 @@ import { Image, Linking, Pressable, StyleSheet, Text, View } from "react-native"
 import { Card, EmptyState, Icon, type } from "@/components/drift";
 import { Chip } from "@/components/exercise-ui";
 import { useOverlays, type SheetOption } from "@/components/overlays";
-import { BleedRow, Button, ErrorState, Input, Loading, Screen, SearchBar, Segments } from "@/components/screen";
-import { colors, radius } from "@/components/theme";
+import { BleedRow, Button, ErrorState, Input, Loading, Screen, Segments } from "@/components/screen";
+import { colors, radius, space } from "@/components/theme";
 import { ApiError } from "@/lib/api";
 import { getApi } from "@/lib/backend";
 import { digits, isArabic } from "@/lib/i18n";
@@ -283,7 +283,7 @@ export default function Saver() {
   };
 
   return (
-    <Screen refreshing={loading && items !== null} onRefresh={load}>
+    <Screen refreshing={loading && items !== null} onRefresh={load} search={{ placeholder: st.search, value: query, onChangeText: setQuery }}>
       <View style={styles.saveRow}>
         <Input
           value={link}
@@ -316,7 +316,6 @@ export default function Saver() {
       ) : null}
 
       <Segments options={STATUS_FILTERS} value={status} onChange={setStatus} labels={st.statuses} small />
-      <SearchBar placeholder={st.search} value={query} onChangeText={setQuery} />
       {query.trim() ? (
         <Pressable onPress={() => (smartShown ? setSmart(null) : void searchByMeaning())} disabled={searching} accessibilityRole="button" style={({ pressed }) => [styles.smart, pressed && { opacity: 0.8 }]}>
           <Icon name={smartShown ? "x" : "zap"} size={14} color={colors.accent} />
@@ -389,7 +388,7 @@ function SavedRow({ item, onPress, onMore, onToggle }: { item: SavedItem; onPres
       </View>
       <View style={styles.side}>
         <Pressable onPress={onToggle} hitSlop={8} accessibilityRole="checkbox" accessibilityState={{ checked: done }} accessibilityLabel={done ? st.markWant : st.markDone} style={[styles.check, done && styles.checkOn]}>
-          {done ? <Icon name="check" size={14} color={colors.accent} /> : null}
+          {done ? <Icon name="check" size={14} color={colors.link} /> : null}
         </Pressable>
         <Pressable onPress={onMore} hitSlop={8} accessibilityRole="button" accessibilityLabel={st.moveTo} style={styles.more}>
           <Icon name="more-horizontal" size={18} color={colors.inkFaint} />
@@ -400,13 +399,13 @@ function SavedRow({ item, onPress, onMore, onToggle }: { item: SavedItem; onPres
 }
 
 const styles = StyleSheet.create({
-  saveRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  row: { flexDirection: "row", alignItems: "flex-start", gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
+  saveRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  row: { flexDirection: "row", alignItems: "flex-start", gap: space.md, paddingVertical: space.md, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   thumb: { width: 64, height: 64, borderRadius: radius.control, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
   thumbEmpty: { alignItems: "center", justifyContent: "center" },
-  body: { flex: 1, gap: 3 },
-  side: { alignItems: "center", gap: 10 },
-  check: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: colors.inkFaint, alignItems: "center", justifyContent: "center" },
+  body: { flex: 1, gap: space.xs },
+  side: { alignItems: "center", gap: space.md },
+  check: { width: 26, height: 26, borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.inkFaint, alignItems: "center", justifyContent: "center" },
   // Night: sand is a line here, never a fill (only the main button is filled).
   checkOn: { borderColor: colors.accent },
   more: { width: 26, height: 26, alignItems: "center", justifyContent: "center" },

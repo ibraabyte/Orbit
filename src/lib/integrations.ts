@@ -103,7 +103,7 @@ export const integrationsApi = {
     // No api_key means "keep the saved one" (same provider only).
     api.put<VoiceStatus>("/integrations/voice", { provider, model: model.trim() || null, ...(apiKey.trim() ? { api_key: apiKey.trim() } : {}) }),
   disconnectVoice: (api: Api) => api.delete("/integrations/voice"),
-  transcribe: (api: Pick<ApiClient, "post">, audio: string, mediaType: string, language: "ar" | "en") =>
+  transcribe: (api: Pick<ApiClient, "post">, audio: string, mediaType: string, language: "ar" | "en" | null) =>
     api.post<{ text: string }>("/integrations/voice/transcribe", { audio, media_type: mediaType, language })
 };
 
@@ -132,16 +132,16 @@ export const adminApi = {
 export type IntegrationState = { label: string; tone: "neutral" | "success" | "warning"; detail: string };
 
 export function whoopState(whoop: IntegrationsOverview["whoop"], now = new Date()): IntegrationState {
-  if (!whoop.configured) return { label: "Not available", tone: "neutral", detail: "This Orbit server hasn't turned WHOOP on yet." };
-  if (!whoop.connected) return { label: "Not connected", tone: "neutral", detail: "Sign in with WHOOP to bring in recovery, sleep and strain." };
-  if (whoop.last_sync_error) return { label: "Needs attention", tone: "warning", detail: whoop.last_sync_error };
-  return { label: "Connected", tone: "success", detail: syncedAgo(whoop.last_synced_at, now) };
+  if (!whoop.configured) return { label: t.pv.notAvailable, tone: "neutral", detail: t.pv.whoopOff };
+  if (!whoop.connected) return { label: t.pv.notConnected, tone: "neutral", detail: t.pv.whoopConnect };
+  if (whoop.last_sync_error) return { label: t.pv.needsAttention, tone: "warning", detail: whoop.last_sync_error };
+  return { label: t.pv.connected, tone: "success", detail: syncedAgo(whoop.last_synced_at, now) };
 }
 
 export function seerrState(seerr: SeerrStatus): IntegrationState {
-  if (!seerr.connected) return { label: "Not connected", tone: "neutral", detail: "Add your Seerr server's address and API key." };
-  const host = seerr.url ? seerr.url.replace(/^https?:\/\//, "") : "your server";
-  return { label: "Connected", tone: "success", detail: seerr.account_name ? `${host} as ${seerr.account_name}` : host };
+  if (!seerr.connected) return { label: t.pv.notConnected, tone: "neutral", detail: t.pv.seerrConnect };
+  const host = seerr.url ? seerr.url.replace(/^https?:\/\//, "") : t.pv.yourServer;
+  return { label: t.pv.connected, tone: "success", detail: seerr.account_name ? t.pv.hostAs.replace("{host}", host).replace("{name}", seerr.account_name) : host };
 }
 
 export function chatgptState(chatgpt: ChatgptStatus): IntegrationState {

@@ -12,7 +12,7 @@ const TodayWidget = (props: WidgetProps, env: WidgetEnvironment) => {
   // Night colours from theme.ts: the widget can't import it.
   const ink = "#f2f0ea";
   const muted = "#8a8a90";
-  const sand = "#e8c890";
+  const sand = "#d6be8c";
   const hairline = "#2a2a2e";
   const black = "#0a0a0b";
   const rtl = props.rtl;

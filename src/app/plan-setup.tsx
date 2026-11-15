@@ -10,6 +10,7 @@ import { getApi } from "@/lib/backend";
 import { toggleItem } from "@/lib/exercises";
 import { isArabic } from "@/lib/i18n";
 import { defaultWeekdays, GOALS, LEVELS, planApi, pt, splitFor, WEEK_ORDER, type Goal, type Level, type Weekday } from "@/lib/plan";
+import { space } from "@/components/theme";
 
 // The plan's choices: goal, level and the days you can go. Saving lays the coming days out again.
 export default function PlanSetup() {
@@ -67,12 +68,12 @@ export default function PlanSetup() {
         <Chips options={LEVELS} value={level} onChange={setLevel} label={(option) => pt.levels[option]} />
       </Card>
       <Card title={pt.days} action={<Text style={type.rowSubtitle}>{pt.daysCount(weekdays.length)}</Text>}>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
           {WEEK_ORDER.map((day) => (
             <Chip key={day} label={pt.weekdays[day]} on={weekdays.includes(day)} onPress={() => setWeekdays(toggleItem(weekdays, day))} />
           ))}
         </View>
-        {weekdays.length ? <Text style={[type.rowSubtitle, { paddingTop: 12 }]}>{`${pt.split}: ${split.map((kind) => pt.kinds[kind]).join(isArabic ? " ← " : " → ")}`}</Text> : null}
+        {weekdays.length ? <Text style={[type.rowSubtitle, { paddingTop: space.md }]}>{`${pt.split}: ${split.map((kind) => pt.kinds[kind]).join(isArabic ? " ← " : " → ")}`}</Text> : null}
       </Card>
       <Button variant="primary" title={existing ? pt.save : pt.build} disabled={saving || !weekdays.length} onPress={() => void save()} />
     </Screen>

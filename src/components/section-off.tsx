@@ -2,7 +2,7 @@ import { router, usePathname } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { Card, IconTile, type } from "@/components/drift";
 import { Button } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { useSections } from "@/hooks/use-sections";
 import { parentOf, sectionOfPath, st } from "@/lib/app-sections";
 import { t } from "@/lib/i18n";
@@ -19,11 +19,11 @@ export function SectionOffCover() {
 
   return (
     <View style={styles.cover}>
-      <Card style={{ alignItems: "center", gap: 12, paddingVertical: 24 }}>
+      <Card style={{ alignItems: "center", gap: space.md, paddingVertical: space.xxl }}>
         <IconTile name="eye-off" size={44} />
         <Text style={[type.title, { textAlign: "center" }]}>{st.offTitle}</Text>
         <Text style={[type.rowSubtitle, { textAlign: "center" }]}>{`${st.names[key]} · ${st.offBody}`}</Text>
-        <View style={{ flexDirection: "row", gap: 8 }}>
+        <View style={{ flexDirection: "row", gap: space.sm }}>
           <Button variant="outline" title={t.back} onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} />
           <Button variant="primary" title={st.turnOn} onPress={() => void setOn(key, true)} />
         </View>
@@ -33,5 +33,5 @@ export function SectionOffCover() {
 }
 
 const styles = StyleSheet.create({
-  cover: { position: "absolute", top: 0, bottom: 0, start: 0, end: 0, backgroundColor: colors.shell, justifyContent: "center", padding: 16 }
+  cover: { position: "absolute", top: 0, bottom: 0, start: 0, end: 0, backgroundColor: colors.shell, justifyContent: "center", padding: space.lg }
 });

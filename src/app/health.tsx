@@ -19,6 +19,7 @@ import { dosesOnDay, isLow, rx } from "@/lib/medications";
 import { pt } from "@/lib/plan";
 import { trainingApi, tt } from "@/lib/training";
 import { formatHours, whoopApi, type WhoopStatus, type WhoopSummary } from "@/lib/whoop";
+import { space } from "@/components/theme";
 
 const stamp = (iso: string) => formatDate(iso, { weekday: "short", day: "numeric", month: "short" });
 
@@ -162,7 +163,7 @@ export default function Health() {
           <ListRow key={workout.id} leading={<IconTile name="activity" />} title={workout.type} subtitle={stamp(workout.logged_at)} meta={workout.duration_minutes ? `${workout.duration_minutes} ${t.min}` : undefined} />
         ))}
         {!manualSleep.length && !manualWorkouts.length ? (
-          <View style={{ flexDirection: "row", justifyContent: "center", gap: 16 }}>
+          <View style={{ flexDirection: "row", justifyContent: "center", gap: space.lg }}>
             <EmptyState example={ht.sleepExample} action={false} />
             <EmptyState example={ht.workoutExample} action={false} />
           </View>

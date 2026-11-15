@@ -1,6 +1,6 @@
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { Icon, type, type IconName } from "@/components/drift";
-import { colors, radius } from "@/components/theme";
+import { colors, radius, space } from "@/components/theme";
 
 /** A filter pill: pale when on, like the section switcher. */
 export function Chip({ label, on, onPress, icon }: { label: string; on: boolean; onPress: () => void; icon?: IconName }) {
@@ -27,7 +27,7 @@ export function ExerciseThumb({ uri, size = 48 }: { uri: string | null; size?: n
 }
 
 const styles = StyleSheet.create({
-  chip: { minHeight: 34, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 14, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
+  chip: { minHeight: 34, flexDirection: "row", alignItems: "center", gap: space.sm, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
   chipOn: { backgroundColor: colors.urgent, borderColor: colors.urgent },
   thumb: { borderRadius: radius.control, backgroundColor: colors.surfaceInset }
 });

@@ -10,6 +10,7 @@ import { useTaskActions } from "@/hooks/use-task-actions";
 import { formatNumber, isArabic, t } from "@/lib/i18n";
 import { groupByDay, inList, sortLists, type ListFilter } from "@/lib/tasks";
 import type { TaskList } from "@/lib/types";
+import { space } from "@/components/theme";
 
 // Open tasks by day (overdue, today, tomorrow, later, no date), with the lists (Home, Work) as a filter on top.
 // Long-press a list to rename or delete it.
@@ -110,5 +111,5 @@ export default function Tasks() {
 }
 
 const styles = StyleSheet.create({
-  naming: { flexDirection: "row", alignItems: "center", gap: 8 }
+  naming: { flexDirection: "row", alignItems: "center", gap: space.sm }
 });

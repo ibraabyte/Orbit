@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { colors, fonts } from "@/components/theme";
+import { colors, day, fonts, night, type Palette } from "@/components/theme";
 
 type Rgb = [number, number, number];
 
@@ -26,42 +26,56 @@ function contrast(a: Rgb, b: Rgb) {
   return (high + 0.05) / (low + 0.05);
 }
 
-// Refined: cards (surface) sit on the black ground; inset is the well inside a card.
-const ground = toRgb(colors.shell);
-const card = over(colors.surface, ground);
-const inset = over(colors.surfaceInset, card);
-const hero = over(colors.hero, ground);
-const glow = ground;
-
 describe("Refined theme", () => {
-  it("keeps the black ground and the one sand accent", () => {
-    expect(colors.shell).toBe("#0a0a0b");
-    expect(colors.accent).toBe("#e8c890");
+  it("keeps the black ground and the one sand accent at night, and picks night when the phone says dark", () => {
+    expect(night.shell).toBe("#0a0a0b");
+    expect(night.accent).toBe("#d6be8c");
+    expect(colors).toBe(night);
   });
 
-  it.each<[string, Rgb, Rgb]>([
-    ["ink on a card", toRgb(colors.ink), card],
-    ["muted ink on a card", toRgb(colors.inkMuted), card],
-    ["faint ink on a card (placeholders)", toRgb(colors.inkFaint), card],
-    ["ink on an inset well", toRgb(colors.ink), inset],
-    ["muted ink on an inset well", toRgb(colors.inkMuted), inset],
-    ["links on a card", toRgb(colors.link), card],
-    ["sand numbers on a card", toRgb(colors.accentDeep), card],
-    ["text on the ground", toRgb(colors.onShell), glow],
-    ["muted text on the ground", toRgb(colors.onShellMuted), glow],
-    ["errors on a card", toRgb(colors.dangerOnShell), card],
-    ["black text on the sand button", toRgb(colors.accentInk), toRgb(colors.accent)],
-    ["dark text on the pale urgent pill", toRgb(colors.urgentInk), toRgb(colors.urgent)],
-    ["hero text", toRgb(colors.heroInk), hero],
-    ["secondary hero text", toRgb(colors.accentMuted), hero],
-    ["tinted badge", toRgb(colors.accentTintInk), over(colors.accentTint, card)],
-    ["success badge", toRgb(colors.success), over(colors.successTint, card)],
-    ["text on the solid glass stand-in", toRgb(colors.ink), toRgb(colors.glassSolid)],
-    ["sand text on the ground", toRgb(colors.accent), ground],
-    ["faint ink on an inset well (placeholders in fields)", toRgb(colors.inkFaint), inset],
-    ["dark text on the pale button", toRgb(colors.urgentInk), toRgb(colors.ink)]
-  ])("%s is readable (AA, 4.5:1)", (_name, fg, bg) => {
-    expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
+  it("gives day the same keys as night", () => {
+    expect(Object.keys(day).sort()).toEqual(Object.keys(night).sort());
+  });
+
+  describe.each<[string, Palette]>([
+    ["night", night],
+    ["day", day]
+  ])("%s", (_mode, p) => {
+    // Cards (surface) sit on the ground; inset is the well inside a card.
+    const ground = toRgb(p.shell);
+    const card = over(p.surface, ground);
+    const inset = over(p.surfaceInset, card);
+    const hero = over(p.hero, ground);
+
+    it.each<[string, Rgb, Rgb]>([
+      ["ink on a card", toRgb(p.ink), card],
+      ["muted ink on a card", toRgb(p.inkMuted), card],
+      ["faint ink on a card (placeholders)", toRgb(p.inkFaint), card],
+      ["ink on an inset well", toRgb(p.ink), inset],
+      ["muted ink on an inset well", toRgb(p.inkMuted), inset],
+      ["links on a card", toRgb(p.link), card],
+      ["links on the ground", toRgb(p.link), ground],
+      ["sand numbers on a card", toRgb(p.accentDeep), card],
+      ["text on the ground", toRgb(p.onShell), ground],
+      ["muted text on the ground", toRgb(p.onShellMuted), ground],
+      ["errors on a card", toRgb(p.dangerOnShell), card],
+      ["black text on the sand button", toRgb(p.accentInk), toRgb(p.accent)],
+      ["text on the urgent pill", toRgb(p.urgentInk), toRgb(p.urgent)],
+      ["hero text", toRgb(p.heroInk), hero],
+      ["secondary hero text", toRgb(p.accentMuted), hero],
+      ["tinted badge", toRgb(p.accentTintInk), over(p.accentTint, card)],
+      ["success badge", toRgb(p.success), over(p.successTint, card)],
+      ["text on the solid glass stand-in", toRgb(p.ink), toRgb(p.glassSolid)],
+      ["faint ink on an inset well (placeholders in fields)", toRgb(p.inkFaint), inset],
+      ["text on the ink-coloured button", toRgb(p.urgentInk), toRgb(p.ink)]
+    ])("%s is readable (AA, 4.5:1)", (_name, fg, bg) => {
+      expect(contrast(fg, bg)).toBeGreaterThanOrEqual(4.5);
+    });
+
+    // Rings, bars and switches are shapes, not text: WCAG asks 3:1 against what they sit on.
+    it("sand rings and bars show on a card (3:1)", () => {
+      expect(contrast(toRgb(p.accent), card)).toBeGreaterThanOrEqual(3);
+    });
   });
 
   it("names one JetBrains Mono family per weight (English; Arabic uses IBM Plex Sans Arabic)", () => {

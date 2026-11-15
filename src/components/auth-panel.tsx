@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Animated, Easing, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 import { type } from "@/components/drift";
 import { useReduceMotion } from "@/components/motion";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 
 // Auth fills the screen with the card colour. On iPad the form keeps a phone width, centered.
 export function AuthPage({ children }: { children: ReactNode }) {
@@ -49,7 +49,7 @@ export function AuthHeader({ subtitle }: { subtitle: string }) {
 
 export function Field({ label, error, style, trailing, ...props }: TextInputProps & { label: string; error?: string | null; trailing?: ReactNode }) {
   return (
-    <View style={{ gap: 4 }}>
+    <View style={{ gap: space.xs }}>
       <Text style={styles.label}>{label}</Text>
       <View style={[styles.inputWrap, error ? styles.inputError : null]}>
         <TextInput accessibilityLabel={label} placeholderTextColor={colors.inkFaint} selectionColor={colors.accentDeep} style={[styles.input, style]} {...props} />
@@ -61,19 +61,19 @@ export function Field({ label, error, style, trailing, ...props }: TextInputProp
 }
 
 export const authStyles = StyleSheet.create({
-  link: { fontFamily: fonts.medium, color: colors.link, fontSize: 14, textAlign: "center", paddingVertical: 12 }
+  link: { fontFamily: fonts.medium, color: colors.link, fontSize: textSize.subheadline, textAlign: "center", paddingVertical: space.md }
 });
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: colors.surface },
-  content: { flexGrow: 1, width: "100%", maxWidth: 480, alignSelf: "center", paddingHorizontal: 28, paddingTop: 98, paddingBottom: 32, gap: 18 },
-  header: { gap: 18 },
-  markTile: { width: 56, height: 56, borderRadius: 16, borderCurve: "continuous", backgroundColor: colors.shell, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
+  content: { flexGrow: 1, width: "100%", maxWidth: 480, alignSelf: "center", paddingHorizontal: space.xxl, paddingTop: space.huge * 2, paddingBottom: space.xxxl, gap: space.lg },
+  header: { gap: space.lg },
+  markTile: { width: 56, height: 56, borderRadius: radius.lg, borderCurve: "continuous", backgroundColor: colors.shell, borderWidth: 1, borderColor: colors.hairline, alignItems: "center", justifyContent: "center" },
   mark: { width: 30, height: 30 },
-  wordmark: { fontFamily: "JetBrainsMono_600SemiBold", fontSize: 30, lineHeight: 36, color: colors.onShell },
-  subtitle: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
-  label: { fontFamily: fonts.medium, fontSize: 12, color: colors.inkMuted },
-  inputWrap: { minHeight: 50, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: "#26262a" },
-  input: { flex: 1, minWidth: 0, minHeight: 48, paddingHorizontal: 14, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
+  wordmark: { fontFamily: "JetBrainsMono_600SemiBold", fontSize: textSize.title1, lineHeight: lineHeights.title1, color: colors.onShell },
+  subtitle: { fontFamily: fonts.regular, fontSize: textSize.subheadline, color: colors.inkMuted },
+  label: { fontFamily: fonts.medium, fontSize: textSize.caption1, color: colors.inkMuted },
+  inputWrap: { minHeight: 50, flexDirection: "row", alignItems: "center", borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.input },
+  input: { flex: 1, minWidth: 0, minHeight: 48, paddingHorizontal: space.lg, fontFamily: fonts.medium, fontSize: textSize.callout, color: colors.ink },
   inputError: { borderWidth: 2, borderColor: colors.dangerOnShell }
 });

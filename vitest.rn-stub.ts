@@ -1,6 +1,9 @@
 // Vitest runs src/lib in Node; React Native modules are not needed there.
 export const I18nManager = { isRTL: false };
 export const DevSettings = {};
+export const Appearance = { getColorScheme: () => "dark" };
+export const DynamicColorIOS = (pair: { dark: string }) => pair.dark;
+export const useColorScheme = () => "dark";
 export const ExecutionEnvironment = {};
 export default {};
 // expo-secure-store: nothing saved, so every setting is its default.

@@ -7,6 +7,7 @@ import { Screen } from "@/components/screen";
 import { useSeerr } from "@/hooks/use-seerr";
 import { formatDate, t } from "@/lib/i18n";
 import { mt, type SeerrCredit, type SeerrPerson } from "@/lib/seerr";
+import { space } from "@/components/theme";
 
 // An actor or director, like their page in Seerr: photo, short facts, biography, and everything they're in.
 export default function Person() {
@@ -43,7 +44,7 @@ export default function Person() {
 
   return (
     <Screen title={person.name}>
-      <View style={{ flexDirection: "row", gap: 16, alignItems: "center" }}>
+      <View style={{ flexDirection: "row", gap: space.lg, alignItems: "center" }}>
         <Poster path={person.profilePath} title={person.name} width={96} round />
         <View style={{ flex: 1 }}>
           <FactRows rows={facts} />

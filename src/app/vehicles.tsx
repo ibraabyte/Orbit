@@ -4,7 +4,7 @@ import { CarPicker } from "@/components/car-picker";
 import { Badge, Card, EmptyState, Hero, IconTile, ListRow, ProgressBar, RowButton, type } from "@/components/drift";
 import { toDateKey, useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, radius, space, textSize } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { parseKm } from "@/lib/car-catalog";
@@ -97,17 +97,17 @@ export default function Vehicles() {
         const { odometer_km: odometer, next_oil_change_km: oilAt } = vehicle;
         const oilShare = odometer !== null && oilAt ? ((odometer - (oilAt - oilIntervalKm)) / oilIntervalKm) * 100 : null;
         return (
-          <View key={vehicle.id} style={{ gap: 14 }}>
+          <View key={vehicle.id} style={{ gap: space.lg }}>
             <Pressable onPress={() => editOdometer(vehicle)} accessibilityRole="button" accessibilityLabel={t.odometer}>
-              <Hero style={{ gap: 14 }}>
+              <Hero style={{ gap: space.lg }}>
                 <IconTile name="truck" size={44} tone="urgent" />
-                <View style={{ flex: 1, gap: 4, alignItems: "flex-start" }}>
+                <View style={{ flex: 1, gap: space.xs, alignItems: "flex-start" }}>
                   <Text style={[type.h2, { color: colors.heroInk }]}>{vehicle.name}</Text>
                   {vehicle.plate ? <Text style={styles.plate}>{vehicle.plate}</Text> : null}
                 </View>
                 <View style={{ alignItems: "flex-end" }}>
                   <Text style={[type.tileLabel, { color: colors.accentMuted }]}>{t.odometer}</Text>
-                  <Text style={[type.title, { fontSize: 16, color: colors.heroInk }]}>{odometer === null ? "–" : `${formatNumber(odometer)} ${t.km}`}</Text>
+                  <Text style={[type.title, { fontSize: textSize.callout, color: colors.heroInk }]}>{odometer === null ? "–" : `${formatNumber(odometer)} ${t.km}`}</Text>
                 </View>
               </Hero>
             </Pressable>
@@ -123,7 +123,7 @@ export default function Vehicles() {
                     badges={left === null ? <Badge glyph="○">{t.notSet}</Badge> : left < 0 ? <Badge tone="urgent" glyph="!">{`${-left} ${t.daysOverdue}`}</Badge> : left <= 30 ? <Badge tone="accent" glyph="◷">{`${left} ${t.daysLeft}`}</Badge> : <Badge tone="success" glyph="✓">{`${left} ${t.daysLeft}`}</Badge>}
                     subtitle={date ? formatDate(`${date}T12:00:00`, { day: "numeric", month: "short", year: "numeric" }) : null}
                     trailing={
-                      <View style={{ flexDirection: "row", gap: 6 }}>
+                      <View style={{ flexDirection: "row", gap: space.sm }}>
                         <RowButton label={t.renewedToday} onPress={() => renew(vehicle, field, months)} />
                         <RowButton outline icon="calendar" label={t.enterDate} onPress={() => enterDate(vehicle, field, label)} />
                       </View>
@@ -134,7 +134,7 @@ export default function Vehicles() {
             </Card>
             {oilAt && oilShare !== null ? (
               <Card>
-                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+                <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
                   <Text style={type.barLabel}>
                     {t.oilAt} {formatNumber(oilAt)} {t.km}
                   </Text>
@@ -165,5 +165,5 @@ export default function Vehicles() {
 }
 
 const styles = StyleSheet.create({
-  plate: { ...type.barValue, backgroundColor: colors.shell, color: colors.onShell, borderRadius: 4, paddingHorizontal: 8, paddingVertical: 2, letterSpacing: 2, overflow: "hidden" }
+  plate: { ...type.barValue, backgroundColor: colors.shell, color: colors.onShell, borderRadius: radius.xs, paddingHorizontal: space.sm, paddingVertical: space.xxs, letterSpacing: 2, overflow: "hidden" }
 });

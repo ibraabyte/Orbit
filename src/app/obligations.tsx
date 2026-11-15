@@ -4,7 +4,7 @@ import { Badge, Card, CheckItem, EmptyState, Hero, ListRow, MoreButton, Progress
 import { AmountField, ChoiceButton, FieldLabel, FormButtons } from "@/components/money-form";
 import { toDateKey, useOverlays } from "@/components/overlays";
 import { Input, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
@@ -59,7 +59,7 @@ export default function Obligations() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      <Hero style={{ flexDirection: "column", alignItems: "flex-start", gap: 4 }}>
+      <Hero style={{ flexDirection: "column", alignItems: "flex-start", gap: space.xs }}>
         <Text style={[type.tileLabel, { color: colors.accentMuted }]}>{t.owed}</Text>
         <Text style={[type.h1, { color: colors.heroInk }]}>{formatMoney(obligationsRemaining(data, currency), currency)}</Text>
       </Hero>
@@ -71,13 +71,13 @@ export default function Obligations() {
         const shown = expanded ? installments : unpaid.slice(0, preview);
         return (
           <Card key={obligation.id} title={obligation.name} action={<MoreButton label={t.delete} onPress={() => menu(plan)} />}>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
               <Badge>{t.obligationKinds[obligation.kind]}</Badge>
               {obligation.provider ? <Badge>{obligation.provider}</Badge> : null}
               {done ? <Badge tone="success" glyph="✓">{t.paidOff}</Badge> : overdue.length ? <Badge tone="urgent" glyph="!">{`${overdue.length} ${t.overdue}`}</Badge> : null}
             </View>
             <ProgressBar value={paid} max={Math.max(paid + remaining, 0.01)} height={10} />
-            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
               <Text style={type.rowSubtitle}>{`${paidCount}/${total} ${t.paymentsPaid}`}</Text>
               <Text style={type.barValue}>{`${t.remaining} ${formatMoney(remaining, obligation.currency)}`}</Text>
             </View>
@@ -95,7 +95,7 @@ export default function Obligations() {
               );
             })}
             {installments.length > preview || paidCount ? (
-              <Pressable accessibilityRole="button" onPress={() => toggle(obligation.id)} style={{ paddingVertical: 6 }}>
+              <Pressable accessibilityRole="button" onPress={() => toggle(obligation.id)} style={{ paddingVertical: space.sm }}>
                 <Text style={[type.pill, { textAlign: "center" }]}>{expanded ? t.showLess : t.showAll}</Text>
               </Pressable>
             ) : null}
@@ -105,7 +105,7 @@ export default function Obligations() {
       <Card title={adding ? t.addObligation : undefined}>
         {!plans.length && !adding ? <EmptyState icon="calendar">{t.obligationsEmpty}</EmptyState> : null}
         {adding ? (
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: space.sm }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />
             <Input placeholder={`${t.provider} (${t.optional})`} value={provider} onChangeText={setProvider} />
             <ChoiceButton title={t.kindLabel} value={kind} options={kinds} labels={t.obligationKinds} onChange={setKind} />
@@ -114,11 +114,11 @@ export default function Obligations() {
             <FieldLabel>{t.paymentsCount}</FieldLabel>
             <Input placeholder={t.paymentsCount} accessibilityLabel={t.paymentsCount} value={count} onChangeText={setCount} keyboardType="number-pad" maxLength={3} />
             <ChoiceButton title={t.every} value={every} options={everyOptions} labels={t.installmentEvery} onChange={setEvery} />
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
               <Text style={[type.rowSubtitle, { flex: 1 }]}>{t.firstPayment}</Text>
               <RowButton outline label={day(firstDue)} onPress={() => void pickDate(t.firstPayment, firstDue).then((date) => date && setFirstDue(date))} />
             </View>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
               <CheckItem checked={paidFirst} label={t.firstPaidNow} onPress={() => setPaidFirst(!paidFirst)} />
               <Text style={[type.rowSubtitle, { flex: 1 }]}>{t.firstPaidNow}</Text>
             </View>

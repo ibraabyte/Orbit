@@ -4,7 +4,7 @@ import { Badge, Card, EmptyState, Hero, ListRow, Metric, RowButton, type } from 
 import { AmountEditor, AmountField, ChoiceButton, FieldLabel, FormButtons } from "@/components/money-form";
 import { useOverlays } from "@/components/overlays";
 import { Input, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
@@ -60,12 +60,12 @@ export default function Investments() {
 
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
-      <Hero style={{ flexDirection: "column", alignItems: "stretch", gap: 10 }}>
-        <View style={{ gap: 4 }}>
+      <Hero style={{ flexDirection: "column", alignItems: "stretch", gap: space.md }}>
+        <View style={{ gap: space.xs }}>
           <Text style={[type.tileLabel, { color: colors.accentMuted }]}>{t.currentValue}</Text>
           <Text style={[type.h1, { color: colors.heroInk }]}>{formatMoney(totals.value, currency)}</Text>
         </View>
-        <View style={{ flexDirection: "row", gap: 8 }}>
+        <View style={{ flexDirection: "row", gap: space.sm }}>
           <View style={{ flex: 1 }}>
             <Metric onLime label={t.invested} value={formatMoney(totals.invested, currency)} />
           </View>
@@ -124,14 +124,14 @@ export default function Investments() {
         })}
         {!data.investments.length && !adding ? <EmptyState icon="trending-up">{t.investEmpty}</EmptyState> : null}
         {adding ? (
-          <View style={{ gap: 8 }}>
+          <View style={{ gap: space.sm }}>
             <Input placeholder={t.name} value={name} onChangeText={setName} autoFocus />
             <ChoiceButton title={t.kindLabel} value={kind} options={kinds} labels={t.investmentKinds} onChange={setKind} />
             <FieldLabel>{t.invested}</FieldLabel>
             <AmountField label={t.invested} value={invested} onChange={setInvested} currency={currency} />
             <FieldLabel>{`${t.currentValue} (${t.optional})`}</FieldLabel>
             <AmountField label={t.currentValue} value={value} onChange={setValue} currency={currency} onSubmit={add} />
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
               <Text style={[type.rowSubtitle, { flex: 1 }]}>{`${t.startedOn} (${t.optional})`}</Text>
               <RowButton outline label={startedOn ? day(startedOn) : t.enterDate} onPress={() => void pickDate(t.startedOn, startedOn).then((date) => date && setStartedOn(date))} />
             </View>

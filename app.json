@@ -6,7 +6,7 @@
     "version": "0.4.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
@@ -127,6 +127,7 @@
         }
       ],
       "@livekit/react-native-expo-plugin",
+      "./plugins/with-native-rtl",
       [
         "expo-share-intent",
         {

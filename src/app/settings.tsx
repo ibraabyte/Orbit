@@ -1,13 +1,12 @@
-import { Link } from "expo-router";
 import * as Updates from "expo-updates";
 import { useEffect, useState } from "react";
-import { Alert, DevSettings, Pressable, Switch, Text, View } from "react-native";
+import { Alert, DevSettings, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
 import { resyncWidget } from "@/hooks/use-widget-sync";
-import { Avatar, Card, Chevron, IconTile, ListRow, type } from "@/components/drift";
-import { useOverlays } from "@/components/overlays";
+import { Avatar, Card, IconTile, ListRow, type } from "@/components/drift";
+import { ChoiceMenu, useOverlays } from "@/components/overlays";
 import { Button, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, currentAppearance, setAppearance, space, textSize, type AppearanceChoice } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSections } from "@/hooks/use-sections";
 import { clearAskConsent, loadAskConsent } from "@/hooks/use-ask-consent";
@@ -17,22 +16,9 @@ import { currentNumerals, saveNumerals, t, toggleLanguage } from "@/lib/i18n";
 import { adminApi, type ServerSettings } from "@/lib/integrations";
 import type { Numerals } from "@/lib/numerals";
 
-// A row in the settings card. The top row (first) has no line above it.
-function Setting({ label, detail, first, children }: { label: string; detail?: string; first?: boolean; children: React.ReactNode }) {
-  return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, paddingVertical: 10, borderTopWidth: first ? 0 : 1, borderTopColor: colors.surfaceInset }}>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={type.rowTitle}>{label}</Text>
-        {detail ? <Text style={type.rowSubtitle}>{detail}</Text> : null}
-      </View>
-      {children}
-    </View>
-  );
-}
-
 export default function Settings() {
   const { data, userId } = useDashboardData();
-  const { sheet, toast } = useOverlays();
+  const { toast } = useOverlays();
   const [lock, setLock] = useState(true);
   const [numerals, setNumerals] = useState<Numerals>(currentNumerals);
   // The AI the person agreed to send their data to for Ask Orbit; null when not agreed.
@@ -81,84 +67,78 @@ export default function Settings() {
     if (__DEV__ && typeof DevSettings.reload === "function") return DevSettings.reload();
     Updates.reloadAsync().catch(() => toast(t.restartForNumerals));
   };
+  const [look, setLook] = useState<AppearanceChoice>(currentAppearance);
+  const lookLabel = { system: t.appearanceSystem, light: t.appearanceLight, dark: t.appearanceDark };
+  const lookChoices = (["system", "light", "dark"] as const).map((choice) => ({ label: lookLabel[choice], selected: choice === look, run: () => (setAppearance(choice), setLook(choice)) }));
   const numeralsLabel = { arab: t.numeralsArab, latn: t.numeralsLatn };
-  const pickNumerals = () =>
-    sheet({
-      title: t.numerals,
-      options: (["arab", "latn"] as const).map((choice) => ({
-        label: `${choice === numerals ? "● " : "○ "}${numeralsLabel[choice]}`,
-        run: () => changeNumerals(choice)
-      }))
-    });
+  const numeralChoices = (["arab", "latn"] as const).map((choice) => ({ label: numeralsLabel[choice], selected: choice === numerals, run: () => changeNumerals(choice) }));
 
   const track = { true: colors.accent, false: colors.hairline };
 
   return (
     <Screen>
-      <Card style={{ flexDirection: "row", alignItems: "center", gap: 14, paddingVertical: 14 }}>
+      <Card style={{ flexDirection: "row", alignItems: "center", gap: space.lg, paddingVertical: space.lg }}>
         <Avatar name={name} size={48} dark />
-        <Text style={[type.title, { flex: 1, fontSize: 16 }]}>{name}</Text>
+        <Text style={[type.title, { flex: 1, fontSize: textSize.callout }]}>{name}</Text>
+      </Card>
+      {/* Grouped lists, like the system Settings: where to go first, then this phone's preferences, then the server. */}
+      <Card list>
+        <ListRow first leading={<IconTile name="layers" />} title={st.sections} meta={st.sectionsCount(sectionsOff.length)} href="/sections" />
+        <ListRow leading={<IconTile name="bell" />} title={t.notifications} subtitle={t.notificationsDetail} href="/notifications" />
+        <ListRow leading={<IconTile name="link" />} title={t.integrations} subtitle={t.integrationsDetail} href="/integrations" />
       </Card>
       <Card list>
-        <ListRow first leading={<IconTile name="layers" />} title={st.sections} meta={st.sectionsCount(sectionsOff.length)} href="/sections" chevron />
-      </Card>
-      <Card list>
-        <Setting first label={t.faceId}>
-          <Switch
-            accessibilityLabel={t.faceId}
-            trackColor={track} thumbColor={colors.ink}
-            value={lock}
-            onValueChange={(next) => {
-              setLock(next);
-              void setAppLockEnabled(next).then(resyncWidget);
-            }}
-          />
-        </Setting>
-        <Link href="/notifications" asChild>
-          <Pressable accessibilityRole="link">
-            <Setting label={t.notifications} detail={t.notificationsDetail}>
-              <Chevron />
-            </Setting>
-          </Pressable>
-        </Link>
-        {askConsent ? (
-          <Setting label={t.askShare} detail={t.askShareDetail.replace("{provider}", askConsent)}>
-            <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />
-          </Setting>
-        ) : null}
-        <Pressable
-          accessibilityRole="button"
+        <ListRow
+          first
+          leading={<IconTile name="lock" />}
+          title={t.faceId}
+          trailing={
+            <Switch
+              accessibilityLabel={t.faceId}
+              trackColor={track}
+              value={lock}
+              onValueChange={(next) => {
+                setLock(next);
+                void setAppLockEnabled(next).then(resyncWidget);
+              }}
+            />
+          }
+        />
+        <ListRow
+          leading={<IconTile name="globe" />}
+          title={t.language}
+          meta={t.langLabel}
+          chevron
           onPress={() => {
             const message = toggleLanguage();
             if (message) toast(message);
           }}
-        >
-          <Setting label={t.language}>
-            <Text style={type.rowSubtitle}>{t.langLabel}</Text>
-            <Chevron />
-          </Setting>
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={`${t.numerals}, ${numeralsLabel[numerals]}`} onPress={pickNumerals}>
-          <Setting label={t.numerals}>
-            <Text style={type.rowSubtitle}>{numeralsLabel[numerals]}</Text>
-            <Chevron />
-          </Setting>
-        </Pressable>
+        />
+        <ChoiceMenu fill title={t.appearance} choices={lookChoices}>
+          <ListRow leading={<IconTile name="moon" />} title={t.appearance} meta={lookLabel[look]} chevron />
+        </ChoiceMenu>
+        <ChoiceMenu fill title={t.numerals} choices={numeralChoices}>
+          <ListRow leading={<IconTile name="hash" />} title={t.numerals} meta={numeralsLabel[numerals]} chevron />
+        </ChoiceMenu>
       </Card>
-      <Card title={t.integrations}>
-        <ListRow leading={<IconTile name="link" />} title={t.integrations} subtitle={t.integrationsDetail} href="/integrations" chevron />
-      </Card>
+      {askConsent ? (
+        <Card>
+          <Text style={type.rowTitle}>{t.askShare}</Text>
+          <Text style={type.rowSubtitle}>{t.askShareDetail.replace("{provider}", askConsent)}</Text>
+          <Button variant="outline" title={t.askWithdraw} onPress={() => void withdrawAsk()} />
+        </Card>
+      ) : null}
       {server ? (
-        <Card title={t.serverCard}>
-          <Text style={type.rowSubtitle}>{t.serverOnlyYou}</Text>
+        <Card list>
           <ListRow
+            first
             leading={<IconTile name="user-plus" />}
             title={t.allowSignups}
-            subtitle={server.signups_forced_by_server ? t.signupsForced : server.signups_open ? t.signupsOpen : t.signupsClosed}
+            subtitle={`${server.signups_forced_by_server ? t.signupsForced : server.signups_open ? t.signupsOpen : t.signupsClosed} · ${t.serverOnlyYou}`}
             trailing={
               <Switch
                 accessibilityLabel={t.allowSignups}
-                trackColor={track} thumbColor={colors.ink}
+                trackColor={track}
                 value={server.signups_open || server.signups_forced_by_server}
                 disabled={server.signups_forced_by_server}
                 onValueChange={(next) => void setSignups(next)}

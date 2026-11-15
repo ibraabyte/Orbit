@@ -1,5 +1,6 @@
 import type { ApiClient } from "@/lib/api";
 import { formatDate, isArabic } from "@/lib/i18n";
+import type { VoiceOption } from "@/lib/voice-call";
 
 // Calls the agent makes for you (booking an appointment). Shapes mirror backend/app/routers/calls.py.
 // Nothing rings until you approve the plan; the server talks on the phone with your own Twilio account and OpenAI key.
@@ -37,8 +38,12 @@ export type PhoneSetup = {
   from_number: string | null;
   voice: string;
   openai: boolean;
+  // Who talks on the phone (the pick for the phone agent in Integrations); null: no OpenAI key or ElevenLabs voice model.
+  provider?: "openai" | "elevenlabs" | null;
   ready: boolean;
   voices: string[];
+  // With ElevenLabs: the voices in the user's ElevenLabs account, Arabic ones first.
+  voice_options?: VoiceOption[];
 };
 
 export type SetupInput = { accountSid: string; authToken: string; fromNumber: string; voice: string };
@@ -124,7 +129,7 @@ const en = {
   namePh: "Your name",
   calling: "Calling",
   rules: "It always says it's an automated assistant. It never pays, agrees to a deposit, or gives card, ID or address details. If they offer something else, it asks you.",
-  cost: "Your Twilio and OpenAI accounts are charged per minute. A call stops after 5 minutes.",
+  cost: "Your Twilio account and the agent's voice (OpenAI or ElevenLabs) are charged per minute. A call stops after 5 minutes.",
   approve: "Approve and call",
   starting: "Calling…",
   hangUp: "Hang up",
@@ -147,7 +152,7 @@ const en = {
   setup: "Phone setup",
   setupIntro: "Calls go out through your own Twilio account. Orbit keeps the auth token encrypted on its server, for your account only.",
   setupNotReady: "Set up Twilio below before the first call.",
-  needOpenai: "The agent's voice uses your own OpenAI key. Add it under Integrations, as an AI or as the voice model.",
+  needOpenai: "The agent's voice uses your own OpenAI key or ElevenLabs voice model. Add one under Integrations.",
   openIntegrations: "Open Integrations",
   accountSid: "Account SID (AC…)",
   authToken: "Auth token",
@@ -191,7 +196,7 @@ const ar: typeof en = {
   namePh: "اسمك",
   calling: "يتصل على",
   rules: "دايم يقول إنه مساعد آلي. ما يدفع، ولا يوافق على عربون، ولا يعطي بطاقة أو هوية أو عنوان. إذا عرضوا شي ثاني يرجع لك.",
-  cost: "تنحسب الدقايق من حسابك في Twilio وOpenAI. المكالمة تنقطع بعد ٥ دقايق.",
+  cost: "تنحسب الدقايق من حسابك في Twilio وحساب صوت الوكيل (OpenAI أو ElevenLabs). المكالمة تنقطع بعد ٥ دقايق.",
   approve: "وافق واتصل",
   starting: "يتصل…",
   hangUp: "سكّر المكالمة",
@@ -214,7 +219,7 @@ const ar: typeof en = {
   setup: "إعداد الاتصال",
   setupIntro: "المكالمات تطلع من حسابك في Twilio. يحفظ Orbit رمز الدخول مشفّر في الخادم، لحسابك بس.",
   setupNotReady: "جهّز Twilio تحت قبل أول مكالمة.",
-  needOpenai: "صوت الوكيل يستخدم مفتاح OpenAI حقك. أضفه في التكاملات، كذكاء أو كنموذج صوت.",
+  needOpenai: "صوت الوكيل يستخدم مفتاح OpenAI حقك أو ElevenLabs كمودل صوت. أضف واحد منهم في الربط.",
   openIntegrations: "افتح التكاملات",
   accountSid: "رقم الحساب (AC…)",
   authToken: "رمز الدخول",

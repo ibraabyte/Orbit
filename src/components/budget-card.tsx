@@ -3,7 +3,7 @@ import { Alert, Pressable, Text, View } from "react-native";
 import { Badge, Card, EmptyState, ProgressBar, RowButton, type, type BadgeTone, type Fold } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Input } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space, type Color } from "@/components/theme";
 import { apiUpdate } from "@/lib/api-actions";
 import { getApi } from "@/lib/backend";
 import { budgetProgress, budgetsToCopy, financeCategories, formatMoney, monthKey, parseBudgetAmount, shiftMonth, type BudgetProgress, type BudgetState } from "@/lib/finance";
@@ -11,7 +11,7 @@ import { formatDate, isArabic, t } from "@/lib/i18n";
 import type { Budget, Expense, FinanceCategory } from "@/lib/types";
 
 // State is always written out, with a glyph; the bar colour only backs it up.
-const states: Record<BudgetState, { tone: BadgeTone; glyph: string; label: string; bar: string }> = {
+const states: Record<BudgetState, { tone: BadgeTone; glyph: string; label: string; bar: Color }> = {
   ok: { tone: "success", glyph: "✓", label: t.budgetStateOk, bar: colors.accent },
   near: { tone: "accent", glyph: "◐", label: t.budgetStateNear, bar: colors.accentDeep },
   over: { tone: "urgent", glyph: "!", label: t.budgetStateOver, bar: colors.dangerOnShell }
@@ -81,7 +81,7 @@ export function BudgetCard({ budgets, expenses, currency, refresh, fold }: { bud
 
   return (
     <Card title={t.budget} fold={fold}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space.md }}>
         <RowButton outline disabled={offset <= -1} icon={isArabic ? "chevron-right" : "chevron-left"} label={t.budgetPrevMonth} onPress={() => move(-1)} />
         <Text style={[type.title, { flex: 1, textAlign: "center" }]} accessibilityRole="header">
           {formatDate(`${month}T12:00:00`, { month: "long", year: "numeric" })}
@@ -95,13 +95,13 @@ export function BudgetCard({ budgets, expenses, currency, refresh, fold }: { bud
         const figures = `${formatMoney(spent, budget.currency)} / ${formatMoney(limit, budget.currency)}`;
         const left = limit >= spent ? `${formatMoney(limit - spent, budget.currency)} ${t.budgetLeft}` : `${formatMoney(spent - limit, budget.currency)} ${t.budgetOverBy}`;
         return (
-          <Pressable key={budget.id} accessibilityRole="button" accessibilityLabel={`${name}, ${shown.label}, ${figures}`} onPress={() => open(row)} style={({ pressed }) => [{ gap: 6, paddingVertical: 6 }, pressed && { opacity: 0.7 }]}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Pressable key={budget.id} accessibilityRole="button" accessibilityLabel={`${name}, ${shown.label}, ${figures}`} onPress={() => open(row)} style={({ pressed }) => [{ gap: space.sm, paddingVertical: space.sm }, pressed && { opacity: 0.7 }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
               <Text style={[type.barLabel, { flex: 1 }]} numberOfLines={1}>{name}</Text>
               <Badge tone={shown.tone} glyph={shown.glyph}>{shown.label}</Badge>
             </View>
             <ProgressBar value={Math.min(ratio, 1)} max={1} color={shown.bar} height={10} />
-            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+            <View style={{ flexDirection: "row", justifyContent: "space-between", gap: space.sm }}>
               <Text style={type.rowSubtitle}>{figures}</Text>
               <Text style={type.rowSubtitle}>{left}</Text>
             </View>
@@ -111,15 +111,15 @@ export function BudgetCard({ budgets, expenses, currency, refresh, fold }: { bud
       {!rows.length && !editing ? <EmptyState icon="pie-chart">{t.budgetEmpty}</EmptyState> : null}
       {copyable.length ? <Button variant="outline" title={t.budgetCopy} disabled={busy} onPress={copy} /> : null}
       {editing ? (
-        <View style={{ gap: 8 }}>
+        <View style={{ gap: space.sm }}>
           {/* The currency is shown beside the amount, so a wrong one is seen before saving. */}
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
             <View style={{ flex: 1 }}>
               <Input accessibilityLabel={`${t.budgetAmount} (${editing.currency}): ${t.financeCategoryNames[editing.category]}`} placeholder={`${t.financeCategoryNames[editing.category]} · ${t.budgetAmount}`} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" returnKeyType="done" onSubmitEditing={save} autoFocus />
             </View>
             <Text style={type.barValue}>{editing.currency}</Text>
           </View>
-          <View style={{ flexDirection: "row", gap: 8 }}>
+          <View style={{ flexDirection: "row", gap: space.sm }}>
             <View style={{ flex: 1 }}><Button variant="outline" title={t.cancel} onPress={() => setEditing(null)} /></View>
             <View style={{ flex: 1 }}><Button variant="primary" title={t.save} disabled={parsed === null || busy} onPress={save} /></View>
           </View>

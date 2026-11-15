@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Badge, Card, EmptyState, GoalBar, Icon, ListRow, MoreButton, RingGauge, RowButton, StatGrid, StatTile, type, type IconName } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Screen } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { apiUpdate } from "@/lib/api-actions";
 import { getApi, hasServer } from "@/lib/backend";
@@ -74,14 +74,14 @@ export default function Food() {
       <Card title={t.foodLog}>
         <View style={styles.summary}>
           <RingGauge value={targetPercent(eaten, target) / 100} size={76} label={String(eaten)} sublabel={t.kcal} />
-          <View style={{ flex: 1, gap: 6 }}>
+          <View style={{ flex: 1, gap: space.sm }}>
             {target ? (
               <Text style={type.body}>
                 {eaten <= target ? `${target - eaten} ${t.kcal} ${t.left}` : `${eaten - target} ${t.kcal} ${t.over}`}
               </Text>
             ) : (
               <Pressable onPress={() => router.push("/health-goals")} accessibilityRole="link" hitSlop={8}>
-                <Text style={[type.link, { color: colors.accent }]}>{t.noTarget}</Text>
+                <Text style={[type.link, { color: colors.link }]}>{t.noTarget}</Text>
               </Pressable>
             )}
             {day ? (
@@ -107,7 +107,7 @@ export default function Food() {
         {day
           ? mealsByType(day.meals).map((group) => (
               <View key={group.type}>
-                <Text style={[type.tileLabel, { marginTop: 8 }]}>{`${t.mealTypeNames[group.type]} · ${group.calories} ${t.kcal}`}</Text>
+                <Text style={[type.tileLabel, { marginTop: space.sm }]}>{`${t.mealTypeNames[group.type]} · ${group.calories} ${t.kcal}`}</Text>
                 {group.meals.map((meal) => (
                   <ListRow
                     key={meal.id}
@@ -170,8 +170,8 @@ export default function Food() {
 }
 
 const styles = StyleSheet.create({
-  summary: { flexDirection: "row", alignItems: "center", gap: 14 },
-  actions: { flexDirection: "row", gap: 8 },
-  action: { flex: 1, minHeight: 64, paddingVertical: 10, paddingHorizontal: 4, borderRadius: radius.tile, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center", gap: 6 },
-  actionText: { fontFamily: fonts.semibold, fontSize: 11, lineHeight: 14, color: colors.ink, textAlign: "center" }
+  summary: { flexDirection: "row", alignItems: "center", gap: space.lg },
+  actions: { flexDirection: "row", gap: space.sm },
+  action: { flex: 1, minHeight: 64, paddingVertical: space.md, paddingHorizontal: space.xs, borderRadius: radius.tile, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center", gap: space.sm },
+  actionText: { fontFamily: fonts.semibold, fontSize: textSize.caption2, lineHeight: lineHeights.caption2, color: colors.ink, textAlign: "center" }
 });

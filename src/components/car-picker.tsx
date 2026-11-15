@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { FlatList, KeyboardAvoidingView, Modal, Pressable, StyleSheet, Text, View } from "react-native";
-import { flip, Glass, Icon, type } from "@/components/drift";
+import { flip, Glass, Icon, pressedFade, type } from "@/components/drift";
 import { Button, Input } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, scrim, space, textSize } from "@/components/theme";
 import { carMakes, carModels, carName, carYears, filterChoices, parseKm } from "@/lib/car-catalog";
 import { t } from "@/lib/i18n";
 
@@ -50,7 +50,7 @@ export function CarPicker({ onClose, onAdd }: { onClose: () => void; onAdd: (car
       <KeyboardAvoidingView behavior="padding" pointerEvents="box-none" style={styles.wrap}>
         <Glass style={[styles.sheet, step !== "details" && { flex: 1 }]}>
           <View style={styles.head}>
-            <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={t.back} style={[styles.back, flip]}>
+            <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={t.back} style={({ pressed }) => [styles.back, flip, pressed && pressedFade]}>
               <Icon name="chevron-left" size={18} color={colors.ink} />
             </Pressable>
             <Text style={[type.title, { flex: 1, textAlign: "center" }]} numberOfLines={2}>
@@ -87,14 +87,14 @@ export function CarPicker({ onClose, onAdd }: { onClose: () => void; onAdd: (car
 }
 
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.45)" },
-  wrap: { flex: 1, justifyContent: "flex-end", paddingHorizontal: 12, paddingTop: 72 },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: scrim },
+  wrap: { flex: 1, justifyContent: "flex-end", paddingHorizontal: space.md, paddingTop: space.giant },
   // A margin, because KeyboardAvoidingView owns its own bottom padding.
-  sheet: { borderRadius: 26, overflow: "hidden", marginBottom: 28 },
-  head: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12 },
+  sheet: { borderRadius: radius.xxl, overflow: "hidden", marginBottom: space.xxl },
+  head: { flexDirection: "row", alignItems: "center", gap: space.sm, padding: space.md },
   back: { width: 36, height: 36, borderRadius: radius.control, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
-  search: { marginHorizontal: 12, marginBottom: 8 },
-  details: { gap: 10, paddingHorizontal: 12, paddingBottom: 14 },
-  row: { minHeight: 48, justifyContent: "center", borderTopWidth: 1, borderTopColor: colors.surfaceInset, paddingHorizontal: 16 },
-  rowText: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, textAlign: "left" }
+  search: { marginHorizontal: space.md, marginBottom: space.sm },
+  details: { gap: space.md, paddingHorizontal: space.md, paddingBottom: space.lg },
+  row: { minHeight: 48, justifyContent: "center", borderTopWidth: 1, borderTopColor: colors.surfaceInset, paddingHorizontal: space.lg },
+  rowText: { fontFamily: fonts.medium, fontSize: textSize.callout, color: colors.ink, textAlign: "left" }
 });

@@ -30,7 +30,6 @@ export function ChatgptConnectForm({ status, start, finish, disconnect }: {
     <>
       <ListRow title="ChatGPT" subtitle={state.detail} trailing={<Badge tone={toneToBadge(state.tone)}>{state.label}</Badge>} />
       {status.status !== "connected" ? <Text style={type.rowSubtitle}>{t.chatgptLocalhostHint}</Text> : null}
-      <Text style={type.rowSubtitle}>{t.chatgptPrivacy}</Text>
       <Button
         title={busy ? t.connecting : status.status === "not_connected" ? t.chatgptSignIn : t.chatgptReconnect}
         disabled={busy}

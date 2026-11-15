@@ -1,13 +1,16 @@
 import * as Haptics from "expo-haptics";
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
-import { Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
-import { flip, Glass, Icon, type } from "@/components/drift";
-import { colors, fonts, radius } from "@/components/theme";
-import { formatDate, t } from "@/lib/i18n";
+import { DateTimePicker } from "@expo/ui/community/datetime-picker";
+import { MenuView } from "@expo/ui/community/menu";
+import { ActionSheetIOS, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View, type StyleProp, type ViewStyle } from "react-native";
+import { Glass, Icon, type } from "@/components/drift";
+import { colors, fonts, radius, scrim, shadow, space, textSize, usePalette, useScheme } from "@/components/theme";
+import { t } from "@/lib/i18n";
 
-// One action sheet, one date picker and one toast for the whole app, replacing alerts and typed dates.
+// One action sheet, one date picker and one toast for the whole app, replacing alerts and typed dates. The sheet and the
+// date picker are the system's own: the iOS action sheet and calendar, the Material date dialog on Android.
 
-export type SheetOption = { label: string; run: () => void; destructive?: boolean; keepOpen?: boolean };
+export type SheetOption = { label: string; run: () => void; destructive?: boolean };
 type SheetRequest = { title: string; detail?: string; options: SheetOption[] };
 type PickerRequest = { title: string; initial: Date; resolve: (date: string | null) => void };
 
@@ -32,6 +35,7 @@ function useSides() {
 
 export function OverlayProvider({ children }: { children: ReactNode }) {
   const sides = useSides();
+  const palette = usePalette();
   const [sheet, setSheet] = useState<SheetRequest | null>(null);
   const [picker, setPicker] = useState<PickerRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -46,12 +50,12 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(
     () => ({
-      sheet: setSheet,
+      sheet: process.env.EXPO_OS === "ios" ? (request: SheetRequest) => showActionSheet(request, palette.link) : setSheet,
       toast,
       pickDate: (title: string, initial?: string | null) =>
         new Promise<string | null>((resolve) => setPicker({ title, initial: initial ? new Date(initial) : new Date(), resolve }))
     }),
-    [toast]
+    [toast, palette.link]
   );
 
   const closePicker = (date: string | null) => {
@@ -77,7 +81,7 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
                   accessibilityRole="button"
                   style={styles.option}
                   onPress={() => {
-                    if (!option.keepOpen) setSheet(null);
+                    setSheet(null);
                     option.run();
                   }}
                 >
@@ -93,10 +97,15 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
           </View>
         ) : null}
       </Modal>
-      <Modal visible={Boolean(picker)} transparent animationType="fade" onRequestClose={() => closePicker(null)}>
-        <Pressable style={styles.backdrop} onPress={() => closePicker(null)} accessibilityLabel={t.cancel} />
-        {picker ? <DatePicker key={picker.title} title={picker.title} initial={picker.initial} onPick={closePicker} /> : null}
-      </Modal>
+      {picker && process.env.EXPO_OS === "android" ? (
+        // The Material dialog opens when this mounts; it answers once, picked or cancelled.
+        <DateTimePicker value={picker.initial} accentColor={palette.accent} onValueChange={(_, date) => closePicker(toDateKey(date))} onDismiss={() => closePicker(null)} />
+      ) : (
+        <Modal visible={Boolean(picker)} transparent animationType="fade" onRequestClose={() => closePicker(null)}>
+          <Pressable style={styles.backdrop} onPress={() => closePicker(null)} accessibilityLabel={t.cancel} />
+          {picker ? <DatePicker key={picker.title} title={picker.title} initial={picker.initial} accent={palette.link} onPick={closePicker} /> : null}
+        </Modal>
+      )}
       {message ? (
         <View pointerEvents="none" style={[styles.toastWrap, sides]} accessibilityLiveRegion="polite">
           <View style={styles.toast}>
@@ -111,72 +120,98 @@ export function OverlayProvider({ children }: { children: ReactNode }) {
   );
 }
 
+export type Choice = { label: string; selected: boolean; run: () => void };
+
+/** A native menu on the control it belongs to (a pull-down on iOS, a Material dropdown on Android), with a check on the
+ * current choice. One choice by default: picking the current one again does nothing. multiple: each item toggles.
+ * fill: the control takes the full width of its slot (a row, a grid tile); the menu's host otherwise sizes it to its
+ * content, so the slot is measured and its size handed to the control. */
+export function ChoiceMenu({ title, choices, multiple, fill, style, children }: { title?: string; choices: Choice[]; multiple?: boolean; fill?: boolean; style?: StyleProp<ViewStyle>; children: ReactNode }) {
+  const scheme = useScheme();
+  const [slot, setSlot] = useState<{ width: number; height: number } | null>(null);
+  const menu = (
+    <MenuView
+      title={title}
+      colorScheme={scheme}
+      style={fill ? undefined : style}
+      actions={choices.map((choice, index) => ({ id: String(index), title: choice.label, state: choice.selected ? "on" : "off" }))}
+      onPressAction={({ nativeEvent }) => {
+        const choice = choices[Number(nativeEvent.event)];
+        if (!choice || (!multiple && choice.selected)) return;
+        if (process.env.EXPO_OS === "ios") void Haptics.selectionAsync().catch(() => undefined);
+        choice.run();
+      }}
+    >
+      {/* The menu opens on the tap; the control inside only shows what it is. */}
+      <View pointerEvents="none" style={fill && slot ? { width: slot.width, minHeight: slot.height } : undefined}>
+        {children}
+      </View>
+    </MenuView>
+  );
+  if (!fill) return menu;
+  return (
+    <View style={style} onLayout={({ nativeEvent }) => setSlot((current) => (current?.width === nativeEvent.layout.width ? current : { width: nativeEvent.layout.width, height: nativeEvent.layout.height }))}>
+      {menu}
+    </View>
+  );
+}
+
 // Local calendar date as YYYY-MM-DD, the shape date columns use.
 export function toDateKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
-function DatePicker({ title, initial, onPick }: { title: string; initial: Date; onPick: (date: string) => void }) {
+// iOS: the system calendar in a sheet. A tap on a day isn't final (the month and year wheels change the date too), so
+// Done confirms; the backdrop cancels.
+function DatePicker({ title, initial, accent, onPick }: { title: string; initial: Date; accent: string; onPick: (date: string) => void }) {
   const sides = useSides();
-  const [month, setMonth] = useState(new Date(initial.getFullYear(), initial.getMonth(), 1));
-  const selected = toDateKey(initial);
-  const today = toDateKey(new Date());
-  const leading = month.getDay();
-  const count = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-  const cells = [...Array<null>(leading).fill(null), ...Array.from({ length: count }, (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1))];
-  const weekdays = Array.from({ length: 7 }, (_, index) => formatDate(new Date(2023, 0, 1 + index), { weekday: "narrow" }));
-  const step = (by: number) => setMonth(new Date(month.getFullYear(), month.getMonth() + by, 1));
-
+  const [date, setDate] = useState(initial);
   return (
     <Glass style={[styles.sheetWrap, styles.picker, sides]}>
-      <Text style={[type.rowSubtitle, { textAlign: "center" }]}>{title}</Text>
       <View style={styles.pickerHead}>
-        <Pressable onPress={() => step(-1)} accessibilityRole="button" accessibilityLabel="Previous month" style={[styles.pickerStep, flip]}>
-          <Icon name="chevron-left" size={18} color={colors.ink} />
-        </Pressable>
-        <Text style={type.title}>{formatDate(month, { month: "long", year: "numeric" })}</Text>
-        <Pressable onPress={() => step(1)} accessibilityRole="button" accessibilityLabel="Next month" style={[styles.pickerStep, flip]}>
-          <Icon name="chevron-right" size={18} color={colors.ink} />
+        <Text style={[type.title, { flexShrink: 1 }]} numberOfLines={1}>
+          {title}
+        </Text>
+        <Pressable onPress={() => onPick(toDateKey(date))} accessibilityRole="button" hitSlop={12} style={({ pressed }) => pressed && { opacity: 0.6 }}>
+          <Text style={[type.link, { fontFamily: fonts.bold }]}>{t.done}</Text>
         </Pressable>
       </View>
-      <View style={styles.pickerGrid}>
-        {weekdays.map((day, index) => (
-          <Text key={index} style={[styles.pickerCell, type.tileLabel, { textAlign: "center", height: 20 }]}>
-            {day}
-          </Text>
-        ))}
-        {cells.map((date, index) => {
-          if (!date) return <View key={`blank-${index}`} style={styles.pickerCell} />;
-          const key = toDateKey(date);
-          const on = key === selected;
-          return (
-            <Pressable key={key} onPress={() => onPick(key)} accessibilityRole="button" accessibilityLabel={formatDate(date, { dateStyle: "long" })} accessibilityState={{ selected: on }} style={[styles.pickerCell, styles.pickerDay, on && { backgroundColor: colors.accent }, !on && key === today && { backgroundColor: colors.surfaceInset }]}>
-              <Text style={{ fontFamily: on ? fonts.bold : fonts.medium, fontSize: 14, color: on ? colors.accentInk : colors.ink }}>{formatDate(date, { day: "numeric" })}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <DateTimePicker value={date} display="inline" accentColor={accent} onValueChange={(_, next) => setDate(next)} />
     </Glass>
   );
 }
 
+// The system action sheet, with Cancel last and destructive options in red.
+function showActionSheet({ title, detail, options }: SheetRequest, tint: string) {
+  ActionSheetIOS.showActionSheetWithOptions(
+    {
+      title,
+      message: detail,
+      options: [...options.map((option) => option.label), t.cancel],
+      cancelButtonIndex: options.length,
+      destructiveButtonIndex: options.flatMap((option, index) => (option.destructive ? [index] : [])),
+      tintColor: tint
+    },
+    (index) => options[index]?.run()
+  );
+}
+
+// The toast sits just above the floating tab bar.
+const TOAST_BOTTOM = 108;
+
 const styles = StyleSheet.create({
-  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(0,0,0,0.6)" },
-  sheetWrap: { position: "absolute", left: 12, right: 12, bottom: 28, gap: 8 },
-  sheet: { borderRadius: 20, borderCurve: "continuous" },
-  sheetHeader: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 10, gap: 2 },
-  option: { minHeight: 52, alignItems: "center", justifyContent: "center", borderTopWidth: 1, borderTopColor: colors.surfaceInset, paddingHorizontal: 16 },
-  optionText: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, textAlign: "center" },
+  backdrop: { ...StyleSheet.absoluteFill, backgroundColor: scrim },
+  sheetWrap: { position: "absolute", left: space.md, right: space.md, bottom: space.xxl, gap: space.sm },
+  sheet: { borderRadius: radius.xl, borderCurve: "continuous" },
+  sheetHeader: { paddingHorizontal: space.lg, paddingTop: space.lg, paddingBottom: space.md, gap: space.xxs },
+  option: { minHeight: 52, alignItems: "center", justifyContent: "center", borderTopWidth: 1, borderTopColor: colors.surfaceInset, paddingHorizontal: space.lg },
+  optionText: { fontFamily: fonts.medium, fontSize: textSize.callout, color: colors.ink, textAlign: "center" },
   // The toast is the one pale floating thing: dark text, a sand check.
   cancel: { minHeight: 52, alignItems: "center", justifyContent: "center" },
-  toastWrap: { position: "absolute", left: 16, right: 16, bottom: 108 },
-  toast: { flexDirection: "row", alignItems: "center", gap: 10, borderRadius: radius.card, borderCurve: "continuous", backgroundColor: colors.urgent, paddingHorizontal: 14, paddingVertical: 12, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 15, shadowOffset: { width: 0, height: 10 } },
-  toastMark: { width: 24, height: 24, borderRadius: 12, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
-  toastText: { flex: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.urgentInk },
-  picker: { borderRadius: 20, borderCurve: "continuous", padding: 16, gap: 10 },
-  pickerHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  pickerStep: { width: 36, height: 36, borderRadius: radius.control, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
-  pickerGrid: { flexDirection: "row", flexWrap: "wrap" },
-  pickerCell: { width: `${100 / 7}%`, height: 40 },
-  pickerDay: { alignItems: "center", justifyContent: "center", borderRadius: radius.control }
+  toastWrap: { position: "absolute", left: space.lg, right: space.lg, bottom: TOAST_BOTTOM },
+  toast: { flexDirection: "row", alignItems: "center", gap: space.md, borderRadius: radius.card, borderCurve: "continuous", backgroundColor: colors.urgent, paddingHorizontal: space.lg, paddingVertical: space.md, boxShadow: shadow.floating },
+  toastMark: { width: 24, height: 24, borderRadius: radius.pill, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
+  toastText: { flex: 1, fontFamily: fonts.medium, fontSize: textSize.subheadline, color: colors.urgentInk },
+  picker: { borderRadius: radius.xl, borderCurve: "continuous", padding: space.lg, gap: space.md },
+  pickerHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.md, minHeight: 44 }
 });

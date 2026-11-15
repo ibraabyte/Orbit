@@ -5,7 +5,7 @@ import { Chip, Chips } from "@/components/chips";
 import { Card, CheckItem, EmptyState, Icon, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Input, Screen } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useTaskActions } from "@/hooks/use-task-actions";
 import { apiUpdate } from "@/lib/api-actions";
@@ -135,10 +135,10 @@ export default function TaskScreen() {
 
   return (
     <Screen stackAction={dirty ? { label: t.saveChanges, onPress: () => void save() } : undefined} refreshing={loading} onRefresh={refresh}>
-      <View style={{ gap: 6 }}>
+      <View style={{ gap: space.sm }}>
         <Input value={draft.title} onChangeText={(title) => set({ title })} placeholder={t.taskTitlePh} maxLength={220} multiline returnKeyType="done" blurOnSubmit style={styles.title} accessibilityLabel={t.taskTitlePh} />
         <Input value={draft.notes} onChangeText={(notes) => set({ notes })} placeholder={t.notesPh} multiline style={styles.notes} accessibilityLabel={t.notesPh} />
-        {dirty ? <Text style={[type.hint, { color: colors.accent }]}>● {t.unsaved}</Text> : null}
+        {dirty ? <Text style={[type.hint, { color: colors.link }]}>● {t.unsaved}</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
       </View>
 
@@ -177,7 +177,6 @@ export default function TaskScreen() {
 
       <Card title={`${repeatGlyph} ${t.repeat}`}>
         <Chips options={repeatOptions} value={draft.recurrence} onChange={(recurrence) => set({ recurrence })} label={(key) => (key === "never" ? t.never : t.recurrenceNames[key])} />
-        {draft.recurrence !== "never" ? <Text style={type.rowSubtitle}>{t.repeatsHint}</Text> : null}
       </Card>
 
       <Card title={t.priority}>
@@ -217,17 +216,17 @@ export default function TaskScreen() {
 }
 
 const styles = StyleSheet.create({
-  title: { fontFamily: fonts.medium, fontSize: 18, lineHeight: 24, minHeight: 52 },
+  title: { fontFamily: fonts.medium, fontSize: textSize.headline, lineHeight: lineHeights.headline, minHeight: 52 },
   notes: { minHeight: 64, textAlignVertical: "top" },
-  error: { fontFamily: fonts.medium, fontSize: 13, color: colors.dangerOnShell },
-  dueRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  field: { minHeight: 44, borderRadius: radius.control, borderWidth: 1, borderColor: colors.hairline, paddingHorizontal: 12, justifyContent: "center" },
-  dayField: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
+  error: { fontFamily: fonts.medium, fontSize: textSize.footnote, color: colors.dangerOnShell },
+  dueRow: { flexDirection: "row", alignItems: "center", gap: space.sm },
+  field: { minHeight: 44, borderRadius: radius.control, borderWidth: 1, borderColor: colors.hairline, paddingHorizontal: space.md, justifyContent: "center" },
+  dayField: { flex: 1, flexDirection: "row", alignItems: "center", gap: space.sm },
   time: { width: 84, textAlign: "center", fontFamily: fonts.medium },
-  inline: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6 },
-  step: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 44, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
+  inline: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.sm },
+  step: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 44, borderTopWidth: 1, borderTopColor: colors.surfaceInset },
   stepDelete: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
   struck: { textDecorationLine: "line-through", color: colors.inkMuted },
-  actions: { gap: 10, paddingTop: 8 },
-  pair: { flexDirection: "row", gap: 10 }
+  actions: { gap: space.md, paddingTop: space.sm },
+  pair: { flexDirection: "row", gap: space.md }
 });

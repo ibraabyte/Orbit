@@ -62,7 +62,7 @@ describe("what each feature uses", () => {
     expect(choiceLabel(row("assistant"), "gemini", set)).toBe("Gemini · made-up-gemini");
     expect(choiceLabel(row("assistant"), "gemini", set, true)).toBe("Gemini");
     expect(choiceLabel(row("call"), "gpt-realtime-mini", set)).toBe("gpt-realtime-mini · cheaper");
-    expect(choiceLabel(row("speech"), "phone", set)).toBe("The phone");
+    expect(choiceLabel(row("speech"), "phone", set)).toBe("iPhone dictation");
     expect(choiceLabel(row("speech"), "cloud", set)).toBe("Voice model: Groq · whisper-large-v3");
   });
 
@@ -73,7 +73,7 @@ describe("what each feature uses", () => {
     expect(featureSummary(row("assistant", { choice: "anthropic", stale: true }), set)).toBe("Claude was removed, so it uses the default for now: OpenAI.");
     expect(featureSummary(row("health", { effective: null, default: null, options: [] }), set)).toBe("Connect an AI in Integrations first.");
     expect(featureSummary(row("call", { effective: null, default: null, options: [] }), set)).toBe("Needs an OpenAI or ElevenLabs key, added in Integrations.");
-    expect(featureSummary(row("phone_agent", { effective: null, default: null, options: [] }), set)).toBe("Needs an OpenAI key, added on the OpenAI page in Integrations.");
+    expect(featureSummary(row("phone_agent", { effective: null, default: null, options: [] }), set)).toBe("Needs an OpenAI or ElevenLabs key, added in Integrations.");
     // The call can go through ElevenLabs.
     expect(choiceLabel(row("call"), "elevenlabs", set)).toBe("ElevenLabs · Arabic voices");
   });

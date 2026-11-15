@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Badge, Card, Icon, type } from "@/components/drift";
+import { Badge, Card, Icon, pressedFade, type } from "@/components/drift";
 import { Button, Segments } from "@/components/screen";
-import { colors, fonts, radius } from "@/components/theme";
+import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { formatNumber, macroText, mealTypeAt, scaleNutrition, servingText, sourceLabel, stepServings, type FoodCandidate, type MealType } from "@/lib/food-log";
 import { t } from "@/lib/i18n";
 
@@ -36,13 +36,13 @@ export function FoodLogPanel({ food, busy, onLog, onClose }: { food: FoodCandida
 
       <View style={styles.stepper}>
         <Text style={[type.barLabel, { flex: 1 }]}>{t.servings}</Text>
-        <Pressable onPress={() => setServings((value) => stepServings(value, -1))} accessibilityRole="button" accessibilityLabel={`${t.servings} -`} style={styles.stepButton}>
+        <Pressable onPress={() => setServings((value) => stepServings(value, -1))} accessibilityRole="button" accessibilityLabel={`${t.servings} -`} style={({ pressed }) => [styles.stepButton, pressed && pressedFade]}>
           <Icon name="minus" size={16} color={colors.ink} />
         </Pressable>
         <Text style={styles.servings} accessibilityLiveRegion="polite">
           {formatNumber(servings)}
         </Text>
-        <Pressable onPress={() => setServings((value) => stepServings(value, 1))} accessibilityRole="button" accessibilityLabel={`${t.servings} +`} style={styles.stepButton}>
+        <Pressable onPress={() => setServings((value) => stepServings(value, 1))} accessibilityRole="button" accessibilityLabel={`${t.servings} +`} style={({ pressed }) => [styles.stepButton, pressed && pressedFade]}>
           <Icon name="plus" size={16} color={colors.ink} />
         </Pressable>
       </View>
@@ -61,9 +61,9 @@ export function FoodLogPanel({ food, busy, onLog, onClose }: { food: FoodCandida
 }
 
 const styles = StyleSheet.create({
-  meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: 8 },
-  stepper: { flexDirection: "row", alignItems: "center", gap: 10 },
-  stepButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
-  servings: { minWidth: 44, textAlign: "center", fontFamily: fonts.bold, fontSize: 18, color: colors.ink },
-  total: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8, paddingVertical: 4, borderRadius: radius.tile }
+  meta: { flexDirection: "row", flexWrap: "wrap", alignItems: "center", gap: space.sm },
+  stepper: { flexDirection: "row", alignItems: "center", gap: space.md },
+  stepButton: { width: 40, height: 40, borderRadius: radius.pill, backgroundColor: colors.surfaceInset, alignItems: "center", justifyContent: "center" },
+  servings: { minWidth: 44, textAlign: "center", fontFamily: fonts.bold, fontSize: textSize.headline, color: colors.ink },
+  total: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: space.sm, paddingVertical: space.xs, borderRadius: radius.tile }
 });

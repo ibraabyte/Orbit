@@ -5,7 +5,7 @@ import { Badge, Card, EmptyState, ListRow, RowButton, type } from "@/components/
 import { ExerciseThumb } from "@/components/exercise-ui";
 import { useOverlays } from "@/components/overlays";
 import { Button } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, radius, space } from "@/components/theme";
 import { getApi } from "@/lib/backend";
 import { isArabic } from "@/lib/i18n";
 import { label } from "@/lib/exercises";
@@ -142,7 +142,7 @@ export function PlanDayCard({ day, today, onChange }: { day: PlannedDay; today: 
 }
 
 const styles = StyleSheet.create({
-  recovery: { borderWidth: 1, borderColor: colors.hairline, borderRadius: 12, borderCurve: "continuous", paddingHorizontal: 12, paddingVertical: 10, marginBottom: 6 },
-  dropped: { paddingTop: 8, opacity: 0.8 },
-  actions: { gap: 8, paddingTop: 12 }
+  recovery: { borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.md, borderCurve: "continuous", paddingHorizontal: space.md, paddingVertical: space.md, marginBottom: space.sm },
+  dropped: { paddingTop: space.sm, opacity: 0.8 },
+  actions: { gap: space.sm, paddingTop: space.md }
 });

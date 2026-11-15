@@ -23,6 +23,7 @@ OPENAI_KEY = "made-up-openai-key-0002"
 TOKEN = "made-up-conversation-token-0003"
 ARABIC_VOICE = "ArabicVoice000000001"
 OTHER_VOICE = "EnglishVoice00000002"
+SIGNED_URL = "wss://api.elevenlabs.io/v1/convai/conversation?agent_id=made-up&conversation_signature=made-up"
 
 
 class FakeElevenLabs:
@@ -78,6 +79,10 @@ class FakeElevenLabs:
             if request.url.params.get("agent_id") not in self.agents:
                 return httpx.Response(404, json={})
             return httpx.Response(200, json={"token": TOKEN})
+        if path == "/v1/convai/conversation/get-signed-url":
+            if request.url.params.get("agent_id") not in self.agents:
+                return httpx.Response(404, json={})
+            return httpx.Response(200, json={"signed_url": SIGNED_URL})
         return httpx.Response(500, json={})
 
     def made(self, kind: str) -> list[httpx.Request]:
@@ -117,8 +122,8 @@ def test_the_elevenlabs_voice_model_can_take_the_call(client: TestClient, auth: 
     assert EL_KEY not in json.dumps(status)
     features = {row["feature"]: row for row in client.get("/integrations/features", headers=auth).json()}
     assert features["call"]["options"] == ["elevenlabs"] and features["call"]["effective"] == "elevenlabs"
-    # The phone agent stays OpenAI only.
-    assert features["phone_agent"]["options"] == []
+    # The phone agent can use it too.
+    assert features["phone_agent"]["options"] == ["elevenlabs"] and features["phone_agent"]["effective"] == "elevenlabs"
 
 
 def test_a_session_makes_the_agent_once_and_hands_over_a_token(client: TestClient, auth: dict, db: Session, eleven):

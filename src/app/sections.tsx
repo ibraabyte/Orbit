@@ -1,7 +1,7 @@
 import { Switch, Text, View } from "react-native";
 import { Card, IconTile, ListRow, type, type IconName } from "@/components/drift";
 import { GroupHeader, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { useSections } from "@/hooks/use-sections";
 import { INSIDE, st, type SectionKey } from "@/lib/app-sections";
 
@@ -38,7 +38,7 @@ export default function Sections() {
           <Switch
             accessibilityLabel={st.names[key]}
             trackColor={track}
-            thumbColor={colors.ink}
+           
             value={!hidden.has(key)}
             disabled={lockedOff}
             onValueChange={(next) => void setOn(key, next)}
@@ -50,13 +50,11 @@ export default function Sections() {
 
   return (
     <Screen title={st.sections}>
-      <Text style={type.rowSubtitle}>{st.sectionsDetail}</Text>
       <Card list>{TOP.map((key, index) => row(key, index === 0))}</Card>
-      <View style={{ gap: 8 }}>
+      <View style={{ gap: space.sm }}>
         <GroupHeader label={st.insideHealth} />
         <Card list>{INSIDE.health!.map((key, index) => row(key, index === 0, true))}</Card>
       </View>
-      <Text style={type.rowSubtitle}>{st.alwaysOn}</Text>
     </Screen>
   );
 }

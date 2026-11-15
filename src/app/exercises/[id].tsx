@@ -4,7 +4,7 @@ import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Badge, Card, EmptyState, Icon, ListRow, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Loading, Screen } from "@/components/screen";
-import { colors, radius } from "@/components/theme";
+import { colors, radius, space, textSize } from "@/components/theme";
 import { getApi } from "@/lib/backend";
 import { et, exercisesApi, injuryNote, label, type ExerciseDetail } from "@/lib/exercises";
 import { formatDate } from "@/lib/i18n";
@@ -68,10 +68,10 @@ export default function ExerciseScreen() {
 
   return (
     <Screen refreshing={loading} onRefresh={load}>
-      <Text style={[type.h1, { paddingHorizontal: 4 }]}>{exercise.name}</Text>
+      <Text style={[type.h1, { paddingHorizontal: space.xs }]}>{exercise.name}</Text>
 
       {exercise.image_urls.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }} style={{ marginHorizontal: -20, flexGrow: 0 }}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.md }} style={{ marginHorizontal: -space.xl, flexGrow: 0 }}>
           <View style={{ width: 10 }} />
           {exercise.image_urls.map((uri) => (
             <Image key={uri} source={{ uri }} style={styles.photo} accessibilityIgnoresInvertColors />
@@ -108,7 +108,7 @@ export default function ExerciseScreen() {
           {bestRows.map(([name, best, show]) =>
             best ? <ListRow key={name} title={name} subtitle={formatDate(best.logged_at, { day: "numeric", month: "short", year: "numeric" })} meta={show(best)} /> : null
           )}
-          {history.sessions.length ? <Text style={[type.sectionLabel, { paddingTop: 8 }]}>{tt.recentSessions}</Text> : null}
+          {history.sessions.length ? <Text style={[type.sectionLabel, { paddingTop: space.sm }]}>{tt.recentSessions}</Text> : null}
           {history.sessions.map((past) => (
             <ListRow key={past.workout_id} href={{ pathname: "/workout", params: { id: past.workout_id } }} title={sessionLine(past.sets)} subtitle={formatDate(past.logged_at, { weekday: "short", day: "numeric", month: "short" })} meta={past.volume_kg ? volumeText(past.volume_kg) : undefined} />
           ))}
@@ -125,14 +125,14 @@ export default function ExerciseScreen() {
           </View>
         ))}
       </Card>
-      <Text style={[type.shellMuted, { textAlign: "center", fontSize: 11 }]}>{et.photoCredit}</Text>
+      <Text style={[type.shellMuted, { textAlign: "center", fontSize: textSize.caption2 }]}>{et.photoCredit}</Text>
     </Screen>
   );
 }
 
 function Fact({ name, value, extra }: { name: string; value: string; extra?: string }) {
   return (
-    <View style={{ gap: 2 }}>
+    <View style={{ gap: space.xxs }}>
       <Text style={type.tileLabel}>{name}</Text>
       <Text style={type.rowTitle}>{value}</Text>
       {extra ? <Text style={type.rowSubtitle}>{extra}</Text> : null}
@@ -142,8 +142,8 @@ function Fact({ name, value, extra }: { name: string; value: string; extra?: str
 
 const styles = StyleSheet.create({
   photo: { width: 260, height: 190, borderRadius: radius.tile, backgroundColor: colors.surfaceInset },
-  warning: { flexDirection: "row", alignItems: "center", gap: 10 },
-  badges: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  step: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
-  stepNumber: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", marginTop: 1 }
+  warning: { flexDirection: "row", alignItems: "center", gap: space.md },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
+  step: { flexDirection: "row", gap: space.md, alignItems: "flex-start" },
+  stepNumber: { width: 22, height: 22, borderRadius: radius.pill, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center", marginTop: space.xxs }
 });

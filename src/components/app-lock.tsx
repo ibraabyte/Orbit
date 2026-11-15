@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { AppState, StyleSheet, Text, View } from "react-native";
 import { Icon } from "@/components/drift";
 import { Button } from "@/components/screen";
-import { colors, fonts } from "@/components/theme";
+import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
 const LOCK_KEY = "orbit.app-lock";
@@ -89,7 +89,7 @@ export function AppLock({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  cover: { alignItems: "center", justifyContent: "center", gap: 16, padding: 28, backgroundColor: colors.shell },
-  mark: { width: 72, height: 72, borderRadius: 20, borderWidth: 2, borderColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center" },
-  title: { fontFamily: fonts.bold, fontSize: 22, color: colors.onShell }
+  cover: { alignItems: "center", justifyContent: "center", gap: space.lg, padding: space.xxl, backgroundColor: colors.shell },
+  mark: { width: 72, height: 72, borderRadius: radius.xl, borderWidth: 2, borderColor: colors.edge, alignItems: "center", justifyContent: "center" },
+  title: { fontFamily: fonts.bold, fontSize: textSize.title2, color: colors.onShell }
 });

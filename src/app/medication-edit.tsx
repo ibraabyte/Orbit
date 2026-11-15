@@ -6,7 +6,7 @@ import { Chips } from "@/components/chips";
 import { Chip } from "@/components/exercise-ui";
 import { useOverlays } from "@/components/overlays";
 import { Button, Input, Screen } from "@/components/screen";
-import { colors } from "@/components/theme";
+import { colors, space } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { getApi } from "@/lib/backend";
 import { formatDate, t } from "@/lib/i18n";
@@ -18,7 +18,7 @@ const dayText = (key: string) => formatDate(`${key}T12:00:00`, { weekday: "short
 // A label over its field, or a row with a switch.
 function Field({ label, detail, children }: { label: string; detail?: string; children: React.ReactNode }) {
   return (
-    <View style={{ gap: 6 }}>
+    <View style={{ gap: space.sm }}>
       <Text style={type.rowSubtitle}>{label}</Text>
       {children}
       {detail ? <Text style={type.rowSubtitle}>{detail}</Text> : null}
@@ -28,19 +28,19 @@ function Field({ label, detail, children }: { label: string; detail?: string; ch
 
 function SwitchRow({ label, detail, value, onChange }: { label: string; detail?: string; value: boolean; onChange: (next: boolean) => void }) {
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 48 }}>
-      <View style={{ flex: 1, gap: 2 }}>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 48 }}>
+      <View style={{ flex: 1, gap: space.xxs }}>
         <Text style={type.rowTitle}>{label}</Text>
         {detail ? <Text style={type.rowSubtitle}>{detail}</Text> : null}
       </View>
-      <Switch accessibilityLabel={label} trackColor={track} thumbColor={colors.ink} value={value} onValueChange={onChange} />
+      <Switch accessibilityLabel={label} trackColor={track} value={value} onValueChange={onChange} />
     </View>
   );
 }
 
 function DateRow({ label, value, onPress }: { label: string; value: string; onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" accessibilityLabel={`${label}, ${value}`} onPress={onPress} style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 44 }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${label}, ${value}`} onPress={onPress} style={{ flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 44 }}>
       <Text style={[type.rowTitle, { flex: 1 }]}>{label}</Text>
       <Text style={type.rowSubtitle}>{value}</Text>
       <Chevron />
@@ -110,7 +110,7 @@ export default function MedicationEdit() {
 
   return (
     <Screen title={existing ? rx.edit : rx.add}>
-      <Card style={{ gap: 14 }}>
+      <Card style={{ gap: space.lg }}>
         <Field label={rx.name}>
           <Input value={form.name} onChangeText={(name) => set({ name })} placeholder={rx.namePh} maxLength={120} accessibilityLabel={rx.name} />
         </Field>
@@ -119,11 +119,11 @@ export default function MedicationEdit() {
         </Field>
       </Card>
 
-      <Card title={rx.when} style={{ gap: 14 }}>
+      <Card title={rx.when} style={{ gap: space.lg }}>
         <Chips options={SCHEDULES} value={form.schedule} onChange={(schedule) => set({ schedule })} label={(option) => rx.schedules[option]} />
         {form.schedule === "weekdays" ? (
           <Field label={rx.days}>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
               {WEEK_ORDER.map((day) => (
                 <Chip key={day} label={rx.weekdays[day]} on={form.weekdays.includes(day)} onPress={() => toggleDay(day)} />
               ))}
@@ -134,7 +134,7 @@ export default function MedicationEdit() {
           <>
             <Chips options={INTERVAL_HOURS.map(String)} value={String(form.everyHours)} onChange={(hours) => set({ everyHours: Number(hours) })} label={(option) => rx.everyHours(Number(option))} />
             <Field label={rx.firstTime} detail={intervalTimes(form.firstTime, form.everyHours).map(timeLabel).join(" · ")}>
-              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
                 {COMMON_TIMES.map((time) => (
                   <Chip key={time} label={timeLabel(time)} on={form.firstTime === time} onPress={() => set({ firstTime: time })} />
                 ))}
@@ -143,12 +143,12 @@ export default function MedicationEdit() {
           </>
         ) : (
           <Field label={rx.times}>
-            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
               {timeChoices.map((time) => (
                 <Chip key={time} label={timeLabel(time)} on={form.times.includes(time)} onPress={() => toggleTime(time)} />
               ))}
             </View>
-            <View style={{ flexDirection: "row", gap: 8, alignItems: "center" }}>
+            <View style={{ flexDirection: "row", gap: space.sm, alignItems: "center" }}>
               <Input style={{ flex: 1 }} value={typedTime} onChangeText={setTypedTime} placeholder={rx.timePh} keyboardType="numbers-and-punctuation" returnKeyType="done" onSubmitEditing={addTyped} accessibilityLabel={rx.timePh} />
               <Button variant="outline" title={rx.addTime} onPress={addTyped} />
             </View>
@@ -156,13 +156,13 @@ export default function MedicationEdit() {
         )}
       </Card>
 
-      <Card title={rx.course} style={{ gap: 6 }}>
+      <Card title={rx.course} style={{ gap: space.sm }}>
         <DateRow label={rx.startsOn} value={dayText(form.startsOn)} onPress={() => void pickStart()} />
         <SwitchRow label={rx.courseOn} detail={rx.courseDetail} value={form.endsOn !== null} onChange={(on) => (on ? void pickEnd() : set({ endsOn: null }))} />
         {form.endsOn ? <DateRow label={rx.endsOn} value={dayText(form.endsOn)} onPress={() => void pickEnd()} /> : null}
       </Card>
 
-      <Card title={rx.stockTitle} style={{ gap: 14 }}>
+      <Card title={rx.stockTitle} style={{ gap: space.lg }}>
         <Field label={rx.stock}>
           <Input value={form.stock} onChangeText={(stock) => set({ stock })} placeholder={rx.stockPh} keyboardType="decimal-pad" accessibilityLabel={rx.stock} />
         </Field>
@@ -181,7 +181,7 @@ export default function MedicationEdit() {
         ) : null}
       </Card>
 
-      <Card style={{ gap: 14 }}>
+      <Card style={{ gap: space.lg }}>
         <Field label={rx.notes}>
           <Input value={form.notes} onChangeText={(notes) => set({ notes })} placeholder={rx.notesPh} maxLength={500} accessibilityLabel={rx.notes} />
         </Field>
