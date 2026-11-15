@@ -5,6 +5,7 @@ from app.models.bank_sms import BankSmsEvent, BankSmsToken, BankTransaction
 from app.models.base import Base
 from app.models.calls import PhoneCall, PhoneConnection
 from app.models.chatgpt import ChatgptConnection
+from app.models.documents import Document
 from app.models.finance import Bill, Budget, Card, Expense, Investment, MoneyAccount, Obligation, ObligationInstallment
 from app.models.fitness import Exercise, GymEquipment, Injury
 from app.models.food import Food
@@ -33,6 +34,7 @@ __all__ = [
     "Capture",
     "Card",
     "ChatgptConnection",
+    "Document",
     "Exercise",
     "Expense",
     "FeatureModel",

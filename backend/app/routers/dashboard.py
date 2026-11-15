@@ -38,6 +38,8 @@ LISTS: list[tuple[str, type[m.Base], Any, int]] = [
     ("medications", m.Medication, m.Medication.created_at.asc(), 100),
     # The last few weeks of answered doses: enough for the log and for knowing which of today's are done.
     ("medicationDoses", m.MedicationDose, m.MedicationDose.scheduled_at.desc(), 600),
+    # Official papers, soonest to expire first.
+    ("documents", m.Document, m.Document.expires_on.asc(), 100),
     ("habitLogs", m.HabitLog, m.HabitLog.logged_at.desc(), 240),
     # ponytail: budgets add up these rows on the phone, so a very heavy spender (over 1000 expenses) is undercounted;
     # the upgrade is a server-side month total per category.
