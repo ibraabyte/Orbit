@@ -44,7 +44,8 @@ export function useCloudVoice(onText: (text: string) => void) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lang = useRef<VoiceLang>("ar-SA");
+  // null: the voice model tells the language itself (Arabic, English or both in one line).
+  const lang = useRef<VoiceLang | null>(null);
   const textHandler = useRef(onText);
   textHandler.current = onText;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -60,7 +61,7 @@ export function useCloudVoice(onText: (text: string) => void) {
       await audio?.setAudioModeAsync({ allowsRecording: false });
       const uri = recorder.uri;
       if (!uri) throw new Error(t.micFailed);
-      const { text } = await integrationsApi.transcribe(getApi(), await readBase64(uri), audioMediaType(uri), voiceApiLang(lang.current));
+      const { text } = await integrationsApi.transcribe(getApi(), await readBase64(uri), audioMediaType(uri), lang.current ? voiceApiLang(lang.current) : null);
       if (text.trim()) textHandler.current(text.trim());
       else setError(t.micNothingHeard);
     } catch (failure) {
@@ -71,7 +72,7 @@ export function useCloudVoice(onText: (text: string) => void) {
   }, [recorder]);
 
   const start = useCallback(
-    async (language: VoiceLang) => {
+    async (language: VoiceLang | null) => {
       setError(null);
       if (!audio || !recorder) return setError(t.micNeedsBuild);
       try {

@@ -2,7 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { AiPicker } from "@/components/ai-picker";
 import { Icon, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button } from "@/components/screen";
@@ -52,7 +51,8 @@ function draftFields(draft: QuickAddDraft) {
 // Arabic or English. A plain quick-add line is saved at once with no AI; anything else goes to the person's own AI,
 // which prepares the changes, and nothing is saved until the person confirms them here.
 export default function Capture() {
-  const params = useLocalSearchParams<{ text?: string }>();
+  // voice=1: opened by holding the Orbit button, so the mic starts at once.
+  const params = useLocalSearchParams<{ text?: string; voice?: string }>();
   const { data, refresh, userId } = useDashboardData();
   const { toast } = useOverlays();
   const ai = useAiChoices("assistant");
@@ -67,13 +67,16 @@ export default function Capture() {
   // What the person is typing into a change's number, by the change's place in the list.
   const [typed, setTyped] = useState<Record<number, string>>({});
   const [accepted, setAccepted] = useState<string | null | undefined>(undefined);
-  const [voiceLang, setVoiceLang] = useState<VoiceLang>(defaultVoiceLang(isArabic));
+  // The phone listens in the app's language; the voice model tells the language by itself.
+  const voiceLang: VoiceLang = defaultVoiceLang(isArabic);
   const beforeVoice = useRef("");
   const voice = useVoice((spoken) => setText(withSpoken(beforeVoice.current, spoken)));
   // The user's own voice model, when they added one in Integrations; else the phone's speech to text above.
   const cloud = useCloudVoice((spoken) => setText(withSpoken(beforeVoice.current, spoken)));
   const [voiceModel, setVoiceModel] = useState<VoiceStatus | null>(null);
   const [voiceConsent, setVoiceConsent] = useState<string | null>(null);
+  const [voiceLoaded, setVoiceLoaded] = useState(false);
+  const autoVoice = useRef(params.voice === "1");
   const listening = voice.listening || cloud.recording;
   const voiceError = cloud.error ?? voice.error;
   const options = { defaultWeightUnit: data.profile?.weight_unit ?? "kg", defaultCurrency: data.expenses[0]?.currency ?? data.bills[0]?.currency ?? "SAR" };
@@ -91,7 +94,6 @@ export default function Capture() {
   const gate = provider === null ? "no-ai" : askGate(provider, accepted);
   const chosen = answer ? answer.actions.filter((_, index) => !skipped.has(index)) : [];
   const total = mealTotal(chosen);
-  const estimated = chosen.some((action) => action.kind === "meal" && action.op === "create" && action.fields.food_id == null);
 
   const edit = (index: number, value: string) => {
     setTyped((current) => ({ ...current, [index]: value }));
@@ -115,7 +117,8 @@ export default function Capture() {
     integrationsApi
       .voice(getApi())
       .then(setVoiceModel)
-      .catch(() => setVoiceModel(null));
+      .catch(() => setVoiceModel(null))
+      .finally(() => setVoiceLoaded(true));
   }, [userId]);
 
   const remember = (line: string) =>
@@ -200,7 +203,7 @@ export default function Capture() {
     // Speech to text set to the phone in Integrations keeps the recording on the phone.
     const provider = cloudVoiceAvailable && voiceModel?.connected && !speechOnPhone(ai.overview) ? voiceModel.provider : null;
     if (!provider) return void voice.start(voiceLang);
-    if (voiceConsented(voiceConsent, provider)) return void cloud.start(voiceLang);
+    if (voiceConsented(voiceConsent, provider)) return void cloud.start(null);
     // The recording leaves the phone, so ask once per provider. Saying no uses the phone this time and asks again next time.
     const name = VOICE_PROVIDER_NAMES[provider];
     Alert.alert(t.voiceConsentTitle.replace("{provider}", name), t.voiceConsentBody.replaceAll("{provider}", name), [
@@ -210,11 +213,19 @@ export default function Capture() {
         onPress: () => {
           setVoiceConsent(provider);
           void AsyncStorage.setItem(voiceConsentKey(userId), provider).catch(() => undefined);
-          void cloud.start(voiceLang);
+          void cloud.start(null);
         }
       }
     ]);
   };
+  // Once the voice model and the AI settings are known, a hold on the Orbit button starts listening by itself.
+  useEffect(() => {
+    if (!autoVoice.current || !voiceLoaded || !(ai.overview || ai.error)) return;
+    autoVoice.current = false;
+    toggleVoice();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [voiceLoaded, ai.overview, ai.error]);
+
   const startOver = () => {
     setAnswer(null);
     setHistory([]);
@@ -235,8 +246,6 @@ export default function Capture() {
           <Text style={[type.pill, { fontSize: textSize.subheadline, color: colors.onShellMuted }]}>{t.cancel}</Text>
         </Pressable>
       </View>
-
-      <AiPicker choices={ai.choices} value={lineAi} onChange={ai.setPicked} onShell />
 
       {answer ? (
         <View style={styles.preview}>
@@ -298,7 +307,6 @@ export default function Capture() {
               </Text>
             </View>
           ) : null}
-          {estimated ? <Text style={[type.rowSubtitle, { fontSize: textSize.caption1 }]}>{t.assistantEstimate}</Text> : null}
           {answer.actions.length ? (
             <Button
               title={busy ? t.assistantThinking : chosen.length === 1 ? t.assistantConfirmOne : t.assistantConfirm.replace("{n}", digits(chosen.length))}
@@ -314,7 +322,7 @@ export default function Capture() {
       <View style={styles.inputRow}>
         <TextInput
           style={[styles.input, parsed && !parsed.validation.ok && { borderColor: colors.accentDeep }]}
-          autoFocus={!answer}
+          autoFocus={!answer && params.voice !== "1"}
           multiline
           placeholder={answer ? t.askPlaceholder : t.assistantPh}
           placeholderTextColor={colors.inkFaint}
@@ -331,13 +339,7 @@ export default function Capture() {
           <Icon name={listening ? "square" : cloud.transcribing ? "loader" : "mic"} size={20} color={listening ? colors.accentInk : colors.ink} />
         </Pressable>
       </View>
-      <View style={styles.chips}>
-        {(["ar-SA", "en-US"] as const).map((lang) => (
-          <Pressable key={lang} onPress={() => setVoiceLang(lang)} accessibilityRole="tab" accessibilityState={{ selected: voiceLang === lang }} style={[styles.chip, voiceLang === lang && styles.chipOn]}>
-            <Icon name="mic" size={11} color={voiceLang === lang ? colors.urgentInk : colors.inkMuted} />
-            <Text style={[type.barLabel, voiceLang === lang && { color: colors.urgentInk }]}>{lang === "ar-SA" ? t.voiceArabic : t.voiceEnglish}</Text>
-          </Pressable>
-        ))}
+      <View style={[styles.chips, { alignItems: "center" }]}>
         {voice.listening ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micListening}</Text> : null}
         {cloud.recording ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micRecording}</Text> : null}
         {cloud.transcribing ? <Text style={[type.shellMeta, { alignSelf: "center" }]}>{t.micTranscribing}</Text> : null}
@@ -345,13 +347,13 @@ export default function Capture() {
       {voiceError ? <Text style={[type.shellMuted, { color: colors.dangerOnShell }]}>{voiceError}</Text> : null}
 
       {!answer && !text.trim() ? (
-        <View style={styles.chips}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }} style={{ flexGrow: 0 }}>
           {starters.map((word) => (
             <Pressable key={word} onPress={() => setText(word)} accessibilityRole="button" style={styles.chip}>
               <Text style={type.barLabel}>{word.trim()}</Text>
             </Pressable>
           ))}
-        </View>
+        </ScrollView>
       ) : null}
 
       {parsed ? (
@@ -397,8 +399,6 @@ export default function Capture() {
           <Icon name="cpu" size={14} color={colors.onShellMuted} />
           <Text style={[type.shellMuted, { flex: 1 }]}>{t.assistantNoAi}</Text>
         </Pressable>
-      ) : !answer && !text.trim() ? (
-        <Text style={type.shellMuted}>{t.assistantHint}</Text>
       ) : null}
 
       {!answer && !text.trim() ? (
@@ -407,7 +407,7 @@ export default function Capture() {
           <Text style={styles.recentText} numberOfLines={1}>
             {t.weekSummary}
           </Text>
-          <Text style={type.shellMeta}>{t.weekFridayHint}</Text>
+          <Icon name={isArabic ? "chevron-left" : "chevron-right"} size={14} color={colors.inkFaint} />
         </Pressable>
       ) : null}
 
@@ -444,7 +444,6 @@ const styles = StyleSheet.create({
   auto: { writingDirection: "auto" },
   inputRow: { flexDirection: "row", alignItems: "flex-end", gap: space.sm },
   mic: { width: 52, height: 52, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.surfaceInset, borderWidth: 1, borderColor: colors.hairline },
-  chipOn: { backgroundColor: colors.urgent },
   action: { gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
   total: { paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
   number: { width: 96, minHeight: 36, paddingHorizontal: space.md, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: textSize.subheadline, color: colors.ink, textAlign: "center" },
