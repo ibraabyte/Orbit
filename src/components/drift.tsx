@@ -16,7 +16,7 @@ import { barHeights, ringRotations } from "@/lib/ring";
 
 type FeatherName = ComponentProps<typeof Feather>["name"];
 // A few symbols Feather has no glyph for: SF Symbols on iOS, the closest Feather glyph elsewhere.
-const EXTRA = { "fork-knife": ["fork.knife", "coffee"], dumbbell: ["dumbbell", "zap"], pills: ["pills", "plus-square"] } as const satisfies Record<string, [SFSymbol, FeatherName]>;
+const EXTRA = { wallet: ["wallet.bifold", "briefcase"], "fork-knife": ["fork.knife", "coffee"], dumbbell: ["dumbbell", "zap"], pills: ["pills", "plus-square"] } as const satisfies Record<string, [SFSymbol, FeatherName]>;
 export type IconName = FeatherName | keyof typeof EXTRA;
 
 const sfSymbols: Partial<Record<FeatherName, SFSymbol>> = {
@@ -93,7 +93,9 @@ const sfSymbols: Partial<Record<FeatherName, SFSymbol>> = {
 export function Icon({ name, size = 16, color = colors.inkMuted }: { name: IconName; size?: number; color?: Color }) {
   const extra = name in EXTRA ? EXTRA[name as keyof typeof EXTRA] : null;
   const symbol = process.env.EXPO_OS === "ios" ? (extra ? extra[0] : sfSymbols[name as FeatherName]) : undefined;
-  if (symbol) return <SymbolView name={symbol} size={size} tintColor={color} weight="medium" accessibilityElementsHidden importantForAccessibility="no" />;
+  // iOS mirrors chart symbols in Arabic, so a rising line would read as falling: they keep their direction.
+  const keepDirection = isArabic && (name === "trending-up" || name === "trending-down");
+  if (symbol) return <SymbolView name={symbol} size={size} tintColor={color} weight="medium" style={keepDirection ? [{ width: size, height: size }, flip] : undefined} accessibilityElementsHidden importantForAccessibility="no" />;
   return <Feather name={extra ? extra[1] : (name as FeatherName)} size={size} color={color} />;
 }
 

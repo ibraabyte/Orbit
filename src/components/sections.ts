@@ -22,7 +22,7 @@ export const manage = [section("tasks", t.tasks, "check-square"), section("phone
 export const logs = [section("health", t.health, "heart"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "bookmark")];
 export const insideHealth = [section("food", t.food, "fork-knife"), section("exercises", et.exercises, "dumbbell"), section("whoop", t.whoop, "activity"), section("medications", rx.medications, "pills")];
 // Money places, investments, cards and installments live inside Finance; they can be pinned the same way.
-export const insideFinance = [section("accounts", t.moneyPlaces, "briefcase"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
+export const insideFinance = [section("accounts", t.moneyPlaces, "wallet"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];
 export const home = [section("vehicles", t.car, "truck"), section("documents", dx.documents, "file-text"), section("media", t.movies, "film")];
 const ask = section("ask", t.askOrbit, "message-circle");
 export const system = [section("integrations", t.integrations, "link"), section("settings", t.settings, "settings")];

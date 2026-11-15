@@ -64,7 +64,7 @@ export default function Finance() {
   const expensesOpen = isFoldOpen(folds, "expenses", false);
 
   const parts: { href: Href; icon: IconName; title: string; subtitle: string; meta: string; badge?: { tone: "urgent" | "accent"; glyph: string; text: string } }[] = [
-    { href: "/accounts", icon: "briefcase", title: t.moneyPlaces, subtitle: fh.moneyPlacesDetail, meta: formatMoney(wealth.cash, currency) },
+    { href: "/accounts", icon: "wallet", title: t.moneyPlaces, subtitle: fh.moneyPlacesDetail, meta: formatMoney(wealth.cash, currency) },
     {
       href: "/investments",
       icon: "trending-up",
