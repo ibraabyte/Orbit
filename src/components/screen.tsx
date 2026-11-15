@@ -77,6 +77,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/settings": { title: t.settings },
   "/notifications": { title: t.notifications },
   "/integrations": { title: t.integrations },
+  "/ai-features": { title: t.pv.usesTitle },
   "/exercises": { title: et.exercises },
   "/gym": { title: et.gym },
   "/injuries": { title: et.injuries },
