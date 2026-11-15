@@ -2,8 +2,8 @@ import { NINE_AM, type AlertTime } from "@/lib/finance";
 import type { PrayerName } from "@/lib/prayer-times";
 
 // Every kind of alert the phone schedules on its own. The morning brief keeps its own setting (lib/morning-brief).
-export type NotificationKind = "prayer" | "reminders" | "medications" | "medStock" | "bills" | "installments" | "car" | "documents" | "shipments" | "budget" | "rest";
-export const NOTIFICATION_KINDS: NotificationKind[] = ["prayer", "reminders", "medications", "medStock", "bills", "installments", "car", "documents", "shipments", "budget", "rest"];
+export type NotificationKind = "prayer" | "reminders" | "medications" | "medStock" | "bills" | "installments" | "car" | "documents" | "shipments" | "leave" | "budget" | "rest";
+export const NOTIFICATION_KINDS: NotificationKind[] = ["prayer", "reminders", "medications", "medStock", "bills", "installments", "car", "documents", "shipments", "leave", "budget", "rest"];
 export const PRAYER_NAMES: PrayerName[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
 
 export type NotificationPrefs = {
@@ -15,7 +15,7 @@ export type NotificationPrefs = {
 };
 
 export const NOTIFICATION_DEFAULT: NotificationPrefs = {
-  kinds: { prayer: true, reminders: true, medications: true, medStock: true, bills: true, installments: true, car: true, documents: true, shipments: true, budget: true, rest: true },
+  kinds: { prayer: true, reminders: true, medications: true, medStock: true, bills: true, installments: true, car: true, documents: true, shipments: true, leave: true, budget: true, rest: true },
   prayers: { fajr: true, dhuhr: true, asr: true, maghrib: true, isha: true },
   headsUp: NINE_AM
 };
@@ -32,6 +32,7 @@ export const NOTIFICATION_SECTION: Record<NotificationKind, string | null> = {
   car: "vehicles",
   documents: "documents",
   shipments: "shipments",
+  leave: null,
   rest: "exercises"
 };
 

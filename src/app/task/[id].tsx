@@ -2,14 +2,16 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Chip, Chips } from "@/components/chips";
-import { Card, CheckItem, EmptyState, Icon, RowButton, type } from "@/components/drift";
+import { Card, CheckItem, EmptyState, Icon, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, Input, Screen } from "@/components/screen";
 import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useTaskActions } from "@/hooks/use-task-actions";
 import { apiUpdate } from "@/lib/api-actions";
-import { getApi } from "@/lib/backend";
+import { phonePosition } from "@/hooks/use-leave-alerts";
+import { getApi, hasServer } from "@/lib/backend";
+import { mapsApi, mx, type PlaceResult } from "@/lib/maps";
 import { formatDate, formatNumber, t } from "@/lib/i18n";
 import { dayAt, nextStepPosition, parseClock, recurrences, reminderAt, reminderLead, REMINDER_LEADS, repeatGlyph, snoozeChanges, sortLists, stepsByTask, type ReminderLead } from "@/lib/tasks";
 import type { RecurrenceRule, Task, TaskPriority } from "@/lib/types";
@@ -23,6 +25,8 @@ type Draft = {
   lead: ReminderLead;
   priority: TaskPriority;
   recurrence: RecurrenceRule | "never";
+  placeName: string;
+  placeId: string | null; // the Google place it was picked from; typing clears it
 };
 
 const pad = (value: number) => String(value).padStart(2, "0");
@@ -38,7 +42,9 @@ function fromTask(task: Task): Draft {
     time: due ? `${pad(due.getHours())}:${pad(due.getMinutes())}` : "09:00",
     lead: reminderLead(task),
     priority: task.priority,
-    recurrence: task.recurrence ?? "never"
+    recurrence: task.recurrence ?? "never",
+    placeName: task.place_name ?? "",
+    placeId: task.place_id
   };
 }
 
@@ -56,9 +62,11 @@ function changesFrom(task: Task, draft: Draft): Record<string, unknown> | null {
     due_at: dueAt,
     reminder_at: remindAt,
     priority: draft.priority,
-    recurrence: draft.recurrence === "never" ? null : draft.recurrence
+    recurrence: draft.recurrence === "never" ? null : draft.recurrence,
+    place_name: draft.placeName.replace(/\s+/g, " ").trim().slice(0, 160) || null,
+    place_id: draft.placeName.trim() ? draft.placeId : null
   };
-  const current: Record<string, unknown> = { title: task.title, notes: task.notes, list_id: task.list_id, due_at: task.due_at, reminder_at: task.reminder_at, priority: task.priority, recurrence: task.recurrence };
+  const current: Record<string, unknown> = { title: task.title, notes: task.notes, list_id: task.list_id, due_at: task.due_at, reminder_at: task.reminder_at, priority: task.priority, recurrence: task.recurrence, place_name: task.place_name, place_id: task.place_id };
   const same = (a: unknown, b: unknown) => (typeof a === "string" && typeof b === "string" && /^\d{4}-/.test(a) ? new Date(a).getTime() === new Date(b).getTime() : a === b);
   return Object.fromEntries(Object.entries(next).filter(([key, value]) => !same(value, current[key])));
 }
@@ -80,6 +88,13 @@ export default function TaskScreen() {
   const [newStep, setNewStep] = useState("");
   const [newList, setNewList] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [maps, setMaps] = useState<boolean | null>(null);
+  const [places, setPlaces] = useState<PlaceResult[] | null>(null);
+  const [searching, setSearching] = useState(false);
+
+  useEffect(() => {
+    if (hasServer()) void mapsApi.status(getApi()).then((found) => setMaps(found.connected), () => setMaps(false));
+  }, []);
 
   useEffect(() => {
     if (!initial) return;
@@ -130,6 +145,18 @@ export default function TaskScreen() {
     if (await act(() => getApi().post("/task-steps", { task_id: task.id, title, position: nextStepPosition(steps) }))) setNewStep("");
   };
 
+  const searchPlaces = async () => {
+    if (draft.placeName.trim().length < 2) return;
+    setSearching(true);
+    try {
+      setPlaces(await mapsApi.places(getApi(), draft.placeName, await phonePosition(false)));
+    } catch (searchError) {
+      setError(searchError instanceof Error ? searchError.message : String(searchError));
+    } finally {
+      setSearching(false);
+    }
+  };
+
   const done = steps.filter((step) => step.done).length;
   const repeatOptions = ["never", ...recurrences] as const;
 
@@ -161,6 +188,22 @@ export default function TaskScreen() {
             <Chips options={[...REMINDER_LEADS, ...(draft.lead === "custom" ? (["custom"] as const) : [])]} value={draft.lead} onChange={(lead) => set({ lead })} label={(lead) => t.leadNames[lead]} />
           </>
         ) : null}
+      </Card>
+
+      <Card title={mx.place}>
+        <View style={styles.inline}>
+          <Input value={draft.placeName} onChangeText={(placeName) => (setPlaces(null), set({ placeName, placeId: null }))} placeholder={mx.placePh} maxLength={160} returnKeyType={maps ? "search" : "done"} onSubmitEditing={() => maps && void searchPlaces()} accessibilityLabel={mx.place} style={{ flex: 1 }} />
+          {maps ? <RowButton icon="search" label={searching ? mx.searching : mx.search} onPress={() => void searchPlaces()} disabled={searching || draft.placeName.trim().length < 2} /> : null}
+        </View>
+        {places?.map((place) => (
+          <ListRow key={place.id} leading={<Icon name="map-pin" size={16} color={colors.inkMuted} />} title={place.name} subtitle={place.address} onPress={() => (setPlaces(null), set({ placeName: place.name, placeId: place.id }))} />
+        ))}
+        {places && !places.length ? <Text style={type.rowSubtitle}>{mx.noResults}</Text> : null}
+        {draft.placeId ? (
+          <Text style={[type.hint, { color: colors.success }]}>{`✓ ${mx.pickedOnMaps}`}</Text>
+        ) : null}
+        {maps === false ? <ListRow leading={<Icon name="navigation" size={16} color={colors.inkMuted} />} title={mx.linkForSearch} href="/maps" chevron /> : <Text style={type.hint}>{mx.placeHint}</Text>}
+        {draft.placeName ? <RowButton outline label={mx.clearPlace} onPress={() => (setPlaces(null), set({ placeName: "", placeId: null }))} /> : null}
       </Card>
 
       <Card title={t.list}>

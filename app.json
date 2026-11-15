@@ -62,7 +62,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Orbit uses your location to calculate prayer times."
+          "locationWhenInUsePermission": "Orbit uses your location to calculate prayer times and, if you link Google Maps, how long the way to your appointments takes."
         }
       ],
       [

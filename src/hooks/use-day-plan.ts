@@ -7,13 +7,28 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { ApiError } from "@/lib/api";
 import { activeProvider, briefStep, serverDetail } from "@/lib/ask";
 import { getApi } from "@/lib/backend";
-import { dayPlanBody, dayPlanCacheKey, dayPlanCacheValue, parseDayPlanCache, type DayPlan } from "@/lib/day-plan";
+import { loadTravelPrefs, phonePosition } from "@/hooks/use-leave-alerts";
+import { mapsApi, tasksToTime } from "@/lib/maps";
+import type { Task } from "@/lib/types";
+import { dayPlanBody, type DayTravel, dayPlanCacheKey, dayPlanCacheValue, parseDayPlanCache, type DayPlan } from "@/lib/day-plan";
 import { featureAi } from "@/lib/feature-models";
 import { isArabic } from "@/lib/i18n";
 import { localDateKey } from "@/lib/insights";
 import { aiQuery, integrationsApi } from "@/lib/integrations";
 import { isNoAiError } from "@/lib/morning-brief";
 import type { PrayerTime } from "@/lib/prayer-times";
+
+// The way to today's appointments goes into the plan only with Google Maps linked, location already allowed, and an
+// appointment with a place still ahead today. Otherwise nothing about where the phone is leaves it.
+async function dayTravel(tasks: Task[], now: Date): Promise<DayTravel | null> {
+  const end = new Date(now);
+  end.setHours(24, 0, 0, 0);
+  if (!tasksToTime(tasks, now, (end.getTime() - now.getTime()) / 3_600_000).length) return null;
+  const status = await mapsApi.status(getApi()).catch(() => null);
+  if (!status?.connected) return null;
+  const origin = await phonePosition(false);
+  return origin ? { origin, prefs: await loadTravelPrefs() } : null;
+}
 
 // Why a plan came from the rules and not from the AI: none connected, not agreed to, or the AI failed or answered badly.
 export type PlanReason = "no-ai" | "consent" | "ai-failed" | null;
@@ -22,9 +37,10 @@ export type DayPlanState = { status: "loading" } | { status: "ready"; plan: DayP
 // Today's plan. With an AI connected and the person's agreement (the same one as Ask Orbit and the morning brief), the
 // server asks that AI once per local day and the plan is kept on the phone; "plan again" asks again from the time now.
 // Without them, or when the AI fails, the server lays the day out with simple rules: nothing is sent anywhere.
-// Prayer times are worked out on the phone; only the five times go to the server, never the location.
+// Prayer times are worked out on the phone; only the five times go to the server. The location goes only to time the
+// way to an appointment with a place, with Google Maps linked (see dayTravel).
 export function useDayPlan(prayers: PrayerTime[], enabled = true) {
-  const { userId } = useDashboardData();
+  const { userId, data } = useDashboardData();
   const [state, setState] = useState<DayPlanState>({ status: "loading" });
   const asking = useRef(false);
   // The day and agreement the last load saw: coming back to Today only loads again when one of them changed.
@@ -32,6 +48,8 @@ export function useDayPlan(prayers: PrayerTime[], enabled = true) {
   const seen = useRef<{ day: string; accepted: string | null; again: boolean } | null>(null);
   const prayersRef = useRef(prayers);
   prayersRef.current = prayers;
+  const tasksRef = useRef(data.tasks);
+  tasksRef.current = data.tasks;
   const locale = isArabic ? "ar" : "en";
 
   const load = useCallback(
@@ -43,7 +61,7 @@ export function useDayPlan(prayers: PrayerTime[], enabled = true) {
       if (!force && seen.current && !seen.current.again && seen.current.day === day && seen.current.accepted === accepted) return;
       asking.current = true;
       seen.current = { day, accepted, again: false };
-      const body = dayPlanBody(prayersRef.current, now, locale);
+      const body = dayPlanBody(prayersRef.current, now, locale, await dayTravel(tasksRef.current, now));
       const drop = () => void AsyncStorage.removeItem(dayPlanCacheKey(userId)).catch(() => undefined);
       const rules = async (reason: PlanReason) => {
         const plan = await getApi().post<DayPlan>("/assistant/day/draft", body);

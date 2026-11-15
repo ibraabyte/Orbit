@@ -15,6 +15,7 @@ import { mt } from "@/lib/seerr";
 import { contentWidth, showsSidebar } from "@/lib/sidebar";
 import { dx } from "@/lib/documents";
 import { rx } from "@/lib/medications";
+import { mx } from "@/lib/maps";
 import { sx } from "@/lib/shipments";
 import { st } from "@/lib/subscriptions";
 import { pt } from "@/lib/plan";
@@ -80,6 +81,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/vehicles": { title: t.car },
   "/documents": { title: dx.documents },
   "/shipments": { title: sx.shipments },
+  "/maps": { title: mx.maps },
   "/media": { title: t.movies },
   "/requests": { title: mt.requests },
   "/ask": { title: t.askOrbit },

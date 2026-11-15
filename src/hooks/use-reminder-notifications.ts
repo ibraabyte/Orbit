@@ -7,6 +7,7 @@ import { handleMedicationResponse, MEDICATION_CATEGORY, setUpMedicationCategory,
 import { useMorningNotifications } from "@/hooks/use-morning-brief";
 import { useNotificationPrefs } from "@/hooks/use-notification-prefs";
 import { usePrayerTimes } from "@/hooks/use-prayer-times";
+import { useLeaveAlerts } from "@/hooks/use-leave-alerts";
 import { useShipmentAlerts } from "@/hooks/use-shipment-alerts";
 import { useVehicles } from "@/hooks/use-vehicles";
 import { useWidgetSync } from "@/hooks/use-widget-sync";
@@ -121,5 +122,6 @@ export function ReminderNotifications() {
   useMedicationStockAlerts();
   useMorningNotifications();
   useShipmentAlerts();
+  useLeaveAlerts();
   return null;
 }
