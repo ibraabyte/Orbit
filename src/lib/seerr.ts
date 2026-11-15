@@ -138,7 +138,156 @@ export type RequestFilter = (typeof REQUEST_FILTERS)[number];
 // The rows on the Movies & TV screen, each with a "see all" list.
 export const DISCOVER_ROWS = ["trending", "movies", "tv", "upcomingMovies", "upcomingTv"] as const;
 export type DiscoverRow = (typeof DISCOVER_ROWS)[number];
-export type DiscoverList = { row: DiscoverRow } | { row: "genre"; kind: SeerrMediaType; genreId: number };
+// Seerr's discover filters (its /discover/movies and /discover/tv). from/to are dates (YYYY-MM-DD); language is the
+// title's original language, not the language the text comes back in.
+export type DiscoverFilters = Partial<
+  Record<"sortBy" | "genre" | "keywords" | "studio" | "network" | "language" | "from" | "to" | "voteAverageGte" | "voteCountGte" | "withRuntimeGte" | "withRuntimeLte" | "watchProviders" | "watchRegion", string>
+>;
+export type DiscoverList =
+  | { row: DiscoverRow }
+  | { row: "genre"; kind: SeerrMediaType; genreId: number }
+  | { row: "studio"; id: number }
+  | { row: "network"; id: number }
+  | { row: "search"; query: string }
+  | { row: "filtered"; kind: SeerrMediaType; filters: DiscoverFilters };
+
+// Where streaming services are looked up. ponytail: fixed to Saudi Arabia; read Seerr's region setting if Orbit
+// ever has users elsewhere.
+export const WATCH_REGION = "SA";
+export type SeerrProvider = { id: number; name: string; logoPath?: string | null; displayPriority?: number };
+
+// Seerr's Discover page is a list of rails the admin arranges (Settings › Discover). Same numbers as Seerr's
+// DiscoverSliderType; 13 and up are rails the admin made, with their own title and data.
+export const SLIDER = {
+  recentlyAdded: 1, recentRequests: 2, watchlist: 3, trending: 4, popularMovies: 5, movieGenres: 6, upcomingMovies: 7, studios: 8, popularTv: 9, tvGenres: 10,
+  upcomingTv: 11, networks: 12, movieKeyword: 13, movieGenre: 14, tvKeyword: 15, tvGenre: 16, search: 17, studio: 18, network: 19, movieStreaming: 20, tvStreaming: 21
+} as const;
+export type SeerrSlider = { id: number; type: number; title?: string | null; enabled: boolean; isBuiltIn?: boolean; data?: string | null; order?: number };
+// Seerr's own defaults, for servers too old to have Settings › Discover.
+export const DEFAULT_SLIDERS: SeerrSlider[] = Array.from({ length: 12 }, (_, index) => ({ id: -(index + 1), type: index + 1, enabled: true, isBuiltIn: true, order: index }));
+
+export type Rail =
+  | { kind: "posters"; list: DiscoverList }
+  | { kind: "recentlyAdded" | "recentRequests" | "watchlist" | "studios" | "networks" }
+  | { kind: "genres"; media: SeerrMediaType };
+
+export function visibleSliders(sliders: SeerrSlider[]) {
+  return sliders.filter((slider) => slider.enabled).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
+// What one of Seerr's rails shows, the way Seerr's own Discover page builds it. null: a kind Orbit doesn't know.
+export function sliderRail(slider: Pick<SeerrSlider, "type" | "data">): Rail | null {
+  const data = slider.data?.trim() ?? "";
+  const filtered = (kind: SeerrMediaType, filters: DiscoverFilters): Rail => ({ kind: "posters", list: { row: "filtered", kind, filters } });
+  const [region, providers] = data.split(",");
+  switch (slider.type) {
+    case SLIDER.recentlyAdded: return { kind: "recentlyAdded" };
+    case SLIDER.recentRequests: return { kind: "recentRequests" };
+    case SLIDER.watchlist: return { kind: "watchlist" };
+    case SLIDER.trending: return { kind: "posters", list: { row: "trending" } };
+    case SLIDER.popularMovies: return { kind: "posters", list: { row: "movies" } };
+    case SLIDER.movieGenres: return { kind: "genres", media: "movie" };
+    case SLIDER.upcomingMovies: return { kind: "posters", list: { row: "upcomingMovies" } };
+    case SLIDER.studios: return { kind: "studios" };
+    case SLIDER.popularTv: return { kind: "posters", list: { row: "tv" } };
+    case SLIDER.tvGenres: return { kind: "genres", media: "tv" };
+    case SLIDER.upcomingTv: return { kind: "posters", list: { row: "upcomingTv" } };
+    case SLIDER.networks: return { kind: "networks" };
+    case SLIDER.movieKeyword: return data ? filtered("movie", { keywords: data }) : null;
+    case SLIDER.tvKeyword: return data ? filtered("tv", { keywords: data }) : null;
+    case SLIDER.movieGenre: return data ? filtered("movie", { genre: data }) : null;
+    case SLIDER.tvGenre: return data ? filtered("tv", { genre: data }) : null;
+    case SLIDER.search: return data ? { kind: "posters", list: { row: "search", query: data } } : null;
+    case SLIDER.studio: return Number(data) ? { kind: "posters", list: { row: "studio", id: Number(data) } } : null;
+    case SLIDER.network: return Number(data) ? { kind: "posters", list: { row: "network", id: Number(data) } } : null;
+    case SLIDER.movieStreaming: return providers ? filtered("movie", { watchRegion: region, watchProviders: providers }) : null;
+    case SLIDER.tvStreaming: return providers ? filtered("tv", { watchRegion: region, watchProviders: providers }) : null;
+    default: return null;
+  }
+}
+
+const BUILT_IN_TITLES: Record<number, keyof typeof en.rows> = {
+  [SLIDER.recentlyAdded]: "recentlyAdded", [SLIDER.recentRequests]: "recentRequests", [SLIDER.watchlist]: "watchlist", [SLIDER.trending]: "trending",
+  [SLIDER.popularMovies]: "movies", [SLIDER.movieGenres]: "movieGenres", [SLIDER.upcomingMovies]: "upcomingMovies", [SLIDER.studios]: "studios",
+  [SLIDER.popularTv]: "tv", [SLIDER.tvGenres]: "tvGenres", [SLIDER.upcomingTv]: "upcomingTv", [SLIDER.networks]: "networks"
+};
+
+export function sliderTitle(slider: Pick<SeerrSlider, "type" | "title">) {
+  const builtIn = BUILT_IN_TITLES[slider.type];
+  return slider.title?.trim() || (builtIn ? mt.rows[builtIn] : mt.rows.filtered);
+}
+
+// Seerr's own studio and network rails (same TMDB ids and order as its Discover page).
+export const STUDIOS = [
+  { id: 2, name: "Disney" }, { id: 127928, name: "20th Century Studios" }, { id: 34, name: "Sony Pictures" }, { id: 174, name: "Warner Bros. Pictures" },
+  { id: 33, name: "Universal" }, { id: 4, name: "Paramount" }, { id: 3, name: "Pixar" }, { id: 521, name: "DreamWorks" }, { id: 420, name: "Marvel Studios" },
+  { id: 9993, name: "DC" }, { id: 41077, name: "A24" }
+];
+export const NETWORKS = [
+  { id: 213, name: "Netflix" }, { id: 2739, name: "Disney+" }, { id: 1024, name: "Prime Video" }, { id: 2552, name: "Apple TV+" }, { id: 453, name: "Hulu" },
+  { id: 49, name: "HBO" }, { id: 4353, name: "Discovery+" }, { id: 2, name: "ABC" }, { id: 19, name: "FOX" }, { id: 359, name: "Cinemax" }, { id: 174, name: "AMC" },
+  { id: 67, name: "Showtime" }, { id: 318, name: "Starz" }, { id: 71, name: "The CW" }, { id: 6, name: "NBC" }, { id: 16, name: "CBS" }, { id: 4330, name: "Paramount+" },
+  { id: 4, name: "BBC One" }, { id: 56, name: "Cartoon Network" }, { id: 80, name: "Adult Swim" }, { id: 13, name: "Nickelodeon" }, { id: 3353, name: "Peacock" }
+];
+
+// The lists that take filters, and what they already filter by. Upcoming, trending and search don't.
+export function filterBase(list: DiscoverList): { kind: SeerrMediaType; filters: DiscoverFilters } | null {
+  switch (list.row) {
+    case "movies": return { kind: "movie", filters: {} };
+    case "tv": return { kind: "tv", filters: {} };
+    case "genre": return { kind: list.kind, filters: { genre: String(list.genreId) } };
+    case "studio": return { kind: "movie", filters: { studio: String(list.id) } };
+    case "network": return { kind: "tv", filters: { network: String(list.id) } };
+    case "filtered": return { kind: list.kind, filters: list.filters };
+    default: return null;
+  }
+}
+
+// The list with the user's choices on top (a choice left empty switches the list's own filter off). With no choices
+// it stays the same list, so it keeps its own path.
+export function withFilters(list: DiscoverList, choices: DiscoverFilters): DiscoverList {
+  const base = filterBase(list);
+  if (!base || !Object.keys(choices).length) return list;
+  const filters = Object.fromEntries(Object.entries({ ...base.filters, ...choices }).filter(([, value]) => value)) as DiscoverFilters;
+  return { row: "filtered", kind: base.kind, filters };
+}
+
+// Seerr's /discover/movies and /discover/tv with filters. Their dates have different names for movies and series.
+export function filteredPath(kind: SeerrMediaType, filters: DiscoverFilters) {
+  const { from, to, ...rest } = filters;
+  const dates = kind === "tv" ? { firstAirDateGte: from, firstAirDateLte: to } : { primaryReleaseDateGte: from, primaryReleaseDateLte: to };
+  const query = Object.entries({ ...rest, ...dates })
+    .filter((entry): entry is [string, string] => Boolean(entry[1]))
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join("&");
+  return `discover/${kind === "tv" ? "tv" : "movies"}${query ? `?${query}` : ""}`;
+}
+
+// A list that came in a link (the Discover screen's params): only the shapes above, with real ids.
+export function parseList(raw: string | undefined): DiscoverList | null {
+  try {
+    const list = JSON.parse(raw ?? "") as Record<string, unknown>;
+    const kind = list.kind === "movie" || list.kind === "tv" ? list.kind : null;
+    const id = Number(list.id);
+    if (DISCOVER_ROWS.includes(list.row as DiscoverRow)) return { row: list.row as DiscoverRow };
+    if (list.row === "genre" && kind && Number(list.genreId) > 0) return { row: "genre", kind, genreId: Number(list.genreId) };
+    if ((list.row === "studio" || list.row === "network") && id > 0) return { row: list.row, id };
+    if (list.row === "search" && typeof list.query === "string" && list.query.trim()) return { row: "search", query: list.query };
+    if (list.row === "filtered" && kind && list.filters && typeof list.filters === "object") {
+      const filters = Object.fromEntries(Object.entries(list.filters).filter(([, value]) => typeof value === "string")) as DiscoverFilters;
+      return { row: "filtered", kind, filters };
+    }
+  } catch {
+    // Not JSON: fall through.
+  }
+  return null;
+}
+
+export function listTitle(list: DiscoverList, name?: string) {
+  if (list.row === "genre") return [name || mt.rows.genre, list.kind === "tv" ? mt.series : mt.movie].join(" · ");
+  if (list.row === "studio" || list.row === "network" || list.row === "search" || list.row === "filtered") return name || mt.rows[list.row];
+  return mt.rows[list.row];
+}
 
 export function normalizeSeerrUrl(url: string) {
   const trimmed = url.trim().replace(/\/+$/, "").replace(/\/api\/v1$/, "");
@@ -335,7 +484,7 @@ export function factLine(details: SeerrDetails) {
 
 const money = (value: number) => digits(`$${value >= 1e9 ? `${(value / 1e9).toFixed(1)}B` : value >= 1e6 ? `${Math.round(value / 1e6)}M` : value.toLocaleString("en")}`);
 
-function languageName(code: string | undefined) {
+export function languageName(code: string | undefined) {
   if (!code) return null;
   try {
     return new Intl.DisplayNames([isArabic ? "ar" : "en"], { type: "language" }).of(code) ?? code;
@@ -385,7 +534,9 @@ export function serverSeerrCall(api: Pick<ApiClient, "request">, language = isAr
 
 // Seerr gives titles, overviews and genres in the language asked for (from TMDB). A path that already names one keeps it.
 export function withLanguage(method: string, path: string, language: string | null) {
-  if (!language || method !== "GET" || /[?&]language=/.test(path)) return path;
+  // On /discover/movies and /discover/tv, Seerr reads "language" as the original language (a filter), and the text
+  // comes in the Seerr account's own display language instead.
+  if (!language || method !== "GET" || /[?&]language=/.test(path) || /^discover\/(movies|tv)(\?|$)/.test(path)) return path;
   return `${path}${path.includes("?") ? "&" : "?"}language=${language}`;
 }
 
@@ -398,18 +549,33 @@ async function withEnglish<T>(call: SeerrCall, path: string, item: T, field: key
 
 function discoverPath(list: DiscoverList) {
   if (list.row === "genre") return `discover/${list.kind === "tv" ? "tv" : "movies"}/genre/${list.genreId}`;
+  if (list.row === "studio") return `discover/movies/studio/${list.id}`;
+  if (list.row === "network") return `discover/tv/network/${list.id}`;
+  if (list.row === "search") return `search?query=${encodeURIComponent(list.query)}`;
+  if (list.row === "filtered") return filteredPath(list.kind, list.filters);
   return { trending: "discover/trending", movies: "discover/movies", tv: "discover/tv", upcomingMovies: "discover/movies/upcoming", upcomingTv: "discover/tv/upcoming" }[list.row];
 }
 
 // Discover lists of one kind come back without mediaType on some Seerr versions.
 function kindOf(list: DiscoverList): SeerrMediaType | null {
-  if (list.row === "genre") return list.kind;
+  if (list.row === "genre" || list.row === "filtered") return list.kind;
+  if (list.row === "studio") return "movie";
+  if (list.row === "network") return "tv";
   if (list.row === "movies" || list.row === "upcomingMovies") return "movie";
   if (list.row === "tv" || list.row === "upcomingTv") return "tv";
   return null;
 }
 
+type MediaRef = { mediaType: SeerrMediaType; tmdbId: number };
+
 export function createSeerrClient(call: SeerrCall) {
+  // Lists that only carry TMDB ids (recently added, requests, watchlist): fetch each title for its name and poster.
+  const titles = (refs: MediaRef[]) =>
+    Promise.all(
+      refs
+        .filter((ref) => (ref.mediaType === "movie" || ref.mediaType === "tv") && ref.tmdbId)
+        .map((ref) => call<SeerrDetails>("GET", `${ref.mediaType}/${ref.tmdbId}`).then((item) => ({ ...item, mediaType: ref.mediaType }), () => null))
+    ).then((items) => uniqueResults(items.filter((item): item is SeerrDetails & { mediaType: SeerrMediaType } => item !== null)));
   const page = <T extends SeerrResult>(path: string, kind: SeerrMediaType | null = null) =>
     call<SeerrPage<T>>("GET", path).then((body) => ({ ...body, results: uniqueResults(body.results.map((item) => (kind && !item.mediaType ? { ...item, mediaType: kind } : item)).filter(isMedia)) }));
   return {
@@ -418,7 +584,19 @@ export function createSeerrClient(call: SeerrCall) {
     search: (query: string, pageNumber = 1) => page(`search?query=${encodeURIComponent(query)}&page=${pageNumber}`).then((body) => body.results),
     searchPage: (query: string, pageNumber = 1) => page(`search?query=${encodeURIComponent(query)}&page=${pageNumber}`),
     trending: () => page("discover/trending").then((body) => body.results),
-    discover: (list: DiscoverList, pageNumber = 1) => page(`${discoverPath(list)}?page=${pageNumber}`, kindOf(list)),
+    discover: (list: DiscoverList, pageNumber = 1) => {
+      const path = discoverPath(list);
+      return page(`${path}${path.includes("?") ? "&" : "?"}page=${pageNumber}`, kindOf(list));
+    },
+    sliders: () => call<SeerrSlider[]>("GET", "settings/discover").then((sliders) => (Array.isArray(sliders) && sliders.length ? sliders : DEFAULT_SLIDERS)),
+    // What arrived on the media server last (Plex, Jellyfin or Emby), newest first.
+    recentlyAdded: (take = 15) => call<{ results: MediaRef[] }>("GET", `media?filter=allavailable&take=${take}&sort=mediaAdded`).then((body) => titles(body.results)),
+    recentRequests: (take = 10) =>
+      call<SeerrRequestPage>("GET", `request?take=${take}&filter=all&sort=added`).then((body) => titles(body.results.map((request) => ({ mediaType: request.type, tmdbId: request.media.tmdbId })))),
+    // Seerr's watchlist: the Plex watchlist, or the one kept in Seerr itself.
+    watchlist: () => call<{ results: MediaRef[] }>("GET", "discover/watchlist").then((body) => titles(body.results ?? [])),
+    providers: (kind: SeerrMediaType) =>
+      call<SeerrProvider[]>("GET", `watchproviders/${kind === "tv" ? "tv" : "movies"}?watchRegion=${WATCH_REGION}`).then((list) => [...list].sort((a, b) => (a.displayPriority ?? 99) - (b.displayPriority ?? 99))),
     genres: (kind: SeerrMediaType) => call<{ id: number; name: string }[]>("GET", `genres/${kind}`),
     requests: (take = 20, filter: RequestFilter = "all") => call<SeerrRequestPage>("GET", `request?take=${take}&filter=${filter}&sort=added`).then((body) => body.results),
     requestPage: (filter: RequestFilter, skip = 0, take = 20) => call<SeerrRequestPage>("GET", `request?take=${take}&skip=${skip}&filter=${filter}&sort=added`),
@@ -461,7 +639,17 @@ const en = {
   seasons: "seasons",
   minutes: "min",
   hours: "h",
-  rows: { trending: "Trending", movies: "Popular movies", tv: "Popular series", upcomingMovies: "Coming soon · movies", upcomingTv: "Coming soon · series", genre: "Genre" } as Record<DiscoverRow | "genre", string>,
+  rows: {
+    trending: "Trending", movies: "Popular movies", tv: "Popular series", upcomingMovies: "Coming soon · movies", upcomingTv: "Coming soon · series", genre: "Genre",
+    studio: "Studio", network: "Network", search: "Search", filtered: "Results", recentlyAdded: "Recently added", recentRequests: "Recent requests",
+    watchlist: "Your Seerr watchlist", studios: "Studios", networks: "Networks", movieGenres: "Movie genres", tvGenres: "Series genres"
+  } as Record<DiscoverRow | "genre" | "studio" | "network" | "search" | "filtered" | "recentlyAdded" | "recentRequests" | "watchlist" | "studios" | "networks" | "movieGenres" | "tvGenres", string>,
+  filter: {
+    show: "Filters", hide: "Hide filters", clear: "Clear filters", sort: "Sort", genres: "Genres", years: "Years", rating: "Rating", runtime: "Length",
+    language: "Original language", streaming: "Streaming in Saudi Arabia",
+    sorts: { popular: "Most popular", newest: "Newest", rating: "Highest rated", title: "A–Z" },
+    runtimes: { short: "Under 90 min", medium: "90–150 min", long: "Over 150 min" }
+  },
   seeAll: "See all",
   loadMore: "Load more",
   nothingFound: "Nothing found. Try another name.",
@@ -544,7 +732,17 @@ const ar: typeof en = {
   seasons: "مواسم",
   minutes: "د",
   hours: "س",
-  rows: { trending: "الرائج", movies: "أفلام مشهورة", tv: "مسلسلات مشهورة", upcomingMovies: "قريبًا · أفلام", upcomingTv: "قريبًا · مسلسلات", genre: "تصنيف" },
+  rows: {
+    trending: "الرائج", movies: "أفلام مشهورة", tv: "مسلسلات مشهورة", upcomingMovies: "قريبًا · أفلام", upcomingTv: "قريبًا · مسلسلات", genre: "تصنيف",
+    studio: "استوديو", network: "قناة", search: "بحث", filtered: "النتائج", recentlyAdded: "أُضيف مؤخرًا", recentRequests: "طلبات حديثة",
+    watchlist: "قائمة مشاهدتك في Seerr", studios: "الاستوديوهات", networks: "القنوات والمنصات", movieGenres: "تصنيفات الأفلام", tvGenres: "تصنيفات المسلسلات"
+  },
+  filter: {
+    show: "الفلاتر", hide: "إخفاء الفلاتر", clear: "امسح الفلاتر", sort: "الترتيب", genres: "التصنيفات", years: "السنوات", rating: "التقييم", runtime: "المدة",
+    language: "اللغة الأصلية", streaming: "منصات البث في السعودية",
+    sorts: { popular: "الأشهر", newest: "الأحدث", rating: "الأعلى تقييمًا", title: "أبجديًا" },
+    runtimes: { short: "أقل من 90 دقيقة", medium: "من 90 إلى 150 دقيقة", long: "أكثر من 150 دقيقة" }
+  },
   seeAll: "الكل",
   loadMore: "عرض المزيد",
   nothingFound: "ما لقينا شي. جرّب اسمًا ثانيًا.",

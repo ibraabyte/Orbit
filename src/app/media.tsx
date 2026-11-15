@@ -12,7 +12,7 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatDate, t } from "@/lib/i18n";
-import { DISCOVER_ROWS, mt, seerrTitle, type DiscoverRow, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult } from "@/lib/seerr";
+import { DEFAULT_SLIDERS, mt, NETWORKS, seerrTitle, sliderRail, sliderTitle, STUDIOS, visibleSliders, type Rail, type SeerrClient, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult, type SeerrSlider } from "@/lib/seerr";
 import type { WatchItem } from "@/lib/types";
 import { groupWatchItems, progressLabel } from "@/lib/watchlist";
 import { space } from "@/components/theme";
@@ -37,7 +37,17 @@ function Connect({ connect, error }: { connect: (url: string, apiKey: string) =>
 type Genre = { id: number; name: string };
 type Pending = { request: SeerrRequest; title: string; posterPath?: string | null };
 
-// Like Seerr's own Discover page: search, request counts, rows of posters, genres, then your watch list.
+// The posters one of Seerr's rails shows. Genre, studio and network rails are chips and load nothing here.
+function railItems(client: SeerrClient, rail: Rail): Promise<SeerrResult[]> | null {
+  if (rail.kind === "posters") return client.discover(rail.list).then((body) => body.results);
+  if (rail.kind === "recentlyAdded") return client.recentlyAdded();
+  if (rail.kind === "recentRequests") return client.recentRequests();
+  if (rail.kind === "watchlist") return client.watchlist();
+  return null;
+}
+
+// Like Seerr's own Discover page: search, request counts, then the rails the admin arranged in Seerr (same order),
+// then your watch list.
 function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   const client = seerr.client!;
   const { sheet } = useOverlays();
@@ -48,7 +58,8 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   const { q } = useLocalSearchParams<{ q?: string }>();
   const [query, setQuery] = useState(q ?? "");
   const [search, setSearch] = useState<{ text: string; page: number; pages: number; results: SeerrResult[] } | null>(null);
-  const [rows, setRows] = useState<Partial<Record<DiscoverRow, SeerrResult[]>>>({});
+  const [sliders, setSliders] = useState<SeerrSlider[]>([]);
+  const [rails, setRails] = useState<Record<number, SeerrResult[]>>({});
   const [genres, setGenres] = useState<{ movie: Genre[]; tv: Genre[] }>({ movie: [], tv: [] });
   const [counts, setCounts] = useState<SeerrCounts | null>(null);
   const [pending, setPending] = useState<Pending[]>([]);
@@ -72,7 +83,22 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
     setLoading(true);
     const quiet = <T,>(work: Promise<T>) => work.catch(() => null);
     await Promise.all([
-      ...DISCOVER_ROWS.map((row) => quiet(client.discover({ row }).then((body) => setRows((before) => ({ ...before, [row]: body.results }))))),
+      quiet(
+        client
+          .sliders()
+          .catch(() => DEFAULT_SLIDERS)
+          .then((all) => {
+            const shown = visibleSliders(all);
+            setSliders(shown);
+            return Promise.all(
+              shown.map((slider) => {
+                const rail = sliderRail(slider);
+                const work = rail ? railItems(client, rail) : null;
+                return work ? quiet(work.then((items) => setRails((before) => ({ ...before, [slider.id]: items })))) : null;
+              })
+            );
+          })
+      ),
       quiet(Promise.all([client.genres("movie"), client.genres("tv")]).then(([movie, tv]) => setGenres({ movie, tv }))),
       quiet(client.counts().then(setCounts)),
       seerr.isAdmin
@@ -188,20 +214,39 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
               ))}
             </Card>
           ) : null}
-          {DISCOVER_ROWS.map((row) => (
-            <PosterRail key={row} title={mt.rows[row]} items={rows[row] ?? []} onSeeAll={() => openDiscover({ row })} empty={rows[row] ? undefined : <EmptyState>{`${t.loading}…`}</EmptyState>} />
-          ))}
-          {(["movie", "tv"] as SeerrMediaType[]).map((kind) =>
-            genres[kind].length ? (
-              <Card key={kind} title={kind === "tv" ? mt.tvGenres : mt.movieGenres}>
-                <BleedRow>
-                  {genres[kind].map((genre) => (
-                    <Chip key={genre.id} label={genre.name} onPress={() => openDiscover({ row: "genre", kind, genreId: genre.id }, genre.name)} />
-                  ))}
-                </BleedRow>
-              </Card>
-            ) : null
-          )}
+          {sliders.map((slider) => {
+            const rail = sliderRail(slider);
+            const title = sliderTitle(slider);
+            if (!rail) return null;
+            if (rail.kind === "genres") {
+              const kind: SeerrMediaType = rail.media;
+              return genres[kind].length ? (
+                <Card key={slider.id} title={title}>
+                  <BleedRow>
+                    {genres[kind].map((genre) => (
+                      <Chip key={genre.id} label={genre.name} onPress={() => openDiscover({ row: "genre", kind, genreId: genre.id }, genre.name)} />
+                    ))}
+                  </BleedRow>
+                </Card>
+              ) : null;
+            }
+            if (rail.kind === "studios" || rail.kind === "networks") {
+              const row = rail.kind === "studios" ? "studio" : "network";
+              return (
+                <Card key={slider.id} title={title}>
+                  <BleedRow>
+                    {(rail.kind === "studios" ? STUDIOS : NETWORKS).map((company) => (
+                      <Chip key={company.id} label={company.name} onPress={() => openDiscover({ row, id: company.id }, company.name)} />
+                    ))}
+                  </BleedRow>
+                </Card>
+              );
+            }
+            const seeAll = rail.kind === "posters" ? () => openDiscover(rail.list, title) : rail.kind === "recentRequests" ? () => openRequests() : undefined;
+            // Recently added and the watchlist are often empty; they stay hidden then, like on Seerr.
+            const waiting = rails[slider.id] ? undefined : rail.kind === "posters" ? <EmptyState>{`${t.loading}…`}</EmptyState> : undefined;
+            return <PosterRail key={slider.id} title={title} items={rails[slider.id] ?? []} onSeeAll={seeAll} empty={waiting} />;
+          })}
         </>
       )}
       {lists.watching.length ? <Card title={t.watching}>{lists.watching.map((item) => watchRow(item, <RowButton label={t.nextEp} onPress={() => watched(item)} />, progressLabel(item)))}</Card> : null}

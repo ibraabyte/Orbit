@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage } from "@/lib/seerr";
+import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER } from "@/lib/seerr";
 
 // A stand-in for Orbit's API client: records the calls the app would send to the server.
 function fakeServer(responses: Record<string, unknown>) {
@@ -163,5 +163,54 @@ describe("seerr language", () => {
     expect(withLanguage("GET", "movie/7?language=en", "ar")).toBe("movie/7?language=en");
     expect(withLanguage("POST", "request", "ar")).toBe("request");
     expect(withLanguage("GET", "movie/7", null)).toBe("movie/7");
+  });
+});
+
+describe("seerr discover rails and filters", () => {
+  it("never sends the display language to discover/movies or discover/tv, where Seerr reads it as original language", () => {
+    expect(withLanguage("GET", "discover/movies?page=1", "ar")).toBe("discover/movies?page=1");
+    expect(withLanguage("GET", "discover/tv", "ar")).toBe("discover/tv");
+    expect(withLanguage("GET", "discover/movies/genre/18?page=1", "ar")).toBe("discover/movies/genre/18?page=1&language=ar");
+  });
+
+  it("builds each rail the way Seerr's Discover page does", () => {
+    expect(sliderRail({ type: SLIDER.popularMovies })).toEqual({ kind: "posters", list: { row: "movies" } });
+    expect(sliderRail({ type: SLIDER.studios })).toEqual({ kind: "studios" });
+    expect(sliderRail({ type: SLIDER.tvKeyword, data: "210024" })).toEqual({ kind: "posters", list: { row: "filtered", kind: "tv", filters: { keywords: "210024" } } });
+    expect(sliderRail({ type: SLIDER.movieStreaming, data: "SA,8|337" })).toEqual({ kind: "posters", list: { row: "filtered", kind: "movie", filters: { watchRegion: "SA", watchProviders: "8|337" } } });
+    expect(sliderRail({ type: SLIDER.network, data: "213" })).toEqual({ kind: "posters", list: { row: "network", id: 213 } });
+    expect(sliderRail({ type: SLIDER.movieGenre, data: "" })).toBeNull();
+    expect(sliderRail({ type: 99 })).toBeNull();
+    expect(visibleSliders([{ id: 1, type: 4, enabled: true, order: 2 }, { id: 2, type: 5, enabled: false, order: 0 }, { id: 3, type: 9, enabled: true, order: 1 }]).map((slider) => slider.id)).toEqual([3, 1]);
+  });
+
+  it("puts filters on movies and series with Seerr's names for each kind's dates", () => {
+    expect(filteredPath("movie", { genre: "18,35", from: "2010-01-01", to: "2019-12-31" })).toBe("discover/movies?genre=18%2C35&primaryReleaseDateGte=2010-01-01&primaryReleaseDateLte=2019-12-31");
+    expect(filteredPath("tv", { from: "2020-01-01", watchProviders: "8|337" })).toBe("discover/tv?watchProviders=8%7C337&firstAirDateGte=2020-01-01");
+    expect(withFilters({ row: "upcomingMovies" }, { genre: "18" })).toEqual({ row: "upcomingMovies" });
+    expect(withFilters({ row: "network", id: 213 }, {})).toEqual({ row: "network", id: 213 });
+    expect(withFilters({ row: "network", id: 213 }, { sortBy: "vote_average.desc" })).toEqual({ row: "filtered", kind: "tv", filters: { network: "213", sortBy: "vote_average.desc" } });
+    // Switching off the genre a list came with drops it from the query.
+    expect(withFilters({ row: "genre", kind: "movie", genreId: 18 }, { genre: undefined })).toEqual({ row: "filtered", kind: "movie", filters: {} });
+  });
+
+  it("only takes list shapes it knows from a link", () => {
+    expect(parseList(JSON.stringify({ row: "studio", id: 2 }))).toEqual({ row: "studio", id: 2 });
+    expect(parseList(JSON.stringify({ row: "filtered", kind: "tv", filters: { genre: "18", evil: 5 } }))).toEqual({ row: "filtered", kind: "tv", filters: { genre: "18" } });
+    expect(parseList(JSON.stringify({ row: "studio", id: "x" }))).toBeNull();
+    expect(parseList("not json")).toBeNull();
+  });
+
+  it("loads the admin's rails, and titles for lists that only carry ids", async () => {
+    const base = "/integrations/seerr/api";
+    const answers: Record<string, unknown> = {
+      [`GET ${base}/settings/discover`]: [],
+      [`GET ${base}/media?filter=allavailable&take=15&sort=mediaAdded`]: { results: [{ mediaType: "movie", tmdbId: 7 }, { mediaType: "music", tmdbId: 1 }, { mediaType: "tv", tmdbId: 404 }] },
+      [`GET ${base}/movie/7`]: { id: 7, title: "Made Up" }
+    };
+    const call = <T,>(method: string, path: string) => (`${method} ${path}` in answers ? Promise.resolve(answers[`${method} ${path}`] as T) : Promise.reject(new Error(path)));
+    const seerr = createSeerrClient(serverSeerrCall({ request: call } as never, null));
+    expect((await seerr.sliders()).length).toBe(12);
+    expect(await seerr.recentlyAdded()).toEqual([{ id: 7, title: "Made Up", mediaType: "movie" }]);
   });
 });

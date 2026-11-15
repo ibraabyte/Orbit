@@ -12,9 +12,9 @@ import { contentWidth } from "@/lib/sidebar";
 
 export const openTitle = (kind: SeerrMediaType, id: number) => router.push({ pathname: "/title", params: { kind, id: String(id) } });
 export const openPerson = (id: number) => router.push({ pathname: "/person", params: { id: String(id) } });
+// The list travels as JSON; the Discover screen checks it before using it.
 export function openDiscover(list: DiscoverList, name?: string) {
-  const params = list.row === "genre" ? { row: list.row, kind: list.kind, genre: String(list.genreId), name: name ?? "" } : { row: list.row };
-  router.push({ pathname: "/discover", params });
+  router.push({ pathname: "/discover", params: { list: JSON.stringify(list), name: name ?? "" } });
 }
 
 const POSTER_RATIO = 1.5;

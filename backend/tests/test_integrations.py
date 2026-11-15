@@ -196,7 +196,7 @@ def test_proxy_still_refuses_near_misses(client: TestClient, auth: dict, fake_se
     client.put("/integrations/seerr", json={"url": "https://seerr.example.com", "api_key": KEY}, headers=auth)
     before = len(fake_seerr)
     for method, path in [
-        ("GET", "discover/watchlist"),
+        ("GET", "discover/keyword/5/movies"),
         ("GET", "tv/5/season/2/episode/1"),
         ("GET", "person/31/../../settings/main"),
         ("GET", "user/1/settings/main"),
@@ -322,3 +322,18 @@ def test_new_request_names_who_asked():
     assert texts["en"][1] == "Made Up Show · by Sara"
     assert data == {"url": "/title?kind=tv&id=9"}
     assert seerr.notification({}) is None
+
+
+def test_proxy_allows_the_discover_rails_and_nothing_next_to_them():
+    for path in [
+        "settings/discover",
+        "media",
+        "discover/movies/studio/2",
+        "discover/tv/network/213",
+        "discover/watchlist",
+        "watchproviders/tv",
+    ]:
+        assert seerr.allowed("GET", path), path
+    for path in ["settings/main", "settings/discover/reset", "media/5", "watchproviders/regions"]:
+        assert not seerr.allowed("GET", path), path
+    assert not seerr.allowed("POST", "settings/discover")

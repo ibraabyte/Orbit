@@ -33,7 +33,14 @@ ALLOWED: list[tuple[str, re.Pattern[str]]] = [
         ("GET", r"discover/trending"),
         ("GET", r"discover/(movies|tv)(/upcoming)?"),
         ("GET", r"discover/(movies|tv)/genre/\d+"),
+        ("GET", r"discover/movies/studio/\d+"),
+        ("GET", r"discover/tv/network/\d+"),
+        ("GET", r"discover/watchlist"),
         ("GET", r"genres/(movie|tv)"),
+        # The rails the admin arranged in Seerr, what arrived on the media server last, and streaming services.
+        ("GET", r"settings/discover"),
+        ("GET", r"media"),
+        ("GET", r"watchproviders/(movies|tv)"),
         # One title: details, its seasons and episodes, ratings, and what is like it.
         ("GET", r"(movie|tv)/\d+"),
         ("GET", r"(movie|tv)/\d+/(recommendations|similar)"),
