@@ -47,6 +47,7 @@ ALLOWED: list[tuple[str, re.Pattern[str]]] = [
         ("GET", r"movie/\d+/ratings"),
         ("GET", r"tv/\d+/season/\d+"),
         ("GET", r"person/\d+(/combined_credits)?"),
+        ("GET", r"collection/\d+"),
         # Requests. Seerr itself decides who may see, approve, retry or cancel which request.
         ("GET", r"request"),
         ("GET", r"request/count"),

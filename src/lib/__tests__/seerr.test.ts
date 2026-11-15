@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER } from "@/lib/seerr";
+import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER, collectionToRequest } from "@/lib/seerr";
 
 // A stand-in for Orbit's API client: records the calls the app would send to the server.
 function fakeServer(responses: Record<string, unknown>) {
@@ -212,5 +212,27 @@ describe("seerr discover rails and filters", () => {
     const seerr = createSeerrClient(serverSeerrCall({ request: call } as never, null));
     expect((await seerr.sliders()).length).toBe(12);
     expect(await seerr.recentlyAdded()).toEqual([{ id: 7, title: "Made Up", mediaType: "movie" }]);
+  });
+});
+
+describe("seerr search and collections", () => {
+  it("splits search into titles, people and collections, and fills a collection's films", async () => {
+    const base = "/integrations/seerr/api";
+    const answers: Record<string, unknown> = {
+      [`GET ${base}/search?query=dune&page=1`]: {
+        page: 1,
+        totalPages: 1,
+        results: [{ id: 1, mediaType: "movie", title: "Dune" }, { id: 2, mediaType: "person", name: "Made Up Actor" }, { id: 3, mediaType: "collection", title: "Dune Collection" }]
+      },
+      [`GET ${base}/collection/3`]: { id: 3, name: "Dune Collection", overview: "Both films.", parts: [{ id: 1, title: "Dune", mediaInfo: { status: 5 } }, { id: 4, title: "Dune: Part Two" }] }
+    };
+    const call = <T,>(method: string, path: string) => (`${method} ${path}` in answers ? Promise.resolve(answers[`${method} ${path}`] as T) : Promise.reject(new Error(path)));
+    const seerr = createSeerrClient(serverSeerrCall({ request: call } as never, null));
+    const found = await seerr.searchPage("dune");
+    expect([found.results, found.people, found.collections].map((list) => list.map((item) => item.id))).toEqual([[1], [2], [3]]);
+    const collection = await seerr.collection(3);
+    expect(collection.parts.every((part) => part.mediaType === "movie")).toBe(true);
+    // Only the film that isn't on the server yet gets asked for.
+    expect(collectionToRequest(collection.parts).map((part) => part.id)).toEqual([4]);
   });
 });

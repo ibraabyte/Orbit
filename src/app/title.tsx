@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, CheckItem, EmptyState, Icon, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { RequestOptions, useRequestOptions } from "@/components/request-options";
-import { CastCard, Chip, FactRows, openDiscover, Poster, PosterRail, StatusPill } from "@/components/seerr-parts";
+import { CastCard, Chip, FactRows, openCollection, openDiscover, Poster, PosterRail, StatusPill } from "@/components/seerr-parts";
 import { BleedRow, Button, CONTENT_MAX_WIDTH } from "@/components/screen";
 import { colors, fonts, lineHeights, radius, shadow, space, textSize, usePalette } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -341,6 +341,12 @@ export default function Title() {
           {facts.length ? (
             <Card title={mt.details}>
               <FactRows rows={facts} />
+            </Card>
+          ) : null}
+
+          {item.collection ? (
+            <Card title={mt.collection}>
+              <ListRow leading={<Poster path={item.collection.posterPath} title={item.collection.name} width={36} />} title={item.collection.name} onPress={() => openCollection(item.collection!.id)} />
             </Card>
           ) : null}
 

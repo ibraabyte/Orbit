@@ -12,6 +12,7 @@ import { contentWidth } from "@/lib/sidebar";
 
 export const openTitle = (kind: SeerrMediaType, id: number) => router.push({ pathname: "/title", params: { kind, id: String(id) } });
 export const openPerson = (id: number) => router.push({ pathname: "/person", params: { id: String(id) } });
+export const openCollection = (id: number) => router.push({ pathname: "/collection", params: { id: String(id) } });
 // The list travels as JSON; the Discover screen checks it before using it.
 export function openDiscover(list: DiscoverList, name?: string) {
   router.push({ pathname: "/discover", params: { list: JSON.stringify(list), name: name ?? "" } });
@@ -47,7 +48,7 @@ export function PosterCard({ item, width, onPress }: { item: SeerrResult; width:
   const year = seerrYear(item);
   return (
     <Pressable
-      onPress={onPress ?? (() => (item.mediaType === "movie" || item.mediaType === "tv") && openTitle(item.mediaType, item.id))}
+      onPress={onPress ?? (() => (item.mediaType === "collection" ? openCollection(item.id) : (item.mediaType === "movie" || item.mediaType === "tv") && openTitle(item.mediaType, item.id)))}
       accessibilityRole="button"
       accessibilityLabel={[name, year, badge?.label].filter(Boolean).join(", ")}
       style={({ pressed }) => [{ width, gap: space.sm }, pressed && { opacity: 0.7 }]}
@@ -64,7 +65,7 @@ export function PosterCard({ item, width, onPress }: { item: SeerrResult; width:
         <Text style={type.rowTitle} numberOfLines={2}>
           {name}
         </Text>
-        <Text style={type.rowSubtitle}>{[year, item.mediaType === "tv" ? mt.series : mt.movie].filter(Boolean).join(" · ")}</Text>
+        <Text style={type.rowSubtitle}>{[year, item.mediaType === "tv" ? mt.series : item.mediaType === "collection" ? mt.collection : mt.movie].filter(Boolean).join(" · ")}</Text>
       </View>
     </Pressable>
   );

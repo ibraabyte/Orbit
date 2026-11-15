@@ -18,7 +18,7 @@ export const REQUEST_STATUS = { 1: "Waiting for approval", 2: "Approved", 3: "De
 
 export type SeerrResult = {
   id: number;
-  mediaType: SeerrMediaType | "person";
+  mediaType: SeerrMediaType | "person" | "collection";
   title?: string;
   name?: string;
   releaseDate?: string;
@@ -77,7 +77,13 @@ export type SeerrDetails = SeerrResult & {
   relatedVideos?: SeerrVideo[];
   externalIds?: { imdbId?: string | null };
   imdbId?: string | null;
+  // A movie in a series of films (TMDB collection).
+  collection?: { id: number; name: string; posterPath?: string | null; backdropPath?: string | null } | null;
 };
+
+// A TMDB collection: the films of one series, oldest first.
+export type SeerrCollection = { id: number; name: string; overview?: string; posterPath?: string | null; backdropPath?: string | null; parts: SeerrResult[] };
+export type SeerrSearchPage = { page: number; totalPages: number; results: SeerrResult[]; people: SeerrResult[]; collections: SeerrResult[] };
 
 export type SeerrRatings = { criticsScore?: number; criticsRating?: string; audienceScore?: number; audienceRating?: string; url?: string };
 
@@ -261,6 +267,11 @@ export function filteredPath(kind: SeerrMediaType, filters: DiscoverFilters) {
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
     .join("&");
   return `discover/${kind === "tv" ? "tv" : "movies"}${query ? `?${query}` : ""}`;
+}
+
+// The films of a collection Seerr would take a request for: not on the server, not asked for yet.
+export function collectionToRequest(parts: SeerrResult[]) {
+  return parts.filter((part) => canRequest(part));
 }
 
 // A list that came in a link (the Discover screen's params): only the shapes above, with real ids.
@@ -582,7 +593,19 @@ export function createSeerrClient(call: SeerrCall) {
     status: () => call<{ version: string }>("GET", "status"),
     me: () => call<SeerrUser>("GET", "auth/me"),
     search: (query: string, pageNumber = 1) => page(`search?query=${encodeURIComponent(query)}&page=${pageNumber}`).then((body) => body.results),
-    searchPage: (query: string, pageNumber = 1) => page(`search?query=${encodeURIComponent(query)}&page=${pageNumber}`),
+    // Like Seerr's search: titles, and the people and collections that match too.
+    searchPage: (query: string, pageNumber = 1): Promise<SeerrSearchPage> =>
+      call<SeerrPage<SeerrResult>>("GET", `search?query=${encodeURIComponent(query)}&page=${pageNumber}`).then((body) => ({
+        page: body.page,
+        totalPages: body.totalPages,
+        results: uniqueResults(body.results.filter(isMedia)),
+        people: uniqueResults(body.results.filter((item) => item.mediaType === "person")),
+        collections: uniqueResults(body.results.filter((item) => item.mediaType === "collection"))
+      })),
+    collection: (collectionId: number) =>
+      call<SeerrCollection>("GET", `collection/${collectionId}`)
+        .then((item) => withEnglish(call, `collection/${collectionId}`, item, "overview"))
+        .then((item) => ({ ...item, parts: uniqueResults((item.parts ?? []).map((part) => ({ ...part, mediaType: "movie" as const }))) })),
     trending: () => page("discover/trending").then((body) => body.results),
     discover: (list: DiscoverList, pageNumber = 1) => {
       const path = discoverPath(list);
@@ -716,6 +739,12 @@ const en = {
   releaseStatus: { Released: "Released", "Post Production": "Post production", "In Production": "In production", Planned: "Planned", Rumored: "Rumored", Canceled: "Canceled", "Returning Series": "Still running", Ended: "Ended", Pilot: "Pilot" } as Record<string, string>,
   watchList: "My watch list",
   disconnectSeerr: "Disconnect Seerr",
+  people: "People",
+  collections: "Collections",
+  collection: "Collection",
+  requestMovies: (count: number) => (count === 1 ? "Request 1 movie" : `Request ${count} movies`),
+  requestedMovies: (count: number) => (count === 1 ? "Requested 1 movie." : `Requested ${count} movies.`),
+  allRequested: "Every movie here is on the server or already requested.",
   pushTitle: "Notifications on your phone",
   pushSteps: "In Seerr, open Settings › Notifications › Webhook. Turn it on, paste this link as the Webhook URL, pick the notifications you want, then Save. Tap Test to try it.",
   shareLink: "Share link",
@@ -810,6 +839,12 @@ const ar: typeof en = {
   releaseStatus: { Released: "معروض", "Post Production": "في المونتاج", "In Production": "قيد التصوير", Planned: "مخطط له", Rumored: "إشاعة", Canceled: "ملغي", "Returning Series": "مستمر", Ended: "انتهى", Pilot: "حلقة تجريبية" },
   watchList: "قائمة مشاهدتي",
   disconnectSeerr: "افصل Seerr",
+  people: "أشخاص",
+  collections: "المجموعات",
+  collection: "مجموعة",
+  requestMovies: (count: number) => (count === 1 ? "اطلب فيلمًا واحدًا" : count === 2 ? "اطلب فيلمين" : count <= 10 ? `اطلب ${digits(String(count))} أفلام` : `اطلب ${digits(String(count))} فيلمًا`),
+  requestedMovies: (count: number) => (count === 1 ? "طُلب فيلم واحد." : count === 2 ? "طُلب فيلمان." : count <= 10 ? `طُلبت ${digits(String(count))} أفلام.` : `طُلب ${digits(String(count))} فيلمًا.`),
+  allRequested: "كل أفلام المجموعة موجودة أو مطلوبة.",
   pushTitle: "التنبيهات على جوالك",
   pushSteps: "في Seerr افتح Settings ثم Notifications ثم Webhook. فعّله، والصق هذا الرابط في Webhook URL، واختر التنبيهات التي تريدها، ثم احفظ. اضغط Test للتجربة.",
   shareLink: "شارك الرابط",

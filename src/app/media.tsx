@@ -6,7 +6,7 @@ import { Alert, Share, Text, View } from "react-native";
 import { Card, EmptyState, ListRow, RowButton, StatGrid, StatTile, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { SeerrConnectForm } from "@/components/seerr-connect-form";
-import { Chip, openDiscover, openTitle, Poster, PosterGrid, PosterRail, SeeAll } from "@/components/seerr-parts";
+import { CastCard, Chip, openDiscover, openTitle, Poster, PosterGrid, PosterRail, SeeAll } from "@/components/seerr-parts";
 import { BleedRow, Button, Screen } from "@/components/screen";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
@@ -57,7 +57,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
   // Opened from a saved movie in the saver: start with its title searched.
   const { q } = useLocalSearchParams<{ q?: string }>();
   const [query, setQuery] = useState(q ?? "");
-  const [search, setSearch] = useState<{ text: string; page: number; pages: number; results: SeerrResult[] } | null>(null);
+  const [search, setSearch] = useState<{ text: string; page: number; pages: number; results: SeerrResult[]; people: SeerrResult[]; collections: SeerrResult[] } | null>(null);
   const [sliders, setSliders] = useState<SeerrSlider[]>([]);
   const [rails, setRails] = useState<Record<number, SeerrResult[]>>({});
   const [genres, setGenres] = useState<{ movie: Genre[]; tv: Genre[] }>({ movie: [], tv: [] });
@@ -70,7 +70,17 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
     setLoading(true);
     try {
       const body = await client.searchPage(text.trim(), page);
-      setSearch((before) => ({ text: text.trim(), page: body.page, pages: body.totalPages, results: page > 1 && before ? [...before.results, ...body.results] : body.results }));
+      setSearch((before) => {
+        const keep = page > 1 && before ? before : null;
+        return {
+          text: text.trim(),
+          page: body.page,
+          pages: body.totalPages,
+          results: keep ? [...keep.results, ...body.results] : body.results,
+          people: keep ? [...keep.people, ...body.people] : body.people,
+          collections: keep ? [...keep.collections, ...body.collections] : body.collections
+        };
+      });
     } catch (error) {
       Alert.alert("Seerr", error instanceof Error ? error.message : t.tryAgain);
     } finally {
@@ -179,10 +189,22 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
     >
       {seerr.error ? <EmptyState>{seerr.error}</EmptyState> : null}
       {search ? (
-        <Card title={t.results}>
-          {search.results.length ? <PosterGrid items={search.results} /> : <EmptyState>{loading ? `${t.loading}…` : mt.nothingFound}</EmptyState>}
-          {search.page < search.pages ? <Button variant="outline" title={mt.loadMore} disabled={loading} onPress={() => runSearch(search.text, search.page + 1)} /> : null}
-        </Card>
+        <>
+          {search.people.length ? (
+            <Card title={mt.people}>
+              <BleedRow>
+                {search.people.map((person) => (
+                  <CastCard key={person.id} person={{ id: person.id, name: person.name ?? "", profilePath: person.profilePath }} />
+                ))}
+              </BleedRow>
+            </Card>
+          ) : null}
+          <PosterRail title={mt.collections} items={search.collections} />
+          <Card title={t.results}>
+            {search.results.length ? <PosterGrid items={search.results} /> : <EmptyState>{loading ? `${t.loading}…` : mt.nothingFound}</EmptyState>}
+            {search.page < search.pages ? <Button variant="outline" title={mt.loadMore} disabled={loading} onPress={() => runSearch(search.text, search.page + 1)} /> : null}
+          </Card>
+        </>
       ) : (
         <>
           <Card title={seerr.isAdmin ? mt.allRequests : mt.myRequests} action={<SeeAll onPress={() => openRequests()} />}>

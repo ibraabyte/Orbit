@@ -332,8 +332,9 @@ def test_proxy_allows_the_discover_rails_and_nothing_next_to_them():
         "discover/tv/network/213",
         "discover/watchlist",
         "watchproviders/tv",
+        "collection/10",
     ]:
         assert seerr.allowed("GET", path), path
-    for path in ["settings/main", "settings/discover/reset", "media/5", "watchproviders/regions"]:
+    for path in ["settings/main", "settings/discover/reset", "media/5", "watchproviders/regions", "collection/10/request"]:
         assert not seerr.allowed("GET", path), path
     assert not seerr.allowed("POST", "settings/discover")
