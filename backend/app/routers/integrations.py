@@ -22,6 +22,7 @@ from app.config import get_settings
 from app.deps import Db, UserId
 from app.models import AiConnection, Profile, ServiceConnection, User, VoiceConnection, WhoopConnection
 from app.models.integrations import AI_CHOICES, AI_PROVIDERS, VOICE_PROVIDERS
+from app.routers.apple_health import AppleHealthStatus, apple_health_status
 from app.routers.chatgpt import ChatgptStatus
 from app.security import decrypt_secret, encrypt_secret
 from app.services import chatgpt_auth, feature_models, seerr, voice_stt, whoop_ai, whoop_api
@@ -127,6 +128,7 @@ def _features(db: Session, user_id) -> list[FeatureStatus]:
 
 class Overview(BaseModel):
     whoop: WhoopOverview
+    apple_health: AppleHealthStatus
     seerr: SeerrStatus
     # ai: the default API-key connection, kept for app versions from before more than one AI could be connected.
     ai: AiStatus
@@ -231,6 +233,7 @@ def overview(user_id: UserId, db: Db):
             last_synced_at=whoop.last_synced_at if whoop else None,
             last_sync_error=whoop.last_sync_error if whoop else None,
         ),
+        apple_health=apple_health_status(user_id, db),
         seerr=_seerr_status(_seerr_row(db, user_id)),
         ai=_ai_status(db, user_id),
         ais=_ai_choices(db, user_id),
