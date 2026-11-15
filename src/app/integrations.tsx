@@ -118,6 +118,8 @@ export default function Integrations() {
         </TileGrid>
       </Card>
 
+      <GmailCard tile status={gmail} onChange={load} returnPath="integrations" />
+
       <Card title={t.pv.svcMedia}>
         <TileGrid>
           <ConnectionTile
@@ -148,7 +150,6 @@ export default function Integrations() {
         </TileGrid>
       </Card>
 
-      <GmailCard tile status={gmail} onChange={load} returnPath="integrations" />
 
       <BankSmsCard />
     </Screen>
