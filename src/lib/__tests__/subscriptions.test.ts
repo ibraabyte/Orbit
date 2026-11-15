@@ -18,11 +18,12 @@ describe("subscription hunter", () => {
       find({ id: "c", status: "tracked" }),
       find({ id: "d", status: "cancelled" }),
       find({ id: "e", status: "cancelled", flags: ["charged_after_cancel"] }),
-      find({ id: "f", status: "dismissed" })
+      find({ id: "f", status: "dismissed" }),
+      find({ id: "g", flags: [] })
     ];
     const groups = groupFinds(finds);
     expect(groups.needsLook.map((f) => f.id)).toEqual(["a", "e"]);
-    expect(groups.keeping.map((f) => f.id)).toEqual(["b", "c"]);
+    expect(groups.keeping.map((f) => f.id)).toEqual(["b", "c", "g"]);
     expect(groups.setAside.map((f) => f.id)).toEqual(["d", "f"]);
     expect(needsLookCount(finds)).toBe(2);
   });

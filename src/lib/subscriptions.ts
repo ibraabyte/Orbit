@@ -240,9 +240,9 @@ export type FindGroups = { needsLook: SubscriptionFind[]; keeping: SubscriptionF
 
 export function groupFinds(finds: SubscriptionFind[]): FindGroups {
   return {
-    // A cancelled one that still charges goes back to the top.
-    needsLook: finds.filter((f) => f.status === "new" || (f.status === "cancelled" && f.flags.includes("charged_after_cancel"))),
-    keeping: finds.filter((f) => f.status === "kept" || f.status === "tracked"),
+    // A cancelled one that still charges goes back to the top. A new one with nothing to flag is already in your bills.
+    needsLook: finds.filter((f) => (f.status === "new" && f.flags.length > 0) || (f.status === "cancelled" && f.flags.includes("charged_after_cancel"))),
+    keeping: finds.filter((f) => f.status === "kept" || f.status === "tracked" || (f.status === "new" && !f.flags.length)),
     setAside: finds.filter((f) => (f.status === "cancelled" && !f.flags.includes("charged_after_cancel")) || f.status === "dismissed")
   };
 }
