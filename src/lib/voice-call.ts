@@ -65,6 +65,16 @@ export function pickedVoice(options: VoiceOption[], saved: string | null | undef
   return options[0]?.id ?? null;
 }
 
+// A voice's short name: ElevenLabs names carry a description after " - " ("Ali - Saudi Arabic" → "Ali").
+export const voiceLabel = (option: VoiceOption) => option.name.split(" - ")[0]!.trim() || option.name;
+
+// The few voices offered the first time: the first ones (Arabic first), always with the one in use.
+export function firstVoices(options: VoiceOption[], current: string | null, count = 4): VoiceOption[] {
+  const few = options.slice(0, count);
+  const now = options.find((option) => option.id === current);
+  return now && !few.includes(now) ? [...few.slice(0, count - 1), now] : few;
+}
+
 type Event = { type?: string; [key: string]: unknown };
 
 const text = (value: unknown) => (typeof value === "string" ? value : "");

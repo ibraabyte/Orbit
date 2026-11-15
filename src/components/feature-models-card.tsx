@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { CallVoiceRow } from "@/components/call-voice-row";
 import { Alert } from "react-native";
 import { IconMark, PickRow, ProviderMark, type Pick } from "@/components/ai-provider-parts";
 import { Card, type IconName } from "@/components/drift";
@@ -53,7 +54,7 @@ export function FeatureModelsCard({ overview, onSaved }: { overview: Integration
     return [...(fallback ? [{ ...fallback, label: `${t.featureDefaultOption} · ${fallback.label}` }] : []), ...others.map((choice) => toPick(row, choice))];
   };
 
-  const group = (title: string, list: FeatureStatus[]) =>
+  const group = (title: string, list: FeatureStatus[], extra?: ReactNode) =>
     list.length ? (
       <Card title={title}>
         {list.map((row) => {
@@ -62,13 +63,14 @@ export function FeatureModelsCard({ overview, onSaved }: { overview: Integration
           // The closed row shows what is used now, by its plain name.
           return <PickRow key={row.feature} icon={ICONS[row.feature]} title={t.featureNames[row.feature]} picks={picks} value={value} summary={toPick(row, row.effective!, value)} disabled={saving} onPick={(key) => void pick(row, key)} />;
         })}
+        {extra}
       </Card>
     ) : null;
 
   return (
     <>
       {group(t.pv.basicText, rows.filter((row) => row.kind === "ai"))}
-      {group(t.pv.basicVoice, rows.filter((row) => row.kind !== "ai"))}
+      {group(t.pv.basicVoice, rows.filter((row) => row.kind !== "ai"), <CallVoiceRow />)}
     </>
   );
 }

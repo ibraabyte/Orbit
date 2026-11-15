@@ -13,7 +13,7 @@ import { elevenLabsAvailable, useVoiceCall, voiceCallAvailable } from "@/hooks/u
 import { actionRows, applyActions, kindName, opName, type ProposedAction } from "@/lib/assistant";
 import { getApi } from "@/lib/backend";
 import { digits, isArabic, t } from "@/lib/i18n";
-import { callClock, callConsentKey, callVoiceKey, MAX_CALL_SECONDS, pickedVoice, providerName, providerOf, voiceOptions, type CallPhase, type CallStatus } from "@/lib/voice-call";
+import { callClock, callConsentKey, callVoiceKey, firstVoices, voiceLabel, MAX_CALL_SECONDS, pickedVoice, providerName, providerOf, voiceOptions, type CallPhase, type CallStatus } from "@/lib/voice-call";
 
 const phaseText: Record<CallPhase, string> = {
   idle: "",
@@ -84,6 +84,8 @@ export default function Call() {
 
   const begin = () => {
     setPending([]);
+    // The first call settles the voice; after that it is changed under Connections › Advanced.
+    if (voice && !saved[provider]) pickVoice(voice);
     // Agreed for this company (the value is the company; agreeing to one doesn't cover the other).
     if (consent?.split(",").includes(provider)) return void call.start(voice);
     // The voice leaves the phone, so ask once. Saying no keeps the call off.
@@ -161,16 +163,16 @@ export default function Call() {
             <View style={styles.stage}>
               <Orb phase={phase} size={148} />
             </View>
-            {voices.length ? (
+            {/* A few voices to pick from the first time only; later the voice is changed in settings. */}
+            {voices.length && !saved[provider] ? (
               <View style={{ gap: 10 }}>
                 <Text style={styles.meta}>{t.callVoice}</Text>
                 <View style={styles.chips}>
-                  {voices.map((option) => (
+                  {firstVoices(voices, voice).map((option) => (
                     <Pressable key={option.id} onPress={() => pickVoice(option.id)} accessibilityRole="tab" accessibilityState={{ selected: voice === option.id }} style={[styles.chip, voice === option.id && styles.chipOn]}>
                       <Text style={[styles.chipText, voice === option.id && { color: D.bg }]} numberOfLines={1}>
-                        {option.name}
+                        {voiceLabel(option)}
                       </Text>
-                      {option.arabic ? <Text style={[styles.chipTag, voice === option.id && { color: D.bg }]}>{t.callArabic}</Text> : null}
                     </Pressable>
                   ))}
                 </View>
@@ -290,7 +292,6 @@ const styles = StyleSheet.create({
   chip: { minHeight: 36, maxWidth: "100%", paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 6, borderRadius: radius.pill, backgroundColor: D.inset },
   chipOn: { backgroundColor: D.sand },
   chipText: { fontFamily: fonts.medium, fontSize: 14, color: D.ink },
-  chipTag: { fontFamily: fonts.semibold, fontSize: 11, color: D.sand },
   card: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 18, borderWidth: 1, borderColor: D.hair, backgroundColor: D.surface },
   cardTitle: { fontFamily: fonts.semibold, fontSize: 15, color: D.ink, writingDirection: "auto" },
   cardMeta: { fontFamily: fonts.regular, fontSize: 12, color: D.muted },

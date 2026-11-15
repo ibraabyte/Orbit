@@ -24,6 +24,7 @@ const sfSymbols: Partial<Record<IconName, SFSymbol>> = {
   "bar-chart-2": "chart.bar",
   bell: "bell",
   bookmark: "bookmark",
+  user: "person",
   briefcase: "briefcase",
   calendar: "calendar",
   camera: "camera",

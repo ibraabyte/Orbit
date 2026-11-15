@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { t } from "@/lib/i18n";
 import {
   CALL_VOICES,
+  firstVoices,
+  voiceLabel,
   callClock,
   callConsentKey,
   callVoiceKey,
@@ -168,5 +170,17 @@ describe("the voice call", () => {
     expect(t.callCost).toContain("{n}");
     expect(t.callCostEleven).toContain("{n}");
     expect(t.callConsentTitle).toContain("{company}");
+  });
+});
+
+describe("call voices offered", () => {
+  const voices = ["Abu Salem", "Ali - Saudi Arabic", "Alice - Clear, Engaging Educator", "Bill - Wise", "Mansour - Saudi, Natural"].map((name, index) => ({ id: `v${index}`, name, arabic: true }));
+  it("shows a voice by its short name", () => {
+    expect(voiceLabel(voices[1]!)).toBe("Ali");
+    expect(voiceLabel(voices[0]!)).toBe("Abu Salem");
+  });
+  it("offers the first few, always with the one in use", () => {
+    expect(firstVoices(voices, null).map((v) => v.id)).toEqual(["v0", "v1", "v2", "v3"]);
+    expect(firstVoices(voices, "v4").map((v) => v.id)).toEqual(["v0", "v1", "v2", "v4"]);
   });
 });
