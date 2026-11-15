@@ -11,6 +11,7 @@ import { useSections } from "@/hooks/use-sections";
 import { st, type SectionKey } from "@/lib/app-sections";
 import { digits, formatClock, isArabic, t } from "@/lib/i18n";
 import { dx } from "@/lib/documents";
+import { sx } from "@/lib/shipments";
 import { rx } from "@/lib/medications";
 import { MORNING_DEFAULT, type MorningSettings } from "@/lib/morning-brief";
 import { NOTIFICATION_DEFAULT, NOTIFICATION_SECTION, PRAYER_NAMES, type NotificationKind, type NotificationPrefs } from "@/lib/notification-prefs";
@@ -129,6 +130,7 @@ export default function NotificationsScreen() {
         {toggle("installments", t.notifInstallments, t.notifDayBefore)}
         {toggle("car", t.notifCar, t.notifCarDetail)}
         {toggle("documents", dx.notif, dx.notifDetail)}
+        {toggle("shipments", sx.notif, sx.notifDetail)}
         {moneyOn ? (
           <ChoiceMenu fill title={t.notifHeadsUpTime} choices={headsUpTimes}>
             <View accessible accessibilityRole="button" accessibilityLabel={`${t.notifHeadsUpTime}, ${clockAt(prefs.headsUp.hour, prefs.headsUp.minute)}`}>
