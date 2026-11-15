@@ -4,6 +4,7 @@ import { Alert, Text } from "react-native";
 import { AppleHealthCard } from "@/components/apple-health-card";
 import { ConnectionTile, IconMark, LogoMark, PickRow, ProviderGrid, ProviderMark, TileGrid, type Pick } from "@/components/ai-provider-parts";
 import { BankSmsCard } from "@/components/bank-sms-card";
+import { GmailCard } from "@/components/gmail-card";
 import { Card, EmptyState, Icon, ListRow, type } from "@/components/drift";
 import { colors } from "@/components/theme";
 import { PROVIDERS } from "@/lib/ai-providers";
@@ -15,6 +16,7 @@ import { digits, t } from "@/lib/i18n";
 import { AI_CHOICE_NAMES, aiChoicesOf, integrationsApi, seerrState, VOICE_PROVIDER_NAMES, whoopState, type AiChoiceName, type IntegrationsOverview } from "@/lib/integrations";
 import { getApi } from "@/lib/backend";
 import { callsApi, px, type PhoneSetup } from "@/lib/phone-calls";
+import { hunterApi, type GmailStatus } from "@/lib/subscriptions";
 
 // How many features picked their own model under Advanced, or nothing when all use the defaults.
 function featureCount(overview: IntegrationsOverview): string | null {
@@ -31,6 +33,7 @@ export default function Integrations() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [phone, setPhone] = useState<PhoneSetup | null>(null);
+  const [gmail, setGmail] = useState<GmailStatus | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -39,6 +42,7 @@ export default function Integrations() {
       setError(null);
       // The Twilio setup for calls made for you; an older server without it just leaves the tile unconnected.
       setPhone(await callsApi.setup(getApi()).catch(() => null));
+      setGmail(await hunterApi.gmailStatus(getApi()).catch(() => null));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
     } finally {
@@ -142,6 +146,8 @@ export default function Integrations() {
           />
         </TileGrid>
       </Card>
+
+      <GmailCard status={gmail} onChange={load} returnPath="integrations" />
 
       <BankSmsCard />
     </Screen>

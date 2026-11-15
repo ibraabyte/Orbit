@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # Where the browser goes after Google sign-in; the app's scheme from app.json.
     google_app_redirect: str = "orbit://sign-in"
 
+    # Read-only Gmail reuses the Google client above. Empty means the sign-in redirect's server + /gmail/callback.
+    gmail_redirect_uri: str = ""
+    gmail_app_redirect: str = "orbit://gmail"
+
     # WHOOP (developer.whoop.com). Empty client id means the integration is off.
     whoop_client_id: str = ""
     whoop_client_secret: str = ""

@@ -14,6 +14,7 @@ import { isArabic, t } from "@/lib/i18n";
 import { mt } from "@/lib/seerr";
 import { contentWidth, showsSidebar } from "@/lib/sidebar";
 import { rx } from "@/lib/medications";
+import { st } from "@/lib/subscriptions";
 import { pt } from "@/lib/plan";
 import { tt } from "@/lib/training";
 
@@ -71,6 +72,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/investments": { title: t.investments },
   "/cards": { title: t.cards },
   "/obligations": { title: t.obligations },
+  "/subscriptions": { title: st.title },
   "/library": { title: t.library },
   "/habits": { title: t.habits, hint: "habit read 20 min daily" },
   "/vehicles": { title: t.car },

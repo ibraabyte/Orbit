@@ -60,6 +60,7 @@ const SCREENS: Record<string, SectionKey> = {
   investments: "finance",
   cards: "finance",
   obligations: "finance",
+  subscriptions: "finance",
   habits: "habits",
   library: "library",
   vehicles: "vehicles",
