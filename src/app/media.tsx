@@ -1,6 +1,7 @@
 import * as Haptics from "expo-haptics";
 import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import * as WebBrowser from "expo-web-browser";
 import { Alert, Share, Text, View } from "react-native";
 import { Card, EmptyState, ListRow, RowButton, StatGrid, StatTile, type } from "@/components/drift";
@@ -12,9 +13,9 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatDate, t } from "@/lib/i18n";
-import { canManageUsers, DEFAULT_SLIDERS, mt, NETWORKS, seerrTitle, sliderRail, sliderTitle, STUDIOS, visibleSliders, type Rail, type SeerrClient, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult, type SeerrSlider } from "@/lib/seerr";
+import { canManageUsers, DEFAULT_SLIDERS, mt, planWatchlistSync, syncToSeerr, NETWORKS, seerrTitle, sliderRail, sliderTitle, STUDIOS, visibleSliders, type Rail, type SeerrClient, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult, type SeerrSlider } from "@/lib/seerr";
 import type { WatchItem } from "@/lib/types";
-import { groupWatchItems, progressLabel } from "@/lib/watchlist";
+import { groupWatchItems, progressLabel, watchDraftFromSeerr } from "@/lib/watchlist";
 import { space } from "@/components/theme";
 
 export default function Media() {
@@ -135,6 +136,30 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- first load only; search runs on submit
   }, [client, seerr.isAdmin]);
 
+  // Once per visit, once Orbit's list has loaded: bring Seerr's watchlist and Orbit's watch list together (each title
+  // once per direction, remembered on this phone).
+  const synced = useRef(false);
+  useEffect(() => {
+    if (synced.current || !watchlist.loaded) return;
+    synced.current = true;
+    const storeKey = `orbit.seerr.watchlist-known.${userId}`;
+    void (async () => {
+      try {
+        const [seerrList, saved] = await Promise.all([client.watchlist(), AsyncStorage.getItem(storeKey).catch(() => null)]);
+        const plan = planWatchlistSync(seerrList, watchlist.items, new Set(saved ? (JSON.parse(saved) as string[]) : []));
+        for (const entry of plan.toOrbit) {
+          const draft = watchDraftFromSeerr(entry, "want");
+          if (draft) await watchlist.save(draft).catch(() => undefined);
+        }
+        for (const entry of plan.toSeerr) await syncToSeerr(client, entry.media_type, entry.tmdb_id, entry.title, entry.status);
+        await AsyncStorage.setItem(storeKey, JSON.stringify([...plan.known])).catch(() => undefined);
+      } catch {
+        // Seerr's watchlist missing (older server): nothing to bring together.
+        synced.current = false;
+      }
+    })();
+  }, [watchlist.loaded, watchlist.items, watchlist.save, client, userId]);
+
   // Back from a title: its request and list buttons may have changed things here.
   useFocusEffect(
     useCallback(() => {
@@ -163,8 +188,8 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
               { label: t.nextSeason, run: () => void act(() => watchlist.watchedOne(item, true)) }
             ]
           : []),
-        { label: t.finished, run: () => void act(() => watchlist.update(item.id, { status: "done" })) },
-        { label: t.remove, destructive: true, run: () => void act(() => watchlist.remove(item.id)) }
+        { label: t.finished, run: () => void act(async () => (await watchlist.update(item.id, { status: "done" }), await syncToSeerr(client, item.media_type, item.tmdb_id, item.title, "done"))) },
+        { label: t.remove, destructive: true, run: () => void act(async () => (await watchlist.remove(item.id), await syncToSeerr(client, item.media_type, item.tmdb_id, item.title, null))) }
       ]
     });
 
@@ -272,7 +297,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
         </>
       )}
       {lists.watching.length ? <Card title={t.watching}>{lists.watching.map((item) => watchRow(item, <RowButton label={t.nextEp} onPress={() => watched(item)} />, progressLabel(item)))}</Card> : null}
-      {lists.want.length ? <Card title={t.wantToWatch}>{lists.want.map((item) => watchRow(item, <RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(item.id))} />))}</Card> : null}
+      {lists.want.length ? <Card title={t.wantToWatch}>{lists.want.map((item) => watchRow(item, <RowButton outline label={t.remove} onPress={() => act(async () => (await watchlist.remove(item.id), await syncToSeerr(client, item.media_type, item.tmdb_id, item.title, null)))} />))}</Card> : null}
       {lists.done.length ? <Card title={t.watched}>{lists.done.map((item) => watchRow(item))}</Card> : null}
       {!watchlist.available ? <EmptyState>{t.error}</EmptyState> : null}
       {canManageUsers(seerr.user) ? <Button variant="outline" title={mt.users} onPress={() => router.push("/users")} /> : null}

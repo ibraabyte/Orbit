@@ -31,6 +31,7 @@ import {
   seerrName,
   seerrPageUrl,
   streamingIn,
+  syncToSeerr,
   topCast,
   trailerUrl,
   type SeerrDetails,
@@ -179,7 +180,12 @@ export default function Title() {
   const facts = factRows(item, (day) => formatDate(day, { day: "numeric", month: "short", year: "numeric" }));
   const onList = watchlist.items.find((row) => row.tmdb_id === tmdbId && row.media_type === kind);
   const listChoices: [WatchStatus, string][] = [["want", t.wantToWatch], ["watching", t.watching], ["done", t.watched]];
-  const setListStatus = (next: WatchStatus) => act(() => (onList ? watchlist.update(onList.id, { status: next }) : watchlist.save(watchDraftFromSeerr(item, next)!)));
+  // Seerr's watchlist follows Orbit's: want and watching are on it, done is off it.
+  const setListStatus = (next: WatchStatus) =>
+    act(async () => {
+      await (onList ? watchlist.update(onList.id, { status: next }) : watchlist.save(watchDraftFromSeerr(item, next)!));
+      if (client) await syncToSeerr(client, kind, tmdbId, name, next);
+    });
 
   // Sent with the picked quality; without options it's one tap, like before.
   const send = (seasonList: number[] | "all") =>
@@ -421,7 +427,7 @@ export default function Title() {
                 {listChoices.map(([value, label]) => (
                   <Chip key={value} label={label} selected={onList?.status === value} onPress={() => void setListStatus(value)} />
                 ))}
-                {onList ? <RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(onList.id))} /> : null}
+                {onList ? <RowButton outline label={t.remove} onPress={() => act(async () => (await watchlist.remove(onList.id), client ? await syncToSeerr(client, kind, tmdbId, name, null) : undefined))} /> : null}
               </View>
             </Card>
           ) : null}

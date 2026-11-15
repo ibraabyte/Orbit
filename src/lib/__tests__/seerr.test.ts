@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER, collectionToRequest, streamingIn, avatarUrl, flipPermission, canManageUsers } from "@/lib/seerr";
+import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER, collectionToRequest, streamingIn, avatarUrl, flipPermission, canManageUsers, planWatchlistSync } from "@/lib/seerr";
 
 // A stand-in for Orbit's API client: records the calls the app would send to the server.
 function fakeServer(responses: Record<string, unknown>) {
@@ -261,5 +261,22 @@ describe("seerr users", () => {
     expect(canManageUsers({ permissions: 8 })).toBe(true);
     expect(canManageUsers({ permissions: 2 })).toBe(true);
     expect(canManageUsers({ permissions: 16 | 32 })).toBe(false);
+  });
+});
+
+describe("seerr watchlist sync", () => {
+  it("brings each title over once in each direction, and leaves Orbit's done and removed ones alone", () => {
+    const seerrList = [{ id: 1, mediaType: "movie" as const, title: "On both" }, { id: 2, mediaType: "tv" as const, name: "Only in Seerr" }, { id: 3, mediaType: "movie" as const, title: "Done in Orbit" }, { id: 4, mediaType: "movie" as const, title: "Removed in Orbit" }];
+    const orbit = [
+      { tmdb_id: 1, media_type: "movie" as const, status: "want" as const, title: "On both" },
+      { tmdb_id: 3, media_type: "movie" as const, status: "done" as const, title: "Done in Orbit" },
+      { tmdb_id: 5, media_type: "tv" as const, status: "watching" as const, title: "Only in Orbit" }
+    ];
+    const plan = planWatchlistSync(seerrList, orbit, new Set(["movie-4"]));
+    expect(plan.toOrbit.map((item) => item.id)).toEqual([2]);
+    expect(plan.toSeerr.map((item) => item.tmdb_id)).toEqual([5]);
+    // Next time nothing moves, even if a list changes back.
+    const again = planWatchlistSync(seerrList, orbit.filter((item) => item.tmdb_id !== 5), plan.known);
+    expect([again.toOrbit, again.toSeerr]).toEqual([[], []]);
   });
 });

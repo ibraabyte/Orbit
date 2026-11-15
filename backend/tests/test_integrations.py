@@ -378,3 +378,8 @@ def test_proxy_allows_the_users_page_and_nothing_next_to_it():
 def test_proxy_never_deletes_the_owner():
     assert not seerr.allowed("DELETE", "user/1")
     assert seerr.allowed("DELETE", "user/12") and seerr.allowed("DELETE", "user/10")
+
+
+def test_proxy_allows_seerrs_watchlist():
+    assert seerr.allowed("POST", "watchlist") and seerr.allowed("DELETE", "watchlist/603")
+    assert not seerr.allowed("DELETE", "watchlist") and not seerr.allowed("GET", "watchlist")

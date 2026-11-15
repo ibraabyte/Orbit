@@ -71,6 +71,9 @@ ALLOWED: list[tuple[str, re.Pattern[str]]] = [
         ("DELETE", r"media/\d+(/file)?"),
         ("POST", r"blocklist"),
         ("DELETE", r"blocklist/\d+"),
+        # Seerr's own watchlist, kept in step with Orbit's watch list.
+        ("POST", r"watchlist"),
+        ("DELETE", r"watchlist/\d+"),
         # Advanced request options: the Radarr/Sonarr servers Seerr sends to, and one server's quality profiles and
         # folders. Seerr answers these without the servers' keys, and decides itself who may use them in a request.
         ("GET", r"service/(radarr|sonarr)"),

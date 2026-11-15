@@ -1,5 +1,6 @@
 import type { ApiClient } from "@/lib/api";
 import { digits, isArabic } from "@/lib/i18n";
+import type { WatchItem, WatchStatus } from "@/lib/types";
 
 // Seerr (Overseerr / Jellyseerr) API client and the pieces the Movies & TV screens build on. Same /api/v1 for all.
 // The server URL and API key are entered in the app once and kept, encrypted, on Orbit's server for this account.
@@ -309,9 +310,33 @@ export function filteredPath(kind: SeerrMediaType, filters: DiscoverFilters) {
 }
 
 // Where it streams in Saudi Arabia (subscriptions only, like Seerr's "Currently streaming on"), and the page to watch.
+// After a change to Orbit's watch list: the same on Seerr's, quietly (Orbit's list is the one that counts).
+export function syncToSeerr(client: SeerrClient, kind: SeerrMediaType, tmdbId: number, title: string, status: WatchStatus | null) {
+  return (onSeerrWatchlist(status) ? client.watchlistAdd(kind, tmdbId, title) : client.watchlistRemove(kind, tmdbId)).catch(() => undefined);
+}
+
 export function streamingIn(details: Pick<SeerrDetails, "watchProviders">, region = WATCH_REGION) {
   const here = details.watchProviders?.find((entry) => entry.iso_3166_1 === region);
   return { link: here?.link ?? null, providers: [...(here?.flatrate ?? [])].sort((a, b) => (a.displayPriority ?? 99) - (b.displayPriority ?? 99)) };
+}
+
+// Orbit's watch list and Seerr's watchlist: "want" and "watching" in Orbit are on Seerr's watchlist; "done" or
+// removed is off it. Each title is brought over once in each direction ("known" remembers which), so taking
+// something off one list doesn't keep bringing it back from the other.
+export const watchKey = (kind: SeerrMediaType, tmdbId: number) => `${kind}-${tmdbId}`;
+export const onSeerrWatchlist = (status: WatchStatus | null) => status === "want" || status === "watching";
+
+export function planWatchlistSync(seerrList: SeerrResult[], orbit: Pick<WatchItem, "tmdb_id" | "media_type" | "status" | "title">[], known: Set<string>) {
+  const inSeerr = new Set(seerrList.filter(isMedia).map((item) => watchKey(item.mediaType, item.id)));
+  const inOrbit = new Set(orbit.map((item) => watchKey(item.media_type, item.tmdb_id)));
+  const wanted = orbit.filter((item) => onSeerrWatchlist(item.status));
+  return {
+    // To Orbit, as "want": on Seerr's list, not in Orbit at all, never brought over before.
+    toOrbit: seerrList.filter((item): item is SeerrResult & { mediaType: SeerrMediaType } => isMedia(item) && !inOrbit.has(watchKey(item.mediaType, item.id)) && !known.has(watchKey(item.mediaType, item.id))),
+    // To Seerr: wanted in Orbit, not on Seerr's list, never sent before.
+    toSeerr: wanted.filter((item) => !inSeerr.has(watchKey(item.media_type, item.tmdb_id)) && !known.has(watchKey(item.media_type, item.tmdb_id))),
+    known: new Set([...known, ...inSeerr, ...wanted.map((item) => watchKey(item.media_type, item.tmdb_id))])
+  };
 }
 
 // The films of a collection Seerr would take a request for: not on the server, not asked for yet.
@@ -750,6 +775,10 @@ export function createSeerrClient(call: SeerrCall) {
     clearData: (mediaId: number) => call<void>("DELETE", `media/${mediaId}`),
     // Removes the title from Radarr or Sonarr, files included.
     removeFiles: (mediaId: number) => call<void>("DELETE", `media/${mediaId}/file?is4k=false`),
+    // Seerr's own watchlist (Seerr accounts, Jellyfin, Emby; a Plex account's comes from Plex). Already there, or
+    // already gone, is fine: the caller only wants the end state.
+    watchlistAdd: (mediaType: SeerrMediaType, tmdbId: number, title: string) => call<void>("POST", "watchlist", { tmdbId, mediaType, title }),
+    watchlistRemove: (mediaType: SeerrMediaType, tmdbId: number) => call<void>("DELETE", `watchlist/${tmdbId}?mediaType=${mediaType}`),
     // Blocklisted titles can't be requested and stop showing in Discover.
     blocklist: (mediaType: SeerrMediaType, tmdbId: number, title: string, userId: number) => call<void>("POST", "blocklist", { tmdbId, mediaType, title, user: userId }),
     unblocklist: (mediaType: SeerrMediaType, tmdbId: number) => call<void>("DELETE", `blocklist/${tmdbId}?mediaType=${mediaType}`),
