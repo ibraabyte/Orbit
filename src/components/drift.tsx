@@ -262,8 +262,8 @@ export function ListRow({
 }
 
 /** Square icon well, used as a ListRow's leading slot. */
-export function IconTile({ name, size = 32, tone = "neutral" }: { name: IconName; size?: number; tone?: "neutral" | "accent" | "urgent" }) {
-  const palette = { neutral: [colors.surfaceInset, colors.ink], accent: [colors.accentTint, colors.accentTintInk], urgent: [colors.urgent, colors.urgentInk] }[tone];
+export function IconTile({ name, size = 32, tone = "neutral" }: { name: IconName; size?: number; tone?: "neutral" | "sand" | "accent" | "urgent" }) {
+  const palette = { neutral: [colors.surfaceInset, colors.ink], sand: [colors.surfaceInset, colors.accentDeep], accent: [colors.accentTint, colors.accentTintInk], urgent: [colors.urgent, colors.urgentInk] }[tone];
   return (
     <View style={[styles.iconTile, { width: size, height: size, backgroundColor: palette[0] }]}>
       <View style={name === "arrow-right" ? flip : null}>

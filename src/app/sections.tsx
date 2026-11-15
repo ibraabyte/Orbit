@@ -1,6 +1,6 @@
 import { View } from "react-native";
-import { ConnectionTile, IconMark, TileGrid } from "@/components/ai-provider-parts";
-import { type IconName } from "@/components/drift";
+import { ConnectionTile, TileGrid } from "@/components/ai-provider-parts";
+import { IconTile, type IconName } from "@/components/drift";
 import { GroupHeader, Screen } from "@/components/screen";
 import { colors, space } from "@/components/theme";
 import { useSections } from "@/hooks/use-sections";
@@ -33,7 +33,7 @@ export default function Sections() {
     return (
       <ConnectionTile
         key={key}
-        mark={<IconMark name={ICONS[key]} color={on ? colors.accentDeep : colors.inkMuted} />}
+        mark={<IconTile name={ICONS[key]} size={36} tone={on ? "sand" : "neutral"} />}
         name={st.names[key]}
         badge={on ? "check" : null}
         checked={on}
