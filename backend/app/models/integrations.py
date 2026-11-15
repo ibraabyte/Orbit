@@ -92,3 +92,17 @@ class FeatureModel(Base):
     choice: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = updated_at()
+
+
+class PushDevice(Base):
+    """A phone that gets Orbit's push notifications (Seerr's, for now): its Expo push token and the language the
+    phone is in, so the text matches. One row per token; signing in as someone else on that phone moves it."""
+
+    __tablename__ = "push_devices"
+    __table_args__ = (CheckConstraint("language in ('ar', 'en')", name="language"),)
+
+    token: Mapped[str] = mapped_column(Text, primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    language: Mapped[str] = mapped_column(Text, nullable=False, server_default="en")
+    created_at: Mapped[datetime] = created_at()
+    updated_at: Mapped[datetime] = updated_at()
