@@ -9,6 +9,9 @@ TaskPriority = Literal["low", "normal", "high"]
 Recurrence = Literal["daily", "weekly", "monthly"]
 ReminderStatus = Literal["scheduled", "sent", "cancelled"]
 StepTitle = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=220)]
+# Where an appointment is: a name or address, and the Google place it was picked from (app/services/leave_times.py).
+PlaceName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=160)]
+PlaceId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300, pattern=r"^[A-Za-z0-9_-]+$")]
 
 
 class Input(BaseModel):
@@ -35,6 +38,8 @@ class TaskCreate(ListChoice):
     due_at: datetime | None = None
     reminder_at: datetime | None = None
     recurrence: Recurrence | None = None
+    place_name: PlaceName | None = None
+    place_id: PlaceId | None = None
     # Tag names to attach in the same call; missing tags are created.
     tags: list[str] = Field(default_factory=list, max_length=20)
     # Checklist lines (subtasks) created with the task, in this order.
@@ -50,6 +55,8 @@ class TaskUpdate(ListChoice):
     reminder_at: datetime | None = None
     reminder_sent_at: datetime | None = None
     recurrence: Recurrence | None = None
+    place_name: PlaceName | None = None
+    place_id: PlaceId | None = None
 
 
 class TaskListCreate(Input):

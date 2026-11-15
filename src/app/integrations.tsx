@@ -16,6 +16,7 @@ import { digits, t } from "@/lib/i18n";
 import { AI_CHOICE_NAMES, aiChoicesOf, integrationsApi, seerrState, VOICE_PROVIDER_NAMES, whoopState, type AiChoiceName, type IntegrationsOverview } from "@/lib/integrations";
 import { getApi } from "@/lib/backend";
 import { callsApi, px, type PhoneSetup } from "@/lib/phone-calls";
+import { mapsApi, mx, type MapsStatus } from "@/lib/maps";
 import { shipmentsApi, sx, type TrackingStatus } from "@/lib/shipments";
 import { hunterApi, type GmailStatus } from "@/lib/subscriptions";
 import { travelApi, tx, type TravelKey } from "@/lib/travel";
@@ -37,6 +38,7 @@ export default function Integrations() {
   const [phone, setPhone] = useState<PhoneSetup | null>(null);
   const [gmail, setGmail] = useState<GmailStatus | null>(null);
   const [tracking, setTracking] = useState<TrackingStatus | null>(null);
+  const [maps, setMaps] = useState<MapsStatus | null>(null);
   const [travelKey, setTravelKey] = useState<TravelKey | null>(null);
 
   const load = useCallback(async () => {
@@ -50,6 +52,7 @@ export default function Integrations() {
       setPhone((current) => nextPhone ?? current);
       setGmail(await hunterApi.gmailStatus(getApi()).catch(() => null));
       setTracking(await shipmentsApi.overview(getApi()).then((found) => found.tracking).catch(() => null));
+      setMaps(await mapsApi.status(getApi()).catch(() => null));
       setTravelKey(await travelApi.overview(getApi()).then((found) => found.key).catch(() => null));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError));
@@ -182,6 +185,21 @@ export default function Integrations() {
             icons={["package", "truck"]}
             label={`17TRACK, ${tracking?.connected ? sx.trackingLinked : sx.trackingConnect}`}
             onPress={() => router.push("/shipments")}
+          />
+        </TileGrid>
+      </Card>
+
+      {/* Leave-time alerts use the person's own Google Maps key, pasted on the Google Maps page. */}
+      <Card title={mx.maps}>
+        <TileGrid>
+          <ConnectionTile
+            wide
+            mark={<IconTile name="navigation" />}
+            name="Google Maps"
+            badge={maps?.connected ? "check" : null}
+            icons={["map-pin", "clock"]}
+            label={`Google Maps, ${maps?.connected ? mx.linked : mx.connect}`}
+            onPress={() => router.push("/maps")}
           />
         </TileGrid>
       </Card>

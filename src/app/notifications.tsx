@@ -12,6 +12,7 @@ import { useSections } from "@/hooks/use-sections";
 import { st, type SectionKey } from "@/lib/app-sections";
 import { digits, formatClock, isArabic, t } from "@/lib/i18n";
 import { dx } from "@/lib/documents";
+import { mx } from "@/lib/maps";
 import { sx } from "@/lib/shipments";
 import { rx } from "@/lib/medications";
 import { MORNING_DEFAULT, type MorningSettings } from "@/lib/morning-brief";
@@ -122,6 +123,7 @@ export default function NotificationsScreen() {
         {tile("car", "truck", t.notifCar)}
         {tile("documents", "file-text", dx.notif)}
         {tile("shipments", "package", sx.notif)}
+        {tile("leave", "navigation", mx.notif)}
         {tile("budget", "pie-chart", t.notifBudget)}
         {tile("rest", "clock", t.notifRest)}
       </TileGrid>

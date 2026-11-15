@@ -34,7 +34,7 @@ const withData = (overrides: Partial<DashboardData>): DashboardData => ({ ...emp
 
 const task = (overrides: Partial<Task>): Task => ({
   id: "t1", user_id: "u", title: "Task", notes: null, status: "open", priority: "normal", due_at: "2026-11-03T12:00:00.000Z", reminder_at: null, reminder_sent_at: null,
-  recurrence: null, list_id: null, created_at: "2026-11-01T00:00:00Z", updated_at: "2026-11-01T00:00:00Z", ...overrides
+  recurrence: null, list_id: null, place_name: null, place_id: null, created_at: "2026-11-01T00:00:00Z", updated_at: "2026-11-01T00:00:00Z", ...overrides
 });
 const reminder = (overrides: Partial<Reminder>): Reminder => ({ id: "r1", user_id: "u", task_id: null, title: "Reminder", body: null, remind_at: "2026-11-03T10:00:00.000Z", status: "scheduled", sent_at: null, created_at: "2026-11-01T00:00:00Z", ...overrides });
 const meal = (overrides: Partial<Meal>): Meal => ({ id: "m1", user_id: "u", name: "Meal", calories: 500, protein_g: null, carbs_g: null, fat_g: null, logged_at: "2026-11-03T05:00:00.000Z", created_at: "2026-11-01T00:00:00Z", ...overrides });

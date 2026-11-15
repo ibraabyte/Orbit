@@ -57,6 +57,9 @@ export type Task = {
   reminder_sent_at: string | null;
   recurrence: RecurrenceRule | null;
   list_id: string | null;
+  // Where the appointment is (a name or address), and the Google place it was picked from. See lib/maps.ts.
+  place_name: string | null;
+  place_id: string | null;
   created_at: string;
   updated_at: string;
 };

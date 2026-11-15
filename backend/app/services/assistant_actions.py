@@ -32,7 +32,7 @@ MAX_ACTIONS = 12
 TEXT_MAX = 120
 FIND_LIMIT = 10
 # Fields the assistant never sets: bookkeeping the app or the server fills in.
-HIDDEN = {"reminder_sent_at", "sent_at", "meal_plan_id", "color", "poster_path", "position"}
+HIDDEN = {"reminder_sent_at", "sent_at", "meal_plan_id", "color", "poster_path", "position", "place_id"}
 
 
 @dataclass(frozen=True)

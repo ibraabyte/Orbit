@@ -29,6 +29,8 @@ function task(overrides: Partial<Task>): Task {
     reminder_sent_at: null,
     recurrence: null,
     list_id: null,
+    place_name: null,
+    place_id: null,
     created_at: now.toISOString(),
     updated_at: now.toISOString(),
     ...overrides

@@ -82,6 +82,8 @@ def complete_task(db: Session, task: Task, completed_at: datetime | None = None)
             reminder_at=next_dates.reminder_at,
             recurrence=task.recurrence,
             list_id=task.list_id,
+            place_name=task.place_name,
+            place_id=task.place_id,
         )
         db.add(next_task)
         db.flush()
