@@ -10,7 +10,7 @@ import { useReduceMotion } from "@/components/motion";
 import { colors, fonts, radius, space, textSize, usePalette, useScheme, type Palette } from "@/components/theme";
 import { et } from "@/lib/exercises";
 import { ht } from "@/lib/health-hub";
-import { t } from "@/lib/i18n";
+import { isArabic, t } from "@/lib/i18n";
 import { mt } from "@/lib/seerr";
 import { contentWidth, showsSidebar } from "@/lib/sidebar";
 import { rx } from "@/lib/medications";
@@ -80,7 +80,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/settings": { title: t.settings },
   "/notifications": { title: t.notifications },
   "/integrations": { title: t.integrations },
-  "/ai-features": { title: t.pv.usesTitle },
+  "/ai-features": { title: t.pv.advanced },
   "/exercises": { title: et.exercises },
   "/gym": { title: et.gym },
   "/injuries": { title: et.injuries },
@@ -94,8 +94,9 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/medications": { title: rx.medications }
 };
 
-export function openCapture(text?: string) {
-  router.push({ pathname: "/capture", params: text ? { text } : {} });
+// voice: start listening as soon as it opens (a hold on the Orbit button).
+export function openCapture(text?: string, voice = false) {
+  router.push({ pathname: "/capture", params: { ...(text ? { text } : {}), ...(voice ? { voice: "1" } : {}) } });
 }
 
 /** The title a stack route shows in its native header, from its path ("/tasks"). */
@@ -149,11 +150,14 @@ export function Screen({
   const hint = stack ? stackScreens[path]?.hint : undefined;
   // The ScrollView comes first, so the native large title collapses as it scrolls; on iOS it insets itself under the
   // header and above the home indicator.
+  // In Arabic React Native mirrors a right-to-left scroll view (scale -1) and mirrors its content back. iOS 26 puts the
+  // large title inside the scroll view beside that content, so it was mirrored once and drew backwards (after a pull to
+  // refresh too). So the scroll view itself stays left to right (no mirroring) and its content runs right to left.
   const scroll = (
     <ScrollView
-      style={styles.shell}
+      style={[styles.shell, { direction: "ltr" }]}
       contentInsetAdjustmentBehavior={stack ? "automatic" : "never"}
-      contentContainerStyle={[styles.content, styles.column, wide && { maxWidth: WIDE_MAX_WIDTH }, { paddingTop: stack || banner ? space.sm : insets.top + space.sm, paddingBottom: bottom }]}
+      contentContainerStyle={[styles.content, styles.column, { direction: isArabic ? "rtl" : "ltr" }, wide && { maxWidth: WIDE_MAX_WIDTH }, { paddingTop: stack || banner ? space.sm : insets.top + space.sm, paddingBottom: bottom }]}
       keyboardShouldPersistTaps="handled"
       refreshControl={
         onRefresh ? (
