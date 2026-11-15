@@ -22,6 +22,7 @@ import { getApi } from "@/lib/backend";
 import { captureStarterKinds, captureStarters, digits, formatDate, isArabic, t } from "@/lib/i18n";
 import type { QuickAddDraft } from "@/lib/quick-add";
 import { aiName, aiQuery, integrationsApi, VOICE_PROVIDER_NAMES, type VoiceStatus } from "@/lib/integrations";
+import { dp } from "@/lib/day-plan";
 import { isNoAiError } from "@/lib/morning-brief";
 import { parseNatural } from "@/lib/quick-add-input";
 import { defaultVoiceLang, voiceConsented, voiceConsentKey, withSpoken, type VoiceLang } from "@/lib/voice";
@@ -399,6 +400,16 @@ export default function Capture() {
         </Pressable>
       ) : !answer && !text.trim() ? (
         <Text style={type.shellMuted}>{t.assistantHint}</Text>
+      ) : null}
+
+      {!answer && !text.trim() ? (
+        <Pressable onPress={() => router.push("/day-plan")} accessibilityRole="link" style={styles.recent}>
+          <Icon name="sunrise" size={13} color={colors.accentDeep} />
+          <Text style={styles.recentText} numberOfLines={1}>
+            {dp.title}
+          </Text>
+          <Text style={type.shellMeta}>{dp.short}</Text>
+        </Pressable>
       ) : null}
 
       {!answer && !text.trim() ? (
