@@ -130,10 +130,27 @@ export type SeerrCounts = { total?: number; movie?: number; tv?: number; pending
 export type SeerrQuotaPart = { days?: number; limit?: number; used?: number; remaining?: number; restricted?: boolean };
 export type SeerrQuota = { movie?: SeerrQuotaPart; tv?: SeerrQuotaPart };
 
-export type SeerrUser = { id: number; displayName?: string; permissions: number };
+// avatar: a full address or a path on the Seerr server. email shows only to people who manage users.
+// userType: 1 Plex, 2 Seerr's own account, 3 Jellyfin, 4 Emby.
+export type SeerrUser = {
+  id: number;
+  displayName?: string;
+  permissions: number;
+  avatar?: string | null;
+  email?: string | null;
+  userType?: number;
+  requestCount?: number;
+  createdAt?: string;
+  movieQuotaLimit?: number | null;
+  tvQuotaLimit?: number | null;
+};
+export type SeerrUserPage = { pageInfo: { pages: number; page: number; results: number }; results: SeerrUser[] };
+export const USER_SORTS = ["displayname", "requests", "created"] as const;
+export type UserSort = (typeof USER_SORTS)[number];
 
 // Seerr's permission bits.
 const ADMIN = 2;
+const MANAGE_USERS = 8;
 const MANAGE_REQUESTS = 16;
 const REQUEST_4K = 1024;
 const REQUEST_4K_MOVIE = 2048;
@@ -331,6 +348,46 @@ export function listTitle(list: DiscoverList, name?: string) {
 export function normalizeSeerrUrl(url: string) {
   const trimmed = url.trim().replace(/\/+$/, "").replace(/\/api\/v1$/, "");
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+export function canManageUsers(user: Pick<SeerrUser, "permissions"> | null) {
+  return user ? (user.permissions & (ADMIN | MANAGE_USERS)) !== 0 : false;
+}
+
+// The permissions Seerr's user page lets an admin switch, in its order. Admin includes all the others. Issue
+// permissions are left out, like the issues section.
+export const USER_PERMISSIONS = [
+  { key: "admin", bit: ADMIN },
+  { key: "manageUsers", bit: MANAGE_USERS },
+  { key: "manageRequests", bit: MANAGE_REQUESTS },
+  { key: "advanced", bit: REQUEST_ADVANCED },
+  { key: "viewRequests", bit: 16384 },
+  { key: "recentView", bit: 67108864 },
+  { key: "watchlistView", bit: 134217728 },
+  { key: "manageBlocklist", bit: 268435456 },
+  { key: "request", bit: 32 },
+  { key: "requestMovie", bit: 262144 },
+  { key: "requestTv", bit: 524288 },
+  { key: "autoApprove", bit: 128 },
+  { key: "autoApproveMovie", bit: 256 },
+  { key: "autoApproveTv", bit: 512 },
+  { key: "request4k", bit: REQUEST_4K },
+  { key: "request4kMovie", bit: REQUEST_4K_MOVIE },
+  { key: "request4kTv", bit: REQUEST_4K_TV },
+  { key: "autoApprove4k", bit: 32768 },
+  { key: "autoRequest", bit: 8388608 }
+] as const;
+export type PermissionKey = (typeof USER_PERMISSIONS)[number]["key"];
+
+export function flipPermission(permissions: number, bit: number) {
+  return permissions ^ bit;
+}
+
+// Avatars are often a path on the Seerr server (its avatar proxy or a default picture).
+export function avatarUrl(avatar: string | null | undefined, serverUrl: string | null) {
+  if (!avatar) return null;
+  if (/^https?:\/\//.test(avatar)) return avatar;
+  return serverUrl ? `${serverUrl}${avatar.startsWith("/") ? "" : "/"}${avatar}` : null;
 }
 
 export function canManageRequests(user: Pick<SeerrUser, "permissions">) {
@@ -659,6 +716,14 @@ export function createSeerrClient(call: SeerrCall) {
       call<SeerrRequest>("PUT", `request/${requestId}`, requestBody(mediaType, tmdbId, seasons, choice, advanced)),
     // Seerr's users, for asking on someone's behalf (people who manage requests or users).
     users: () => call<{ results: SeerrUser[] }>("GET", "user?take=100&sort=displayname").then((body) => body.results ?? []),
+    userPage: (query: string, sort: UserSort = "displayname", skip = 0, take = 25) =>
+      call<SeerrUserPage>("GET", `user?take=${take}&skip=${skip}&sort=${sort}${sort === "displayname" ? "&sortDirection=asc" : ""}${query.trim() ? `&q=${encodeURIComponent(query.trim())}` : ""}`),
+    user: (userId: number) => call<SeerrUser>("GET", `user/${userId}`),
+    userRequests: (userId: number, take = 20) => call<SeerrRequestPage>("GET", `user/${userId}/requests?take=${take}`),
+    userWatchlist: (userId: number) => call<{ results: MediaRef[] }>("GET", `user/${userId}/watchlist`).then((body) => titles(body.results ?? [])),
+    // Seerr's own bulk change, so only the permissions are touched (changing one user also rewrites the username).
+    setPermissions: (userId: number, permissions: number) => call<SeerrUser[]>("PUT", "user", { ids: [String(userId)], permissions }),
+    deleteUser: (userId: number) => call<SeerrUser>("DELETE", `user/${userId}`),
     counts: () => call<SeerrCounts>("GET", "request/count"),
     pendingCount: () => call<SeerrCounts>("GET", "request/count").then((body) => body.pending),
     quota: (userId: number) => call<SeerrQuota>("GET", `user/${userId}/quota`),
@@ -732,6 +797,26 @@ const en = {
   filters: { all: "All", pending: "Waiting", processing: "Downloading", available: "Available", unavailable: "Not on the server yet", failed: "Failed", completed: "Completed", deleted: "Deleted" } as Record<RequestFilter, string>,
   requestSorts: { added: "Newest", modified: "Last changed" } as Record<RequestSort, string>,
   requestKinds: { all: "Movies and series", movie: "Movies", tv: "Series" } as Record<RequestKind, string>,
+  users: "Users",
+  userSorts: { displayname: "Name", requests: "Most requests", created: "Newest" } as Record<UserSort, string>,
+  searchUsers: "Search users",
+  userTypes: { 1: "Plex", 2: "Seerr account", 3: "Jellyfin", 4: "Emby" } as Record<number, string>,
+  roleAdmin: "Admin",
+  roleUser: "User",
+  requestCount: (count: number) => (count === 1 ? "1 request" : `${count} requests`),
+  joined: (day: string) => `Joined ${day}`,
+  recentRequests: "Recent requests",
+  permissions: "Permissions",
+  adminHasAll: "An admin has every permission.",
+  savePermissions: "Save permissions",
+  deleteUser: "Delete user",
+  deleteUserDetail: "Their account and requests are removed from Seerr. This can't be undone.",
+  permissionNames: {
+    admin: "Admin", manageUsers: "Manage users", manageRequests: "Manage requests", advanced: "Advanced requests", viewRequests: "See all requests",
+    recentView: "See recently added", watchlistView: "See watchlists", manageBlocklist: "Manage the blocklist", request: "Request", requestMovie: "Request movies",
+    requestTv: "Request series", autoApprove: "Auto-approve", autoApproveMovie: "Auto-approve movies", autoApproveTv: "Auto-approve series", request4k: "Request 4K",
+    request4kMovie: "Request 4K movies", request4kTv: "Request 4K series", autoApprove4k: "Auto-approve 4K", autoRequest: "Auto-request from watchlist"
+  } as Record<PermissionKey, string>,
   editRequest: "Edit request",
   saveRequest: "Save changes",
   requestFor: "Request for",
@@ -852,6 +937,26 @@ const ar: typeof en = {
   filters: { all: "الكل", pending: "تنتظر", processing: "يتحمّل", available: "متوفر", unavailable: "غير متوفر بعد", failed: "فشل", completed: "مكتمل", deleted: "محذوف" },
   requestSorts: { added: "الأحدث", modified: "آخر تعديل" },
   requestKinds: { all: "أفلام ومسلسلات", movie: "أفلام", tv: "مسلسلات" },
+  users: "المستخدمون",
+  userSorts: { displayname: "الاسم", requests: "الأكثر طلبًا", created: "الأحدث" },
+  searchUsers: "ابحث عن مستخدم",
+  userTypes: { 1: "Plex", 2: "حساب Seerr", 3: "Jellyfin", 4: "Emby" },
+  roleAdmin: "مدير",
+  roleUser: "مستخدم",
+  requestCount: (count: number) => (count === 1 ? "طلب واحد" : count === 2 ? "طلبان" : count <= 10 ? `${digits(String(count))} طلبات` : `${digits(String(count))} طلبًا`),
+  joined: (day: string) => `انضم ${day}`,
+  recentRequests: "طلبات حديثة",
+  permissions: "الصلاحيات",
+  adminHasAll: "المدير عنده كل الصلاحيات.",
+  savePermissions: "احفظ الصلاحيات",
+  deleteUser: "احذف المستخدم",
+  deleteUserDetail: "يُحذف حسابه وطلباته من Seerr. لا يمكن التراجع.",
+  permissionNames: {
+    admin: "مدير", manageUsers: "إدارة المستخدمين", manageRequests: "إدارة الطلبات", advanced: "طلبات متقدمة", viewRequests: "رؤية كل الطلبات",
+    recentView: "رؤية المضاف مؤخرًا", watchlistView: "رؤية قوائم المشاهدة", manageBlocklist: "إدارة قائمة الحظر", request: "الطلب", requestMovie: "طلب الأفلام",
+    requestTv: "طلب المسلسلات", autoApprove: "موافقة تلقائية", autoApproveMovie: "موافقة تلقائية للأفلام", autoApproveTv: "موافقة تلقائية للمسلسلات", request4k: "طلب 4K",
+    request4kMovie: "طلب أفلام 4K", request4kTv: "طلب مسلسلات 4K", autoApprove4k: "موافقة تلقائية لـ4K", autoRequest: "طلب تلقائي من قائمة المشاهدة"
+  },
   editRequest: "عدّل الطلب",
   saveRequest: "احفظ التغييرات",
   requestFor: "الطلب باسم",

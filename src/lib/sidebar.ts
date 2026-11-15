@@ -49,7 +49,9 @@ const parents: Record<string, string> = {
   requests: "media",
   person: "media",
   collection: "media",
-  credits: "media"
+  credits: "media",
+  users: "media",
+  "seerr-user": "media"
 };
 
 // Sheets that open over a screen; the item under them stays lit.

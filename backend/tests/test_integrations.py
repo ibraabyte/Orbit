@@ -360,3 +360,21 @@ def test_proxy_sends_a_request_edit_with_its_body(client: TestClient, auth: dict
     assert response.status_code == 200
     assert seerr.allowed("GET", "user") and not seerr.allowed("GET", "user/1/settings/main")
     assert not seerr.allowed("PUT", "request") and not seerr.allowed("PUT", "user/4")
+
+
+def test_proxy_allows_the_users_page_and_nothing_next_to_it():
+    for method, path in [("GET", "user/4"), ("GET", "user/4/requests"), ("GET", "user/4/watchlist"), ("PUT", "user"), ("DELETE", "user/4")]:
+        assert seerr.allowed(method, path), path
+    for method, path in [
+        ("GET", "user/4/settings/main"),
+        ("POST", "user"),
+        ("POST", "user/import-from-plex"),
+        ("GET", "user/4/pushSubscriptions"),
+        ("DELETE", "user"),
+    ]:
+        assert not seerr.allowed(method, path), path
+
+
+def test_proxy_never_deletes_the_owner():
+    assert not seerr.allowed("DELETE", "user/1")
+    assert seerr.allowed("DELETE", "user/12") and seerr.allowed("DELETE", "user/10")

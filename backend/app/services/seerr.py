@@ -58,6 +58,12 @@ ALLOWED: list[tuple[str, re.Pattern[str]]] = [
         # Changing a waiting request (Seerr allows it only while it waits), and the users to ask on behalf of.
         ("PUT", r"request/\d+"),
         ("GET", r"user"),
+        # Seerr's users page: one user, their requests and watchlist, permissions (Seerr's bulk change, which touches
+        # nothing else), and deleting a user. Seerr checks "Manage users" itself.
+        ("GET", r"user/\d+(/requests|/watchlist)?"),
+        ("PUT", r"user"),
+        # Never the owner (user 1), whatever Seerr would say.
+        ("DELETE", r"user/(?!1\b)\d+"),
         ("GET", r"user/\d+/quota"),
         # Managing one title, for people Seerr lets manage requests: mark it available, clear what Seerr knows, remove
         # it from Radarr/Sonarr, and the blocklist. Seerr checks the permission itself.

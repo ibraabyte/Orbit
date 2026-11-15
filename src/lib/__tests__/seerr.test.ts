@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER, collectionToRequest, streamingIn } from "@/lib/seerr";
+import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER, collectionToRequest, streamingIn, avatarUrl, flipPermission, canManageUsers } from "@/lib/seerr";
 
 // A stand-in for Orbit's API client: records the calls the app would send to the server.
 function fakeServer(responses: Record<string, unknown>) {
@@ -248,5 +248,18 @@ describe("seerr title extras", () => {
     expect(canRequest({ mediaType: "movie", mediaInfo: { status: 6 } })).toBe(false);
     expect(canRequest({ mediaType: "movie", mediaInfo: { status: 7 } })).toBe(true);
     expect(mediaBadge(6)?.glyph).toBe("⊘");
+  });
+});
+
+describe("seerr users", () => {
+  it("finds avatars on the Seerr server, switches one permission, and knows who manages users", () => {
+    expect(avatarUrl("/avatarproxy/abc", "https://seerr.example.com")).toBe("https://seerr.example.com/avatarproxy/abc");
+    expect(avatarUrl("https://plex.tv/users/1/avatar", "https://seerr.example.com")).toBe("https://plex.tv/users/1/avatar");
+    expect(avatarUrl(null, "https://seerr.example.com")).toBeNull();
+    expect(flipPermission(32, 128)).toBe(160);
+    expect(flipPermission(160, 128)).toBe(32);
+    expect(canManageUsers({ permissions: 8 })).toBe(true);
+    expect(canManageUsers({ permissions: 2 })).toBe(true);
+    expect(canManageUsers({ permissions: 16 | 32 })).toBe(false);
   });
 });

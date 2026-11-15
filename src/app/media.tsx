@@ -12,7 +12,7 @@ import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSeerr } from "@/hooks/use-seerr";
 import { useWatchlist } from "@/hooks/use-watchlist";
 import { formatDate, t } from "@/lib/i18n";
-import { DEFAULT_SLIDERS, mt, NETWORKS, seerrTitle, sliderRail, sliderTitle, STUDIOS, visibleSliders, type Rail, type SeerrClient, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult, type SeerrSlider } from "@/lib/seerr";
+import { canManageUsers, DEFAULT_SLIDERS, mt, NETWORKS, seerrTitle, sliderRail, sliderTitle, STUDIOS, visibleSliders, type Rail, type SeerrClient, type SeerrCounts, type SeerrMediaType, type SeerrRequest, type SeerrResult, type SeerrSlider } from "@/lib/seerr";
 import type { WatchItem } from "@/lib/types";
 import { groupWatchItems, progressLabel } from "@/lib/watchlist";
 import { space } from "@/components/theme";
@@ -275,6 +275,7 @@ function Browse({ seerr }: { seerr: ReturnType<typeof useSeerr> }) {
       {lists.want.length ? <Card title={t.wantToWatch}>{lists.want.map((item) => watchRow(item, <RowButton outline label={t.remove} onPress={() => act(() => watchlist.remove(item.id))} />))}</Card> : null}
       {lists.done.length ? <Card title={t.watched}>{lists.done.map((item) => watchRow(item))}</Card> : null}
       {!watchlist.available ? <EmptyState>{t.error}</EmptyState> : null}
+      {canManageUsers(seerr.user) ? <Button variant="outline" title={mt.users} onPress={() => router.push("/users")} /> : null}
       {seerr.isAdmin && seerr.webhookPath ? <PushSetup link={`${(process.env.EXPO_PUBLIC_API_URL ?? "").replace(/\/+$/, "")}${seerr.webhookPath}`} serverUrl={seerr.serverUrl} /> : null}
       <Button variant="outline" title={mt.disconnectSeerr} onPress={() => sheet({ title: mt.disconnectSeerr, detail: seerr.serverUrl ?? undefined, options: [{ label: t.disconnect, destructive: true, run: () => void seerr.disconnect() }] })} />
     </Screen>
