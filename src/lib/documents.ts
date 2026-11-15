@@ -352,7 +352,7 @@ const ar: typeof en = {
   remindChoice: (days: number) => (days === 0 ? "يوم الانتهاء" : days === 60 ? "قبلها بشهرين" : days % 30 === 0 && days > 60 ? `قبلها بـ ${n(days / 30)} شهور` : `قبلها بـ ${n(days)} يوم`),
   notes: "ملاحظات",
   notesPh: "مثلاً: تحتاج صورة جديدة",
-  noNumber: "Orbit ما يحفظ رقم الوثيقة.",
+  noNumber: "رقم الوثيقة ما ينحفظ في التطبيق.",
   save: "حفظ",
   saved: "انحفظت",
   delete: "حذف",

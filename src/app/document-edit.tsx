@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Text, View } from "react-native";
 import { Chips } from "@/components/chips";
 import { Card, type } from "@/components/drift";
@@ -64,6 +64,19 @@ export default function DocumentEdit() {
   const [typed, setTyped] = useState<Typed>(() => partsOf(form.expiresOn, calendar));
   const [saving, setSaving] = useState(false);
   const set = (changes: Partial<DocumentForm>) => setForm((current) => ({ ...current, ...changes }));
+
+  // Opened before the list had loaded (a link from a notification): fill the form once the paper arrives.
+  const [filled, setFilled] = useState(Boolean(existing) || !id);
+  useEffect(() => {
+    if (filled || !existing) return;
+    const next = documentFormFrom(existing);
+    const start: Calendar = hijriOn && (next.kind === "national_id" || next.kind === "iqama") ? "hijri" : "gregorian";
+    setForm(next);
+    setCalendar(start);
+    setTyped(partsOf(next.expiresOn, start));
+    setRemindTouched(true);
+    setFilled(true);
+  }, [filled, existing, hijriOn]);
 
   // A new paper of another kind takes that kind's usual heads-ups, until the person picks their own.
   const [remindTouched, setRemindTouched] = useState(Boolean(existing));

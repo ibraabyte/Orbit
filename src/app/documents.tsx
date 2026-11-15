@@ -54,8 +54,17 @@ export default function Documents() {
         title={documentTitle(document)}
         badges={<DocumentBadge left={left} />}
         subtitle={documentSubtitle(document, left)}
-        onPress={() => edit(document)}
-        trailing={stateOf(left) === "ok" ? undefined : <RowButton label={dx.renewed} onPress={() => renew(document)} />}
+        // A paper due soon carries its own buttons, so the row itself is not one (a button can't sit inside a button).
+        onPress={stateOf(left) === "ok" ? () => edit(document) : undefined}
+        chevron={stateOf(left) === "ok"}
+        trailing={
+          stateOf(left) === "ok" ? undefined : (
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <RowButton label={dx.renewed} onPress={() => renew(document)} />
+              <RowButton outline icon="edit-2" onPress={() => edit(document)} />
+            </View>
+          )
+        }
       />
     );
   };

@@ -21,9 +21,10 @@ export function DocumentBadge({ left }: { left: number }) {
   return <Badge tone="success" glyph="✓">{leftText(left)}</Badge>;
 }
 
-/** "Expires 1 Mar 2027 · 12 Ramadan 1448 AH", and whose it is when not the person's own. */
+/** "Expires 1 Mar 2027", and whose it is when not the person's own; the Hijri date on a second line. */
 export function documentSubtitle(document: OfficialDocument, left: number) {
   const hijri = hijriText(document.expires_on);
-  return [document.holder, `${left < 0 ? dx.expiredOn(document.expires_on) : dx.expiresOn(document.expires_on)}${hijri ? ` · ${hijri}` : ""}`].filter(Boolean).join(" · ");
+  const line = [document.holder, left < 0 ? dx.expiredOn(document.expires_on) : dx.expiresOn(document.expires_on)].filter(Boolean).join(" · ");
+  return hijri ? `${line}\n${hijri}` : line;
 }
 
