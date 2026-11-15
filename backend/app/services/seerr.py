@@ -56,6 +56,12 @@ ALLOWED: list[tuple[str, re.Pattern[str]]] = [
         ("POST", r"request/\d+/retry"),
         ("DELETE", r"request/\d+"),
         ("GET", r"user/\d+/quota"),
+        # Managing one title, for people Seerr lets manage requests: mark it available, clear what Seerr knows, remove
+        # it from Radarr/Sonarr, and the blocklist. Seerr checks the permission itself.
+        ("POST", r"media/\d+/available"),
+        ("DELETE", r"media/\d+(/file)?"),
+        ("POST", r"blocklist"),
+        ("DELETE", r"blocklist/\d+"),
         # Advanced request options: the Radarr/Sonarr servers Seerr sends to, and one server's quality profiles and
         # folders. Seerr answers these without the servers' keys, and decides itself who may use them in a request.
         ("GET", r"service/(radarr|sonarr)"),

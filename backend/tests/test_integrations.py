@@ -338,3 +338,12 @@ def test_proxy_allows_the_discover_rails_and_nothing_next_to_them():
     for path in ["settings/main", "settings/discover/reset", "media/5", "watchproviders/regions", "collection/10/request"]:
         assert not seerr.allowed("GET", path), path
     assert not seerr.allowed("POST", "settings/discover")
+
+
+def test_proxy_allows_managing_a_title_and_nothing_wider():
+    assert seerr.allowed("POST", "media/12/available")
+    assert seerr.allowed("DELETE", "media/12") and seerr.allowed("DELETE", "media/12/file")
+    assert seerr.allowed("POST", "blocklist") and seerr.allowed("DELETE", "blocklist/603")
+    assert not seerr.allowed("POST", "media/12/unknown")
+    assert not seerr.allowed("GET", "media/12/watch_data")
+    assert not seerr.allowed("POST", "blocklist/collection/10")

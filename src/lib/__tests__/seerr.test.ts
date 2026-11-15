@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER, collectionToRequest } from "@/lib/seerr";
+import { backdropUrl, canManageRequests, canRequest, createSeerrClient, factLine, factRows, makers, mediaBadge, normalizeSeerrUrl, playUrl, posterUrl, quotaLine, requestBadge, runtimeLabel, seasonBadge, seasonRows, seerrPageUrl, seerrTitle, serverSeerrCall, topCast, trailerUrl, withLanguage, sliderRail, visibleSliders, filteredPath, withFilters, parseList, SLIDER, collectionToRequest, streamingIn } from "@/lib/seerr";
 
 // A stand-in for Orbit's API client: records the calls the app would send to the server.
 function fakeServer(responses: Record<string, unknown>) {
@@ -234,5 +234,19 @@ describe("seerr search and collections", () => {
     expect(collection.parts.every((part) => part.mediaType === "movie")).toBe(true);
     // Only the film that isn't on the server yet gets asked for.
     expect(collectionToRequest(collection.parts).map((part) => part.id)).toEqual([4]);
+  });
+});
+
+describe("seerr title extras", () => {
+  it("lists the subscriptions it streams on here, best known first", () => {
+    const details = { watchProviders: [{ iso_3166_1: "US", flatrate: [{ id: 1, name: "Elsewhere" }] }, { iso_3166_1: "SA", link: "https://example.com/watch", flatrate: [{ id: 9, name: "Second", displayPriority: 5 }, { id: 8, name: "First", displayPriority: 1 }], buy: [{ id: 2, name: "Store" }] }] };
+    expect(streamingIn(details)).toEqual({ link: "https://example.com/watch", providers: [{ id: 8, name: "First", displayPriority: 1 }, { id: 9, name: "Second", displayPriority: 5 }] });
+    expect(streamingIn({}).providers).toEqual([]);
+  });
+
+  it("never offers a request for a blocklisted title, but does for a deleted one", () => {
+    expect(canRequest({ mediaType: "movie", mediaInfo: { status: 6 } })).toBe(false);
+    expect(canRequest({ mediaType: "movie", mediaInfo: { status: 7 } })).toBe(true);
+    expect(mediaBadge(6)?.glyph).toBe("⊘");
   });
 });

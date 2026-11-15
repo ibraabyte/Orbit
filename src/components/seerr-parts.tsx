@@ -13,6 +13,7 @@ import { contentWidth } from "@/lib/sidebar";
 export const openTitle = (kind: SeerrMediaType, id: number) => router.push({ pathname: "/title", params: { kind, id: String(id) } });
 export const openPerson = (id: number) => router.push({ pathname: "/person", params: { id: String(id) } });
 export const openCollection = (id: number) => router.push({ pathname: "/collection", params: { id: String(id) } });
+export const openCredits = (kind: SeerrMediaType, id: number) => router.push({ pathname: "/credits", params: { kind, id: String(id) } });
 // The list travels as JSON; the Discover screen checks it before using it.
 export function openDiscover(list: DiscoverList, name?: string) {
   router.push({ pathname: "/discover", params: { list: JSON.stringify(list), name: name ?? "" } });

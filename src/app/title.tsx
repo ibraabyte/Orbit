@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Card, CheckItem, EmptyState, Icon, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { RequestOptions, useRequestOptions } from "@/components/request-options";
-import { CastCard, Chip, FactRows, openCollection, openDiscover, Poster, PosterRail, StatusPill } from "@/components/seerr-parts";
+import { CastCard, Chip, FactRows, openCollection, openCredits, openDiscover, Poster, PosterRail, SeeAll, StatusPill } from "@/components/seerr-parts";
 import { BleedRow, Button, CONTENT_MAX_WIDTH } from "@/components/screen";
 import { colors, fonts, lineHeights, radius, shadow, space, textSize, usePalette } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
@@ -29,6 +29,7 @@ import {
   seasonRows,
   seerrName,
   seerrPageUrl,
+  streamingIn,
   topCast,
   trailerUrl,
   type SeerrDetails,
@@ -180,6 +181,7 @@ export default function Title() {
       return next;
     });
 
+  const streaming = streamingIn(item);
   const open = (url: string) => void WebBrowser.openBrowserAsync(url).catch(() => Linking.openURL(url));
   const links = [
     trailer ? { label: `▶ ${mt.trailer}`, url: trailer } : null,
@@ -330,6 +332,16 @@ export default function Title() {
             </Card>
           ) : null}
 
+          {streaming.providers.length ? (
+            <Card title={mt.streamingOn}>
+              <BleedRow>
+                {streaming.providers.map((provider) => (
+                  <Chip key={provider.id} label={provider.name} onPress={() => (streaming.link ? open(streaming.link) : undefined)} />
+                ))}
+              </BleedRow>
+            </Card>
+          ) : null}
+
           {item.genres?.length ? (
             <BleedRow>
               {item.genres.map((genre) => (
@@ -344,6 +356,16 @@ export default function Title() {
             </Card>
           ) : null}
 
+          {item.keywords?.length ? (
+            <Card title={mt.keywords}>
+              <BleedRow>
+                {item.keywords.map((keyword) => (
+                  <Chip key={keyword.id} label={keyword.name} onPress={() => openDiscover({ row: "filtered", kind, filters: { keywords: String(keyword.id) } }, keyword.name)} />
+                ))}
+              </BleedRow>
+            </Card>
+          ) : null}
+
           {item.collection ? (
             <Card title={mt.collection}>
               <ListRow leading={<Poster path={item.collection.posterPath} title={item.collection.name} width={36} />} title={item.collection.name} onPress={() => openCollection(item.collection!.id)} />
@@ -351,7 +373,7 @@ export default function Title() {
           ) : null}
 
           {cast.length ? (
-            <Card title={mt.cast}>
+            <Card title={mt.cast} action={<SeeAll onPress={() => openCredits(kind, tmdbId)} />}>
               <BleedRow>
                 {cast.map((person) => (
                   <CastCard key={person.id} person={person} />
@@ -370,6 +392,8 @@ export default function Title() {
               </View>
             </Card>
           ) : null}
+
+          {seerr.isAdmin ? <Manage seerr={seerr} kind={kind} item={item} act={act} open={open} busy={busy} /> : null}
 
           <PosterRail title={mt.recommended} items={recommended} />
           <PosterRail title={mt.similar} items={similar} />
@@ -410,3 +434,32 @@ const styles = StyleSheet.create({
   rating: { flex: 1, gap: space.xs, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.tile, padding: space.md, alignItems: "flex-start" },
   ratingValue: { fontFamily: fonts.medium, fontSize: textSize.title3, color: colors.ink },
 });
+
+// Seerr's "Manage" panel, for people who manage requests: open it in Radarr/Sonarr, mark it available, clear what
+// Seerr knows, remove it from the server, and the blocklist. The ones that delete things ask first.
+function Manage({ seerr, kind, item, act, open, busy }: { seerr: ReturnType<typeof useSeerr>; kind: SeerrMediaType; item: SeerrDetails; act: (work: () => Promise<unknown>) => Promise<void>; open: (url: string) => void; busy: boolean }) {
+  const client = seerr.client;
+  const { sheet } = useOverlays();
+  if (!client) return null;
+  const mediaId = item.mediaInfo?.id;
+  const status = item.mediaInfo?.status;
+  const name = seerrName(item);
+  const confirm = (title: string, detail: string, run: () => Promise<unknown>) => sheet({ title, detail: `${name}\n${detail}`, options: [{ label: title, destructive: true, run: () => void act(run) }] });
+  const seasons = kind === "tv" ? (item.seasons ?? []).map((season) => season.seasonNumber).filter((number) => number !== 0) : undefined;
+  return (
+    <Card title={mt.manage} style={{ gap: space.md }}>
+      <Text style={type.rowSubtitle}>{mt.manageHint}</Text>
+      <View style={styles.links}>
+        {item.mediaInfo?.serviceUrl ? <RowButton outline label={`${mt.openInService(kind)} ↗`} onPress={() => open(item.mediaInfo!.serviceUrl!)} /> : null}
+        {mediaId && status !== 5 && status !== 6 ? <RowButton outline label={mt.markAvailable} disabled={busy} onPress={() => void act(() => client.markAvailable(mediaId, seasons))} /> : null}
+        {status === 6 ? (
+          <RowButton outline label={mt.removeBlocklist} disabled={busy} onPress={() => void act(() => client.unblocklist(kind, item.id))} />
+        ) : seerr.user ? (
+          <RowButton outline label={mt.addBlocklist} disabled={busy} onPress={() => confirm(mt.addBlocklist, mt.addBlocklistDetail, () => client.blocklist(kind, item.id, name, seerr.user!.id))} />
+        ) : null}
+        {mediaId ? <RowButton outline label={mt.clearData} disabled={busy} onPress={() => confirm(mt.clearData, mt.clearDataDetail, () => client.clearData(mediaId))} /> : null}
+        {mediaId && (status === 3 || status === 4 || status === 5) ? <RowButton outline label={mt.removeFiles(kind)} disabled={busy} onPress={() => confirm(mt.removeFiles(kind), mt.removeFilesDetail, () => client.removeFiles(mediaId))} /> : null}
+      </View>
+    </Card>
+  );
+}

@@ -8,7 +8,8 @@ import { digits, isArabic } from "@/lib/i18n";
 export type SeerrConfig = { url: string; apiKey: string };
 export type SeerrMediaType = "movie" | "tv";
 
-// mediaInfo.status: what the server has. 6 is "blocklisted" (Jellyseerr) or "deleted" (newer Overseerr).
+// mediaInfo.status: what the server has. In Seerr 6 is "blocklisted" (never requested again) and 7 is "deleted"
+// (gone from the server, can be asked for again).
 export type MediaStatus = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 // request.status: what happened to the ask. 4 failed, 5 completed (Jellyseerr).
 export type RequestStatus = 1 | 2 | 3 | 4 | 5;
@@ -43,6 +44,9 @@ export type SeerrMediaInfo = {
   mediaUrl?: string | null;
   plexUrl?: string | null;
   iOSPlexUrl?: string | null;
+  // For people who manage requests: the title's page in Radarr or Sonarr.
+  serviceUrl?: string | null;
+  serviceUrl4k?: string | null;
 };
 
 export type SeerrCast = { id: number; name: string; character?: string; profilePath?: string | null; order?: number };
@@ -77,6 +81,9 @@ export type SeerrDetails = SeerrResult & {
   relatedVideos?: SeerrVideo[];
   externalIds?: { imdbId?: string | null };
   imdbId?: string | null;
+  keywords?: { id: number; name: string }[];
+  // Where it streams, per country (TMDB, from JustWatch).
+  watchProviders?: { iso_3166_1: string; link?: string; flatrate?: SeerrProvider[]; buy?: SeerrProvider[] }[];
   // A movie in a series of films (TMDB collection).
   collection?: { id: number; name: string; posterPath?: string | null; backdropPath?: string | null } | null;
 };
@@ -269,6 +276,12 @@ export function filteredPath(kind: SeerrMediaType, filters: DiscoverFilters) {
   return `discover/${kind === "tv" ? "tv" : "movies"}${query ? `?${query}` : ""}`;
 }
 
+// Where it streams in Saudi Arabia (subscriptions only, like Seerr's "Currently streaming on"), and the page to watch.
+export function streamingIn(details: Pick<SeerrDetails, "watchProviders">, region = WATCH_REGION) {
+  const here = details.watchProviders?.find((entry) => entry.iso_3166_1 === region);
+  return { link: here?.link ?? null, providers: [...(here?.flatrate ?? [])].sort((a, b) => (a.displayPriority ?? 99) - (b.displayPriority ?? 99)) };
+}
+
 // The films of a collection Seerr would take a request for: not on the server, not asked for yet.
 export function collectionToRequest(parts: SeerrResult[]) {
   return parts.filter((part) => canRequest(part));
@@ -389,7 +402,8 @@ export function mediaBadge(status: MediaStatus | undefined): StatusBadge | null 
   if (status === 4) return { label: mt.status.partial, glyph: "◐", tone: "accent" };
   if (status === 3) return { label: mt.status.processing, glyph: "↓", tone: "accent" };
   if (status === 2) return { label: mt.status.pending, glyph: "◷", tone: "neutral" };
-  if (status === 6 || status === 7) return { label: mt.status.removed, glyph: "×", tone: "neutral" };
+  if (status === 6) return { label: mt.status.blocklisted, glyph: "⊘", tone: "neutral" };
+  if (status === 7) return { label: mt.status.removed, glyph: "×", tone: "neutral" };
   return null;
 }
 
@@ -404,7 +418,7 @@ export function requestBadge(status: RequestStatus): StatusBadge {
 // A title can be asked for when the server has nothing yet (or only part of a series).
 export function canRequest(item: Pick<SeerrResult, "mediaType" | "mediaInfo">, is4k = false) {
   const status = is4k ? item.mediaInfo?.status4k : item.mediaInfo?.status;
-  return !status || status === 1 || status === 6 || status === 7 || (item.mediaType === "tv" && status === 4);
+  return !status || status === 1 || status === 7 || (item.mediaType === "tv" && status === 4);
 }
 
 export type SeasonRow = SeerrSeason & { status: MediaStatus | undefined; requested: boolean; requestable: boolean };
@@ -642,6 +656,16 @@ export function createSeerrClient(call: SeerrCall) {
     similar: (mediaType: SeerrMediaType, tmdbId: number) => page(`${mediaType}/${tmdbId}/similar`, mediaType).then((body) => body.results),
     person: (personId: number) => call<SeerrPerson>("GET", `person/${personId}`).then((item) => withEnglish(call, `person/${personId}`, item, "biography")),
     personCredits: (personId: number) => call<{ cast?: SeerrCredit[]; crew?: SeerrCredit[] }>("GET", `person/${personId}/combined_credits`).then((body) => personCredits(body.cast, body.crew)),
+    // Managing a title (people who manage requests). mediaId is Seerr's own id (mediaInfo.id), not the TMDB id.
+    markAvailable: (mediaId: number, seasons?: number[]) =>
+      call<SeerrMediaInfo>("POST", `media/${mediaId}/available`, { is4k: false, ...(seasons ? { seasons: seasons.map((seasonNumber) => ({ seasonNumber })) } : {}) }),
+    // Forgets what Seerr knows about the title (its requests and status). The files stay.
+    clearData: (mediaId: number) => call<void>("DELETE", `media/${mediaId}`),
+    // Removes the title from Radarr or Sonarr, files included.
+    removeFiles: (mediaId: number) => call<void>("DELETE", `media/${mediaId}/file?is4k=false`),
+    // Blocklisted titles can't be requested and stop showing in Discover.
+    blocklist: (mediaType: SeerrMediaType, tmdbId: number, title: string, userId: number) => call<void>("POST", "blocklist", { tmdbId, mediaType, title, user: userId }),
+    unblocklist: (mediaType: SeerrMediaType, tmdbId: number) => call<void>("DELETE", `blocklist/${tmdbId}?mediaType=${mediaType}`),
     approve: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/approve`),
     decline: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/decline`),
     retry: (requestId: number) => call<SeerrRequest>("POST", `request/${requestId}/retry`),
@@ -684,7 +708,7 @@ const en = {
   awaiting: "Awaiting approval",
   requestsEmpty: "No requests here.",
   filters: { all: "All", pending: "Waiting", processing: "Downloading", available: "Available", failed: "Failed" } as Record<RequestFilter, string>,
-  status: { available: "Available", partial: "Partly available", processing: "Downloading", pending: "Requested", removed: "Removed" },
+  status: { available: "Available", partial: "Partly available", processing: "Downloading", pending: "Requested", removed: "Removed", blocklisted: "Blocklisted" },
   requestStatus: { pending: "Waiting for approval", approved: "Approved", declined: "Declined", failed: "Failed", completed: "Completed" },
   request: "Request",
   requestMore: "Request more seasons",
@@ -745,6 +769,21 @@ const en = {
   requestMovies: (count: number) => (count === 1 ? "Request 1 movie" : `Request ${count} movies`),
   requestedMovies: (count: number) => (count === 1 ? "Requested 1 movie." : `Requested ${count} movies.`),
   allRequested: "Every movie here is on the server or already requested.",
+  streamingOn: "Streaming in Saudi Arabia",
+  keywords: "Keywords",
+  fullCredits: "Cast and crew",
+  crew: "Crew",
+  manage: "Manage",
+  manageHint: "Changes here are made on your Seerr server.",
+  openInService: (kind: SeerrMediaType): string => (kind === "tv" ? "Open in Sonarr" : "Open in Radarr"),
+  markAvailable: "Mark as available",
+  clearData: "Clear data",
+  clearDataDetail: "Seerr forgets this title's requests and status. The files stay on the server.",
+  removeFiles: (kind: SeerrMediaType): string => (kind === "tv" ? "Remove from Sonarr" : "Remove from Radarr"),
+  removeFilesDetail: "Removes it from the server, files included. This can't be undone.",
+  addBlocklist: "Add to blocklist",
+  addBlocklistDetail: "It can't be requested, and stops showing in Discover.",
+  removeBlocklist: "Remove from blocklist",
   pushTitle: "Notifications on your phone",
   pushSteps: "In Seerr, open Settings › Notifications › Webhook. Turn it on, paste this link as the Webhook URL, pick the notifications you want, then Save. Tap Test to try it.",
   shareLink: "Share link",
@@ -783,7 +822,7 @@ const ar: typeof en = {
   awaiting: "تنتظر الموافقة",
   requestsEmpty: "لا توجد طلبات هنا.",
   filters: { all: "الكل", pending: "تنتظر", processing: "يتحمّل", available: "متوفر", failed: "فشل" },
-  status: { available: "متوفر", partial: "متوفر جزئيًا", processing: "يتحمّل", pending: "مطلوب", removed: "محذوف" },
+  status: { available: "متوفر", partial: "متوفر جزئيًا", processing: "يتحمّل", pending: "مطلوب", removed: "محذوف", blocklisted: "محظور" },
   requestStatus: { pending: "ينتظر الموافقة", approved: "تمت الموافقة", declined: "مرفوض", failed: "فشل", completed: "اكتمل" },
   request: "اطلب",
   requestMore: "اطلب مواسم أخرى",
@@ -845,6 +884,21 @@ const ar: typeof en = {
   requestMovies: (count: number) => (count === 1 ? "اطلب فيلمًا واحدًا" : count === 2 ? "اطلب فيلمين" : count <= 10 ? `اطلب ${digits(String(count))} أفلام` : `اطلب ${digits(String(count))} فيلمًا`),
   requestedMovies: (count: number) => (count === 1 ? "طُلب فيلم واحد." : count === 2 ? "طُلب فيلمان." : count <= 10 ? `طُلبت ${digits(String(count))} أفلام.` : `طُلب ${digits(String(count))} فيلمًا.`),
   allRequested: "كل أفلام المجموعة موجودة أو مطلوبة.",
+  streamingOn: "منصات البث في السعودية",
+  keywords: "الكلمات المفتاحية",
+  fullCredits: "الممثلون وطاقم العمل",
+  crew: "طاقم العمل",
+  manage: "الإدارة",
+  manageHint: "التغييرات هنا تصير على سيرفر Seerr.",
+  openInService: (kind: SeerrMediaType) => (kind === "tv" ? "افتح في Sonarr" : "افتح في Radarr"),
+  markAvailable: "علّمه متوفرًا",
+  clearData: "امسح البيانات",
+  clearDataDetail: "ينسى Seerr طلبات هذا العنوان وحالته. الملفات تبقى على السيرفر.",
+  removeFiles: (kind: SeerrMediaType) => (kind === "tv" ? "احذفه من Sonarr" : "احذفه من Radarr"),
+  removeFilesDetail: "يُحذف من السيرفر مع ملفاته. لا يمكن التراجع.",
+  addBlocklist: "أضفه إلى قائمة الحظر",
+  addBlocklistDetail: "لن يمكن طلبه، ولن يظهر في الاكتشاف.",
+  removeBlocklist: "أزله من قائمة الحظر",
   pushTitle: "التنبيهات على جوالك",
   pushSteps: "في Seerr افتح Settings ثم Notifications ثم Webhook. فعّله، والصق هذا الرابط في Webhook URL، واختر التنبيهات التي تريدها، ثم احفظ. اضغط Test للتجربة.",
   shareLink: "شارك الرابط",

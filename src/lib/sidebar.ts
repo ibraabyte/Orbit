@@ -48,7 +48,8 @@ const parents: Record<string, string> = {
   discover: "media",
   requests: "media",
   person: "media",
-  collection: "media"
+  collection: "media",
+  credits: "media"
 };
 
 // Sheets that open over a screen; the item under them stays lit.
