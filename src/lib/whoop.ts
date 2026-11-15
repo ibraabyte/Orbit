@@ -1,5 +1,5 @@
 import type { ApiClient } from "@/lib/api";
-import { digits } from "@/lib/i18n";
+import { digits, t } from "@/lib/i18n";
 import type { AiChoiceName } from "@/lib/integrations";
 
 // Same names as the tones in components/screen.tsx.
@@ -155,11 +155,10 @@ export function recentRecovery(daily: WhoopDay[], n = 14) {
 }
 
 export function syncedAgo(lastSyncedAt: string | null, now = new Date()) {
-  if (!lastSyncedAt) return "Not synced yet";
+  if (!lastSyncedAt) return t.pv.notSynced;
   const minutes = Math.max(0, Math.round((now.getTime() - new Date(lastSyncedAt).getTime()) / 60000));
-  if (minutes < 1) return "Synced just now";
-  if (minutes < 60) return `Synced ${minutes}m ago`;
+  if (minutes < 1) return t.pv.syncedNow;
   const hours = Math.round(minutes / 60);
-  if (hours < 48) return `Synced ${hours}h ago`;
-  return `Synced ${Math.round(hours / 24)}d ago`;
+  const [text, n] = minutes < 60 ? [t.pv.syncedMin, minutes] : hours < 48 ? [t.pv.syncedHour, hours] : [t.pv.syncedDay, Math.round(hours / 24)];
+  return digits(text.replace("{n}", String(n)));
 }
