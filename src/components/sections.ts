@@ -17,9 +17,9 @@ import { px } from "@/lib/phone-calls";
 export type Section = { key: string; href: Href; label: string; icon: IconName };
 
 const section = (key: string, label: string, icon: IconName): Section => ({ key, href: `/${key}` as Href, label, icon });
-export const manage = [section("tasks", t.tasks, "check-square"), section("phone-calls", px.calls, "phone-outgoing")];
+export const manage = [section("tasks", t.tasks, "check-square"), section("phone-calls", px.calls, "agent")];
 // Food, Exercises and WHOOP live inside Health now; they can still be pinned for one tap.
-export const logs = [section("health", t.health, "heart"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "bookmark")];
+export const logs = [section("health", t.health, "heart"), section("finance", t.finance, "credit-card"), section("habits", t.habits, "repeat"), section("library", t.library, "saver")];
 export const insideHealth = [section("food", t.food, "fork-knife"), section("exercises", et.exercises, "dumbbell"), section("whoop", t.whoop, "activity"), section("medications", rx.medications, "pills")];
 // Money places, investments, cards and installments live inside Finance; they can be pinned the same way.
 export const insideFinance = [section("accounts", t.moneyPlaces, "wallet"), section("investments", t.investments, "trending-up"), section("cards", t.cards, "credit-card"), section("obligations", t.obligations, "calendar")];

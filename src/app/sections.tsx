@@ -13,7 +13,7 @@ const ICONS: Record<SectionKey, IconName> = {
   medications: "pills",
   finance: "credit-card",
   habits: "repeat",
-  library: "bookmark",
+  library: "saver",
   vehicles: "truck",
   documents: "file-text",
   media: "film"
