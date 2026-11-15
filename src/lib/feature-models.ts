@@ -4,9 +4,9 @@ import type { ApiClient } from "@/lib/api";
 
 // What each AI feature uses (Integrations > "What each feature uses"). Shapes mirror backend/app/routers/integrations.py
 // FeatureStatus and backend/app/services/feature_models.py.
-export const FEATURES = ["assistant", "food_text", "food_photo", "health", "week", "saver", "speech", "call", "phone_agent"] as const;
+export const FEATURES = ["assistant", "food_text", "food_photo", "health", "week", "saver", "bank_sms", "speech", "call", "phone_agent"] as const;
 export type Feature = (typeof FEATURES)[number];
-export type AiFeature = "assistant" | "food_text" | "food_photo" | "health" | "week" | "saver";
+export type AiFeature = "assistant" | "food_text" | "food_photo" | "health" | "week" | "saver" | "bank_sms";
 export type FeatureStatus = {
   feature: Feature;
   kind: "ai" | "realtime" | "speech";

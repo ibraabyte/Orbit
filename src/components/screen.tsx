@@ -63,6 +63,7 @@ export function Columns({ left, right }: { left: ReactNode; right: ReactNode }) 
 // Stack screens: their title and the example line on the capture bar. Each opens on its own, with no row of
 // other sections across the top, so a section only shows its own things.
 const stackScreens: Record<string, { title: string; hint?: string }> = {
+  "/bank-sms": { title: t.bankSms },
   "/tasks": { title: t.tasks, hint: "pay rent fri 5pm +home · pack; passport; charger" },
   "/health": { title: t.health, hint: "weight 82 · slept 7h q4 · workout 40m run" },
   "/health-goals": { title: ht.goals },
@@ -170,6 +171,9 @@ export function Screen({
       contentInsetAdjustmentBehavior={stack ? "automatic" : "never"}
       contentContainerStyle={[styles.content, styles.column, { direction: isArabic ? "rtl" : "ltr" }, wide && { maxWidth: WIDE_MAX_WIDTH }, { paddingTop: stack || banner ? space.sm : insets.top + space.sm, paddingBottom: bottom }]}
       keyboardShouldPersistTaps="handled"
+      // A field low on the page scrolls above the keyboard, and dragging the page down puts the keyboard away.
+      automaticallyAdjustKeyboardInsets
+      keyboardDismissMode="interactive"
       refreshControl={
         onRefresh ? (
           <RefreshControl

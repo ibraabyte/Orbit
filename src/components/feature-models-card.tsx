@@ -16,6 +16,7 @@ const ICONS: Record<Feature, IconName> = {
   health: "activity",
   week: "calendar",
   saver: "bookmark",
+  bank_sms: "credit-card",
   speech: "mic",
   call: "phone-call",
   phone_agent: "phone-outgoing"

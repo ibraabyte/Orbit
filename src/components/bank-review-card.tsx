@@ -1,7 +1,7 @@
 import { Text } from "react-native";
 import { Badge, Card, ListRow, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
-import { canConfirm, isPossibleDuplicate, isSpending, type BankTransaction } from "@/lib/bank-sms";
+import { bankName, canConfirm, isPossibleDuplicate, isReadByAi, isSpending, type BankTransaction } from "@/lib/bank-sms";
 import { financeCategories, formatMoney } from "@/lib/finance";
 import { formatDate, t } from "@/lib/i18n";
 import type { FinanceCategory } from "@/lib/types";
@@ -24,8 +24,8 @@ export function BankReviewCard({
   const accept = (row: BankTransaction, category?: FinanceCategory) => confirm(row, category).then(() => toast(t.bankConfirmed));
   const open = (row: BankTransaction) =>
     sheet({
-      title: row.merchant ?? t.bankNames[row.bank],
-      detail: `${t.bankNames[row.bank]} · ${t.bankKinds[row.kind]}${canConfirm(row) ? "" : ` · ${t.bankUnclearHint}`}`,
+      title: row.merchant ?? bankName(row),
+      detail: `${bankName(row)} · ${t.bankKinds[row.kind]}${canConfirm(row) ? "" : ` · ${t.bankUnclearHint}`}`,
       options: [
         ...(canConfirm(row) && isSpending(row)
           ? financeCategories.map((category) => ({ label: `${t.bankConfirmAs} ${t.financeCategoryNames[category]}`, run: () => void accept(row, category) }))
@@ -42,16 +42,17 @@ export function BankReviewCard({
       {items.map((row) => (
         <ListRow
           key={row.id}
-          title={row.merchant ?? t.bankNames[row.bank]}
+          title={row.merchant ?? bankName(row)}
           badges={
             <>
               {row.kind !== "purchase" ? <Badge>{t.bankKinds[row.kind]}</Badge> : null}
               {isPossibleDuplicate(row) ? <Badge tone="urgent" glyph="!">{t.bankPossibleDuplicate}</Badge> : null}
+              {isReadByAi(row) ? <Badge glyph="✦">{t.bankReadByAi}</Badge> : null}
               {row.amount === null ? <Badge tone="urgent" glyph="!">{t.bankUnclear}</Badge> : null}
             </>
           }
           subtitle={[
-            ...(row.merchant ? [t.bankNames[row.bank]] : []),
+            ...(row.merchant ? [bankName(row)] : []),
             formatDate(row.received_at, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }),
             ...(isSpending(row) ? [t.financeCategoryNames[row.category]] : [])
           ].join(" · ")}

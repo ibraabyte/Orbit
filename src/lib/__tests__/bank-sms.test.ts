@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bankSmsApi, canConfirm, isPossibleDuplicate, isSpending, type BankTransaction } from "@/lib/bank-sms";
+import { bankName, bankSmsApi, canConfirm, isPossibleDuplicate, isReadByAi, isSpending, shortcutUrl, type BankTransaction } from "@/lib/bank-sms";
 
 function fakeApi() {
   const calls: { method: string; path: string; body?: unknown }[] = [];
@@ -65,5 +65,37 @@ describe("bank SMS", () => {
   it("spots a possible duplicate", () => {
     expect(isPossibleDuplicate(row())).toBe(false);
     expect(isPossibleDuplicate(row({ review_reasons: ["possible_duplicate"] }))).toBe(true);
+  });
+});
+
+describe("ready Shortcut and examples", () => {
+  it("builds the Shortcut's download address", () => {
+    expect(shortcutUrl("https://x/")).toBe("https://x/bank-sms/shortcut");
+    expect(shortcutUrl("https://x")).toBe("https://x/bank-sms/shortcut");
+  });
+
+  it("marks only what the AI read", () => {
+    expect(isReadByAi(row({ review_reasons: ["read_by_ai"] }))).toBe(true);
+    expect(isReadByAi(row({ review_reasons: ["unverified_bank_format"] }))).toBe(false);
+  });
+
+  it("names a message with no bank", () => {
+    expect(bankName(row({ bank: null }))).toBeTruthy();
+    expect(bankName(row({ bank: null }))).not.toBe(bankName(row({ bank: "rajhi" })));
+    expect(canConfirm(row({ bank: null }))).toBe(true);
+  });
+
+  it("calls the template and settings routes", async () => {
+    const { api, calls } = fakeApi();
+    await bankSmsApi.preview(api, "text");
+    await bankSmsApi.templates(api);
+    await bankSmsApi.deleteTemplate(api, "a/b");
+    await bankSmsApi.setAi(api, false);
+    expect(calls).toEqual([
+      { method: "POST", path: "/bank-sms/templates/preview", body: { example: "text" } },
+      { method: "GET", path: "/bank-sms/templates", body: undefined },
+      { method: "DELETE", path: "/bank-sms/templates/a%2Fb", body: undefined },
+      { method: "PATCH", path: "/bank-sms/settings", body: { ai_read: false } }
+    ]);
   });
 });

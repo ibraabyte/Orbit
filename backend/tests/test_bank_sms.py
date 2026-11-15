@@ -243,3 +243,18 @@ def test_deleting_the_account_takes_everything(client, auth, key, db: Session):
     assert response.status_code in (200, 204)
     for table in ("bank_transactions", "bank_sms_events", "bank_sms_tokens"):
         assert db.execute(text(f"select count(*) from {table}")).scalar_one() == 0
+
+
+def test_message_without_bank_or_event_id_is_read(client, auth, key):
+    response = client.post("/bank-sms", json={"message": PURCHASE}, headers=key)
+    assert response.status_code == 201
+    row = response.json()["transaction"]
+    assert row["bank"] is None and row["kind"] == "purchase" and row["status"] == "needs_review"
+    assert "unverified_bank_format" in row["review_reasons"]
+
+
+def test_resent_without_event_id_is_flagged_not_doubled(client, auth, key):
+    message = "شراء\nمبلغ: 41 ريال"
+    client.post("/bank-sms", json={"message": message}, headers=key)
+    twin = client.post("/bank-sms", json={"message": message}, headers=key).json()["transaction"]
+    assert "possible_duplicate" in twin["review_reasons"] and twin["status"] == "needs_review"
