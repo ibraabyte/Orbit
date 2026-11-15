@@ -166,9 +166,7 @@ describe("the voice call", () => {
   });
 
   it("has every call text in the app's language", () => {
-    for (const key of ["callTitle", "callConsentBody", "callCost", "callNoKey", "callNeedsBuild"] as const) expect(t[key]).toBeTruthy();
-    expect(t.callCost).toContain("{n}");
-    expect(t.callCostEleven).toContain("{n}");
+    for (const key of ["callTitle", "callConsentBody", "callNoKey", "callNeedsBuild"] as const) expect(t[key]).toBeTruthy();
     expect(t.callConsentTitle).toContain("{company}");
   });
 });
@@ -176,8 +174,11 @@ describe("the voice call", () => {
 describe("call voices offered", () => {
   const voices = ["Abu Salem", "Ali - Saudi Arabic", "Alice - Clear, Engaging Educator", "Bill - Wise", "Mansour - Saudi, Natural"].map((name, index) => ({ id: `v${index}`, name, arabic: true }));
   it("shows a voice by its short name", () => {
-    expect(voiceLabel(voices[1]!)).toBe("Ali");
-    expect(voiceLabel(voices[0]!)).toBe("Abu Salem");
+    expect(voiceLabel(voices[1]!, false)).toBe("Ali");
+    expect(voiceLabel(voices[0]!, false)).toBe("Abu Salem");
+    expect(voiceLabel(voices[1]!, true)).toBe("علي");
+    expect(voiceLabel(voices[0]!, true)).toBe("أبو سالم");
+    expect(voiceLabel(voices[2]!, true)).toBe("Alice");
   });
   it("offers the first few, always with the one in use", () => {
     expect(firstVoices(voices, null).map((v) => v.id)).toEqual(["v0", "v1", "v2", "v3"]);

@@ -1,4 +1,5 @@
 import type { ProposedAction } from "@/lib/assistant";
+import { isArabic } from "@/lib/i18n";
 
 // The voice call with the assistant (src/app/call.tsx, src/hooks/use-voice-call.ts). Two ways, picked in Integrations
 // ("What each feature uses"): OpenAI Realtime with the user's OpenAI key, or ElevenLabs Agents with the ElevenLabs key
@@ -65,8 +66,20 @@ export function pickedVoice(options: VoiceOption[], saved: string | null | undef
   return options[0]?.id ?? null;
 }
 
-// A voice's short name: ElevenLabs names carry a description after " - " ("Ali - Saudi Arabic" → "Ali").
-export const voiceLabel = (option: VoiceOption) => option.name.split(" - ")[0]!.trim() || option.name;
+// Arabic names a voice may carry, written in Arabic when the app is in Arabic.
+// ponytail: a fixed list of common names; a name not in it stays as the company wrote it.
+const ARABIC_NAMES: Record<string, string> = {
+  "abu salem": "أبو سالم", ali: "علي", mansour: "منصور", ibrahim: "إبراهيم", ahmed: "أحمد", ahmad: "أحمد", mohammed: "محمد", mohamed: "محمد", muhammad: "محمد",
+  khalid: "خالد", faisal: "فيصل", fahad: "فهد", omar: "عمر", saud: "سعود", abdullah: "عبدالله", salem: "سالم", nasser: "ناصر", majed: "ماجد", rashid: "راشد",
+  yousef: "يوسف", youssef: "يوسف", hamad: "حمد", sultan: "سلطان", sara: "سارة", sarah: "سارة", noura: "نورة", nora: "نورة", layla: "ليلى", fatima: "فاطمة",
+  hala: "هلا", reem: "ريم", maha: "مها", amal: "أمل", mona: "منى", huda: "هدى", haya: "هيا", lama: "لمى", rania: "رانيا", yasmin: "ياسمين"
+};
+
+// A voice's short name: ElevenLabs names carry a description after " - " ("Ali - Saudi Arabic" → "Ali", "علي" in Arabic).
+export function voiceLabel(option: VoiceOption, arabic = isArabic) {
+  const short = option.name.split(" - ")[0]!.trim() || option.name;
+  return (arabic && ARABIC_NAMES[short.toLowerCase()]) || short;
+}
 
 // The few voices offered the first time: the first ones (Arabic first), always with the one in use.
 export function firstVoices(options: VoiceOption[], current: string | null, count = 4): VoiceOption[] {

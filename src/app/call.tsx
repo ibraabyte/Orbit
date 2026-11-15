@@ -13,7 +13,7 @@ import { elevenLabsAvailable, useVoiceCall, voiceCallAvailable } from "@/hooks/u
 import { actionRows, applyActions, kindName, opName, type ProposedAction } from "@/lib/assistant";
 import { getApi } from "@/lib/backend";
 import { digits, isArabic, t } from "@/lib/i18n";
-import { callClock, callConsentKey, callVoiceKey, firstVoices, voiceLabel, MAX_CALL_SECONDS, pickedVoice, providerName, providerOf, voiceOptions, type CallPhase, type CallStatus } from "@/lib/voice-call";
+import { callClock, callConsentKey, callVoiceKey, firstVoices, voiceLabel, pickedVoice, providerName, providerOf, voiceOptions, type CallPhase, type CallStatus } from "@/lib/voice-call";
 
 const phaseText: Record<CallPhase, string> = {
   idle: "",
@@ -74,7 +74,8 @@ export default function Call() {
 
   const provider = providerOf(status);
   const company = providerName(provider);
-  const voices = voiceOptions(status);
+  // Nothing until the server says which company calls, so OpenAI's names never flash before ElevenLabs'.
+  const voices = status ? voiceOptions(status) : [];
   const voice = pickedVoice(voices, saved[provider]);
 
   const pickVoice = (next: string) => {
@@ -178,8 +179,6 @@ export default function Call() {
                 </View>
               </View>
             ) : null}
-            {provider === "elevenlabs" && !voices.length ? <Text style={styles.hint}>{t.callVoicesEmpty}</Text> : null}
-            <Text style={styles.hint}>{(provider === "elevenlabs" ? t.callCostEleven : t.callCost).replace("{n}", digits(MAX_CALL_SECONDS / 60))}</Text>
           </View>
         )}
         {/* What the assistant wants to change, one card each, saved only on a tap. */}
