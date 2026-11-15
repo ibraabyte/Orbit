@@ -137,6 +137,7 @@ export default function RootLayout() {
         <Stack.Protected guard={Boolean(session)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.sheet } }} />
+          <Stack.Screen name="customize-today" options={{ presentation: "formSheet", sheetAllowedDetents: [0.75, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.sheet } }} />
           <Stack.Screen name="call" options={{ presentation: "fullScreenModal", gestureEnabled: false }} />
         </Stack.Protected>
         {/* Every screen that reads account data: signed out they have no provider, so they must not be reachable. */}
