@@ -3,14 +3,16 @@ import { useCallback, useState } from "react";
 import { Text, View } from "react-native";
 import { Card, CardLink, EmptyState, GoalBar, IconTile, ListRow, StatGrid, StatTile, type, type IconName } from "@/components/drift";
 import { Columns, Screen } from "@/components/screen";
+import { useAppleHealth } from "@/hooks/use-apple-health";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSections } from "@/hooks/use-sections";
 import { pathHidden } from "@/lib/app-sections";
+import { latest, weekMinutes } from "@/lib/apple-health";
 import { getApi, hasServer } from "@/lib/backend";
 import { et, exercisesApi } from "@/lib/exercises";
 import { foodApi, targetPercent, type FoodDay } from "@/lib/food-log";
 import { buildHealthSnapshot } from "@/lib/health";
-import { deltaText, goalFields, ht, weightHistory, whoopWeekMinutes } from "@/lib/health-hub";
+import { deltaText, goalFields, ht, weightHistory } from "@/lib/health-hub";
 import { formatDate, t } from "@/lib/i18n";
 import { formatSleepDuration } from "@/lib/sleep";
 import { dosesOnDay, isLow, rx } from "@/lib/medications";
@@ -30,6 +32,7 @@ export default function Health() {
   // Food, exercises and WHOOP can each be switched off in Settings → Sections; they leave this hub too.
   const { on, hidden } = useSections();
   const foodOn = on("food");
+  const apple = useAppleHealth();
   const [live, setLive] = useState<Live>({ day: null, whoop: null, summary: null, injuries: null, active: false });
 
   const loadLive = useCallback(async () => {
@@ -59,6 +62,7 @@ export default function Health() {
   const reload = () => {
     void refresh();
     void loadLive();
+    void apple.refresh();
   };
 
   const profile = data.profile;
@@ -75,8 +79,15 @@ export default function Health() {
   const protein = day?.totals.protein_g ?? health.todayMacros.protein;
   const proteinTarget = day?.targets.protein_g ?? health.macroTargets.protein;
   const recovery = summary?.latest.recovery?.value ?? null;
-  const workoutMinutes = whoopOn && summary ? Math.max(whoopWeekMinutes(summary.daily), health.workoutMinutes) : health.workoutMinutes;
-  const sleepText = whoopOn && summary?.latest.sleep_hours ? formatHours(summary.latest.sleep_hours.value) : health.sleepNights ? formatSleepDuration(health.sleepAverageMinutes) : "–";
+  // WHOOP and Apple Health may both have a day (WHOOP writes to Health too): each day counts once.
+  const watchMinutes = weekMinutes(whoopOn && summary ? summary.daily : [], apple.days);
+  const workoutMinutes = Math.max(watchMinutes, health.workoutMinutes);
+  const appleSleep = latest(apple.days, "sleep_minutes");
+  const appleWeight = latest(apple.days, "weight_kg");
+  const fromWatch = whoopOn || Boolean(appleSleep);
+  const sleepText =
+    whoopOn && summary?.latest.sleep_hours ? formatHours(summary.latest.sleep_hours.value) : appleSleep ? formatSleepDuration(appleSleep.value) : health.sleepNights ? formatSleepDuration(health.sleepAverageMinutes) : "–";
+  const steps = apple.today?.steps ?? null;
 
   // Doses still open today, or a medicine running low.
   const openDoses = dosesOnDay(data.medications, data.medicationDoses, new Date()).filter((entry) => !entry.dose).length;
@@ -106,10 +117,11 @@ export default function Health() {
         <StatGrid columns={2}>
           {[
             ...(foodOn ? [<StatTile key="eaten" href="/food" label={ht.eaten} value={eaten} unit={calorieTarget ? `/ ${calorieTarget} ${t.kcal}` : t.kcal} size={18} />] : []),
+            ...(steps !== null ? [<StatTile key="steps" label={ht.steps} value={steps} size={18} />] : []),
             ...(whoopOn ? [<StatTile key="recovery" href="/whoop" label={ht.readiness} value={recovery === null ? "–" : `${Math.round(recovery)}%`} size={18} />] : []),
             // Weight fills the place of whichever of the two is missing.
-            ...(!foodOn || !whoopOn ? [<StatTile key="weight" label={t.weight} value={health.latestWeight ?? "–"} unit={deltaText(health.weightDelta) ?? health.weightUnit ?? undefined} size={18} />] : []),
-            <StatTile key="sleep" href={whoopOn ? "/whoop" : undefined} label={whoopOn ? ht.sleepLast : t.avgSleep} value={sleepText} size={18} />,
+            ...(!foodOn || !whoopOn ? [<StatTile key="weight" label={t.weight} value={health.latestWeight ?? appleWeight?.value ?? "–"} unit={health.latestWeight !== null ? deltaText(health.weightDelta) ?? health.weightUnit ?? undefined : appleWeight ? "kg" : undefined} size={18} />] : []),
+            <StatTile key="sleep" href={whoopOn ? "/whoop" : undefined} label={fromWatch ? ht.sleepLast : t.avgSleep} value={sleepText} size={18} />,
             <StatTile key="workouts" label={ht.workoutsWeek} value={workoutMinutes} unit={`/ ${health.workoutTarget} ${t.min}`} size={18} />
           ]}
         </StatGrid>

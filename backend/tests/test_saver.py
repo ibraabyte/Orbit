@@ -81,7 +81,7 @@ def test_a_page_link_saves_its_title_picture_site_and_category(client: TestClien
     assert done.status_code == 200 and done.json()["status"] == "done" and done.json()["category"] == "Reading"
 
 
-def test_tiktok_uses_its_oembed_and_never_the_video(client: TestClient, auth: dict, web: Web):
+def test_tiktok_uses_its_oembed_and_keeps_only_its_picture_when_the_video_is_refused(client: TestClient, auth: dict, web: Web):
     web.pages["https://www.tiktok.com/oembed"] = httpx.Response(
         200,
         json={"title": "Easy kabsa in 10 minutes #food", "author_name": "made.up.cook", "thumbnail_url": "https://p16.example.com/t.jpg"},
@@ -90,7 +90,8 @@ def test_tiktok_uses_its_oembed_and_never_the_video(client: TestClient, auth: di
     assert saved["title"] == "Easy kabsa in 10 minutes #food"
     assert saved["site_name"] == "TikTok" and saved["category"] == "video"
     assert saved["image_url"] == "https://p16.example.com/t.jpg"
-    assert all(url.startswith("https://www.tiktok.com/oembed") for url in web.seen)
+    # The page itself is never fetched; the background job only asks for the picture (the video went to yt-dlp, refused here).
+    assert all(url.startswith(("https://www.tiktok.com/oembed", "https://p16.example.com/t.jpg")) for url in web.seen)
 
 
 def test_a_tiktok_short_link_follows_to_the_video(client: TestClient, auth: dict, web: Web):

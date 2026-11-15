@@ -12,6 +12,7 @@ const en = {
   byHand: "Logged by hand",
   byHandWhoop: "WHOOP brings sleep and workouts in by itself. These are the ones you typed.",
   eaten: "Eaten",
+  steps: "Steps",
   readiness: "Recovery",
   sleepLast: "Sleep",
   strain: "Strain",
@@ -50,6 +51,7 @@ const ar: typeof en = {
   byHand: "مسجّل يدويًا",
   byHandWhoop: "WHOOP يجيب النوم والتمارين بنفسه. هذي اللي كتبتها أنت.",
   eaten: "أكلت",
+  steps: "الخطوات",
   readiness: "الاستشفاء",
   sleepLast: "النوم",
   strain: "الإجهاد",
@@ -149,17 +151,4 @@ export function weightHistory(weightLogs: WeightLog[], count = 5) {
 export function deltaText(delta: number | null) {
   if (!delta) return null;
   return `${delta < 0 ? "↓" : "↑"}${Math.abs(delta)}`;
-}
-
-/** WHOOP's workout minutes over the last 7 days (today included), from its daily rows ("YYYY-MM-DD"). */
-export function whoopWeekMinutes(daily: { date: string; workout_minutes: number }[], now = new Date()) {
-  const start = new Date(now);
-  start.setDate(start.getDate() - 6);
-  const from = localKey(start);
-  const to = localKey(now);
-  return daily.filter((day) => day.date >= from && day.date <= to).reduce((sum, day) => sum + (day.workout_minutes || 0), 0);
-}
-
-function localKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }

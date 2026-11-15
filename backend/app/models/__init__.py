@@ -1,5 +1,6 @@
 """All tables. Importing this module registers every model on Base.metadata (Alembic relies on that)."""
 
+from app.models.apple_health import AppleHealthDay
 from app.models.auth import RefreshToken, ServerSettings, User
 from app.models.bank_sms import BankSmsEvent, BankSmsToken, BankTransaction
 from app.models.base import Base
@@ -22,6 +23,7 @@ from app.models.whoop import WhoopConnection, WhoopCycle, WhoopInsight, WhoopRec
 
 __all__ = [
     "AiConnection",
+    "AppleHealthDay",
     "Attachment",
     "BankSmsEvent",
     "BankSmsToken",

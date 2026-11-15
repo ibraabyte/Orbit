@@ -70,8 +70,8 @@ const en = {
   provider: "Provider", totalAmount: "Total amount", paymentsCount: "Number of payments", firstPayment: "First payment", firstPaidNow: "First payment already paid", paymentsPaid: "paid", remaining: "Left", nextPayment: "Next", showAll: "Show all", showLess: "Show less", paidOff: "Paid off", markUnpaid: "Mark unpaid", installment: "Installment", schedulePreview: "payments of",
   moneyDue: "Money due", dueTomorrow: "Tomorrow",
   moneyEmpty: "Add your bank accounts, wallets and cash to see all your money in one place.", investEmpty: "Add each investment app or portfolio with what you put in and what it is worth now.", cardsEmpty: "Add a card with its name and last 4 digits, then pick it for each subscription.", obligationsEmpty: "Add a pay-later plan or a loan to track what is left and when each payment is due.",
-  featuresTitle: "What each feature uses", featureDefault: "Default: {name}", featureDefaultOption: "Default", featureStale: "{name} was removed, so it uses the default for now: {now}.", featureNeedsAi: "Connect an AI in Integrations first.", featureNeedsRealtime: "Needs an OpenAI or ElevenLabs key, added in Integrations.", featureEleven: "ElevenLabs · Arabic voices", featurePhone: "iPhone dictation", featureCloud: "Voice model: {name}", featureCheaper: "cheaper", featureSaveFailed: "Couldn't save that. Try again.", aiRemoveUsedBy: "These go back to the default: {features}.",
-  featureNames: { assistant: "Assistant", food_text: "Food by text", food_photo: "Plate photo", health: "Health summary", week: "Friday summary", saver: "Saved link summary", speech: "Speech to text", call: "Voice call", phone_agent: "Phone agent" },
+  featuresTitle: "What each feature uses", featuresIntro: "Pick one of your connected models for each feature, like a cheaper one for food and a stronger one for the assistant. Left alone, a feature uses the default.", featureDefault: "Default: {name}", featureDefaultOption: "Default", featureStale: "{name} was removed, so it uses the default for now: {now}.", featureNeedsAi: "Connect an AI in Integrations first.", featureNeedsOpenai: "Needs an OpenAI key, added on the OpenAI page in Integrations.", featureNeedsRealtime: "Needs an OpenAI or ElevenLabs key, added in Integrations.", featureEleven: "ElevenLabs · Arabic voices", featurePhone: "iPhone dictation", featureCloud: "Voice model: {name}", featureCheaper: "cheaper", featureSaveFailed: "Couldn't save that. Try again.", aiRemoveUsedBy: "These go back to the default: {features}.",
+  featureNames: { assistant: "Assistant", food_text: "Food by text", food_photo: "Plate photo", health: "Health summary", week: "Friday summary", saver: "Saver: analysis and search", speech: "Speech to text", call: "Voice call", phone_agent: "Phone agent" },
   pv: {
     aiSection: "AI",
     connected: "Connected", notConnected: "Not connected", isDefault: "Default", viaAccount: "Account",
@@ -81,6 +81,10 @@ const en = {
     seerrConnect: "Add your Seerr server's address and API key.", yourServer: "your server", hostAs: "{host} as {name}",
     loadFailed: "Couldn't load your connections. Pull to try again.",
     notSynced: "Not synced yet", syncedNow: "Synced just now", syncedMin: "Synced {n}m ago", syncedHour: "Synced {n}h ago", syncedDay: "Synced {n}d ago",
+    usesTitle: "What each feature uses", usesDetail: "Pick a model per feature, like a cheaper one for food.", otherServices: "Other services",
+    ahConnect: "Connect Apple Health", ahSync: "Sync now", ahSyncing: "Syncing…", ahReads: "Steps, sleep, workouts, heart rate, weight",
+    ahEmpty: "Apple Health sent nothing. Allow Orbit in Settings → Health → Data Access.", ahFailed: "Couldn't sync Apple Health. Try again.",
+    ahDisconnect: "Disconnect Apple Health", ahDisconnectBody: "Orbit deletes the synced days. Apple Health keeps everything.", disconnectAction: "Disconnect",
     blurbs: {
       openai: "GPT for the assistant and summaries, speech to text, and the live voice call.",
       anthropic: "Claude for the assistant, food, health and summaries.",
@@ -169,8 +173,8 @@ const ar: typeof en = {
   provider: "الجهة", totalAmount: "المبلغ الكامل", paymentsCount: "عدد الدفعات", firstPayment: "أول دفعة", firstPaidNow: "الدفعة الأولى مدفوعة", paymentsPaid: "مدفوعة", remaining: "المتبقي", nextPayment: "القادمة", showAll: "عرض الكل", showLess: "عرض أقل", paidOff: "انتهى السداد", markUnpaid: "إلغاء الدفع", installment: "قسط", schedulePreview: "دفعات بقيمة",
   moneyDue: "مدفوعات قريبة", dueTomorrow: "بكرة",
   moneyEmpty: "أضف حساباتك ومحافظك والكاش لتشوف كل فلوسك في مكان واحد.", investEmpty: "أضف كل تطبيق أو محفظة استثمار بالمبلغ اللي حطيته وقيمته الحالية.", cardsEmpty: "أضف بطاقة باسمها وآخر ٤ أرقام، ثم اخترها لكل اشتراك.", obligationsEmpty: "أضف خطة تقسيط أو قرض لتتابع المتبقي وموعد كل دفعة.",
-  featuresTitle: "وش يستخدم كل قسم", featureDefault: "الافتراضي: {name}", featureDefaultOption: "الافتراضي", featureStale: "القسم كان يستخدم {name} وانحذف، فرجع للافتراضي {now} حاليًا.", featureNeedsAi: "اربط ذكاء من صفحة الربط أول.", featureNeedsRealtime: "يحتاج مفتاح OpenAI أو ElevenLabs من صفحة الربط.", featureEleven: "ElevenLabs · أصوات عربية", featurePhone: "إملاء الآيفون", featureCloud: "مودل الصوت: {name}", featureCheaper: "أرخص", featureSaveFailed: "ما انحفظ. جرّب مرة ثانية.", aiRemoveUsedBy: "هذي الأقسام ترجع للافتراضي: {features}.",
-  featureNames: { assistant: "المساعد", food_text: "الأكل بالكتابة", food_photo: "تصوير الصحن", health: "ملخص الصحة", week: "ملخص الجمعة", saver: "ملخص الروابط", speech: "تحويل الصوت لنص", call: "المكالمة الصوتية", phone_agent: "وكيل الاتصال" },
+  featuresTitle: "وش يستخدم كل قسم", featuresIntro: "اختر لكل قسم مودل من المودلات المربوطة عندك، مثلاً مودل أرخص للأكل وأقوى للمساعد. إذا ما اخترت شي، يستخدم القسم الافتراضي.", featureDefault: "الافتراضي: {name}", featureDefaultOption: "الافتراضي", featureStale: "القسم كان يستخدم {name} وانحذف، فرجع للافتراضي {now} حاليًا.", featureNeedsAi: "اربط ذكاء من صفحة الربط أول.", featureNeedsOpenai: "يحتاج مفتاح OpenAI، تضيفه من صفحة OpenAI في الربط.", featureNeedsRealtime: "يحتاج مفتاح OpenAI أو ElevenLabs من صفحة الربط.", featureEleven: "ElevenLabs · أصوات عربية", featurePhone: "إملاء الآيفون", featureCloud: "مودل الصوت: {name}", featureCheaper: "أرخص", featureSaveFailed: "ما انحفظ. جرّب مرة ثانية.", aiRemoveUsedBy: "هذي الأقسام ترجع للافتراضي: {features}.",
+  featureNames: { assistant: "المساعد", food_text: "الأكل بالكتابة", food_photo: "تصوير الصحن", health: "ملخص الصحة", week: "ملخص الجمعة", saver: "الحافظة: التحليل والبحث", speech: "تحويل الصوت لنص", call: "المكالمة الصوتية", phone_agent: "وكيل الاتصال" },
   pv: {
     aiSection: "الذكاء الاصطناعي",
     connected: "مربوط", notConnected: "مو مربوط", isDefault: "الافتراضي", viaAccount: "حساب",
@@ -180,6 +184,10 @@ const ar: typeof en = {
     seerrConnect: "أضف عنوان سيرفر Seerr ومفتاحه.", yourServer: "سيرفرك", hostAs: "{host} باسم {name}",
     loadFailed: "تعذّر تحميل الربط. اسحب للمحاولة مرة ثانية.",
     notSynced: "ما تزامن للحين", syncedNow: "تزامن الحين", syncedMin: "تزامن قبل {n} د", syncedHour: "تزامن قبل {n} س", syncedDay: "تزامن قبل {n} يوم",
+    usesTitle: "وش يستخدم كل قسم", usesDetail: "اختر مودل لكل قسم، مثلاً مودل أرخص للأكل.", otherServices: "خدمات ثانية",
+    ahConnect: "اربط صحة Apple", ahSync: "زامن الحين", ahSyncing: "يزامن…", ahReads: "الخطوات، النوم، التمارين، النبض، الوزن",
+    ahEmpty: "ما وصل شي من صحة Apple. اسمح لـ Orbit من الإعدادات ← الصحة ← الوصول للبيانات.", ahFailed: "ما قدرنا نزامن صحة Apple. جرّب مرة ثانية.",
+    ahDisconnect: "افصل صحة Apple", ahDisconnectBody: "Orbit يحذف الأيام اللي زامنها. صحة Apple تحتفظ بكل شي.", disconnectAction: "افصل",
     blurbs: {
       openai: "GPT للمساعد والملخصات، وتحويل الصوت لنص، والمكالمة الصوتية.",
       anthropic: "Claude للمساعد والأكل والصحة والملخصات.",

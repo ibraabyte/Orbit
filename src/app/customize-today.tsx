@@ -4,6 +4,7 @@ import { Card, Icon, ListRow, type } from "@/components/drift";
 import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { useSections } from "@/hooks/use-sections";
 import { useTodayLayout } from "@/hooks/use-today-layout";
+import { dp } from "@/lib/day-plan";
 import { t } from "@/lib/i18n";
 import { rx } from "@/lib/medications";
 import { pt } from "@/lib/plan";
@@ -11,6 +12,7 @@ import type { TodayCard } from "@/lib/today-layout";
 
 const labels: Record<TodayCard, string> = {
   brief: t.morningBrief,
+  dayplan: dp.short,
   digest: t.digest,
   attention: t.attention,
   upnext: t.nextUp,

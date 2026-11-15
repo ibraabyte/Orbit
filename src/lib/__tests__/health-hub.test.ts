@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deltaText, goalsBody, goalsChanged, goalsForm, weightHistory, whoopWeekMinutes } from "@/lib/health-hub";
+import { deltaText, goalsBody, goalsChanged, goalsForm, weightHistory } from "@/lib/health-hub";
 import type { WeightLog } from "@/lib/types";
 
 const weight = (id: string, value: number, at: string, unit: "kg" | "lb" = "kg"): WeightLog => ({ id, user_id: "user-1", weight: value, unit, logged_at: at, created_at: at });
@@ -54,17 +54,5 @@ describe("weight history", () => {
     expect(deltaText(1.2)).toBe("↑1.2");
     expect(deltaText(0)).toBeNull();
     expect(deltaText(null)).toBeNull();
-  });
-});
-
-describe("WHOOP workout minutes", () => {
-  it("adds the last 7 days, today included", () => {
-    const now = new Date("2026-07-10T12:00:00+03:00");
-    const daily = [
-      { date: "2026-07-03", workout_minutes: 99 },
-      { date: "2026-07-04", workout_minutes: 30 },
-      { date: "2026-07-10", workout_minutes: 45 }
-    ];
-    expect(whoopWeekMinutes(daily, now)).toBe(75);
   });
 });

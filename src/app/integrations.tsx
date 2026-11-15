@@ -1,6 +1,7 @@
 import { router, useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Text } from "react-native";
+import { AppleHealthCard } from "@/components/apple-health-card";
 import { ConnectionTile, IconMark, LogoMark, PickRow, ProviderGrid, ProviderMark, TileGrid, type Pick } from "@/components/ai-provider-parts";
 import { BankSmsCard } from "@/components/bank-sms-card";
 import { Card, EmptyState, Icon, ListRow, type } from "@/components/drift";
@@ -109,6 +110,8 @@ export default function Integrations() {
           />
         </TileGrid>
       </Card>
+
+      <AppleHealthCard status={overview.apple_health} onChange={load} />
 
       <Card title={t.pv.svcMedia}>
         <TileGrid>
