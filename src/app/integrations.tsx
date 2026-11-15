@@ -169,7 +169,7 @@ export default function Integrations() {
             badge={phone?.connected ? "check" : null}
             icons={["phone-outgoing"]}
             label={`Twilio, ${phone?.connected ? px.connected : px.notConnected}`}
-            onPress={() => router.push("/phone-calls")}
+            onPress={() => router.push("/twilio")}
           />
         </TileGrid>
       </Card>

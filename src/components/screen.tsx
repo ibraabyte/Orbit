@@ -67,6 +67,7 @@ const stackScreens: Record<string, { title: string; hint?: string }> = {
   "/health": { title: t.health, hint: "weight 82 · slept 7h q4 · workout 40m run" },
   "/health-goals": { title: ht.goals },
   "/whoop": { title: t.whoop },
+  "/twilio": { title: "Twilio" },
   "/food": { title: t.food, hint: "buy milk · plan dinner salmon @friday" },
   "/food-add": { title: t.addFood },
   "/food-scan": { title: t.scanBarcode },
