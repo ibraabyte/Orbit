@@ -4,9 +4,9 @@ import { router } from "expo-router";
 import { Alert, DevSettings, Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { isAppLockEnabled, setAppLockEnabled } from "@/components/app-lock";
 import { resyncWidget } from "@/hooks/use-widget-sync";
-import { Avatar, Card, Icon, ListRow, type } from "@/components/drift";
+import { Avatar, Card, Icon, IconTile, ListRow, type, type IconName } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
-import { Button, Screen, Segments } from "@/components/screen";
+import { Button, Screen } from "@/components/screen";
 import { colors, currentAppearance, fonts, radius, setAppearance, space, textSize, type AppearanceChoice } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { useSections } from "@/hooks/use-sections";
@@ -86,7 +86,6 @@ export default function Settings() {
       <View style={styles.me}>
         <Avatar name={name} size={76} dark />
         <Text style={styles.name}>{name}</Text>
-        <Text style={type.rowSubtitle}>{st.sectionsCount(sectionsOff.length)}</Text>
       </View>
       <View style={styles.places}>
         {places.map((place) => (
@@ -98,28 +97,23 @@ export default function Settings() {
           </Pressable>
         ))}
       </View>
-      <Card>
-        <View style={styles.pick}>
-          <Text style={type.rowSubtitle}>{t.appearance}</Text>
-          <Segments options={["system", "light", "dark"] as const} labels={lookLabel} value={look} onChange={(choice) => (setAppearance(choice), setLook(choice))} />
-        </View>
-        <View style={styles.pick}>
-          <Text style={type.rowSubtitle}>{t.numerals}</Text>
-          <Segments options={["latn", "arab"] as const} labels={{ latn: "0123", arab: "٠١٢٣" }} value={numerals} onChange={changeNumerals} />
-        </View>
-        <View style={styles.pick}>
-          <Text style={type.rowSubtitle}>{t.languageShort}</Text>
-          <Segments
-            options={["ar", "en"] as const}
-            labels={{ ar: "العربية", en: "English" }}
-            value={language}
-            onChange={(next) => {
-              if (next === language) return;
-              const message = toggleLanguage();
-              if (message) toast(message);
-            }}
-          />
-        </View>
+      {/* This phone's choices, each a row with its icon and the options as small pills you tap. */}
+      <Card list>
+        <PickRow icon="moon" title={t.appearance} value={look} onChange={(choice) => (setAppearance(choice), setLook(choice))}
+          options={[{ key: "system", icon: "smartphone", label: lookLabel.system }, { key: "light", icon: "sun", label: lookLabel.light }, { key: "dark", icon: "moon", label: lookLabel.dark }]} first />
+        <PickRow icon="hash" title={t.numerals} value={numerals} onChange={changeNumerals}
+          options={[{ key: "latn", label: "0123" }, { key: "arab", label: "٠١٢٣" }]} />
+        <PickRow
+          icon="globe"
+          title={t.languageShort}
+          value={language}
+          onChange={(next) => {
+            if (next === language) return;
+            const message = toggleLanguage();
+            if (message) toast(message);
+          }}
+          options={[{ key: "ar", label: "العربية" }, { key: "en", label: "English" }]}
+        />
       </Card>
       <Card list>
         <ListRow
@@ -167,12 +161,45 @@ export default function Settings() {
   );
 }
 
+type PickOption<T extends string> = { key: T; label: string; icon?: IconName };
+
+// One choice: its icon and name, then the options as pills; the picked one is filled.
+function PickRow<T extends string>({ icon, title, options, value, onChange, first }: { icon: IconName; title: string; options: PickOption<T>[]; value: T; onChange: (next: T) => void; first?: boolean }) {
+  return (
+    <View style={[styles.pick, !first && styles.pickLine]}>
+      <View style={styles.pickHead}>
+        <IconTile name={icon} />
+        <Text style={type.rowTitle}>{title}</Text>
+      </View>
+      <View style={styles.pills} accessibilityRole="radiogroup" accessibilityLabel={title}>
+        {options.map((option) => {
+          const on = option.key === value;
+          return (
+            <Pressable key={option.key} onPress={() => onChange(option.key)} accessibilityRole="radio" accessibilityState={{ selected: on }} accessibilityLabel={option.label} style={({ pressed }) => [styles.pill, on && styles.pillOn, pressed && { opacity: 0.7 }]}>
+              {option.icon ? <Icon name={option.icon} size={15} color={on ? colors.accentInk : colors.inkMuted} /> : null}
+              <Text style={[styles.pillText, on && { color: colors.accentInk }]} numberOfLines={1}>
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   me: { alignItems: "center", gap: space.xs, paddingTop: space.sm, paddingBottom: space.xs },
   name: { fontFamily: fonts.bold, fontSize: textSize.title3, color: colors.ink, marginTop: space.xs },
   places: { flexDirection: "row", gap: space.sm },
   place: { flex: 1, alignItems: "center", gap: space.sm, paddingVertical: space.lg, paddingHorizontal: space.sm, borderRadius: radius.card, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
-  pick: { gap: space.sm },
+  pick: { gap: space.md, paddingVertical: space.md },
+  pickLine: { borderTopWidth: 1, borderTopColor: colors.surfaceInset },
+  pickHead: { flexDirection: "row", alignItems: "center", gap: space.md },
+  pills: { flexDirection: "row", gap: space.sm },
+  pill: { flex: 1, minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.xs, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
+  pillOn: { backgroundColor: colors.accent, borderColor: colors.accent },
+  pillText: { fontFamily: fonts.medium, fontSize: textSize.subheadline, color: colors.ink },
   signOut: { alignItems: "center", paddingVertical: space.md },
   signOutText: { fontFamily: fonts.semibold, fontSize: textSize.body, color: colors.dangerOnShell }
 });
