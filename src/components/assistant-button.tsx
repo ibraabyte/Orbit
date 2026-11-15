@@ -3,7 +3,6 @@ import { useRef } from "react";
 import { Image, Platform, Pressable, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { openCapture, useSidebar } from "@/components/screen";
-import { holdVoice } from "@/components/voice-hold";
 import { colors, radius, shadow, usePalette } from "@/components/theme";
 import { t } from "@/lib/i18n";
 
@@ -21,6 +20,14 @@ const RAISE = 10;
 const capsuleBar = process.env.EXPO_OS === "ios" && Number.parseInt(String(Platform.Version), 10) >= 26;
 const barTall = capsuleBar ? 60 : process.env.EXPO_OS === "ios" ? 49 : 80;
 const barBottom = capsuleBar ? -10 : 0;
+
+// Hold to talk: the button tells the voice overlay (src/components/voice-hold.tsx) when the hold starts and ends.
+export type HoldListener = (event: "begin" | "end") => void;
+export const holdListeners = new Set<HoldListener>();
+const holdVoice = {
+  begin: () => holdListeners.forEach((listener) => listener("begin")),
+  end: () => holdListeners.forEach((listener) => listener("end"))
+};
 
 // The assistant: a raised sand button with the Orbit mark, laid over the middle tab of the native bar. A tap opens
 // Capture to type; a hold opens it already listening.

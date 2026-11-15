@@ -2,7 +2,7 @@ import * as Haptics from "expo-haptics";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { OrbitMark } from "@/components/assistant-button";
+import { holdListeners, OrbitMark, type HoldListener as Listener } from "@/components/assistant-button";
 import { Icon, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { openCapture } from "@/components/screen";
@@ -28,14 +28,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 // Hold the Orbit button to talk: a dark bar with the voice over the tab bar and the words above it while you speak.
 // Letting go sends it. A plain line ("lunch 45") becomes one card at once; anything else goes to the person's AI and
 // comes back as a card of changes. Nothing is saved until Save; Edit opens the assistant with the words.
-// The button (src/components/assistant-button.tsx) drives it through holdVoice.
+// The button (src/components/assistant-button.tsx) drives it through holdListeners.
 
-type Listener = (event: "begin" | "end") => void;
-const listeners = new Set<Listener>();
-export const holdVoice = {
-  begin: () => listeners.forEach((listener) => listener("begin")),
-  end: () => listeners.forEach((listener) => listener("end"))
-};
 
 type Result = { kind: "draft"; draft: QuickAddDraft } | { kind: "ai"; reply: ActReply };
 type Phase = "idle" | "listening" | "thinking" | "result";
@@ -154,8 +148,8 @@ export function VoiceHold() {
       if (event === "begin") handlers.current.begin();
       else void handlers.current.finish();
     };
-    listeners.add(listener);
-    return () => void listeners.delete(listener);
+    holdListeners.add(listener);
+    return () => void holdListeners.delete(listener);
   }, []);
 
   const save = async () => {
