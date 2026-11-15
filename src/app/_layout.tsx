@@ -26,7 +26,7 @@ import { clearDashboardCache, DashboardDataProvider } from "@/hooks/use-dashboar
 import { ReminderNotifications } from "@/hooks/use-reminder-notifications";
 import { clearWidget } from "@/hooks/use-widget-sync";
 import { hasServer, watchSession, type AppSession } from "@/lib/backend";
-import { t } from "@/lib/i18n";
+import { isArabic, t } from "@/lib/i18n";
 
 const configured = hasServer();
 // Sharing into Orbit needs the native share extension, which Expo Go doesn't have.
@@ -69,6 +69,9 @@ const sheetHeader = {
 const searchScreens = ["library", "media", "exercises/index"];
 const headerSearch = { placement: "stacked", hideWhenScrolling: false } as const;
 const routePath = (name: string) => "/" + name.replace(/\/?index$/, "");
+// In Arabic, back is a swipe from the right edge. iOS's own back swipe stays on the left edge even when the app is
+// right to left, so Arabic uses react-native-screens' push and edge swipe, which follow the stack's direction.
+const arabicSwipe = isArabic ? ({ animation: "simple_push", animationMatchesGesture: true } as const) : {};
 
 export default function RootLayout() {
   const [session, setSession] = useState<AppSession | null | undefined>(undefined);
@@ -133,7 +136,7 @@ export default function RootLayout() {
 
   const stack = (
     <ThemeProvider value={theme}>
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.shell } }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.shell }, ...arabicSwipe }}>
         <Stack.Protected guard={Boolean(session)}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="capture" options={{ presentation: "formSheet", sheetAllowedDetents: [0.8, 1], sheetGrabberVisible: true, contentStyle: { backgroundColor: colors.sheet } }} />
