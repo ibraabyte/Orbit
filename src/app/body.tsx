@@ -1,10 +1,10 @@
 import { useFocusEffect } from "expo-router";
 import { useCallback, useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
-import { Card, EmptyState, Icon, ListRow, MoreButton, TrendBars, type } from "@/components/drift";
+import { Badge, Card, EmptyState, Icon, ListRow, MoreButton, TrendBars, type } from "@/components/drift";
 import { Chip } from "@/components/exercise-ui";
 import { toDateKey, useOverlays } from "@/components/overlays";
-import { BleedRow, Button, Input, Loading, Screen, Segments } from "@/components/screen";
+import { Button, GroupHeader, Input, Loading, Screen, Segments } from "@/components/screen";
 import { colors, space } from "@/components/theme";
 import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { getApi } from "@/lib/backend";
@@ -101,12 +101,14 @@ export default function Body() {
 
   return (
     <Screen refreshing={loading && Boolean(measurements)} onRefresh={() => void load()}>
-      <Card title={tt.addMeasurement}>
-        <BleedRow>
+      <View>
+      <GroupHeader label={tt.addMeasurement} />
+      <Card style={{ gap: space.md, paddingVertical: space.lg }}>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: space.sm }}>
           {KINDS.map((item) => (
             <Chip key={item} label={tt.kinds[item]} on={kind === item} onPress={() => setKind(item)} />
           ))}
-        </BleedRow>
+        </View>
         <View style={{ flexDirection: "row", gap: space.sm, alignItems: "center" }}>
           <Input style={{ flex: 1 }} value={value} onChangeText={setValue} placeholder={`${tt.kinds[kind]} (${unit})`} keyboardType="decimal-pad" onSubmitEditing={() => void add()} returnKeyType="done" />
           {unitKey ? <Segments small options={unitsFor(kind)} value={unit} onChange={(next) => setUnits((current) => ({ ...current, [unitKey]: next }))} /> : null}
@@ -114,10 +116,11 @@ export default function Body() {
         <View style={{ flexDirection: "row", gap: space.sm, alignItems: "center" }}>
           <Chip label={formatDate(`${date}T12:00:00`, { weekday: "short", day: "numeric", month: "short" })} icon="calendar" on={false} onPress={() => void pickDay()} />
           <View style={{ flex: 1 }}>
-            <Button variant="primary" title={t.save} disabled={busy || !value.trim()} onPress={() => void add()} />
+            <Button title={t.save} disabled={busy || !value.trim()} onPress={() => void add()} />
           </View>
         </View>
       </Card>
+      </View>
 
       {!measurements ? (
         loading ? <Loading /> : <EmptyState>{error ?? tt.couldNotLoad}</EmptyState>
@@ -125,7 +128,7 @@ export default function Body() {
         <EmptyState icon="maximize">{tt.noMeasurements}</EmptyState>
       ) : (
         <>
-          <Text style={[type.shellMuted, { paddingHorizontal: space.xs }]}>{tt.tapForHistory}</Text>
+          <GroupHeader label={tt.tapForHistory} />
           {trends.map((trend) => (
             <TrendCard key={trend.kind} trend={trend} open={open === trend.kind} onToggle={() => setOpen(open === trend.kind ? null : trend.kind)} rows={open === trend.kind ? kindHistory(trend.kind, measurements, weights) : []} onRemove={(id) => remove(trend.kind, id)} />
           ))}
@@ -149,10 +152,10 @@ function TrendCard({ trend, open, onToggle, rows, onRemove }: { trend: Trend; op
     <Card title={tt.kinds[trend.kind]} action={toggle}>
       <Pressable onPress={onToggle} style={{ flexDirection: "row", alignItems: "flex-end", gap: space.md }}>
         <View style={{ gap: space.xxs, minWidth: 120 }}>
-          <Text style={type.stat}>
+          <Text style={[type.stat, { fontSize: 30 }]}>
             {digits(trim1(trend.latest.value))} <Text style={type.rowSubtitle}>{trend.latest.unit}</Text>
           </Text>
-          <Text style={type.rowSubtitle}>{change ? `${change} · ${tt.since(day(trend.firstAt))}` : day(trend.latest.at)}</Text>
+          {change ? <Badge>{`${change} · ${tt.since(day(trend.firstAt))}`}</Badge> : <Text style={type.rowSubtitle}>{day(trend.latest.at)}</Text>}
         </View>
         {trend.points.length > 1 ? (
           <View style={{ flex: 1 }}>

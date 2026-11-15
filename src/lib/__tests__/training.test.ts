@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bodyTrends,
+  weekMinutes,
   changeText,
   clock,
   defaultUnit,
@@ -180,5 +181,18 @@ describe("training", () => {
     expect(unitsFor("weight")).toEqual(["kg", "lb"]);
     expect(unitsFor("body_fat")).toEqual(["%"]);
     expect(unitsFor("waist")).toEqual(["cm", "in"]);
+  });
+});
+
+describe("weekMinutes", () => {
+  it("adds each day's minutes, oldest first, and counts a session with no time as one minute", () => {
+    const now = new Date(2026, 10, 15, 20);
+    const sessions = [
+      { logged_at: new Date(2026, 10, 15, 18).toISOString(), duration_minutes: 30 },
+      { logged_at: new Date(2026, 10, 15, 8).toISOString(), duration_minutes: 10 },
+      { logged_at: new Date(2026, 10, 9, 12).toISOString(), duration_minutes: null },
+      { logged_at: new Date(2026, 10, 8, 12).toISOString(), duration_minutes: 50 }
+    ];
+    expect(weekMinutes(sessions, now)).toEqual([1, 0, 0, 0, 0, 0, 40]);
   });
 });

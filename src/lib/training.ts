@@ -296,3 +296,11 @@ const ar: typeof en = {
 };
 
 export const tt = isArabic ? ar : en;
+
+/** Workout minutes on each of the last 7 days, oldest first, ending today. A session with no time still counts a minute, so its day shows. */
+export function weekMinutes(sessions: Pick<SessionSummary, "logged_at" | "duration_minutes">[], now = new Date()) {
+  return Array.from({ length: 7 }, (_, index) => {
+    const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (6 - index)).toDateString();
+    return sessions.filter((session) => new Date(session.logged_at).toDateString() === day).reduce((sum, session) => sum + Math.max(1, session.duration_minutes ?? 0), 0);
+  });
+}
