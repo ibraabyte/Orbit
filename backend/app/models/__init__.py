@@ -16,6 +16,7 @@ from app.models.life import Habit, HabitLog
 from app.models.medications import Medication, MedicationDose
 from app.models.plan import PlannedExercise, PlannedWorkout, TrainingPlan
 from app.models.profile import Profile
+from app.models.subscriptions import GmailConnection, SubscriptionFind, SubscriptionScan
 from app.models.tasks import Reminder, Task, TaskList, TaskStep
 from app.models.things import Vehicle, WatchItem
 from app.models.training import BodyMeasurement, WorkoutExercise, WorkoutSet
@@ -39,6 +40,7 @@ __all__ = [
     "Expense",
     "FeatureModel",
     "Food",
+    "GmailConnection",
     "GroceryItem",
     "GymEquipment",
     "Habit",
@@ -59,10 +61,12 @@ __all__ = [
     "Profile",
     "PushSubscription",
     "RefreshToken",
+    "Reminder",
     "ServerSettings",
     "ServiceConnection",
-    "Reminder",
     "SleepLog",
+    "SubscriptionFind",
+    "SubscriptionScan",
     "Tag",
     "Tagging",
     "Task",
