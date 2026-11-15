@@ -1,14 +1,14 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useVideoPlayer, VideoView } from "expo-video";
 import { useCallback, useEffect, useState } from "react";
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Card, Icon, RowButton, type } from "@/components/drift";
 import { useOverlays } from "@/components/overlays";
 import { Button, ErrorState, Input, Loading, Screen } from "@/components/screen";
 import { colors, radius } from "@/components/theme";
 import { getApi } from "@/lib/backend";
 import { isArabic } from "@/lib/i18n";
-import { addTag, categoryLabel, megabytes, picturesOf, siteLabel, st, videoOf } from "@/lib/saver";
+import { addTag, categoryLabel, mapsLink, megabytes, picturesOf, siteLabel, st, videoOf } from "@/lib/saver";
 import type { SavedItem } from "@/lib/types";
 
 // One saved item: the copy of its video or pictures kept on the server, what the AI saw in it, its tags and note.
@@ -19,6 +19,8 @@ export default function SavedPage() {
   const [error, setError] = useState<string | null>(null);
   const [tag, setTag] = useState("");
   const [note, setNote] = useState<string | null>(null);
+  // Making a task or adding to the shopping list: one at a time, so a double tap doesn't add twice.
+  const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -78,6 +80,31 @@ export default function SavedPage() {
       ]
     });
 
+  // From saved to done: the item goes to the tasks or shopping list routers like anything typed there.
+  const act = async (work: () => Promise<string>) => {
+    setBusy(true);
+    try {
+      toast(await work());
+    } catch (actError) {
+      toast(actError instanceof Error ? actError.message : String(actError));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const makeTask = (from: SavedItem) =>
+    act(async () => {
+      const notes = [from.url, from.summary].filter(Boolean).join("\n");
+      await getApi().post("/tasks", { title: from.title.slice(0, 220), ...(notes ? { notes } : {}) });
+      return st.madeTask;
+    });
+
+  const addGroceries = (from: SavedItem) =>
+    act(async () => {
+      for (const name of from.ingredients) await getApi().post("/grocery-items", { name: name.slice(0, 220) });
+      return st.addedGroceries(from.ingredients.length);
+    });
+
   const submitTag = () => {
     if (!item) return;
     const next = addTag(item.labels, tag);
@@ -129,6 +156,25 @@ export default function SavedPage() {
         </Card>
       ) : null}
 
+      {item.transcript ? (
+        <Card title={st.spoken}>
+          <Text style={[type.body, { color: colors.ink }]} selectable>
+            {item.transcript}
+          </Text>
+        </Card>
+      ) : null}
+
+      {item.ingredients.length ? (
+        <Card title={st.ingredients}>
+          {item.ingredients.map((line) => (
+            <Text key={line} style={[type.body, { color: colors.ink }]} selectable>
+              {`• ${line}`}
+            </Text>
+          ))}
+          <Button title={st.addToGroceries} variant="outline" onPress={() => void addGroceries(item)} disabled={busy} />
+        </Card>
+      ) : null}
+
       <Card title={st.tags}>
         <View style={styles.tags}>
           {item.labels.length ? (
@@ -177,6 +223,8 @@ export default function SavedPage() {
 
       <View style={{ gap: 8 }}>
         {item.url ? <RowButton label={st.openOriginal} onPress={() => void Linking.openURL(item.url!)} /> : null}
+        {item.place ? <RowButton label={`${st.openMap} · ${item.place}`} outline onPress={() => void Linking.openURL(mapsLink(item.place!, Platform.OS))} /> : null}
+        <RowButton label={st.makeTask} outline onPress={() => void makeTask(item)} disabled={busy} />
         <RowButton label={item.status === "want" ? st.markDone : st.markWant} outline onPress={() => void change({ status: item.status === "want" ? "done" : "want" })} />
         <RowButton label={st.analyzeAgain} outline onPress={() => void analyze()} disabled={pending} />
         <RowButton label={st.remove} outline onPress={remove} />

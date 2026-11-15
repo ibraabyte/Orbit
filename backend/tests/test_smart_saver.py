@@ -14,7 +14,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import models as m
-from app.services import link_preview, saver_jobs, saver_media, whoop_ai
+from app.services import link_preview, saver_jobs, saver_media, voice_stt, whoop_ai
 from tests.conftest import bearer, sign_up
 
 KEY = "made-up-ai-key-0003"
@@ -29,6 +29,8 @@ ANALYSIS = {
     "labels": ["طبخ", "#وصفات", "طبخ", "دجاج"],
     "search_terms": ["طبخة", "أكل", "cooking", "recipe", "kabsa"],
     "category": "video",
+    "place": "",
+    "ingredients": ["2 كوب رز", "دجاجة", "بهارات كبسة"],
 }
 
 
@@ -126,6 +128,8 @@ def test_a_saved_link_keeps_a_copy_of_its_picture_and_gets_tags_and_search_words
     assert item["labels"] == ["طبخ", "وصفات", "دجاج"]
     assert "cooking" in item["search_terms"] and "طبخة" in item["search_terms"]
     assert item["category"] == "video"
+    # A recipe's ingredients are kept for the shopping list; no place means none, not an empty string.
+    assert item["ingredients"] == ANALYSIS["ingredients"] and item["place"] is None
     [copy] = item["media"]
     assert copy["kind"] == "image" and copy["content_type"] == "image/jpeg" and copy["size_bytes"] == len(JPEG)
     # The copy is served by its signed link, with no sign-in.
@@ -232,6 +236,92 @@ def test_a_tiktok_video_is_kept_through_the_downloader(client: TestClient, auth:
     assert item["media_error"] is None and item["analysis_status"] == "done"
 
 
+# What is said in a video, through the user's own voice model
+
+
+SPOKEN = "اليوم بنسوي كبسة دجاج على السريع، حطوا الرز بعد ما يغلي المرق"
+
+
+class Voice:
+    def __init__(self) -> None:
+        self.files: list[bytes] = []
+        self.fail = False
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        if b"speech.mp3" in request.content:
+            self.files.append(request.content)
+            return httpx.Response(500 if self.fail else 200, json={"text": SPOKEN})
+        return httpx.Response(200, json={"text": ""})  # The one second of silence that checks the key.
+
+
+@pytest.fixture
+def voice(client: TestClient, auth: dict, monkeypatch: pytest.MonkeyPatch) -> Iterator[Voice]:
+    fake = Voice()
+    monkeypatch.setattr(voice_stt, "transport", httpx.MockTransport(fake.handler))
+    monkeypatch.setattr(saver_media, "speech_audio", lambda video: b"made-up-sound")
+    assert (
+        client.put("/integrations/voice", json={"provider": "groq", "api_key": "made-up-voice-key-0004"}, headers=auth).status_code == 200
+    )
+    yield fake
+
+
+def save_tiktok(client: TestClient, auth: dict, monkeypatch: pytest.MonkeyPatch) -> str:
+    def fake_download(url: str, folder: Path, max_bytes: int, max_seconds: int) -> saver_media.Gathered:
+        (folder / "video.mp4").write_bytes(MP4)
+        return saver_media.Gathered(text="#food", video_file=folder / "video.mp4", duration=30)
+
+    monkeypatch.setattr(saver_media, "ytdlp_download", fake_download)
+    url = "https://www.tiktok.com/@made.up.cook/video/7300000000000000010"
+    return client.post("/captures/save", json={"url": url}, headers=auth).json()["capture"]["id"]
+
+
+def test_what_is_said_in_a_video_is_kept_given_to_the_ai_and_searched(
+    client: TestClient, auth: dict, web: Web, ai: Ai, voice: Voice, monkeypatch: pytest.MonkeyPatch
+):
+    connect_ai(client, auth)
+    item = saved_item(client, auth, save_tiktok(client, auth, monkeypatch))
+    assert item["transcript"] == SPOKEN and item["analysis_status"] == "done"
+    assert len(voice.files) == 1 and b"made-up-sound" in voice.files[0]
+    sent = json.dumps(ai.requests[-1], ensure_ascii=False)
+    assert SPOKEN in sent or json.dumps(SPOKEN)[1:-1] in sent
+    ai.terms = ["المرق"]  # Only in what was said.
+    assert client.post("/captures/search", json={"query": "مرق"}, headers=auth).json()["ids"] == [item["id"]]
+    # Looking at it again doesn't pay the voice model twice.
+    client.post(f"/captures/{item['id']}/analyze", json={"locale": "ar"}, headers=auth)
+    assert len(voice.files) == 1
+
+
+def test_a_voice_model_error_only_leaves_the_text_out(
+    client: TestClient, auth: dict, web: Web, voice: Voice, monkeypatch: pytest.MonkeyPatch
+):
+    voice.fail = True
+    item = saved_item(client, auth, save_tiktok(client, auth, monkeypatch))
+    assert item["transcript"] is None and item["analysis_status"] == "no_ai"
+    assert [copy["kind"] for copy in item["media"] if not copy["poster"]] == ["video"]
+
+
+def test_without_a_voice_model_nothing_is_sent(client: TestClient, auth: dict, web: Web, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(saver_media, "speech_audio", lambda video: pytest.fail("no voice model, no sound pulled out"))
+    assert saved_item(client, auth, save_tiktok(client, auth, monkeypatch))["transcript"] is None
+
+
+@pytest.mark.skipif(not saver_media.has_ffmpeg(), reason="needs ffmpeg")
+def test_the_sound_is_pulled_out_small_and_a_silent_video_gives_none(tmp_path: Path):
+    def make(name: str, *inputs: str) -> Path:
+        out = tmp_path / name
+        made = subprocess.run(
+            ["ffmpeg", "-v", "error", *inputs, "-t", "3", "-pix_fmt", "yuv420p", str(out)], capture_output=True, check=False
+        )
+        assert made.returncode == 0, made.stderr
+        return out
+
+    picture_only = ["-f", "lavfi", "-i", "testsrc=size=160x120:rate=10"]
+    with_sound = make("talk.mp4", *picture_only, "-f", "lavfi", "-i", "sine=frequency=440:sample_rate=44100", "-shortest")
+    audio = saver_media.speech_audio(with_sound)
+    assert audio is not None and 1024 < len(audio) < 100_000
+    assert saver_media.speech_audio(make("quiet.mp4", *picture_only)) is None
+
+
 def test_a_site_that_refuses_the_video_still_saves_the_link(client: TestClient, auth: dict, web: Web):
     capture_id = client.post("/captures/save", json={"url": "https://www.instagram.com/reel/MadeUp123/"}, headers=auth).json()["capture"][
         "id"
@@ -321,6 +411,15 @@ def test_a_real_video_gives_the_ai_stills_and_gets_a_poster(client: TestClient, 
 
 
 # Tags, search, delete
+
+
+def test_a_place_is_kept_for_the_map(client: TestClient, auth: dict, web: Web, ai: Ai):
+    connect_ai(client, auth)
+    ai.analysis = {**ANALYSIS, "category": "place", "place": "  Made Up Burger, Riyadh ", "ingredients": []}
+    capture_id = client.post("/captures/save", json={"url": "https://blog.example.com/burger"}, headers=auth).json()["capture"]["id"]
+    item = saved_item(client, auth, capture_id)
+    assert item["place"] == "Made Up Burger, Riyadh" and item["ingredients"] == []
+    assert "place" in ai.requests[-1]["response_format"]["json_schema"]["schema"]["required"]
 
 
 def test_tags_are_edited_and_kept_when_looked_at_again(client: TestClient, auth: dict, web: Web, ai: Ai):

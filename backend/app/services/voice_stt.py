@@ -3,6 +3,7 @@
 The assistant's mic records on the phone; when the user connected a voice model, the recording comes here and goes on
 to that provider with the user's own key, and only the text comes back. Nothing is kept: not the audio, not the text.
 Without a voice model the phone keeps turning speech into text itself (src/hooks/use-voice.ts).
+The saver also sends a saved video's sound here (services/saver_jobs.py); that text is kept with the saved item.
 """
 
 import io

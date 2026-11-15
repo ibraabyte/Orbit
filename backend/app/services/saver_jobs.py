@@ -2,8 +2,10 @@
 
 1. Keep copies: a tweet's text and pictures, a video (yt-dlp), or the page's picture. A copy the site refuses only sets
    media_error; the item stays saved with its link.
-2. Look at it: the user's own AI gets the text plus up to MAX_AI_IMAGES pictures (the post's pictures, or stills
-   through the video) and writes the summary, what is in it, tags and search words.
+2. Listen to it: when the user connected a voice model (Integrations > Voice), a video's sound goes to it and what is
+   said is kept as capture.transcript. A voice model that fails only leaves the transcript empty.
+3. Look at it: the user's own AI gets the text (and what is said) plus up to MAX_AI_IMAGES pictures (the post's
+   pictures, or stills through the video) and writes the summary, what is in it, tags and search words.
 
 Status lives on the capture (analysis_status): pending while this runs, then done, no_ai (nothing connected) or
 failed. A restart in the middle leaves pending rows, which recover() turns into failed so the app offers Try again.
@@ -22,7 +24,8 @@ from sqlalchemy.orm import Session
 from app import models as m
 from app.config import get_settings
 from app.db import get_sessionmaker
-from app.services import saver_ai, saver_media, whoop_ai
+from app.security import decrypt_secret
+from app.services import saver_ai, saver_media, voice_stt, whoop_ai
 from app.services.link_preview import _host
 from app.services.saver_media import BUCKET, IMAGE_TYPES, MAX_IMAGE_BYTES, MAX_IMAGES, VIDEO_TYPES, Gathered, MediaRefused
 
@@ -151,6 +154,27 @@ def _pictures(rows: list[m.Attachment]) -> list[saver_ai.Image]:
     return images[:MAX_AI_IMAGES]
 
 
+def _listen(db: Session, capture: m.Capture) -> None:
+    """What is said in the item's video, through the user's own voice model. Never raises; no model, no sound or a
+    provider error just leaves the transcript empty (Look at it again tries again)."""
+    if capture.transcript:
+        return
+    video = next((row for row in attachments(db, capture) if row.content_type and row.content_type.startswith("video/")), None)
+    voice = db.get(m.VoiceConnection, capture.user_id) if video else None
+    api_key = decrypt_secret(voice.api_key) if voice else None
+    path = saver_media.file_for(video.object_path) if video and api_key else None
+    audio = saver_media.speech_audio(path) if path else None
+    if voice is None or api_key is None or audio is None:
+        return
+    try:
+        # No language: the video's may not be the app's.
+        text = voice_stt.transcribe(voice_stt.VoiceAccess(voice.provider, voice.model, api_key), audio, "audio/mpeg", None)
+    except voice_stt.VoiceUnavailable as exc:
+        log.warning("saver: speech to text failed: %s", exc)
+        return
+    capture.transcript = text[:8000] or None
+
+
 def _known(capture: m.Capture) -> dict[str, Any]:
     known = {
         "link": capture.url,
@@ -159,6 +183,7 @@ def _known(capture: m.Capture) -> dict[str, Any]:
         "title": capture.title,
         "author": capture.author,
         "text": capture.content_text,
+        "speech": capture.transcript,
         "description": capture.summary,
         "note": capture.note,
         "media_problem": capture.media_error,
@@ -175,6 +200,8 @@ def _apply(capture: m.Capture, found: saver_ai.Analysis) -> None:
     # Tags the user already has stay; the AI's are added after them.
     capture.labels = saver_ai._clean_list([*capture.labels, *found.labels], 20, 40)
     capture.search_terms = " · ".join(found.search_terms)[:4000] or None
+    capture.place = found.place or None
+    capture.ingredients = found.ingredients
     if capture.category == "other" and found.category != "other":
         capture.category = found.category
 
@@ -191,6 +218,8 @@ def process(capture_id: uuid.UUID, locale: str = "en", ai: str | None = None, fe
             if fetch and capture.type == "link" and capture.url and not attachments(db, capture):
                 _gather_link(db, capture, folder)
                 db.commit()
+            _listen(db, capture)
+            db.commit()
             access = whoop_ai.access_for(db, capture.user_id, ai, "saver")
             if access is None:
                 capture.analysis_status, capture.analysis_error = "no_ai", None
