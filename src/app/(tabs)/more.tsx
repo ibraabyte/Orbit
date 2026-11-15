@@ -54,8 +54,13 @@ export default function More() {
     <Link href="/tasks" asChild>
       <Pressable accessibilityRole="link" accessibilityLabel={`${t.tasks}, ${status.tasks?.value ?? ""} ${status.tasks?.caption ?? ""}`} style={styles.lead}>
         <View style={styles.spread}>
-          <Text style={styles.leadTitle}>{t.tasks}</Text>
-          {summary.todayTaskCount ? <Text style={styles.leadSide}>{mt.today(formatNumber(summary.todayTaskCount))}</Text> : null}
+          <View style={{ flexShrink: 1, gap: 2 }}>
+            <Text style={styles.leadTitle}>{t.tasks}</Text>
+            {summary.todayTaskCount ? <Text style={styles.leadSide}>{mt.today(formatNumber(summary.todayTaskCount))}</Text> : null}
+          </View>
+          <View style={styles.leadMark}>
+            <Icon name="check-square" size={16} color={colors.urgentInk} />
+          </View>
         </View>
         <View style={{ gap: space.xxs }}>
           {status.tasks?.value ? <Text style={styles.leadValue}>{status.tasks.value}</Text> : <Icon name="check" size={36} color={colors.urgentInk} />}
@@ -76,10 +81,15 @@ export default function More() {
   const healthCard = on("health") ? (
     <Link key="health" href="/health" asChild>
       <Pressable accessibilityRole="link" style={styles.health}>
-        <RingGauge value={Math.min(1, workoutDone / workoutTarget)} size={52} thickness={6} track={colors.accentWash} hole={colors.accentTint} />
-        <View style={{ flex: 1, gap: space.xs }}>
+        <View style={styles.spread}>
           <Text style={styles.title}>{t.health}</Text>
-          <Text style={[styles.line, { color: colors.accentTintInk }]} numberOfLines={3}>
+          <View style={[styles.leadMark, { backgroundColor: colors.surface }]}>
+            <Icon name="heart" size={16} color={colors.link} />
+          </View>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: space.sm }}>
+          <RingGauge value={Math.min(1, workoutDone / workoutTarget)} size={36} thickness={5} track={colors.accentWash} hole={colors.accentTint} />
+          <Text style={[styles.line, { flex: 1, color: colors.accentTintInk }]} numberOfLines={2}>
             {workoutDone >= workoutTarget ? mt.targetMet : mt.minLeft(formatNumber(workoutTarget - workoutDone))}
           </Text>
         </View>
@@ -117,7 +127,7 @@ export default function More() {
   return (
     <Screen header={<TabHeader title={t.more} action={<HeaderButton icon="settings" label={t.settings} onPress={() => router.push("/settings")} />} />}>
       <View style={styles.search}>
-        <Icon name={on("ask") ? "message-circle" : "search"} size={18} color={colors.link} />
+        <Icon name="search" size={17} color={colors.inkMuted} />
         <TextInput
           value={query}
           onChangeText={setQuery}
@@ -199,20 +209,22 @@ const card = { borderRadius: radius.card, borderCurve: "continuous" } as const;
 const plain = { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline } as const;
 
 const styles = StyleSheet.create({
-  search: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 54, paddingHorizontal: space.lg, ...plain, borderColor: colors.accentLine, borderRadius: radius.pill },
-  searchInput: { flex: 1, minHeight: 44, fontFamily: fonts.regular, fontSize: textSize.subheadline, color: colors.ink },
+  // Like the system search field: filled, no border, the magnifier at the start.
+  search: { flexDirection: "row", alignItems: "center", gap: space.sm, minHeight: 44, paddingHorizontal: space.md, borderRadius: 12, borderCurve: "continuous", backgroundColor: colors.surfaceInset },
+  searchInput: { flex: 1, minHeight: 40, fontFamily: fonts.regular, fontSize: textSize.body, color: colors.ink },
   row: { flexDirection: "row", gap: space.md },
   column: { flex: 1, flexBasis: 0, gap: space.md },
   spread: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.sm },
   // Tasks: the inverted card, dark on the day ground and pale at night.
   lead: { ...card, flex: 1, flexBasis: 0, minWidth: 0, minHeight: 236, justifyContent: "space-between", gap: space.md, padding: space.lg, backgroundColor: colors.urgent },
+  leadMark: { width: 30, height: 30, borderRadius: radius.tile, borderCurve: "continuous", alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.12)" },
   leadTitle: { fontFamily: fonts.semibold, fontSize: textSize.subheadline, color: colors.urgentInk },
   leadSide: { fontFamily: fonts.medium, fontSize: textSize.caption1, color: colors.urgentInk, opacity: 0.7 },
   leadValue: { fontFamily: fonts.bold, fontSize: textSize.display, lineHeight: lineHeights.display, color: colors.urgentInk },
   leadFoot: { gap: space.xs, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.edge },
   leadTask: { fontFamily: fonts.semibold, fontSize: textSize.caption1, color: colors.urgentInk },
   leadDue: { fontFamily: fonts.regular, fontSize: textSize.caption2, color: colors.urgentInk, opacity: 0.6 },
-  health: { ...card, flex: 1, minHeight: 113, padding: space.lg, flexDirection: "row", alignItems: "center", gap: space.md, backgroundColor: colors.accentTint },
+  health: { ...card, flex: 1, minHeight: 113, padding: space.lg, justifyContent: "space-between", gap: space.sm, backgroundColor: colors.accentTint },
   finance: { ...card, ...plain, flex: 1, minHeight: 113, padding: space.lg, justifyContent: "space-between" },
   habits: { ...card, ...plain, gap: space.md, padding: space.lg },
   title: { fontFamily: fonts.bold, fontSize: textSize.subheadline, color: colors.ink },
