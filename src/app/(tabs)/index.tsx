@@ -1,15 +1,15 @@
 import { router } from "expo-router";
 import { Fragment, useMemo, type ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Badge, Card, CardLink, Chevron, CountBadge, EmptyState, Hero, Icon, IconTile, ListRow, Metric, RingGauge, RowButton, StatGrid, StatTile, type } from "@/components/drift";
-import { DOCUMENT_ICONS, DocumentBadge, documentSubtitle } from "@/components/document-ui";
+import { StyleSheet, Text, View } from "react-native";
+import { Badge, Card, CardLink, CountBadge, EmptyState, IconTile, ListRow, RingGauge, type, type IconName } from "@/components/drift";
+import { DOCUMENT_ICONS } from "@/components/document-ui";
 import { DoseRow } from "@/components/medication-ui";
 import { DayPlanCard } from "@/components/day-plan";
 import { MorningBriefCard } from "@/components/morning-brief-card";
 import { WeeklySummaryCard } from "@/components/weekly-summary";
+import { AheadTiles, Bars, Meter, Panel, Pills, PrayerStrip, StatBox, StatGrid2, Timeline, type TimelineItem } from "@/components/today-parts";
 import { useOverlays } from "@/components/overlays";
-import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, Skeleton, TabHeader } from "@/components/screen";
-import { SwipeToDone } from "@/components/swipe-to-done";
+import { CaptureHint, Columns, ErrorState, HeaderButton, OfflineBanner, Screen, Skeleton, TabHeader, useWide } from "@/components/screen";
 import { TaskRow } from "@/components/task-row";
 import { colors, fonts, lineHeights, radius, space, textSize } from "@/components/theme";
 import { useAppleHealth } from "@/hooks/use-apple-health";
@@ -23,29 +23,27 @@ import { useReadiness } from "@/hooks/use-readiness";
 import { useSections } from "@/hooks/use-sections";
 import { useTodayLayout } from "@/hooks/use-today-layout";
 import { useWeeklySummary } from "@/hooks/use-weekly-summary";
-import { apiCompleteTask, apiUpdate } from "@/lib/api-actions";
+import { apiCompleteTask } from "@/lib/api-actions";
 import { appHref } from "@/lib/app-href";
 import { eventHidden, pathHidden } from "@/lib/app-sections";
 import { getApi } from "@/lib/backend";
-import { buildCalendarDays } from "@/lib/calendar";
-import { buildDailyBrief, openTasks, summarizeDashboard } from "@/lib/dashboard";
-import { dp } from "@/lib/day-plan";
+import { buildCalendarDays, type CalendarEventKind } from "@/lib/calendar";
+import { buildDailyBrief, openTasks, summarizeDashboard, todaysTasks } from "@/lib/dashboard";
 import { isPastDue } from "@/lib/dates";
-import { formatMoney, nextBillDueDate } from "@/lib/finance";
-import { foodSummary } from "@/lib/food";
-import { formatClock24, formatDate, formatIn, formatNumber, isArabic, t } from "@/lib/i18n";
+import { budgetProgress, formatMoney, monthKey } from "@/lib/finance";
+import { habitProgress } from "@/lib/habits";
+import { dayLetters, runningTotal, sleepWeek, spendWeek, td, workoutWeek } from "@/lib/today-charts";
+import { formatDate, formatNumber, isArabic, t } from "@/lib/i18n";
 import { prayerNamesEn, type PrayerTime } from "@/lib/prayer-times";
-import { buildRail, type RailEntry } from "@/lib/rail";
+import { buildRail } from "@/lib/rail";
 import { dayMuscles, pt, recoveryLine } from "@/lib/plan";
-import { daysLeft, documentsDueSoon, documentTitle, dx } from "@/lib/documents";
+import { daysLeft, documentsDueSoon, documentTitle } from "@/lib/documents";
 import { dosesOnDay, rx } from "@/lib/medications";
-import { formatSleepDuration } from "@/lib/sleep";
-import { cardLabel, moneyDueSoon, type MoneyDue } from "@/lib/wealth";
+import { moneyDueSoon } from "@/lib/wealth";
 import type { TodayCard } from "@/lib/today-layout";
 import { isFriday } from "@/lib/weekly-summary";
 
 const prayerName = (prayer: PrayerTime) => (isArabic ? prayer.label : prayerNamesEn[prayer.name]);
-const minutesUntil = (at: Date) => Math.max(0, Math.round((at.getTime() - Date.now()) / 60_000));
 
 // Today in Refined: the date and title, the next prayer on a sand-edged card, the morning brief, the digest (without
 // what attention already lists), then what to do first: what needs attention (overdue tasks, money due) and what is
@@ -58,6 +56,7 @@ export default function Today() {
   const apple = useAppleHealth().today;
   const { toast } = useOverlays();
   const now = useNow();
+  const wide = useWide();
   // Which cards show and in what order: set in the Customize sheet (src/app/customize-today.tsx).
   const { layout, ready: choicesRead, shown: show } = useTodayLayout();
   // Sections switched off in Settings leave Today too (their data is kept).
@@ -77,7 +76,6 @@ export default function Today() {
     [data, prayersToday, now, sectionsOff]
   );
   const summary = useMemo(() => summarizeDashboard(data), [data]);
-  const food = useMemo(() => foodSummary(data), [data]);
   const moneyDue = useMemo(() => moneyDueSoon(data), [data]);
   // Everything whose time has passed, today's too: Next up only shows what is still ahead.
   const overdue = useMemo(() => openTasks(data.tasks).filter((task) => isPastDue(task.due_at, now)).slice(0, 6), [data.tasks, now]);
@@ -87,22 +85,11 @@ export default function Today() {
   const calorieShare = calorieTarget ? Math.min(1, summary.todayCalories / calorieTarget) : 0;
   const hasData = data.profile !== null || data.tasks.length > 0;
   const money = show("attention") && on("finance") ? moneyDue : [];
-  const attentionCount = overdue.length + money.length;
   // The digest skips what the attention card already lists (overdue tasks, money due).
   const shownElsewhere = [...(show("attention") && overdue.length ? ["overdue-tasks"] : []), ...(money.length ? ["overdue-bills", "overdue-installments"] : [])];
   const digest = buildDailyBrief(data)
     .filter((item) => !pathHidden(item.href, sectionsOff) && !shownElsewhere.includes(item.id))
     .slice(0, 5);
-  // What is still ahead today (not prayers: the next one has its own card).
-  const upNext = rail.entries.filter((entry): entry is Extract<RailEntry, { kind: "event" }> => entry.kind === "event" && !entry.past).slice(0, 8);
-
-  // Paid: an installment is ticked off; a repeating bill moves to its next date, a one-off one is marked paid.
-  const pay = (item: MoneyDue) => {
-    if (item.installment) return act(() => apiUpdate(getApi(), "/obligation-installments", item.installment!.id, { paid_at: new Date().toISOString() }));
-    if (!item.bill) return;
-    const nextDue = nextBillDueDate(item.bill);
-    return act(() => apiUpdate(getApi(), "/bills", item.bill!.id, nextDue ? { due_at: nextDue, status: "active" } : { status: "paid" }));
-  };
 
   const complete = (taskId: string) => act(() => apiCompleteTask(getApi(), taskId)).then(() => toast(t.done));
 
@@ -125,69 +112,38 @@ export default function Today() {
     );
   }
 
-  const prayerCard = prayer ? (
-    <Hero>
-      <View style={styles.heroMark}>
-        <Icon name="moon" size={19} color={colors.link} />
+  const prayerCard = prayersToday.length ? <PrayerStrip prayers={prayersToday} next={prayer ?? null} now={now} /> : null;
+
+  // The rest of today: what is late (marked), then what is due today and still open.
+  const restOfDay = show("attention") ? [...overdue, ...todaysTasks(data.tasks, now).filter((task) => !overdue.includes(task))].slice(0, 8) : [];
+  const attentionCard = restOfDay.length ? (
+    <Panel title={td.restOfDay} note={`${restOfDay.length}`}>
+      <View>
+        {restOfDay.map((task, index) => (
+          <TaskRow key={task.id} task={task} first={index === 0} />
+        ))}
       </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={type.rowSubtitle}>{t.nextPrayer}</Text>
-        <Text style={styles.heroValue} numberOfLines={1}>
-          {prayerName(prayer)} · <Text style={{ writingDirection: "ltr" }}>{formatClock24(prayer.at)}</Text>
-        </Text>
-      </View>
-      <Text style={styles.heroIn}>{formatIn(minutesUntil(prayer.at))}</Text>
-    </Hero>
+    </Panel>
   ) : null;
 
-  const renderNext = (entry: Extract<RailEntry, { kind: "event" }>, index: number) => {
-    const { event, taskId } = entry;
-    const focus = entry.id === rail.focusId;
-    const open = () => router.push(appHref(event.href));
-    const row = (
-      <Pressable onPress={open} accessibilityRole="button" accessibilityLabel={`${t.railKinds[event.kind]}: ${event.title}, ${formatClock24(entry.at)}`} style={[styles.nextRow, index === 0 && { borderTopWidth: 0 }]}>
-        <Text style={[styles.nextTime, focus && { color: colors.link }]}>{formatClock24(entry.at)}</Text>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={type.rowTitle} numberOfLines={2}>
-            {event.title}
-          </Text>
-          <Text style={type.rowSubtitle}>{t.railKinds[event.kind]}</Text>
-        </View>
-        {focus && taskId ? <RowButton label={t.done} onPress={() => void complete(taskId)} /> : <Chevron />}
-      </Pressable>
-    );
-    return <View key={entry.id}>{taskId && !focus ? <SwipeToDone onDone={() => void complete(taskId)}>{row}</SwipeToDone> : row}</View>;
-  };
-
-  const attentionCard = show("attention") && attentionCount ? (
-    <Card title={t.attention} action={<CardLink href="/tasks" label={t.tasks} />}>
-      {overdue.map((task, index) => (
-        <TaskRow key={task.id} task={task} first={index === 0} />
-      ))}
-      {money.map((item, index) => (
-        <ListRow
-          key={item.id}
-          first={!overdue.length && index === 0}
-          title={item.title}
-          badges={item.state === "overdue" ? <Badge tone="urgent" glyph="!">{t.overdue}</Badge> : item.state === "today" ? <Badge tone="accent" glyph="•">{t.dueToday}</Badge> : <Badge glyph="○">{t.dueTomorrow}</Badge>}
-          subtitle={item.kind === "installment" ? t.installment : item.card ? `${t.chargedTo} ${cardLabel(item.card)}` : null}
-          meta={formatMoney(item.amount, item.currency)}
-          trailing={<RowButton label={t.markPaid} onPress={() => void pay(item)} />}
-        />
-      ))}
-    </Card>
-  ) : null;
-
+  // The day top to bottom: the prayers and everything timed, done ones dark, the next one marked "now".
+  const timeline: TimelineItem[] = [...rail.earlier, ...rail.entries].flatMap((entry): TimelineItem[] => {
+    if (entry.kind === "now") return [];
+    const state = entry.past ? "done" : entry.id === rail.focusId ? "now" : "later";
+    return entry.kind === "prayer"
+      ? [{ id: entry.id, at: entry.at, title: prayerName(entry.prayer), icon: "moon", state, nowLabel: td.now }]
+      : [{ id: entry.id, at: entry.at, title: entry.event.title, subtitle: t.railKinds[entry.event.kind], icon: RAIL_ICONS[entry.event.kind], state, href: appHref(entry.event.href), nowLabel: td.now }];
+  });
   const nextCard =
-    show("upnext") && upNext.length ? (
-      <Card title={t.nextUp} action={<CountBadge value={upNext.length} />}>
-        <View>{upNext.map(renderNext)}</View>
-      </Card>
+    show("upnext") && timeline.some((item) => item.state !== "done") ? (
+      <Panel title={td.yourDay} note={td.done(timeline.filter((item) => item.state === "done").length, timeline.length)}>
+        <Timeline items={timeline} />
+      </Panel>
     ) : null;
 
   // Nothing late and nothing timed for the rest of the day: one quiet card instead of two empty ones.
   const clearCard =
-    show("attention") && !attentionCard && !nextCard ? (
+    show("attention") && !attentionCard && !nextCard && !money.length ? (
       <Card>
         <EmptyState icon="check" example={isArabic ? "ذكرني أتصل بأمي ٩ الليل" : "call mom 9pm"}>{`${t.allClear} · ${t.allClearBody}`}</EmptyState>
       </Card>
@@ -209,17 +165,54 @@ export default function Today() {
       </Card>
     ) : null;
 
-  // A zero says nothing, so its tile stays away; with no tiles left, the row goes too.
-  const tiles = [
-    // Shown only when there are open tasks beyond the overdue ones the attention card lists.
-    ...(summary.openTaskCount > overdue.length ? [<StatTile key="tasks" href="/tasks" label={t.openTasks} value={summary.openTaskCount} alert={summary.overdueTaskCount > 0} />] : []),
-    ...(summary.dueReminderCount ? [<StatTile key="reminders" href="/tasks" label={t.dueReminders} value={summary.dueReminderCount} alert />] : []),
-    ...(readiness.value !== null && on("whoop") ? [<StatTile key="readiness" href="/whoop" label={t.readiness} value={formatNumber(readiness.value)} color={colors.accentDeep} />] : []),
-    ...(on("food") && food.todayPlannedMeals ? [<StatTile key="meals" href="/food" label={t.mealsPlanned} value={food.todayPlannedMeals} />] : []),
-    ...(on("finance") && summary.todaySpending ? [<StatTile key="spent" href="/finance" label={t.spentToday} value={formatMoney(summary.todaySpending, currency)} />] : []),
-    ...(on("habits") && summary.activeHabitCount ? [<StatTile key="habits" href="/habits" label={t.habitsDone} value={`${summary.completedHabitCount}/${summary.activeHabitCount}`} />] : [])
+  // Four squares with a number and a week's chart each. A square with nothing in the week stays away.
+  const week7 = dayLetters(now);
+  const sleep = sleepWeek(data.sleepLogs, now);
+  const spent = spendWeek(data.expenses, currency, now);
+  const moved = workoutWeek(data.workouts, now);
+  // Apple Health counts for today too; when it and a typed log both have the day, the larger one shows.
+  sleep[6] = Math.max(sleep[6]!, (apple?.sleep_minutes ?? 0) / 60);
+  moved[6] = Math.max(moved[6]!, apple?.workout_minutes ?? 0);
+  const workoutTarget = data.profile?.weekly_workout_minutes_target ?? 150;
+  const squares = [
+    ...(on("health") && sleep.some(Boolean) ? [<StatBox key="sleep" label={td.sleep} value={formatNumber(Math.round(sleep[6] * 10) / 10)} unit={td.hours} href="/health"><Bars values={sleep} highlight={6} /></StatBox>] : []),
+    ...(on("finance") && spent.some(Boolean) ? [<StatBox key="spent" label={td.spending} value={formatNumber(Math.round(spent.reduce((a, b) => a + b, 0)))} unit={currency} href="/finance"><Bars values={runningTotal(spent)} color={colors.accentDeep} /></StatBox>] : []),
+    ...(on("food") && calorieTarget ? [<StatBox key="food" label={td.calories} value={formatNumber(summary.todayCalories)} unit={td.of(formatNumber(calorieTarget))} href="/food"><Meter share={calorieShare} /></StatBox>] : []),
+    ...(on("exercises") ? [<StatBox key="workout" label={td.workout} value={formatNumber(moved.reduce((a, b) => a + b, 0))} unit={td.of(`${formatNumber(workoutTarget)} ${t.min}`)} href="/health"><Bars values={moved} color={colors.accentDeep} /></StatBox>] : [])
   ];
-  const quickTiles = show("quick") && tiles.length ? <StatGrid columns={3}>{tiles}</StatGrid> : null;
+  const quickTiles = show("quick") && squares.length ? <StatGrid2>{squares}</StatGrid2> : null;
+
+  // Habits as pills: tap one to log it for today; done ones are dark.
+  const habitItems = on("habits") ? data.habits.filter((habit) => !habit.archived_at) : [];
+  const habitsCard =
+    show("habits") && habitItems.length ? (
+      <Panel title={td.habits} note={`${summary.completedHabitCount}/${summary.activeHabitCount}`}>
+        <Pills
+          items={habitItems.map((habit) => {
+            const done = habitProgress(habit, data.habitLogs, now).done;
+            return { key: habit.id, label: habit.name, on: done, onPress: done ? undefined : () => void act(() => getApi().post("/habit-logs", { habit_id: habit.id, logged_at: new Date().toISOString() })) };
+          })}
+        />
+      </Panel>
+    ) : null;
+
+  // The week's spending, a bar a day (today dark), with what is left of this month's budgets.
+  const budgets = budgetProgress(data.budgets, data.expenses, monthKey(now)).filter((row) => row.budget.currency === currency);
+  const budgetLeft = budgets.reduce((sum, row) => sum + row.limit - row.spent, 0);
+  const spendCard =
+    show("spend") && on("finance") && spent.some(Boolean) ? (
+      <Panel title={td.spendWeek} note={budgets.length ? td.budgetLeft(formatMoney(Math.max(0, budgetLeft), currency)) : undefined} href="/finance">
+        <View style={styles.spendRow}>
+          <View>
+            <Text style={styles.spendTotal}>{formatNumber(Math.round(spent.reduce((a, b) => a + b, 0)))}</Text>
+            <Text style={type.rowSubtitle}>{`${currency} ${td.thisWeek}`}</Text>
+          </View>
+          <View style={{ flex: 1, maxWidth: 180 }}>
+            <Bars values={spent} highlight={6} height={56} labels={week7} />
+          </View>
+        </View>
+      </Panel>
+    ) : null;
 
   // The plan's workout for today until it's done; a rest day or no plan shows nothing.
   const workoutDay = show("workout") && on("exercises") ? planToday.day : null;
@@ -253,44 +246,39 @@ export default function Today() {
     </Card>
   ) : null;
 
-  // Papers expired or expiring within a month; the card stays away while everything is valid.
-  const docsDue = show("docs") && on("documents") ? documentsDueSoon(data.documents, now) : [];
-  const docsCard = docsDue.length ? (
-    <Card title={dx.soon} action={<CardLink href="/documents" label={dx.documents} />}>
-      {docsDue.slice(0, 4).map((document, index) => {
-        const left = daysLeft(document, now);
-        return <ListRow key={document.id} first={index === 0} href="/documents" leading={<IconTile name={DOCUMENT_ICONS[document.kind]} tone="urgent" />} title={documentTitle(document)} badges={<DocumentBadge left={left} />} subtitle={documentSubtitle(document, left)} />;
-      })}
-    </Card>
+  // Coming up: money due (late, today, tomorrow) and papers expiring, as small squares.
+  const docsDue = on("documents") ? documentsDueSoon(data.documents, now) : [];
+  const ahead = show("docs")
+    ? [
+        ...money.map((item) => ({ id: item.id, icon: "credit-card" as const, title: item.title, when: item.state === "overdue" ? t.overdue : item.state === "today" ? t.dueToday : t.dueTomorrow, href: "/finance" as const })),
+        ...docsDue.map((document) => ({ id: document.id, icon: DOCUMENT_ICONS[document.kind], title: documentTitle(document), when: td.inDays(daysLeft(document, now)), href: "/documents" as const }))
+      ].slice(0, 3)
+    : [];
+  const docsCard = ahead.length ? (
+    <Panel title={td.ahead}>
+      <AheadTiles items={ahead} />
+    </Panel>
   ) : null;
 
-  // Health shows once something is logged today (food, a workout, sleep); before that it would be a row of zeros.
-  // With Food off, the card keeps workouts and sleep and drops the calorie ring.
-  const foodOn = on("food");
-  // Apple Health counts too; a day it and a typed log both have shows the larger number, not the two added up.
-  const workoutToday = Math.max(summary.todayWorkoutMinutes, apple?.workout_minutes ?? 0);
-  const sleepToday = Math.max(summary.todaySleepMinutes, apple?.sleep_minutes ?? 0);
-  const healthLogged = (foodOn && summary.todayCalories > 0) || workoutToday > 0 || sleepToday > 0;
-  const healthCard = show("health") && on("health") && healthLogged ? (
-    <Card title={t.healthToday} action={<CardLink href="/health" label={t.health} />}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: space.lg }}>
-        {foodOn ? <RingGauge value={calorieShare} label={calorieTarget ? `${Math.round(calorieShare * 100)}%` : "–"} /> : null}
-        <View style={{ flex: 1, flexDirection: "row", gap: space.sm }}>
-          {foodOn ? (
-            <View style={{ flex: 1 }}>
-              <Metric label={t.calories} value={summary.todayCalories} unit={calorieTarget ? `/ ${calorieTarget}` : undefined} />
+  // Your body today: recovery, calories and habits as rings; a ring with nothing behind it stays away.
+  const rings = [
+    ...(on("whoop") && readiness.value !== null ? [{ key: "recovery", share: readiness.value / 100, label: `${formatNumber(readiness.value)}%`, name: td.recovery, color: colors.urgent }] : []),
+    ...(on("food") && calorieTarget ? [{ key: "food", share: calorieShare, label: formatNumber(summary.todayCalories), name: td.calories, color: colors.accent }] : []),
+    ...(on("habits") && summary.activeHabitCount ? [{ key: "habits", share: summary.completedHabitCount / summary.activeHabitCount, label: `${summary.completedHabitCount}/${summary.activeHabitCount}`, name: td.habits, color: colors.accentDeep }] : [])
+  ];
+  const healthCard =
+    show("health") && on("health") && rings.length ? (
+      <Panel title={td.body} href="/health">
+        <View style={styles.rings}>
+          {rings.map((ring) => (
+            <View key={ring.key} style={styles.ring}>
+              <RingGauge value={ring.share} size={76} thickness={8} label={ring.label} color={ring.color} />
+              <Text style={type.rowSubtitle}>{ring.name}</Text>
             </View>
-          ) : null}
-          <View style={{ flex: 1 }}>
-            <Metric label={t.workouts} value={workoutToday} unit={t.min} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Metric label={t.sleep} value={formatSleepDuration(sleepToday)} />
-          </View>
+          ))}
         </View>
-      </View>
-    </Card>
-  ) : null;
+      </Panel>
+    ) : null;
 
   // The morning brief comes right after the prayer, even while it is still asking for AI or permission.
   const briefCard = show("brief") ? <MorningBriefCard state={brief.state} data={data} retry={() => void brief.refresh()} /> : null;
@@ -305,6 +293,8 @@ export default function Today() {
     digest: digestCard,
     attention: attentionCard ?? clearCard,
     upnext: nextCard,
+    habits: habitsCard,
+    spend: spendCard,
     meds: medsCard,
     docs: docsCard,
     workout: workoutCard,
@@ -313,23 +303,30 @@ export default function Today() {
     health: healthCard
   };
   const placed = (list: TodayCard[]) => list.map((card) => <Fragment key={card}>{cards[card]}</Fragment>);
-  // ponytail: on iPad quick numbers and health keep the second column, in their chosen order; the rest fill the first.
-  const side: TodayCard[] = ["quick", "health"];
+  // ponytail: on iPad the charts (body, numbers, habits, spending) take the second column; on a phone everything is
+  // one column in the chosen order.
+  const side: TodayCard[] = ["health", "quick", "habits", "spend"];
 
-  // Phone: one column: the prayer, then the cards in the chosen order. iPad: the same, with quick numbers and health
-  // on the other side.
   return (
     <Screen wide header={header} banner={error ? <OfflineBanner message={t.offline} /> : undefined} refreshing={loading} onRefresh={reload}>
-      <Columns
-        left={
-          <>
-            {prayerCard}
-            {newcomer ? <CaptureHint hint={t.capturePh} /> : null}
-            {placed(layout.order.filter((card) => !side.includes(card)))}
-          </>
-        }
-        right={<>{placed(layout.order.filter((card) => side.includes(card)))}</>}
-      />
+      {wide ? (
+        <Columns
+          left={
+            <>
+              {prayerCard}
+              {newcomer ? <CaptureHint hint={t.capturePh} /> : null}
+              {placed(layout.order.filter((card) => !side.includes(card)))}
+            </>
+          }
+          right={<>{placed(layout.order.filter((card) => side.includes(card)))}</>}
+        />
+      ) : (
+        <>
+          {prayerCard}
+          {newcomer ? <CaptureHint hint={t.capturePh} /> : null}
+          {placed(layout.order)}
+        </>
+      )}
       {/* Which cards Today shows and their order: set now and then, so it waits at the end instead of beside the title. */}
       <View style={{ alignItems: "center", paddingTop: space.lg }}>
         <HeaderButton icon="sliders" label={t.customize} onPress={() => router.push("/customize-today")} />
@@ -337,6 +334,8 @@ export default function Today() {
     </Screen>
   );
 }
+
+const RAIL_ICONS: Record<CalendarEventKind, IconName> = { task: "check-square", reminder: "bell", meal: "coffee", mealPlan: "coffee", grocery: "check-square", workout: "activity", weight: "activity", sleep: "moon", expense: "credit-card", bill: "credit-card" };
 
 function digestIcon(tone?: string | null) {
   if (tone === "danger") return "alert-circle" as const;
@@ -348,6 +347,10 @@ const styles = StyleSheet.create({
   heroMark: { width: 40, height: 40, borderRadius: radius.tile, borderCurve: "continuous", backgroundColor: colors.accentWash, alignItems: "center", justifyContent: "center" },
   heroValue: { fontFamily: fonts.semibold, fontSize: textSize.headline, lineHeight: lineHeights.headline, color: colors.ink },
   heroIn: { fontFamily: fonts.medium, fontSize: textSize.footnote, color: colors.link },
+  spendRow: { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: space.lg },
+  spendTotal: { fontFamily: fonts.bold, fontSize: textSize.title2, color: colors.ink, writingDirection: "ltr" },
+  rings: { flexDirection: "row", justifyContent: "space-around" },
+  ring: { alignItems: "center", gap: space.sm },
   nextRow: { flexDirection: "row", alignItems: "center", gap: space.md, minHeight: 52, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: colors.surfaceInset, backgroundColor: colors.surface },
   nextTime: { width: 52, fontFamily: fonts.semibold, fontSize: textSize.caption1, color: colors.inkMuted, writingDirection: "ltr" }
 });

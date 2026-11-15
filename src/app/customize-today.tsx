@@ -5,24 +5,26 @@ import { colors, fonts, radius, space, textSize } from "@/components/theme";
 import { useSections } from "@/hooks/use-sections";
 import { useTodayLayout } from "@/hooks/use-today-layout";
 import { dp } from "@/lib/day-plan";
-import { dx } from "@/lib/documents";
 import { t } from "@/lib/i18n";
 import { rx } from "@/lib/medications";
 import { pt } from "@/lib/plan";
 import type { TodayCard } from "@/lib/today-layout";
+import { td } from "@/lib/today-charts";
 
 const labels: Record<TodayCard, string> = {
   brief: t.morningBrief,
   dayplan: dp.short,
   digest: t.digest,
-  attention: t.attention,
-  upnext: t.nextUp,
+  attention: td.restOfDay,
+  upnext: td.yourDay,
+  spend: td.spendWeek,
+  habits: td.habits,
   meds: rx.todayDoses,
-  docs: dx.soon,
+  docs: td.ahead,
   workout: pt.todayWorkout,
   week: t.weekSummary,
   quick: t.quick,
-  health: t.healthToday
+  health: td.body
 };
 
 // Today → Customize, as a sheet: every card below the prayer with a switch to show or hide it, and arrows to move it
@@ -31,7 +33,7 @@ const labels: Record<TodayCard, string> = {
 export default function CustomizeToday() {
   const { layout, shown, setShown, move } = useTodayLayout();
   const { on } = useSections();
-  const inUse = (card: TodayCard) => (card === "health" ? on("health") : card === "workout" ? on("exercises") : card === "meds" ? on("medications") : card === "docs" ? on("documents") : true);
+  const inUse = (card: TodayCard) => (card === "health" ? on("health") : card === "workout" ? on("exercises") : card === "meds" ? on("medications") : card === "spend" ? on("finance") : card === "habits" ? on("habits") : true);
   const cards = layout.order.filter(inUse);
   const track = { true: colors.accent, false: colors.hairline };
 
