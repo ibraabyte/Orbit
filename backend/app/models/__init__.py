@@ -2,7 +2,7 @@
 
 from app.models.apple_health import AppleHealthDay
 from app.models.auth import RefreshToken, ServerSettings, User
-from app.models.bank_sms import BankSmsEvent, BankSmsToken, BankTransaction
+from app.models.bank_sms import BankSmsEvent, BankSmsTemplate, BankSmsToken, BankTransaction
 from app.models.base import Base
 from app.models.calls import PhoneCall, PhoneConnection
 from app.models.chatgpt import ChatgptConnection
@@ -29,6 +29,7 @@ __all__ = [
     "AppleHealthDay",
     "Attachment",
     "BankSmsEvent",
+    "BankSmsTemplate",
     "BankSmsToken",
     "BankTransaction",
     "Base",

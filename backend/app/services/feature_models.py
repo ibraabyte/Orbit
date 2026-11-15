@@ -21,7 +21,7 @@ from sqlalchemy.orm import Session
 from app.models import FeatureModel, VoiceConnection
 from app.services import voice_call, whoop_ai
 
-AI_FEATURES = ("assistant", "food_text", "food_photo", "health", "week", "saver")
+AI_FEATURES = ("assistant", "food_text", "food_photo", "health", "week", "saver", "bank_sms")
 REALTIME_FEATURES = ("call", "phone_agent")
 REALTIME_MODELS = ("gpt-realtime", "gpt-realtime-mini")
 DEFAULT_REALTIME = REALTIME_MODELS[0]

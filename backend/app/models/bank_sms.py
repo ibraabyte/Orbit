@@ -8,7 +8,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, Numeric, Text, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Numeric, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -33,6 +33,8 @@ class BankSmsToken(Base):
     token_hash: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     created_at: Mapped[datetime] = created_at()
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Read messages no template matches with the user's own AI (app/services/bank_ai.py).
+    ai_read: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
 
 
 class BankTransaction(Owned, Base):
@@ -47,7 +49,8 @@ class BankTransaction(Owned, Base):
         Index("bank_transactions_user_message_idx", "user_id", "message_mac", "created_at"),
     )
 
-    bank: Mapped[str] = mapped_column(Text, nullable=False)
+    # None when the Shortcut doesn't say which bank; the reader then uses every bank's words.
+    bank: Mapped[str | None] = mapped_column(Text)
     kind: Mapped[str] = mapped_column(Text, nullable=False)
     amount: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
     currency: Mapped[str | None] = mapped_column(Text)
@@ -76,3 +79,22 @@ class BankSmsEvent(Base):
     transaction_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("bank_transactions.id", ondelete="CASCADE"), nullable=False
     )
+
+
+class BankSmsTemplate(Owned, Base):
+    """A message shape learnt from an example the user pasted. `pattern` holds placeholders, never the example's values
+    (app/services/bank_templates.py)."""
+
+    __tablename__ = "bank_sms_templates"
+    __table_args__ = (
+        CheckConstraint(_in("bank", BANKS), name="bank"),
+        CheckConstraint(_in("kind", tuple(kind for kind in KINDS if kind != "unknown")), name="kind"),
+        CheckConstraint("char_length(label) <= 60", name="label_length"),
+        CheckConstraint("char_length(pattern) <= 4000", name="pattern_length"),
+    )
+
+    bank: Mapped[str | None] = mapped_column(Text)
+    label: Mapped[str] = mapped_column(Text, nullable=False)
+    kind: Mapped[str] = mapped_column(Text, nullable=False)
+    pattern: Mapped[str] = mapped_column(Text, nullable=False)
+    last_matched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

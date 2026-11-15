@@ -91,8 +91,16 @@ def _has(text, markers):
     return False
 
 
+_REFUND_WORDS = ["refund", "refunded", "reversal", "reversed", "استرداد", "استرجاع", "ارجاع"]
+
+
+def is_refund_or_balance(text: str) -> bool:
+    """Wording that must never sit inside a template's free slots: money going back, or a balance."""
+    return _has(normalize_message(text), _REFUND_WORDS) or bool(_BALANCE.search(text))
+
+
 def _kind(text, bank):
-    if _has(text, ["refund", "refunded", "reversal", "استرداد", "استرجاع", "ارجاع"]):
+    if _has(text, _REFUND_WORDS):
         return "refund"
     if re.search(r"credit\s*card\s*(?:bill\s*)?payment|card\s*bill\s*payment|سداد\s*(?:فاتور[ةه]\s*)?(?:ال)?بطاق", text):
         return "card_payment"
@@ -124,19 +132,30 @@ def _amount(clean):
     if not matches:
         return None, None, "missing_amount"
     found = matches[0]
-    currency = (found["before"] or found["after"]).upper()
-    if currency.startswith(("ريال", "ر.")) or re.fullmatch(r"ر\s*س\.?", currency):
-        currency = "SAR"
-    if currency not in _SUPPORTED:
+    currency = currency_code(found["before"] or found["after"])
+    if currency is None:
         return None, None, "unsupported_currency"
-    number = (found["num1"] or found["num2"]).strip()
-    if not re.fullmatch(r"(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?", number):
-        return None, None, "invalid_amount"
-    whole, _, fraction = number.replace(",", "").partition(".")
-    value = int(whole) * 100 + int(fraction.ljust(2, "0") or "0")
-    if value <= 0 or value > 999_999_999_999:
+    value = minor_units((found["num1"] or found["num2"]).strip())
+    if value is None:
         return None, None, "invalid_amount"
     return value, currency, None
+
+
+def currency_code(raw: str) -> str | None:
+    """SAR for the Arabic riyal spellings; None for a currency Orbit doesn't take."""
+    currency = raw.strip().upper()
+    if currency.startswith(("ريال", "ر.")) or re.fullmatch(r"ر\s*س\.?", currency):
+        currency = "SAR"
+    return currency if currency in _SUPPORTED else None
+
+
+def minor_units(number: str) -> int | None:
+    """'1,020.50' -> 102050. None for anything that isn't a plain positive amount."""
+    if not re.fullmatch(r"(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?", number):
+        return None
+    whole, _, fraction = number.replace(",", "").partition(".")
+    value = int(whole) * 100 + int(fraction.ljust(2, "0") or "0")
+    return value if 0 < value <= 999_999_999_999 else None
 
 
 def _label(clean, labels):
@@ -149,15 +168,34 @@ def _label(clean, labels):
     return value[:100] or None
 
 
-def parse_sms(bank: str, message: str, *, verified: bool | None = None) -> dict:
-    if bank not in BANKS:
+# With no bank named, any bank's purchase words count; such a read is never trusted on its own.
+ANY_BANK = {"verified": False, "purchase_markers": sorted({marker for bank in BANKS.values() for marker in bank["purchase_markers"]})}
+
+
+def check_sensitive(message: str) -> None:
+    """Raises SensitiveMessage for an OTP, a full card or account number, or an IBAN."""
+    clean = _clean(message)
+    if _SENSITIVE.search(normalize_message(message)) or _FULL_NUMBER.search(clean) or _ACCOUNT.search(clean):
+        raise SensitiveMessage("sensitive_message")
+
+
+def is_failed(message: str) -> bool:
+    return bool(_FAILED.search(normalize_message(message)))
+
+
+def category_for(merchant: str | None) -> str:
+    text = normalize_message(merchant or "")
+    return next((category for category, keywords in CATEGORY_KEYWORDS.items() if _has(text, keywords)), "other")
+
+
+def parse_sms(bank: str | None, message: str, *, verified: bool | None = None) -> dict:
+    if bank is not None and bank not in BANKS:
         raise ValueError("unknown_bank")
+    rules = BANKS[bank] if bank else ANY_BANK
     if not isinstance(message, str) or not message.strip() or len(message) > 4000:
         raise ValueError("invalid_message")
+    check_sensitive(message)
     clean = _clean(message)
-    text = normalize_message(message)
-    if _SENSITIVE.search(text) or _FULL_NUMBER.search(clean) or _ACCOUNT.search(clean):
-        raise SensitiveMessage("sensitive_message")
     operation = _operation_text(clean)
     operation_text = normalize_message(operation)
     result = {
@@ -174,7 +212,7 @@ def parse_sms(bank: str, message: str, *, verified: bool | None = None) -> dict:
     if _FAILED.search(operation_text):
         result.update(status="ignored", review_reasons=["failed_or_pending"])
         return result
-    result["kind"] = _kind(operation_text, BANKS[bank])
+    result["kind"] = _kind(operation_text, rules)
     if result["kind"] == "unknown":
         result["review_reasons"].append("unknown_format")
         return result
@@ -189,12 +227,8 @@ def parse_sms(bank: str, message: str, *, verified: bool | None = None) -> dict:
     card = re.search(r"(?:\bcard(?:\s*ending(?:\s*in)?)?|بطاقة|البطاقة)\s*[:：]?\s*[*xX#-]*\s*(\d{4})(?!\d)", clean, re.IGNORECASE)
     if card:
         result["card_last4"] = card[1]
-    merchant = normalize_message(result["merchant"] or "")
-    for category, keywords in CATEGORY_KEYWORDS.items():
-        if _has(merchant, keywords):
-            result["category"] = category
-            break
-    if not (BANKS[bank]["verified"] if verified is None else verified):
+    result["category"] = category_for(result["merchant"])
+    if not (rules["verified"] if verified is None else verified):
         result["review_reasons"].append("unverified_bank_format")
     if result["kind"] in {"transfer_in", "transfer_out", "card_payment", "cash_withdrawal"}:
         result["review_reasons"].append("non_expense_movement")

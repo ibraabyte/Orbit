@@ -213,3 +213,10 @@ class ParserTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def test_no_bank_uses_every_banks_purchase_words():
+    # "عملية دفع" is only in STC's purchase words.
+    result = parse_sms(None, "عملية دفع; مبلغ: 10 SAR; لدى: X")
+    assert result["kind"] == "purchase"
+    assert "unverified_bank_format" in result["review_reasons"]

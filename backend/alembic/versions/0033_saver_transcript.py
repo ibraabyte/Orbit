@@ -8,7 +8,7 @@ Items saved before this start with none; "Look at it again" fills them.
 
 Downgrading drops the columns and what is in them.
 
-Comes after 0031 (push devices).
+Comes after 0032 (bank SMS templates).
 """
 
 from collections.abc import Sequence
@@ -17,8 +17,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0032"
-down_revision: str | None = "0031"
+revision: str = "0033"
+down_revision: str | None = "0032"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
