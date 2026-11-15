@@ -22,7 +22,6 @@ import { getApi } from "@/lib/backend";
 import { captureStarterKinds, captureStarters, digits, formatDate, isArabic, t } from "@/lib/i18n";
 import type { QuickAddDraft } from "@/lib/quick-add";
 import { aiName, aiQuery, integrationsApi, VOICE_PROVIDER_NAMES, type VoiceStatus } from "@/lib/integrations";
-import { dp } from "@/lib/day-plan";
 import { isNoAiError } from "@/lib/morning-brief";
 import { parseNatural } from "@/lib/quick-add-input";
 import { defaultVoiceLang, voiceConsented, voiceConsentKey, withSpoken, type VoiceLang } from "@/lib/voice";
@@ -248,9 +247,8 @@ export default function Capture() {
           <Text style={[type.pill, { fontSize: textSize.subheadline, color: colors.onShellMuted }]}>{t.cancel}</Text>
         </Pressable>
         {/* A live voice call: talk and hear the answers, no send button. */}
-        <Pressable onPress={() => router.push("/call")} accessibilityRole="button" accessibilityLabel={t.callTitle} hitSlop={8} style={styles.call}>
-          <Icon name="phone" size={14} color={colors.ink} />
-          <Text style={[type.pill, { fontSize: 13, color: colors.ink }]}>{t.callButton}</Text>
+        <Pressable onPress={() => router.push("/call")} accessibilityRole="button" accessibilityLabel={t.callTitle} hitSlop={8} style={({ pressed }) => [styles.call, pressed && { transform: [{ scale: 0.94 }] }]}>
+          <Icon name="phone" size={18} color={palette.accentInk} />
         </Pressable>
       </View>
 
@@ -338,42 +336,40 @@ export default function Capture() {
         </View>
       ) : null}
 
-      <View>
-        <TextInput
-          style={[styles.input, parsed && !parsed.validation.ok && { borderColor: colors.accentDeep }]}
-          autoFocus={!answer && params.voice !== "1"}
-          multiline
-          placeholder={answer ? t.askPlaceholder : t.assistantPh}
-          placeholderTextColor={colors.inkFaint}
-          selectionColor={colors.accentDeep}
-          value={text}
-          onChangeText={setText}
-          maxLength={ACT_TEXT_MAX}
-          submitBehavior="blurAndSubmit"
-          onSubmitEditing={() => void submit()}
-          returnKeyType="send"
-          // A plain note, not a form: no AutoFill bubble over it.
-          textContentType="none"
-          autoComplete="off"
-          editable={!busy && !listening && !cloud.transcribing}
-        />
-      </View>
-      {/* Shortcuts that start a line (with what they are for), and the mic. */}
-      <View style={styles.tools}>
-        {!answer && !text.trim() ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm }} style={{ flex: 1 }}>
-            {starters.map(({ word, icon }) => (
-              <Pressable key={word} onPress={() => setText(word)} accessibilityRole="button" style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}>
-                <Icon name={icon} size={15} color={colors.accentDeep} />
-                <Text style={type.barLabel}>{word.trim()}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-        ) : (
-          <View style={{ flex: 1 }} />
-        )}
+      {/* Shortcuts first, as one row that runs edge to edge: pick one, or just type or talk. */}
+      {!answer && !text.trim() ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.shortcuts} contentContainerStyle={styles.shortcutsRow}>
+          {starters.map(({ word, icon }) => (
+            <Pressable key={word} onPress={() => setText(word)} accessibilityRole="button" style={({ pressed }) => [styles.chip, pressed && { opacity: 0.7 }]}>
+              <Icon name={icon} size={16} color={colors.accentDeep} />
+              <Text style={styles.chipText}>{word.trim()}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
+
+      {/* The field as one card, with the mic inside it at the end. */}
+      <View style={[styles.composer, parsed && !parsed.validation.ok && { borderColor: colors.accentDeep }]}>
+          <TextInput
+            style={styles.input}
+            autoFocus={!answer && params.voice !== "1"}
+            multiline
+            placeholder={answer ? t.askPlaceholder : t.assistantPh}
+            placeholderTextColor={colors.inkFaint}
+            selectionColor={colors.accentDeep}
+            value={text}
+            onChangeText={setText}
+            maxLength={ACT_TEXT_MAX}
+            submitBehavior="blurAndSubmit"
+            onSubmitEditing={() => void submit()}
+            returnKeyType="send"
+            // A plain note, not a form: no AutoFill bubble over it.
+            textContentType="none"
+            autoComplete="off"
+            editable={!busy && !listening && !cloud.transcribing}
+          />
         <Pressable onPress={toggleVoice} disabled={cloud.transcribing} accessibilityRole="button" accessibilityLabel={listening ? t.micStop : t.micStart} style={[styles.mic, listening && { backgroundColor: colors.accent }, cloud.transcribing && { opacity: 0.5 }]}>
-          <Icon name={listening ? "square" : cloud.transcribing ? "loader" : "mic"} size={22} color={listening ? colors.accentInk : colors.surface} />
+          <Icon name={listening ? "square" : cloud.transcribing ? "loader" : "mic"} size={20} color={listening ? colors.accentInk : colors.surface} />
         </Pressable>
       </View>
       <View style={[styles.chips, { alignItems: "center" }]}>
@@ -428,26 +424,6 @@ export default function Capture() {
         </Pressable>
       ) : null}
 
-      {!answer && !text.trim() ? (
-        <Pressable onPress={() => router.push("/day-plan")} accessibilityRole="link" style={styles.recent}>
-          <Icon name="sunrise" size={13} color={colors.accentDeep} />
-          <Text style={styles.recentText} numberOfLines={1}>
-            {dp.title}
-          </Text>
-          <Text style={type.shellMeta}>{dp.short}</Text>
-        </Pressable>
-      ) : null}
-
-      {!answer && !text.trim() ? (
-        <Pressable onPress={() => router.push("/week")} accessibilityRole="link" style={styles.recent}>
-          <Icon name="calendar" size={13} color={colors.accentDeep} />
-          <Text style={styles.recentText} numberOfLines={1}>
-            {t.weekSummary}
-          </Text>
-          <Icon name={isArabic ? "chevron-left" : "chevron-right"} size={14} color={colors.inkFaint} />
-        </Pressable>
-      ) : null}
-
       {!answer && !text.trim() && recent.length ? (
         <View style={{ gap: space.sm }}>
           <Text style={type.shellMeta}>{t.recent}</Text>
@@ -476,20 +452,24 @@ export default function Capture() {
 const styles = StyleSheet.create({
   screen: { padding: space.xl, gap: space.md },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: space.lg },
-  call: { minHeight: 34, flexDirection: "row", alignItems: "center", gap: space.xs, paddingHorizontal: space.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
+  // A round sand button, like a phone's green call button but in Orbit's colour.
+  call: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, boxShadow: "0 6px 16px rgba(176,142,80,0.35)" },
   ask: { gap: space.lg, paddingTop: space.lg },
   askMark: { width: 52, height: 52, borderRadius: 16, borderCurve: "continuous", backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" },
   title: { fontFamily: fonts.bold, fontSize: 30, lineHeight: 40, color: colors.onShell },
-  tools: { flexDirection: "row", alignItems: "center", gap: space.md },
+  shortcuts: { flexGrow: 0, marginHorizontal: -space.xl },
+  shortcutsRow: { gap: space.sm, paddingHorizontal: space.xl },
+  composer: { flexDirection: "row", alignItems: "flex-end", gap: space.sm, padding: space.sm, paddingStart: space.lg, borderRadius: 26, borderCurve: "continuous", borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.surface },
   auto: { writingDirection: "auto" },
-  mic: { width: 60, height: 60, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.ink, boxShadow: "0 12px 28px rgba(26,26,28,0.22)" },
+  mic: { width: 44, height: 44, borderRadius: radius.pill, alignItems: "center", justifyContent: "center", backgroundColor: colors.ink },
   action: { gap: space.sm, paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
   total: { paddingTop: space.md, borderTopWidth: 1, borderTopColor: colors.hairline },
   number: { width: 96, minHeight: 36, paddingHorizontal: space.md, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.control, backgroundColor: colors.field, fontFamily: fonts.semibold, fontSize: textSize.subheadline, color: colors.ink, textAlign: "center" },
   note: { flexDirection: "row", alignItems: "center", gap: space.sm, paddingVertical: space.sm },
-  input: { maxHeight: 180, minHeight: 72, paddingVertical: space.sm, paddingHorizontal: 0, textAlignVertical: "top", writingDirection: "auto", borderBottomWidth: 1, borderColor: "transparent", fontFamily: fonts.medium, fontSize: 20, lineHeight: 30, color: colors.ink },
+  input: { flex: 1, maxHeight: 160, minHeight: 44, paddingVertical: 10, paddingHorizontal: 0, textAlignVertical: "top", writingDirection: "auto", fontFamily: fonts.medium, fontSize: 18, lineHeight: 26, color: colors.ink },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: space.sm },
-  chip: { minHeight: 38, paddingHorizontal: space.md, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: space.xs, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
+  chipText: { fontFamily: fonts.medium, fontSize: textSize.subheadline, color: colors.ink },
+  chip: { minHeight: 40, borderWidth: 1, borderColor: colors.hairline, paddingHorizontal: space.lg, justifyContent: "center", flexDirection: "row", alignItems: "center", gap: space.xs, borderRadius: radius.pill, backgroundColor: colors.surfaceInset },
   preview: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.hairline, borderRadius: radius.card, paddingHorizontal: space.lg, paddingVertical: space.md, gap: space.sm },
   previewHead: { flexDirection: "row", alignItems: "center", gap: space.sm },
   previewMark: { width: 28, height: 28, borderRadius: radius.control, backgroundColor: colors.urgent, alignItems: "center", justifyContent: "center" },
