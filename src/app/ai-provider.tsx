@@ -7,19 +7,27 @@ import { ModelPicker, ProviderMark } from "@/components/ai-provider-parts";
 import { ChatgptConnectForm } from "@/components/chatgpt-connect-form";
 import { Badge, Card, EmptyState, Icon, ListRow, type } from "@/components/drift";
 import { Button, Input, Loading, Screen, Segments } from "@/components/screen";
+import { loadAskConsent, saveAskConsent } from "@/hooks/use-ask-consent";
+import { useDashboardData } from "@/hooks/use-dashboard-data";
 import { colors, fonts } from "@/components/theme";
+import { consentNames } from "@/lib/ask";
 import { firstModel, isProviderId, openrouterResult, PROVIDERS, providersApi, providerState, type ProviderModel } from "@/lib/ai-providers";
 import { getApi } from "@/lib/backend";
 import { removeBody } from "@/lib/feature-models";
 import { digits, isArabic, t } from "@/lib/i18n";
-import { integrationsApi, VOICE_PROVIDER_NAMES, type AiProvider, type IntegrationsOverview, type VoiceProvider } from "@/lib/integrations";
+import { AI_CHOICE_NAMES, integrationsApi, VOICE_PROVIDER_NAMES, type AiProvider, type IntegrationsOverview, type VoiceProvider } from "@/lib/integrations";
 
 type Busy = "test" | "save" | "model" | "remove" | "speech" | "account" | "default" | "instructions";
 type Notice = { ok: boolean; message: string };
 
 // One AI company: add, test, change or remove its key, pick its model from the company's own list, and turn on what
 // else it can do (speech to text, the voice call). OpenAI and OpenRouter can also be connected with an account.
+// Connecting an AI for text is also the person's agreement to send their items to it (Apple 5.1.2(i)): the note sits
+// next to the connect button, and the agreement is saved on this phone the moment the connection works. An AI connected
+// before that (or the agreement withdrawn in Settings) gets an Allow card here, so Today never has to ask.
 export default function AiProvider() {
+  const { userId } = useDashboardData();
+  const [accepted, setAccepted] = useState<string | null>(null);
   const params = useLocalSearchParams<{ id?: string; status?: string }>();
   const id = isProviderId(params.id) ? params.id : "openai";
   const provider = PROVIDERS[id];
@@ -59,6 +67,16 @@ export default function AiProvider() {
   }, [id]);
 
   useEffect(() => {
+    void loadAskConsent(userId).then(setAccepted);
+  }, [userId]);
+
+  // Saves the agreement for these AIs (as the brief and assistant name them: "Claude", "ChatGPT"…).
+  const agree = async (...names: string[]) => {
+    for (const name of names) await saveAskConsent(userId, name);
+    setAccepted(await loadAskConsent(userId));
+  };
+
+  useEffect(() => {
     void load().then((next) => {
       if (next && providerState(next, id).keySaved) void fetchSaved();
     });
@@ -92,6 +110,11 @@ export default function AiProvider() {
   const tab = method ?? (provider.account === "chatgpt" && !state.keySaved && overview.chatgpt.status !== "not_connected" ? "account" : "key");
   const instructionsNow = instructions ?? state.instructions ?? "";
   const textModel = pickedModel ?? state.textModel;
+  // The AIs of this company in use for text right now that have no agreement yet.
+  const unshared = [state.textModel ? AI_CHOICE_NAMES[id as AiProvider] : null, state.account ? AI_CHOICE_NAMES.chatgpt : null].filter(
+    (name): name is string => name !== null && !consentNames(accepted).includes(name)
+  );
+  const shareNote = (name: string) => <Text style={type.rowSubtitle}>{t.pv.shareNote.replace("{name}", name)}</Text>;
 
   const test = () =>
     run("test", async () => {
@@ -107,6 +130,7 @@ export default function AiProvider() {
         const model = firstModel(models ?? [], "text", textModel) ?? (id === "anthropic" ? "" : null);
         if (model === null) return { ok: false, message: t.pv.testFirst };
         await integrationsApi.connectAi(getApi(), { provider: id as AiProvider, model, apiKey, instructions: instructionsNow });
+        await agree(AI_CHOICE_NAMES[id as AiProvider]);
         // The same key also feeds speech to text when this company is the voice model.
         if (state.speechModel && apiKey && id === "openai") await integrationsApi.connectVoice(getApi(), { provider: "openai", model: state.speechModel, apiKey });
       } else {
@@ -199,7 +223,10 @@ export default function AiProvider() {
       await load();
       if (result.type !== "success") return;
       const outcome = openrouterResult(result.url);
-      if (outcome?.ok) await fetchSaved();
+      if (outcome?.ok) {
+        await agree(AI_CHOICE_NAMES.openrouter);
+        await fetchSaved();
+      }
       return outcome ?? undefined;
     });
 
@@ -210,7 +237,11 @@ export default function AiProvider() {
         <View style={{ flex: 1, gap: 4 }}>
           <View style={styles.headerLine}>
             <Text style={styles.name}>{provider.name}</Text>
-            <Badge tone={state.connected ? "success" : "neutral"}>{state.isDefault ? t.pv.isDefault : state.connected ? t.pv.connected : t.pv.notConnected}</Badge>
+            {state.connected ? (
+              <View style={styles.on} accessibilityLabel={state.isDefault ? t.pv.isDefault : t.pv.connected}>
+                <Icon name={state.isDefault ? "star" : "check"} size={13} color={colors.accentInk} />
+              </View>
+            ) : null}
           </View>
           <Text style={type.rowSubtitle}>{t.pv.blurbs[id]}</Text>
         </View>
@@ -221,6 +252,12 @@ export default function AiProvider() {
           <Icon name={notice.ok ? "check-circle" : "alert-circle"} size={16} color={notice.ok ? colors.accentDeep : colors.dangerOnShell} />
           <Text style={[type.rowSubtitle, { flex: 1, color: colors.ink }]}>{notice.message}</Text>
         </View>
+      ) : null}
+
+      {unshared.length ? (
+        <Card title={t.pv.shareTitle.replace("{name}", unshared.join(isArabic ? " و" : " & "))}>
+          <Button title={t.pv.shareAllow} onPress={() => void agree(...unshared).catch(() => Alert.alert(t.changeFailed, t.tryAgain))} />
+        </Card>
       ) : null}
 
       {provider.account ? (
@@ -234,7 +271,7 @@ export default function AiProvider() {
 
       {tab === "account" && provider.account === "chatgpt" ? (
         <Card title={t.pv.methodChatgpt}>
-          <Text style={type.rowSubtitle}>{t.pv.chatgptNote}</Text>
+          {state.account ? null : shareNote(AI_CHOICE_NAMES.chatgpt)}
           <ChatgptConnectForm
             status={overview.chatgpt}
             start={async () => {
@@ -245,6 +282,7 @@ export default function AiProvider() {
             finish={async (callbackUrl) => {
               try {
                 await integrationsApi.finishChatgpt(getApi(), callbackUrl);
+                await agree(AI_CHOICE_NAMES.chatgpt);
               } finally {
                 await load();
               }
@@ -259,8 +297,7 @@ export default function AiProvider() {
 
       {tab === "account" && provider.account === "openrouter" ? (
         <Card title={t.pv.methodOpenrouter}>
-          <Text style={type.rowSubtitle}>{t.pv.openrouterAccount}</Text>
-          {state.keySaved ? <ListRow leading={<Icon name="check-circle" size={18} color={colors.accentDeep} />} title={t.pv.connected} subtitle={state.textModel} /> : null}
+          {state.keySaved ? <ListRow leading={<Icon name="check-circle" size={18} color={colors.accentDeep} />} title={t.pv.connected} subtitle={state.textModel} /> : shareNote(provider.name)}
           <Button title={busy === "account" ? t.connecting : t.pv.openrouterSignIn} disabled={busy !== null} onPress={() => void openrouterSignIn()} />
         </Card>
       ) : null}
@@ -282,6 +319,7 @@ export default function AiProvider() {
                 style={{ writingDirection: "ltr" }}
               />
               {!hasText && otherVoice ? <Text style={type.rowSubtitle}>{t.pv.speechReplaces.replace("{name}", otherVoice)}</Text> : null}
+              {hasText ? shareNote(AI_CHOICE_NAMES[id as AiProvider]) : null}
               <View style={styles.buttons}>
                 <View style={{ flex: 1 }}>
                   <Button variant="outline" title={busy === "test" ? t.pv.testing : t.pv.test} disabled={busy !== null || keyInput.trim().length < 8} onPress={() => void test()} />
@@ -309,18 +347,16 @@ export default function AiProvider() {
               <Button variant="outline" title={busy === "remove" ? t.pv.saving : t.pv.removeAll} disabled={busy !== null} onPress={remove} />
             </>
           )}
-          {id === "anthropic" ? <Text style={type.rowSubtitle}>{t.pv.noSubscription}</Text> : id === "openai" ? <Text style={type.rowSubtitle}>{t.pv.chatgptNote}</Text> : null}
         </Card>
       ) : null}
 
       {hasText && tab === "key" && (state.keySaved || models) ? (
         <Card title={t.pv.modelTitle}>
           {models ? (
-            <ModelPicker models={models} kind="text" value={textModel} onPick={pickModel} disabled={busy !== null} />
+            <ModelPicker provider={provider} models={models} kind="text" value={textModel} onPick={pickModel} disabled={busy !== null} />
           ) : (
             <Text style={type.rowSubtitle}>{state.textModel ?? t.pv.testFirst}</Text>
           )}
-          <Text style={type.rowSubtitle}>{t.pv.modelLive.replace("{name}", provider.name)}</Text>
           {state.textModel ? (
             <>
               <Input accessibilityLabel={t.aiInstructions} placeholder={t.aiInstructions} value={instructionsNow} onChangeText={setInstructions} maxLength={1000} multiline style={{ height: 96 }} />
@@ -329,14 +365,13 @@ export default function AiProvider() {
               ) : null}
             </>
           ) : null}
-          <Text style={type.rowSubtitle}>{t.aiPrivacy}</Text>
         </Card>
       ) : null}
 
       {hasSpeech && tab === "key" && (state.keySaved || models) ? (
         <Card title={t.pv.speechTitle} action={<Badge tone={state.speechModel ? "success" : "neutral"}>{state.speechModel ? t.voiceOn : t.pv.speechOff}</Badge>}>
           {state.speechModel ? <Text style={type.rowSubtitle}>{t.pv.speechOn.replace("{name}", provider.name)}</Text> : null}
-          {models ? <ModelPicker models={models} kind="speech" value={firstModel(models, "speech", pickedSpeech ?? state.speechModel)} onPick={pickSpeech} disabled={busy !== null} /> : null}
+          {models ? <ModelPicker provider={provider} models={models} kind="speech" value={firstModel(models, "speech", pickedSpeech ?? state.speechModel)} onPick={pickSpeech} disabled={busy !== null} /> : null}
           {id === "openai" && state.textModel && !state.speechModel ? (
             <>
               {otherVoice ? <Text style={type.rowSubtitle}>{t.pv.speechReplaces.replace("{name}", otherVoice)}</Text> : null}
@@ -344,7 +379,6 @@ export default function AiProvider() {
             </>
           ) : null}
           {id === "openai" && state.speechModel && state.textModel ? <Button variant="outline" title={t.pv.speechStop} disabled={busy !== null} onPress={() => void stopSpeech()} /> : null}
-          <Text style={type.rowSubtitle}>{t.voicePrivacy}</Text>
         </Card>
       ) : null}
 
@@ -354,18 +388,8 @@ export default function AiProvider() {
         </Card>
       ) : null}
 
-      {(state.textModel || state.account) && hasText ? (
-        <Card>
-          {state.isDefault ? (
-            <ListRow first leading={<Icon name="star" size={18} color={colors.accentDeep} />} title={t.pv.defaultNow} subtitle={names.length ? t.pv.usedBy.replace("{features}", names.join(isArabic ? "، " : ", ")) : null} />
-          ) : (
-            <>
-              {names.length ? <Text style={type.rowSubtitle}>{t.pv.usedBy.replace("{features}", names.join(isArabic ? "، " : ", "))}</Text> : null}
-              <Button variant="outline" title={t.pv.makeDefault} disabled={busy !== null} onPress={() => void makeDefault()} />
-            </>
-          )}
-        </Card>
-      ) : null}
+      {/* The header's badge already says when this is the default; otherwise one button makes it so. */}
+      {(state.textModel || state.account) && hasText && !state.isDefault ? <Button variant="outline" title={t.pv.makeDefault} disabled={busy !== null} onPress={() => void makeDefault()} /> : null}
     </Screen>
   );
 }
@@ -376,5 +400,6 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.bold, fontSize: 22, color: colors.ink },
   notice: { flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.accentLine, backgroundColor: colors.accentTint },
   noticeBad: { borderColor: colors.dangerOnShell, backgroundColor: colors.surface },
-  buttons: { flexDirection: "row", gap: 10 }
+  buttons: { flexDirection: "row", gap: 10 },
+  on: { width: 22, height: 22, borderRadius: 11, backgroundColor: colors.accent, alignItems: "center", justifyContent: "center" }
 });

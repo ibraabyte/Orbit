@@ -45,8 +45,9 @@ export function WeekWritten({ state, retry, compact }: { state: WeekState; retry
         {t.weekWriting}
       </Text>
     );
-  if (state.status === "no-ai") return <Text style={type.rowSubtitle}>{t.weekNoAi}</Text>;
-  if (state.status === "consent") return <Text style={type.rowSubtitle}>{t.weekConsent}</Text>;
+  if (state.status === "no-ai") return null;
+  // Not agreed to send to this AI: the numbers only, without asking here (the AI page asks, when it is connected).
+  if (state.status === "consent") return null;
   if (state.status === "error")
     return (
       <View style={{ gap: space.sm }}>
@@ -80,7 +81,7 @@ export function WeekWritten({ state, retry, compact }: { state: WeekState; retry
 export function WeeklySummaryCard({ state, retry }: { state: WeekState; retry: () => void }) {
   const facts = factsOf(state);
   const action =
-    state.status === "no-ai" ? <CardLink href="/integrations" label={t.morningBriefConnect} /> : state.status === "consent" ? <CardLink href="/ask" label={t.morningBriefAllow} /> : <CardLink href="/week" label={t.weekOpen} />;
+    state.status === "no-ai" ? <CardLink href="/integrations" label={t.morningBriefConnect} /> : <CardLink href="/week" label={t.weekOpen} />;
   return (
     <Card title={t.weekSummary} action={action}>
       {facts ? <Text style={type.rowSubtitle}>{weekRange(facts)}</Text> : null}

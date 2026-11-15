@@ -18,7 +18,7 @@ export default function Week() {
       {facts ? <WeekFactsGrid facts={facts} /> : <Loading />}
       <Card
         title={t.weekSummary}
-        action={state.status === "no-ai" ? <CardLink href="/integrations" label={t.morningBriefConnect} /> : state.status === "consent" ? <CardLink href="/ask" label={t.morningBriefAllow} /> : undefined}
+        action={state.status === "no-ai" ? <CardLink href="/integrations" label={t.morningBriefConnect} /> : undefined}
       >
         <WeekWritten state={state} retry={() => void refresh()} />
       </Card>
