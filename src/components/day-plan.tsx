@@ -49,8 +49,10 @@ export function PlanHeader({ plan, reason }: { plan: DayPlan; reason: Extract<Da
   );
 }
 
+// The AI is allowed on its page when it is connected (docs/brain/decisions/2026-11-15-ai-consent-at-connect.md),
+// so the card links only to connecting one.
 const reasonLink = (state: DayPlanState) =>
-  state.status === "ready" && state.reason === "no-ai" ? <CardLink href="/integrations" label={t.morningBriefConnect} /> : state.status === "ready" && state.reason === "consent" ? <CardLink href="/ask" label={t.morningBriefAllow} /> : null;
+  state.status === "ready" && state.reason === "no-ai" ? <CardLink href="/integrations" label={t.morningBriefConnect} /> : null;
 
 /** Today's card: what is happening now and the next few blocks. */
 export function DayPlanCard({ state, now, tasks, retry, onDone }: { state: DayPlanState; now: Date; tasks: Task[]; retry: () => void; onDone: (taskId: string) => void }) {
