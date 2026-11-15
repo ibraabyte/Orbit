@@ -76,7 +76,9 @@ def recovery(db: Session, score: float, day: date = DAY) -> None:
 
 
 def tasks(db: Session, user, *rows: tuple[str, str, datetime, datetime | None]) -> None:
-    db.add_all([m.Task(user_id=user, title=title, priority=priority, due_at=due, reminder_at=remind) for title, priority, due, remind in rows])
+    db.add_all(
+        [m.Task(user_id=user, title=title, priority=priority, due_at=due, reminder_at=remind) for title, priority, due, remind in rows]
+    )
     db.commit()
 
 
