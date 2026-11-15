@@ -141,6 +141,14 @@
           "iosShareExtensionName": "Orbit Share",
           "androidIntentFilters": ["text/*", "image/*", "video/*"]
         }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Orbit reads your steps, sleep, workouts, heart rate and weight from Apple Health to show them on your Health page. It never writes to Health. · يقرأ Orbit خطواتك ونومك وتمارينك ونبضك ووزنك من صحة Apple عشان يعرضها في صفحة الصحة. ما يكتب أي شي في الصحة.",
+          "NSHealthUpdateUsageDescription": false,
+          "background": false
+        }
       ]
     ],
     "experiments": {

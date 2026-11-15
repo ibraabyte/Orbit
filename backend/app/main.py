@@ -13,6 +13,7 @@ from app.db import get_sessionmaker
 from app.routers import (
     admin,
     ai_providers,
+    apple_health,
     assistant,
     auth,
     bank_sms,
@@ -84,6 +85,7 @@ def create_app() -> FastAPI:
         dashboard.router,
         export.router,
         whoop.router,
+        apple_health.router,
         food.foods,
         food.router,
         assistant.router,
