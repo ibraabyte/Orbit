@@ -126,11 +126,9 @@ export const kindHidden = (kind: string, hidden: Set<SectionKey>) => {
 // The words for the Sections screen.
 const en = {
   sections: "Sections",
-  sectionsDetail: "Switch off what you don't use for now. It leaves Today, More and the assistant, and its alerts go quiet. Nothing is deleted: switch it on again and everything is back.",
   sectionsCount: (off: number) => (off ? `${digits(off)} off` : "All on"),
   insideHealth: "Inside Health",
   offWithHealth: "Off with Health",
-  alwaysOn: "Tasks and reminders are always on.",
   names: { health: "Health", food: "Food", exercises: "Exercises & gym", whoop: "WHOOP", medications: "Medications", finance: "Finance", habits: "Habits", library: "Saver", vehicles: "Car", media: "Movies & TV" } as Record<SectionKey, string>,
   details: {
     health: "Body, sleep, goals and everything below",
@@ -152,11 +150,9 @@ const en = {
 };
 const ar: typeof en = {
   sections: "الأقسام",
-  sectionsDetail: "اقفل اللي ما تستخدمه الحين. يختفي من اليوم والمزيد والمساعد، وتسكت تنبيهاته. ما ينحذف شي: افتحه مرة ثانية ويرجع كل شي.",
   sectionsCount: (off: number) => (off ? `${digits(off)} مقفول` : "كلها شغالة"),
   insideHealth: "داخل الصحة",
   offWithHealth: "مقفول مع الصحة",
-  alwaysOn: "المهام والتذكيرات شغالة دايم.",
   names: { health: "الصحة", food: "الأكل", exercises: "التمارين والنادي", whoop: "WHOOP", medications: "الأدوية", finance: "المالية", habits: "العادات", library: "الحافظة", vehicles: "السيارة", media: "الأفلام والمسلسلات" },
   details: {
     health: "الجسم والنوم والأهداف وكل اللي تحتها",
