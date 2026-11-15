@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     # Claude writes the Arabic WHOOP summary. Empty key means the AI summary is off.
     anthropic_api_key: str = ""
     insights_model: str = "claude-opus-5-5"
+    # The smart saver keeps copies of shared videos and pictures here (a disk volume in docker-compose.yml, in the backups).
+    media_dir: str = "/data/media"
+    # Videos bigger or longer than this are saved without a copy (the link, picture and analysis still are).
+    saver_max_video_mb: int = 300
+    saver_max_video_minutes: int = 30
     # Optional ChatGPT model override; empty selects from this user's available Codex models.
     chatgpt_model: str = ""
 

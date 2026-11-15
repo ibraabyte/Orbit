@@ -307,6 +307,14 @@ describe("dashboard summaries", () => {
           image_url: null,
           site_name: null,
           summary: null,
+          labels: [],
+          analysis: null,
+          search_terms: null,
+          content_text: null,
+          author: null,
+          analysis_status: "none",
+          analysis_error: null,
+          media_error: null,
           created_at: now.toISOString()
         }
       ],
@@ -461,6 +469,14 @@ describe("dashboard summaries", () => {
           image_url: null,
           site_name: null,
           summary: null,
+          labels: [],
+          analysis: null,
+          search_terms: null,
+          content_text: null,
+          author: null,
+          analysis_status: "none",
+          analysis_error: null,
+          media_error: null,
           created_at: now.toISOString()
         }
       ]

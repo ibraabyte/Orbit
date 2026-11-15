@@ -34,6 +34,7 @@ from app.routers import (
     training,
     whoop,
 )
+from app.services import saver_jobs
 from app.services.whoop_sync import scheduler
 
 
@@ -51,6 +52,8 @@ def _integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # Background WHOOP sync; does nothing unless WHOOP is configured.
     scheduler.start()
+    # Saver items left half-done by a restart get a Try again button instead of waiting forever.
+    saver_jobs.recover()
     yield
     scheduler.stop()
 

@@ -1,7 +1,8 @@
 FROM python:3.13-slim
 
 # curl is for health checks (Coolify's own check needs curl or wget inside the image).
-RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+# ffmpeg lets the saver take stills from a saved video for the AI, and join a video's picture and sound.
+RUN apt-get update && apt-get install -y --no-install-recommends curl ffmpeg && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir "uv>=0.11,<0.12"
 
 WORKDIR /app
@@ -16,6 +17,8 @@ COPY app ./app
 COPY docker-entrypoint.sh ./
 
 RUN useradd --system --uid 10001 orbit
+# The saver's folder (a volume in docker-compose.yml); a new volume takes this owner.
+RUN mkdir -p /data/media && chown orbit /data/media
 USER orbit
 
 EXPOSE 8000

@@ -24,6 +24,9 @@ services:
     # ponytail: fixed proxy IP; if Seerr stops connecting after Coolify recreates the network, check this address.
     extra_hosts:
       - "requests.ibrabyte.app:10.0.3.2"
+    # The saver's copies of shared videos and pictures (ORBIT_MEDIA_DIR).
+    volumes:
+      - orbit-media:/data/media
     depends_on:
       db:
         condition: service_healthy
@@ -45,6 +48,8 @@ services:
       - orbit-postgres:/var/lib/postgresql/data
       # Nightly pg_dump files land here (a Coolify Scheduled Task runs the dump, see DEPLOY.md).
       - orbit-backups:/backups
+      # Read-only, so the nightly Scheduled Task on db can pack the saver's copies into /backups too (DEPLOY.md step 8).
+      - orbit-media:/media:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d orbit"]
       interval: 10s
@@ -54,3 +59,4 @@ services:
 volumes:
   orbit-postgres:
   orbit-backups:
+  orbit-media:
