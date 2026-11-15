@@ -61,7 +61,8 @@ export function upcomingBlocks(plan: DayPlan, now: Date, count: number): DayBloc
 
 /** The time in the app's numerals, kept as one left-to-right run inside Arabic text. */
 export const blockTime = (value: string) => digits(value);
-export const blockRange = (block: DayBlock) => `${digits(block.start)}–${digits(block.end)}`;
+// The marks keep "07:15–08:15" in that order inside Arabic text too: Arabic digits around a dash would otherwise flip.
+export const blockRange = (block: DayBlock) => `\u2066${digits(block.start)}\u200e–\u200e${digits(block.end)}\u2069`;
 
 const en = {
   title: "Your day plan",

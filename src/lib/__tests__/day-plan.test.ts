@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blockTitle, dayPlanBody, dayPlanCacheKey, dayPlanCacheValue, energyLine, hhmm, isNow, parseDayPlanCache, upcomingBlocks, type DayBlock, type DayPlan } from "@/lib/day-plan";
+import { blockRange, blockTitle, dayPlanBody, dayPlanCacheKey, dayPlanCacheValue, energyLine, hhmm, isNow, parseDayPlanCache, upcomingBlocks, type DayBlock, type DayPlan } from "@/lib/day-plan";
 
 const block = (start: string, end: string, kind: DayBlock["kind"], extra: Partial<DayBlock> = {}): DayBlock => ({ start, end, kind, title: "", task_id: null, prayer: null, priority: null, workout_kind: null, ...extra });
 const plan: DayPlan = {
@@ -34,6 +34,7 @@ describe("day plan", () => {
 
   it("names prayers, workouts and breaks in the app's language", () => {
     expect(blockTitle(plan.blocks[0])).toBe("Write the report");
+    expect(blockRange(plan.blocks[0])).toBe("\u206607:15\u200e–\u200e08:15\u2069");
     expect(blockTitle(plan.blocks[1])).toBe("Dhuhr prayer");
     expect(blockTitle(plan.blocks[2])).toBe("Workout: Push");
     expect(blockTitle(block("09:00", "09:15", "break"))).toBe("Short break");

@@ -67,7 +67,8 @@ export function DayPlanCard({ state, now, tasks, retry, onDone }: { state: DayPl
         <>
           <PlanHeader plan={state.plan} reason={state.reason} />
           {next.map((block, index) => (
-            <PlanRow key={`${block.start}-${block.kind}-${index}`} block={block} now={now} tasks={tasks} first={index === 0} onDone={onDone} />
+            // Only the first task on the card gets a Done button, like Next up; the full plan has one on each.
+            <PlanRow key={`${block.start}-${block.kind}-${index}`} block={block} now={now} tasks={tasks} first={index === 0} onDone={block === next.find((item) => item.task_id) ? onDone : undefined} />
           ))}
           {!next.length ? <Text style={type.rowSubtitle}>{state.plan.blocks.length ? dp.over : dp.empty}</Text> : null}
         </>
