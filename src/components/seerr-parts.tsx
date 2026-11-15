@@ -10,7 +10,8 @@ import { contentWidth } from "@/lib/sidebar";
 
 // The Movies & TV pieces: posters, poster rows and grids, cast faces. Built from the shared theme only.
 
-export const openTitle = (kind: SeerrMediaType, id: number) => router.push({ pathname: "/title", params: { kind, id: String(id) } });
+// edit: a waiting request on that title to open for editing.
+export const openTitle = (kind: SeerrMediaType, id: number, edit?: number) => router.push({ pathname: "/title", params: { kind, id: String(id), ...(edit ? { edit: String(edit) } : {}) } });
 export const openPerson = (id: number) => router.push({ pathname: "/person", params: { id: String(id) } });
 export const openCollection = (id: number) => router.push({ pathname: "/collection", params: { id: String(id) } });
 export const openCredits = (kind: SeerrMediaType, id: number) => router.push({ pathname: "/credits", params: { kind, id: String(id) } });

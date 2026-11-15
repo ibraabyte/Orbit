@@ -477,7 +477,7 @@ def disconnect_seerr(user_id: UserId, db: Db):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.api_route("/seerr/api/{path:path}", methods=["GET", "POST", "DELETE"], include_in_schema=False)
+@router.api_route("/seerr/api/{path:path}", methods=["GET", "POST", "PUT", "DELETE"], include_in_schema=False)
 def seerr_proxy(path: str, request: Request, user_id: UserId, db: Db, body: Annotated[dict[str, Any] | None, Body()] = None) -> Any:
     """The app's Seerr calls (search, trending, requests, approve...), sent on with this user's saved key."""
     method = request.method
@@ -494,7 +494,7 @@ def seerr_proxy(path: str, request: Request, user_id: UserId, db: Db, body: Anno
             method,
             path,
             params=list(request.query_params.multi_items()),
-            json=body if method == "POST" else None,
+            json=body if method in ("POST", "PUT") else None,
             allow_private=_is_admin(db, user_id),
         )
     except seerr.SeerrError as exc:

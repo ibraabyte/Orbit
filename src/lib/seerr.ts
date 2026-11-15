@@ -117,6 +117,10 @@ export type SeerrRequest = {
   media: { tmdbId: number; status: MediaStatus; mediaType: SeerrMediaType };
   seasons?: { seasonNumber: number; status?: RequestStatus }[];
   requestedBy?: { id?: number; displayName?: string };
+  // What the request was sent with (advanced requests): the Radarr/Sonarr server, quality profile and folder.
+  serverId?: number | null;
+  profileId?: number | null;
+  rootFolder?: string | null;
   modifiedBy?: { id?: number; displayName?: string } | null;
 };
 
@@ -142,10 +146,21 @@ export type SeerrService = { id: number; name: string; is4k: boolean; isDefault:
 export type SeerrServiceDetails = { server: SeerrService; profiles: { id: number; name: string }[]; rootFolders: { id: number; path: string; freeSpace?: number }[] };
 
 // What the person picked before sending a request. null = let Seerr use the server's default.
-export type RequestChoice = { is4k: boolean; serverId: number | null; profileId: number | null; rootFolder: string | null };
-export const DEFAULT_CHOICE: RequestChoice = { is4k: false, serverId: null, profileId: null, rootFolder: null };
+// userId: who the request is for, when someone who manages requests asks on another user's behalf. null: yourself.
+export type RequestChoice = { is4k: boolean; serverId: number | null; profileId: number | null; rootFolder: string | null; userId: number | null };
+export const DEFAULT_CHOICE: RequestChoice = { is4k: false, serverId: null, profileId: null, rootFolder: null, userId: null };
 
-export const REQUEST_FILTERS = ["all", "pending", "processing", "available", "failed"] as const;
+// A waiting request opened for editing starts from what it was sent with.
+export function choiceFrom(request: Pick<SeerrRequest, "is4k" | "serverId" | "profileId" | "rootFolder" | "requestedBy">, myId: number | null): RequestChoice {
+  const owner = request.requestedBy?.id ?? null;
+  return { is4k: Boolean(request.is4k), serverId: request.serverId ?? null, profileId: request.profileId ?? null, rootFolder: request.rootFolder ?? null, userId: owner !== null && owner !== myId ? owner : null };
+}
+
+// Seerr's request filters ("approved" is the same list as "processing" on the server, so it's left out).
+export const REQUEST_FILTERS = ["all", "pending", "processing", "available", "unavailable", "failed", "completed", "deleted"] as const;
+export const REQUEST_SORTS = ["added", "modified"] as const;
+export type RequestSort = (typeof REQUEST_SORTS)[number];
+export type RequestKind = "all" | SeerrMediaType;
 export type RequestFilter = (typeof REQUEST_FILTERS)[number];
 
 // The rows on the Movies & TV screen, each with a "see all" list.
@@ -349,6 +364,7 @@ export function requestBody(kind: SeerrMediaType, tmdbId: number, seasons: numbe
   const body: Record<string, unknown> = { mediaType: kind, mediaId: tmdbId };
   if (kind === "tv") body.seasons = seasons;
   if (choice.is4k) body.is4k = true;
+  if (choice.userId !== null) body.userId = choice.userId;
   if (advanced && (choice.serverId !== null || choice.profileId !== null || choice.rootFolder !== null)) {
     if (choice.serverId !== null) body.serverId = choice.serverId;
     if (choice.profileId !== null) body.profileId = choice.profileId;
@@ -549,12 +565,12 @@ export function personCredits(cast: SeerrCredit[] = [], crew: SeerrCredit[] = []
 }
 
 // One Seerr API call: method, path under /api/v1 (no leading slash), optional JSON body.
-export type SeerrCall = <T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown) => Promise<T>;
+export type SeerrCall = <T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown) => Promise<T>;
 
 // The app never talks to Seerr itself: Orbit's server holds the user's key (encrypted) and passes these calls on
 // for that account only (backend/app/routers/integrations.py).
 export function serverSeerrCall(api: Pick<ApiClient, "request">, language = isArabic ? "ar" : null): SeerrCall {
-  return <T,>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown) => api.request<T>(method, `/integrations/seerr/api/${withLanguage(method, path, language)}`, body);
+  return <T,>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown) => api.request<T>(method, `/integrations/seerr/api/${withLanguage(method, path, language)}`, body);
 }
 
 // Seerr gives titles, overviews and genres in the language asked for (from TMDB). A path that already names one keeps it.
@@ -636,7 +652,13 @@ export function createSeerrClient(call: SeerrCall) {
       call<SeerrProvider[]>("GET", `watchproviders/${kind === "tv" ? "tv" : "movies"}?watchRegion=${WATCH_REGION}`).then((list) => [...list].sort((a, b) => (a.displayPriority ?? 99) - (b.displayPriority ?? 99))),
     genres: (kind: SeerrMediaType) => call<{ id: number; name: string }[]>("GET", `genres/${kind}`),
     requests: (take = 20, filter: RequestFilter = "all") => call<SeerrRequestPage>("GET", `request?take=${take}&filter=${filter}&sort=added`).then((body) => body.results),
-    requestPage: (filter: RequestFilter, skip = 0, take = 20) => call<SeerrRequestPage>("GET", `request?take=${take}&skip=${skip}&filter=${filter}&sort=added`),
+    requestPage: (filter: RequestFilter, skip = 0, take = 20, sort: RequestSort = "added", kind: RequestKind = "all") =>
+      call<SeerrRequestPage>("GET", `request?take=${take}&skip=${skip}&filter=${filter}&sort=${sort}&mediaType=${kind}`),
+    // Changes a waiting request: its seasons, server, profile, folder, or whose it is. Seerr only allows it while waiting.
+    editRequest: (requestId: number, mediaType: SeerrMediaType, tmdbId: number, seasons: number[] | "all", choice: RequestChoice, advanced = false) =>
+      call<SeerrRequest>("PUT", `request/${requestId}`, requestBody(mediaType, tmdbId, seasons, choice, advanced)),
+    // Seerr's users, for asking on someone's behalf (people who manage requests or users).
+    users: () => call<{ results: SeerrUser[] }>("GET", "user?take=100&sort=displayname").then((body) => body.results ?? []),
     counts: () => call<SeerrCounts>("GET", "request/count"),
     pendingCount: () => call<SeerrCounts>("GET", "request/count").then((body) => body.pending),
     quota: (userId: number) => call<SeerrQuota>("GET", `user/${userId}/quota`),
@@ -707,7 +729,13 @@ const en = {
   allRequests: "All requests",
   awaiting: "Awaiting approval",
   requestsEmpty: "No requests here.",
-  filters: { all: "All", pending: "Waiting", processing: "Downloading", available: "Available", failed: "Failed" } as Record<RequestFilter, string>,
+  filters: { all: "All", pending: "Waiting", processing: "Downloading", available: "Available", unavailable: "Not on the server yet", failed: "Failed", completed: "Completed", deleted: "Deleted" } as Record<RequestFilter, string>,
+  requestSorts: { added: "Newest", modified: "Last changed" } as Record<RequestSort, string>,
+  requestKinds: { all: "Movies and series", movie: "Movies", tv: "Series" } as Record<RequestKind, string>,
+  editRequest: "Edit request",
+  saveRequest: "Save changes",
+  requestFor: "Request for",
+  me: "Me",
   status: { available: "Available", partial: "Partly available", processing: "Downloading", pending: "Requested", removed: "Removed", blocklisted: "Blocklisted" },
   requestStatus: { pending: "Waiting for approval", approved: "Approved", declined: "Declined", failed: "Failed", completed: "Completed" },
   request: "Request",
@@ -821,7 +849,13 @@ const ar: typeof en = {
   allRequests: "كل الطلبات",
   awaiting: "تنتظر الموافقة",
   requestsEmpty: "لا توجد طلبات هنا.",
-  filters: { all: "الكل", pending: "تنتظر", processing: "يتحمّل", available: "متوفر", failed: "فشل" },
+  filters: { all: "الكل", pending: "تنتظر", processing: "يتحمّل", available: "متوفر", unavailable: "غير متوفر بعد", failed: "فشل", completed: "مكتمل", deleted: "محذوف" },
+  requestSorts: { added: "الأحدث", modified: "آخر تعديل" },
+  requestKinds: { all: "أفلام ومسلسلات", movie: "أفلام", tv: "مسلسلات" },
+  editRequest: "عدّل الطلب",
+  saveRequest: "احفظ التغييرات",
+  requestFor: "الطلب باسم",
+  me: "أنا",
   status: { available: "متوفر", partial: "متوفر جزئيًا", processing: "يتحمّل", pending: "مطلوب", removed: "محذوف", blocklisted: "محظور" },
   requestStatus: { pending: "ينتظر الموافقة", approved: "تمت الموافقة", declined: "مرفوض", failed: "فشل", completed: "اكتمل" },
   request: "اطلب",

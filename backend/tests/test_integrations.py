@@ -40,6 +40,8 @@ def fake_seerr(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[httpx.Request]]
             return httpx.Response(200, json={"results": [{"id": 7, "mediaType": "movie", "title": "Made Up Movie"}]})
         if path == "request" and request.method == "POST":
             return httpx.Response(201, json={"id": 3, "status": 1, "body": json.loads(request.content)})
+        if path == "request/3" and request.method == "PUT":
+            return httpx.Response(200, json={"id": 3, "status": 1, "body": json.loads(request.content)})
         if path == "request/3" and request.method == "DELETE":
             return httpx.Response(204)
         if path == "movie/404":
@@ -347,3 +349,14 @@ def test_proxy_allows_managing_a_title_and_nothing_wider():
     assert not seerr.allowed("POST", "media/12/unknown")
     assert not seerr.allowed("GET", "media/12/watch_data")
     assert not seerr.allowed("POST", "blocklist/collection/10")
+
+
+def test_proxy_sends_a_request_edit_with_its_body(client: TestClient, auth: dict, fake_seerr):
+    client.put("/integrations/seerr", json={"url": "https://seerr.example.com", "api_key": KEY}, headers=auth)
+    response = client.put("/integrations/seerr/api/request/3", json={"mediaType": "tv", "seasons": [1, 2], "userId": 4}, headers=auth)
+    sent = fake_seerr[-1]
+    assert (sent.method, sent.url.path) == ("PUT", "/api/v1/request/3")
+    assert json.loads(sent.content) == {"mediaType": "tv", "seasons": [1, 2], "userId": 4}
+    assert response.status_code == 200
+    assert seerr.allowed("GET", "user") and not seerr.allowed("GET", "user/1/settings/main")
+    assert not seerr.allowed("PUT", "request") and not seerr.allowed("PUT", "user/4")

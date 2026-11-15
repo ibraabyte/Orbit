@@ -8,7 +8,7 @@ import { Chip, openTitle, Poster, StatusPill } from "@/components/seerr-parts";
 import { BleedRow, Button, Screen } from "@/components/screen";
 import { useSeerr } from "@/hooks/use-seerr";
 import { formatDate, t } from "@/lib/i18n";
-import { mediaBadge, mt, quotaLine, REQUEST_FILTERS, requestBadge, seerrTitle, type RequestFilter, type SeerrQuota, type SeerrRequest } from "@/lib/seerr";
+import { mediaBadge, mt, quotaLine, REQUEST_FILTERS, REQUEST_SORTS, requestBadge, seerrTitle, type RequestFilter, type RequestKind, type RequestSort, type SeerrQuota, type SeerrRequest } from "@/lib/seerr";
 import { space } from "@/components/theme";
 
 const PAGE = 20;
@@ -22,6 +22,8 @@ export default function Requests() {
   const client = seerr.client;
   const { sheet } = useOverlays();
   const [filter, setFilter] = useState<RequestFilter>(REQUEST_FILTERS.includes(params.filter as RequestFilter) ? (params.filter as RequestFilter) : "all");
+  const [sort, setSort] = useState<RequestSort>("added");
+  const [kind, setKind] = useState<RequestKind>("all");
   const [items, setItems] = useState<SeerrRequest[]>([]);
   const [pages, setPages] = useState({ page: 0, pages: 1 });
   const [looks, setLooks] = useState<Record<string, Look>>({});
@@ -52,7 +54,7 @@ export default function Requests() {
       if (!client) return;
       setLoading(true);
       try {
-        const body = await client.requestPage(filter, (page - 1) * PAGE, PAGE);
+        const body = await client.requestPage(filter, (page - 1) * PAGE, PAGE, sort, kind);
         setItems((before) => (page === 1 ? body.results : [...before, ...body.results.filter((item) => !before.some((old) => old.id === item.id))]));
         setPages({ page, pages: body.pageInfo.pages });
         setFailed(null);
@@ -63,7 +65,7 @@ export default function Requests() {
         setLoading(false);
       }
     },
-    [client, filter, lookUp]
+    [client, filter, sort, kind, lookUp]
   );
 
   useEffect(() => {
@@ -94,6 +96,14 @@ export default function Requests() {
       <BleedRow>
         {REQUEST_FILTERS.map((option) => (
           <Chip key={option} label={mt.filters[option]} selected={option === filter} onPress={() => setFilter(option)} />
+        ))}
+      </BleedRow>
+      <BleedRow>
+        {(["all", "movie", "tv"] as RequestKind[]).map((option) => (
+          <Chip key={option} label={mt.requestKinds[option]} selected={option === kind} onPress={() => setKind(option)} />
+        ))}
+        {REQUEST_SORTS.map((option) => (
+          <Chip key={option} label={mt.requestSorts[option]} selected={option === sort} onPress={() => setSort(option)} />
         ))}
       </BleedRow>
       {quotas.map((line) => (
@@ -129,11 +139,15 @@ export default function Requests() {
                   <View style={{ gap: space.sm }}>
                     <RowButton icon="check" label={mt.approve} onPress={() => act(() => client!.approve(request.id))} />
                     <RowButton outline label={mt.decline} onPress={() => act(() => client!.decline(request.id))} />
+                    <RowButton outline label={mt.editRequest} onPress={() => openTitle(request.type, request.media.tmdbId, request.id)} />
                   </View>
                 ) : seerr.isAdmin && request.status === 4 ? (
                   <RowButton icon="refresh-cw" label={mt.retry} onPress={() => act(() => client!.retry(request.id))} />
                 ) : mine && request.status === 1 ? (
-                  <RowButton outline label={t.cancel} onPress={() => cancel(request, title)} />
+                  <View style={{ gap: space.sm }}>
+                    <RowButton outline label={mt.editRequest} onPress={() => openTitle(request.type, request.media.tmdbId, request.id)} />
+                    <RowButton outline label={t.cancel} onPress={() => cancel(request, title)} />
+                  </View>
                 ) : undefined
               }
             />

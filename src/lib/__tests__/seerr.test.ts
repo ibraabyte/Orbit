@@ -72,7 +72,7 @@ describe("seerr details", () => {
       [`GET ${base}/person/31/combined_credits`]: { cast: [{ id: 1, mediaType: "movie", releaseDate: "2001-01-01" }, { id: 2, mediaType: "tv", firstAirDate: "2020-01-01" }], crew: [{ id: 1, mediaType: "movie" }] },
       [`POST ${base}/request`]: { id: 9, status: 1 },
       [`POST ${base}/request/9/retry`]: { id: 9, status: 2 },
-      [`GET ${base}/request?take=20&skip=40&filter=processing&sort=added`]: { pageInfo: { pages: 3, page: 3, results: 41 }, results: [] }
+      [`GET ${base}/request?take=20&skip=40&filter=processing&sort=added&mediaType=all`]: { pageInfo: { pages: 3, page: 3, results: 41 }, results: [] }
     });
     const upcoming = await seerr.discover({ row: "upcomingMovies" }, 2);
     expect(upcoming.results.map((item) => [item.id, item.mediaType])).toEqual([[5, "movie"], [6, "movie"]]);
