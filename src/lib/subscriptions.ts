@@ -82,6 +82,7 @@ const en = {
   monthly: "a month",
   yearly: "a year",
   weekly: "a week",
+  periods: { weekly: "Weekly", monthly: "Monthly", yearly: "Yearly" } as Record<FindPeriod, string>,
   noPrice: "Price unknown",
   last: (date: string) => `Last ${date}`,
   next: (date: string) => `Next ${date}`,
@@ -95,8 +96,8 @@ const en = {
   } as Record<FindFlag, string>,
   sources: { expenses: "Expenses", bank: "Bank SMS", email: "Email" } as Record<string, string>,
   priceWas: (was: string) => `Was ${was}`,
-  cancelIt: "Cancel it",
-  howToCancel: "How to cancel",
+  cancelIt: "Open the cancel page",
+  howToCancel: "Search how to cancel",
   didCancel: "Did you cancel it?",
   yesCancelled: "Yes, I cancelled it",
   notYet: "Not yet",
@@ -153,6 +154,7 @@ const ar: typeof en = {
   monthly: "بالشهر",
   yearly: "بالسنة",
   weekly: "بالأسبوع",
+  periods: { weekly: "أسبوعي", monthly: "شهري", yearly: "سنوي" },
   noPrice: "السعر غير معروف",
   last: (date: string) => `آخر خصم ${date}`,
   next: (date: string) => `القادم ${date}`,
@@ -166,8 +168,8 @@ const ar: typeof en = {
   },
   sources: { expenses: "المصاريف", bank: "رسائل البنك", email: "البريد" },
   priceWas: (was: string) => `كان ${was}`,
-  cancelIt: "ألغه",
-  howToCancel: "طريقة الإلغاء",
+  cancelIt: "افتح صفحة الإلغاء",
+  howToCancel: "ابحث عن طريقة الإلغاء",
   didCancel: "ألغيته؟",
   yesCancelled: "إيه، ألغيته",
   notYet: "لسه",
@@ -213,16 +215,34 @@ export function gmailResultMessage(url: string | null | undefined): { ok: boolea
   return { ok: status === "connected", message: st.results[status] ?? st.results.error };
 }
 
+// Keeps "SAR 45" in one piece inside an Arabic line, so the amount and the currency don't swap places.
+const money = (amount: number, currency: string) => (isArabic ? `\u2068${formatMoney(amount, currency)}\u2069` : formatMoney(amount, currency));
+
 const day = (date: string) => formatDate(`${date.slice(0, 10)}T12:00:00`);
+
+/** One amount, kept whole inside Arabic text. */
+export const priceOnly = money;
 
 export function priceLine(find: SubscriptionFind): string {
   if (find.amount === null || !find.currency) return st.noPrice;
-  return `${formatMoney(find.amount, find.currency)} ${st[find.period]}`;
+  return `${money(find.amount, find.currency)} ${st[find.period]}`;
 }
 
 export function datesLine(find: SubscriptionFind): string {
-  const parts = [find.charges ? st.last(day(find.last_charged_on)) : null, find.next_expected_on ? st.next(day(find.next_expected_on)) : null];
+  // A cancelled or set-aside one has no next charge to wait for.
+  const upcoming = find.next_expected_on && find.status !== "cancelled" && find.status !== "dismissed" ? find.next_expected_on : null;
+  const parts = [find.charges ? st.last(day(find.last_charged_on)) : null, upcoming ? st.next(day(upcoming)) : null];
   return parts.filter(Boolean).join(" · ");
+}
+
+/** The row's line under the name: how often, then the last and next charge. */
+export function rowLine(find: SubscriptionFind): string {
+  return [st.periods[find.period], datesLine(find)].filter(Boolean).join(" · ");
+}
+
+/** The row's number on the side: just the price, or a dash when unknown. */
+export function rowPrice(find: SubscriptionFind): string {
+  return find.amount === null || !find.currency ? "–" : money(find.amount, find.currency);
 }
 
 export function sourcesLine(find: SubscriptionFind): string {
@@ -247,13 +267,13 @@ export function groupFinds(finds: SubscriptionFind[]): FindGroups {
   };
 }
 
-/** "SAR 120 · USD 9.99": every currency's total, biggest first. Empty when nothing has a price. */
-export function totalsLine(totals: Record<string, number>): string {
-  return Object.entries(totals)
+/** Every currency's total, biggest first: the main one for a tile, the rest for a line under it ("+ $9.99"). */
+export function totalsParts(totals: Record<string, number>): { main: string; rest: string } {
+  const parts = Object.entries(totals)
     .filter(([, amount]) => amount > 0)
     .sort((a, b) => b[1] - a[1])
-    .map(([currency, amount]) => formatMoney(amount, currency))
-    .join(" · ");
+    .map(([currency, amount]) => money(amount, currency));
+  return { main: parts[0] ?? "", rest: parts.length > 1 ? `+ ${parts.slice(1).join(" + ")}` : "" };
 }
 
 /** How many finds want a decision, for a badge on the Finance row. */

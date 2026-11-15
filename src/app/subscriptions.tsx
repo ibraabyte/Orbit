@@ -8,7 +8,6 @@ import { useOverlays, type SheetOption } from "@/components/overlays";
 import { Button, Input, Loading, Screen, ui } from "@/components/screen";
 import { GmailCard } from "@/components/gmail-card";
 import { getApi, hasServer } from "@/lib/backend";
-import { formatMoney } from "@/lib/finance";
 import { formatDate } from "@/lib/i18n";
 import {
   datesLine,
@@ -16,10 +15,13 @@ import {
   groupFinds,
   hunterApi,
   parsePrice,
+  priceOnly,
+  rowLine,
+  rowPrice,
   priceLine,
   sourcesLine,
   st,
-  totalsLine,
+  totalsParts,
   type HunterOverview,
   type SubscriptionFind
 } from "@/lib/subscriptions";
@@ -135,8 +137,8 @@ export default function Subscriptions() {
   }
 
   const groups = groupFinds(overview.finds);
-  const running = totalsLine(overview.monthly);
-  const forgotten = totalsLine(overview.untracked_monthly);
+  const running = totalsParts(overview.monthly);
+  const forgotten = totalsParts(overview.untracked_monthly);
   const scanned = overview.scanned_at ? st.lastScan(formatDate(overview.scanned_at, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })) : null;
   const scanLine = [scanned, overview.gmail.connected && overview.scanned_at ? st.emailsRead(overview.emails_read) : null].filter(Boolean).join(" · ");
 
@@ -146,10 +148,11 @@ export default function Subscriptions() {
         <Text style={type.rowSubtitle}>{st.intro}</Text>
         {overview.finds.length ? (
           <StatGrid columns={2}>
-            <StatTile label={st.running} value={running || "–"} size={17} />
-            <StatTile label={st.notInBills} value={forgotten || "–"} size={17} alert={Boolean(forgotten)} />
+            <StatTile label={st.running} value={running.main || "–"} size={17} />
+            <StatTile label={st.notInBills} value={forgotten.main || "–"} size={17} alert={Boolean(forgotten.main)} />
           </StatGrid>
         ) : null}
+        {running.rest || forgotten.rest ? <Text style={type.rowSubtitle}>{[running.rest && `${st.running} ${running.rest}`, forgotten.rest && `${st.notInBills} ${forgotten.rest}`].filter(Boolean).join(" · ")}</Text> : null}
         <Button title={scanning ? st.scanning : overview.scanned_at ? st.scanAgain : st.scan} disabled={scanning} onPress={() => void scan()} />
         {scanLine ? <Text style={type.rowSubtitle}>{scanLine}</Text> : null}
         {overview.email_error ? <Text style={ui.error}>{overview.email_error}</Text> : null}
@@ -183,14 +186,14 @@ function FindList({ title, finds, onOpen, muted }: { title: string; finds: Subsc
     <Card title={title}>
       {finds.map((find, index) => {
         const flags = flagLabels(find);
-        const was = find.previous_amount !== null && find.currency ? st.priceWas(formatMoney(find.previous_amount, find.currency)) : null;
+        const was = find.previous_amount !== null && find.currency ? st.priceWas(priceOnly(find.previous_amount, find.currency)) : null;
         return (
           <ListRow
             key={find.id}
             first={index === 0}
             leading={<IconTile name={find.status === "cancelled" ? "x-circle" : find.status === "tracked" ? "check-circle" : "repeat"} tone={flags.some((f) => f.urgent) && !muted ? "urgent" : "neutral"} />}
             title={find.name}
-            meta={priceLine(find)}
+            meta={rowPrice(find)}
             badges={
               !muted && flags.length ? (
                 <>
@@ -202,7 +205,7 @@ function FindList({ title, finds, onOpen, muted }: { title: string; finds: Subsc
                 </>
               ) : undefined
             }
-            subtitle={[datesLine(find), was].filter(Boolean).join(" · ") || null}
+            subtitle={[rowLine(find), was].filter(Boolean).join(" · ") || null}
             onPress={() => onOpen(find)}
             chevron
           />

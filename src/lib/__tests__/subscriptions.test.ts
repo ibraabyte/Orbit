@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { flagLabels, gmailResultMessage, groupFinds, hunterApi, needsLookCount, parsePrice, priceLine, totalsLine, type SubscriptionFind } from "@/lib/subscriptions";
+import { datesLine, flagLabels, rowLine, rowPrice, gmailResultMessage, groupFinds, hunterApi, needsLookCount, parsePrice, priceLine, totalsParts, type SubscriptionFind } from "@/lib/subscriptions";
 
 function find(overrides: Partial<SubscriptionFind>): SubscriptionFind {
   return {
@@ -37,8 +37,14 @@ describe("subscription hunter", () => {
   it("writes prices and totals", () => {
     expect(priceLine(find({}))).toContain("a month");
     expect(priceLine(find({ amount: null }))).toBe("Price unknown");
-    expect(totalsLine({ USD: 9.99, SAR: 120, EUR: 0 }).split(" · ")).toHaveLength(2);
-    expect(totalsLine({})).toBe("");
+    expect(rowPrice(find({ amount: null }))).toBe("–");
+    expect(rowLine(find({}))).toMatch(/^Monthly · Last .* · Next /);
+    // A cancelled one has no next charge.
+    expect(datesLine(find({ status: "cancelled" }))).not.toContain("Next");
+    const parts = totalsParts({ USD: 9.99, SAR: 120, EUR: 0 });
+    expect(parts.main).toContain("120");
+    expect(parts.rest).toMatch(/^\+ .*9\.99/);
+    expect(totalsParts({})).toEqual({ main: "", rest: "" });
   });
 
   it("reads typed prices in either digits", () => {

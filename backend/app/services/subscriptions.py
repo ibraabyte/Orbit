@@ -73,7 +73,7 @@ CATALOG: tuple[Service, ...] = (
     # Apple bills every App Store and iCloud subscription as one merchant; the app opens the list to pick from.
     Service(
         "apple",
-        "Apple (App Store, iCloud)",
+        "Apple",
         "cloud",
         ("apple.com/bill", "apple com bill", "itunes", "icloud", "apple services"),
         ("apple.com", "email.apple.com"),
