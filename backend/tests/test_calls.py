@@ -231,7 +231,7 @@ def test_rotated_token_says_to_paste_the_new_one(client: TestClient, auth: dict,
 
 def test_twilio_errors_are_explained_without_secrets():
     wrong = twilio._explain(401, {"code": 20003, "message": "Authenticate"})
-    assert isinstance(wrong, twilio.TwilioKeyRejected) and "(Twilio error 20003)" in str(wrong)
+    assert isinstance(wrong, twilio.TwilioKeyRejected) and str(wrong).endswith("Twilio says: Authenticate (Twilio error 20003)")
     forbidden = twilio._explain(403, {"code": 20003, "message": "Permission Denied"})
     assert not isinstance(forbidden, twilio.TwilioKeyRejected) and "Permission Denied" in str(forbidden)
     assert "verified numbers" in str(twilio._explain(400, {"code": 21219}))

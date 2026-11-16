@@ -56,7 +56,10 @@ def _explain(status_code: int, body: object) -> TwilioUnavailable:
     said = " ".join(said.split())[:200] if isinstance(said, str) else ""
     tag = f" (Twilio error {code})" if code else f" (Twilio HTTP {status_code})"
     if status_code == 401:
-        return TwilioKeyRejected(_KEY_REJECTED + tag)
+        # Twilio also answers 401 / 20003 when the keys are right but the account is blocked from this action
+        # (a compliance profile or an addendum not accepted), so its own words are shown too.
+        said_part = f" Twilio says: {said}" if said else ""
+        return TwilioKeyRejected(_KEY_REJECTED + said_part + tag)
     if code in _HINTS:
         return TwilioUnavailable(_HINTS[code] + tag)
     if status_code == 403:
