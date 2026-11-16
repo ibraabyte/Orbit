@@ -94,7 +94,7 @@ def test_setup_checks_account_and_number(client: TestClient, auth: dict, twilio_
     assert status["connected"] is False and status["ready"] is False
 
     wrong = client.put("/calls/setup", json={"account_sid": SID, "auth_token": "nope", "from_number": OWN_NUMBER}, headers=auth)
-    assert wrong.status_code == 409
+    assert wrong.status_code == 409 and "paste the new one in Phone setup" in wrong.json()["detail"]
     bad_sid = client.put("/calls/setup", json={"account_sid": "AC12", "auth_token": TOKEN, "from_number": OWN_NUMBER}, headers=auth)
     assert bad_sid.status_code == 422
     not_theirs = client.put("/calls/setup", json={"account_sid": SID, "auth_token": TOKEN, "from_number": "+966511111111"}, headers=auth)
@@ -215,6 +215,18 @@ def test_refused_call_is_not_shown_as_wrong_keys(client: TestClient, auth: dict,
     other = client.post(f"/calls/{_draft(client, auth, to_number='+966500000007')['id']}/start", headers=auth)
     assert other.status_code == 502 and other.json()["detail"] == "Twilio refused: Made-up reason from Twilio (Twilio error 99999)"
     assert TOKEN not in json.dumps([refused.json(), other.json()])
+
+
+def test_rotated_token_says_to_paste_the_new_one(client: TestClient, auth: dict, twilio_api, db: Session):
+    """The token saved in Orbit was replaced in Twilio: starting a call says to save the new one."""
+    _setup(client, auth)
+    _openai(db, _user_id(client, auth))
+    row = db.get(PhoneConnection, _user_id(client, auth))
+    row.auth_token = encrypt_secret("made-up-old-token")
+    db.commit()
+    refused = client.post(f"/calls/{_draft(client, auth)['id']}/start", headers=auth)
+    assert refused.status_code == 409
+    assert "paste the new one in Phone setup" in refused.json()["detail"] and "20003" in refused.json()["detail"]
 
 
 def test_twilio_errors_are_explained_without_secrets():

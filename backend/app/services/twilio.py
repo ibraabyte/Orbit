@@ -31,7 +31,10 @@ _HINTS = {
     21216: "Twilio won't call this number. Check it and try again.",
     21219: "A Twilio trial account can only call verified numbers. Verify it under Verified Caller IDs, or upgrade.",
 }
-_KEY_REJECTED = "Twilio refused this account SID or auth token."
+# Seen after the user rotates the token in Twilio: the old one saved in Orbit stops working.
+_KEY_REJECTED = (
+    "Twilio refused this account SID or auth token. If you changed the token in Twilio, paste the new one in Phone setup and save."
+)
 
 
 class TwilioUnavailable(Exception):
