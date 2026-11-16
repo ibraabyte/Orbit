@@ -7,6 +7,7 @@ Checking the account and the number calls go out from, starting a call (its audi
 import base64
 import hashlib
 import hmac
+import logging
 from collections.abc import Mapping
 from xml.sax.saxutils import quoteattr
 
@@ -14,16 +15,23 @@ import httpx2 as httpx
 
 # Replaced in tests with httpx2.MockTransport.
 transport: httpx.BaseTransport | None = None
+log = logging.getLogger(__name__)
 
 API = "https://api.twilio.com/2010-04-01"
 # Twilio's own errors that need the user to change something in their Twilio account.
 _HINTS = {
+    10002: "A Twilio trial account can't do this. Upgrade the account in the Twilio console.",
+    20005: "This Twilio account isn't active. Open the Twilio console to check it.",
+    20403: "Twilio says this account can't use the API right now. Open the Twilio console to check it.",
     21210: "This number isn't in your Twilio account. Buy it, or verify it under Phone Numbers > Verified Caller IDs.",
+    21211: "Twilio says this phone number isn't valid.",
+    21212: "Twilio won't call from this number. Use a Twilio number or a verified caller ID.",
+    21214: "Twilio can't reach this phone number.",
     21215: "Calls to this country are off in your Twilio account. Turn it on under Voice > Settings > Geo permissions.",
     21216: "Twilio won't call this number. Check it and try again.",
-    21219: "A Twilio trial account can only call verified numbers. Upgrade the account or verify this number.",
-    21211: "Twilio says this phone number isn't valid.",
+    21219: "A Twilio trial account can only call verified numbers. Verify it under Verified Caller IDs, or upgrade.",
 }
+_KEY_REJECTED = "Twilio refused this account SID or auth token."
 
 
 class TwilioUnavailable(Exception):
@@ -34,21 +42,52 @@ class TwilioKeyRejected(TwilioUnavailable):
     """Twilio refused the account SID or the auth token."""
 
 
+def _explain(status_code: int, body: object) -> TwilioUnavailable:
+    """Twilio's own error code and words, so a refusal for any other reason isn't shown as "wrong SID or token".
+
+    Only a 401 means the SID and token don't match. A 403 (or anything else) is the account refusing this one
+    request: a trial limit, a country that's off, a number that isn't verified, a suspended account."""
+    code = body.get("code") if isinstance(body, dict) else None
+    code = code if isinstance(code, int) else None
+    said = body.get("message") if isinstance(body, dict) else None
+    said = " ".join(said.split())[:200] if isinstance(said, str) else ""
+    tag = f" (Twilio error {code})" if code else f" (Twilio HTTP {status_code})"
+    if status_code == 401:
+        return TwilioKeyRejected(_KEY_REJECTED + tag)
+    if code in _HINTS:
+        return TwilioUnavailable(_HINTS[code] + tag)
+    if status_code == 403:
+        # Seen on trial accounts: the keys work, but this account may not place this call.
+        reason = f" Twilio says: {said}" if said else ""
+        return TwilioUnavailable(f"The SID and token are fine, but your Twilio account may not make this call.{reason}{tag}")
+    if said:
+        return TwilioUnavailable(f"Twilio refused: {said}{tag}")
+    if status_code >= 500:
+        return TwilioUnavailable(f"Twilio answered with an error. Try again later.{tag}")
+    return TwilioUnavailable(f"Twilio refused the request.{tag}")
+
+
 def _request(method: str, sid: str, token: str, path: str, data: Mapping[str, str] | None = None, params=None) -> dict:
     try:
         with httpx.Client(transport=transport, timeout=20.0, auth=(sid, token)) as client:
             response = client.request(method, f"{API}/Accounts/{sid}{path}", data=data, params=params)
     except httpx.HTTPError as exc:
         raise TwilioUnavailable("Can't reach Twilio from the server. Try again later.") from exc
-    if response.status_code in (401, 403):
-        raise TwilioKeyRejected("Twilio refused this account SID or auth token.")
     try:
         body = response.json()
     except ValueError:
         body = {}
     if response.status_code >= 400:
-        code = body.get("code") if isinstance(body, dict) else None
-        raise TwilioUnavailable(_HINTS.get(code) or f"Twilio answered with an error ({response.status_code}). Try again later.")
+        error = _explain(response.status_code, body)
+        # The code and Twilio's words only: never the SID, token or the request.
+        log.warning(
+            "Twilio %s %s refused: HTTP %s, code %s",
+            method,
+            path.split("?")[0],
+            response.status_code,
+            body.get("code") if isinstance(body, dict) else None,
+        )
+        raise error
     return body if isinstance(body, dict) else {}
 
 

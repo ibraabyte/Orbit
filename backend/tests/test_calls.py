@@ -49,6 +49,11 @@ def twilio_api(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[httpx.Request]]
             form = dict(parse_qsl(request.content.decode()))
             if form["To"] == "+966500000009":
                 return httpx.Response(400, json={"code": 21215})
+            if form["To"] == "+966500000008":
+                # The SID and token are right, but the account may not place this call (403, not 401).
+                return httpx.Response(403, json={"code": 20003, "message": "Permission Denied", "status": 403})
+            if form["To"] == "+966500000007":
+                return httpx.Response(400, json={"code": 99999, "message": "Made-up   reason\nfrom Twilio", "status": 400})
             return httpx.Response(201, json={"sid": CALL_SID})
         if "/Calls/" in path:
             return httpx.Response(200, json={"sid": CALL_SID, "status": "completed"})
@@ -197,6 +202,30 @@ def test_twilio_error_is_explained(client: TestClient, auth: dict, twilio_api, d
     response = client.post(f"/calls/{call['id']}/start", headers=auth)
     assert response.status_code == 502 and "Geo permissions" in response.json()["detail"]
     assert client.get(f"/calls/{call['id']}", headers=auth).json()["status"] == "draft"
+
+
+def test_refused_call_is_not_shown_as_wrong_keys(client: TestClient, auth: dict, twilio_api, db: Session):
+    """The keys passed setup, so a 403 when the call starts is the account refusing this call: show Twilio's reason."""
+    _setup(client, auth)
+    _openai(db, _user_id(client, auth))
+    refused = client.post(f"/calls/{_draft(client, auth, to_number='+966500000008')['id']}/start", headers=auth)
+    assert refused.status_code == 502
+    detail = refused.json()["detail"]
+    assert "SID or auth token" not in detail and "Permission Denied" in detail and "20003" in detail
+    other = client.post(f"/calls/{_draft(client, auth, to_number='+966500000007')['id']}/start", headers=auth)
+    assert other.status_code == 502 and other.json()["detail"] == "Twilio refused: Made-up reason from Twilio (Twilio error 99999)"
+    assert TOKEN not in json.dumps([refused.json(), other.json()])
+
+
+def test_twilio_errors_are_explained_without_secrets():
+    wrong = twilio._explain(401, {"code": 20003, "message": "Authenticate"})
+    assert isinstance(wrong, twilio.TwilioKeyRejected) and "(Twilio error 20003)" in str(wrong)
+    forbidden = twilio._explain(403, {"code": 20003, "message": "Permission Denied"})
+    assert not isinstance(forbidden, twilio.TwilioKeyRejected) and "Permission Denied" in str(forbidden)
+    assert "verified numbers" in str(twilio._explain(400, {"code": 21219}))
+    assert str(twilio._explain(503, {})) == "Twilio answered with an error. Try again later. (Twilio HTTP 503)"
+    assert str(twilio._explain(418, "not json")) == "Twilio refused the request. (Twilio HTTP 418)"
+    assert "may not make this call" in str(twilio._explain(403, "not json"))
 
 
 def test_calls_are_private(client: TestClient, auth: dict):
