@@ -380,11 +380,17 @@ def hang_up(call_id: uuid.UUID, user_id: UserId, db: Db):
     if setup and token and call.twilio_sid:
         try:
             twilio.end_call(setup.account_sid, token, call.twilio_sid, ringing=call.status == "calling")
-        except twilio.TwilioUnavailable as exc:
+        except twilio.TwilioKeyRejected as exc:
             raise _twilio_failure(exc) from exc
-    if call.status == "calling":
-        call.status = "canceled"
-        call.ended_at = datetime.now(UTC)
+        except twilio.TwilioUnavailable:
+            # Twilio refuses to end a call that already ended (or never connected): it is over either way, so it
+            # mustn't stay "in the call" in the app.
+            phone_agent.log.warning("ending the call through Twilio failed; marking it ended")
+    # The user asked to end it: it ends here now. Twilio's own update can still add the duration afterwards.
+    call.status = "canceled" if call.status == "calling" else "ended"
+    call.ended_at = call.ended_at or datetime.now(UTC)
+    call.stream_key = None
+    _finish(db, call)
     db.commit()
     db.refresh(call)
     return _out(call)
@@ -427,6 +433,9 @@ async def twilio_status(call_id: uuid.UUID, request: Request):
         ours = _STATUS.get(twilio_status)
         if ours and call.status in ACTIVE_STATUSES:
             call.status = ours
+        elif ours in ("ended", "failed", "canceled"):
+            # Already ended in Orbit (hung up, or the stream closed): only the duration below is still new.
+            ours = "ended"
         if twilio_status in ("busy", "no-answer") and call.outcome is None:
             call.outcome = "no_answer"
         if twilio_status == "failed":
@@ -482,6 +491,10 @@ def _save(call_id: uuid.UUID, result: phone_agent.Result) -> None:
             call.outcome = "needs_you" if result.transcript else "no_answer"
         if result.error:
             call.error = result.error
+        # The audio stream is over, so the call is too, even if Twilio's own "completed" update never arrives.
+        if call.status in ACTIVE_STATUSES:
+            call.status = "failed" if result.error and not result.transcript else "ended"
+            call.ended_at = call.ended_at or datetime.now(UTC)
         _finish(db, call)
         db.commit()
 
