@@ -5,6 +5,7 @@ here is made up.
 """
 
 import asyncio
+import base64
 import json
 import uuid
 from collections.abc import AsyncIterator, Iterator
@@ -529,3 +530,60 @@ def test_phone_agent_through_elevenlabs(
     assert done["outcome"] == "booked" and done["appointment_at"].startswith("2030-01-06T13:00")
     assert [line["who"] for line in done["transcript"]] == ["agent", "them", "agent"]
     assert db.get(Task, uuid.UUID(done["task_id"])).title.startswith("موعد")
+
+
+def test_hearing_tells_sound_from_silence():
+    # Mu-law: 0xFF and 0x7F are silence, 0x00 is the loudest sample.
+    assert phone_agent._loudest(base64.b64encode(b"\xff\x7f" * 80).decode()) == 0
+    assert phone_agent._loudest(base64.b64encode(b"\xff" * 79 + b"\x00").decode()) == 32124
+    assert phone_agent._loudest("not base64!") == 0
+    quiet, talking = phone_agent.Hearing(), phone_agent.Hearing()
+    for _ in range(phone_agent.SILENT_FRAMES):
+        quiet.heard("////")
+        talking.heard("////")
+    talking.heard("AAAA")
+    said, heard = phone_agent.Result(), phone_agent.Result()
+    quiet.check(said)
+    talking.check(heard)
+    assert said.error == phone_agent.THEM_SILENT and heard.error is None
+    # A short call, or one that already failed, keeps its own story.
+    short, failed = phone_agent.Hearing(frames=10), phone_agent.Result(error="Something else.")
+    short.check(heard)
+    quiet.check(failed)
+    assert heard.error is None and failed.error == "Something else."
+
+
+def test_silent_line_says_they_could_not_be_heard(
+    client: TestClient, auth: dict, twilio_api, db: Session, monkeypatch: pytest.MonkeyPatch, eleven: FakeElevenLabs
+):
+    add_elevenlabs(db, _user_id(client, auth))
+    body = {"account_sid": SID, "auth_token": TOKEN, "from_number": OWN_NUMBER, "voice": ARABIC_VOICE}
+    assert client.put("/calls/setup", json=body, headers=auth).status_code == 200
+    call = _draft(client, auth)
+    assert client.post(f"/calls/{call['id']}/start", headers=auth).status_code == 200
+    twiml = dict(parse_qsl(next(r for r in twilio_api if r.url.path.endswith("/Calls.json")).content.decode()))["Twiml"]
+    stream_key = twiml.split('name="key" value="')[1].split('"')[0]
+    fake = FakeElevenSocket("2030-01-06T16:00")
+
+    @asynccontextmanager
+    async def fake_open(url: str):
+        yield fake
+
+    monkeypatch.setattr(phone_agent, "open_elevenlabs", fake_open)
+    start = {"event": "start", "start": {"streamSid": "MZ1", "customParameters": {"call_id": call["id"], "key": stream_key}}}
+    with client.websocket_connect("/calls/stream") as socket:
+        socket.send_json(start)
+        assert socket.receive_json()["event"] == "media"
+        # Only an open line's hush comes from their side: every frame is silence.
+        for timestamp in range(phone_agent.SILENT_FRAMES):
+            socket.send_json({"event": "media", "media": {"payload": "////", "timestamp": str(timestamp * 20)}})
+        assert socket.receive_json()["event"] == "clear"
+        assert socket.receive_json()["event"] == "media"
+        assert socket.receive_json() == {"event": "mark", "mark": {"name": "goodbye-1"}, "streamSid": "MZ1"}
+        socket.send_json({"event": "mark", "mark": {"name": "goodbye-1"}})
+        socket.send_json({"event": "stop"})
+        with pytest.raises(Exception):  # noqa: B017 - closed by the server
+            socket.receive_json()
+
+    done = client.get(f"/calls/{call['id']}", headers=auth).json()
+    assert done["status"] == "ended" and done["error"] == phone_agent.THEM_SILENT

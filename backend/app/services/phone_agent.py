@@ -16,6 +16,8 @@ middle, so it still keeps the words and the outcome.
 """
 
 import asyncio
+import base64
+import binascii
 import json
 import logging
 import uuid
@@ -315,6 +317,49 @@ class Result:
         self.summary = _text(args.get("summary"), 1000)
 
 
+# Mu-law audio louder than this (out of 32,124) is someone talking or a sound on the line; the quiet hum of an open
+# line stays well under it.
+SOUND_LEVEL = 800
+# About ten seconds of Twilio's 20 ms frames: long enough that silence means the line isn't carrying their voice.
+SILENT_FRAMES = 500
+THEM_SILENT = (
+    "Their side of the line was silent the whole call, so the agent couldn't hear them. This is usually the phone "
+    "network on the route from your Twilio number; try again, or try another Twilio number."
+)
+
+
+def _loudest(payload: str) -> int:
+    """The loudest sample in a frame of Twilio's base64 8 kHz mu-law audio."""
+    try:
+        frame = base64.b64decode(payload, validate=True)
+    except (binascii.Error, ValueError):
+        return 0
+    loudest = 0
+    for byte in set(frame):
+        value = ~byte & 0xFF
+        level = ((((value & 0x0F) << 3) + 0x84) << ((value >> 4) & 0x07)) - 0x84
+        loudest = max(loudest, level)
+    return loudest
+
+
+@dataclass
+class Hearing:
+    """How much of the other side's audio reached Orbit: frames in all, and frames with a sound in them."""
+
+    frames: int = 0
+    loud: int = 0
+
+    def heard(self, payload: str) -> None:
+        self.frames += 1
+        if _loudest(payload) > SOUND_LEVEL:
+            self.loud += 1
+
+    def check(self, result: "Result") -> None:
+        log.info("call audio from their side: %d frames, %d with sound", self.frames, self.loud)
+        if self.frames >= SILENT_FRAMES and not self.loud and not result.error:
+            result.error = THEM_SILENT
+
+
 class Twilio(Protocol):
     async def receive_text(self) -> str: ...
 
@@ -324,6 +369,7 @@ class Twilio(Protocol):
 async def talk(twilio: Twilio, stream_sid: str, ai: Realtime, setup: dict[str, Any], zone: ZoneInfo, hang_up) -> Result:
     """Passes audio both ways until the call ends. hang_up() is awaited once the agent has said goodbye."""
     result = Result()
+    hearing = Hearing()
     state = {"latest_ms": 0, "item": None, "item_start_ms": None, "ending": False, "hung_up": False}
 
     async def send_twilio(event: dict[str, Any]) -> None:
@@ -353,6 +399,7 @@ async def talk(twilio: Twilio, stream_sid: str, ai: Realtime, setup: dict[str, A
             if event == "media":
                 media = message.get("media") or {}
                 state["latest_ms"] = int(media.get("timestamp") or state["latest_ms"])
+                hearing.heard(media.get("payload", ""))
                 await ai.send(json.dumps({"type": "input_audio_buffer.append", "audio": media.get("payload", "")}))
             elif event == "mark" and (message.get("mark") or {}).get("name") == "goodbye":
                 await end()
@@ -427,6 +474,7 @@ async def talk(twilio: Twilio, stream_sid: str, ai: Realtime, setup: dict[str, A
         for task in tasks + timers:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+    hearing.check(result)
     return result
 
 
@@ -435,6 +483,7 @@ async def talk_elevenlabs(twilio: Twilio, stream_sid: str, ai: Realtime, start: 
     talk over it, and finish_call comes as a client tool. After it, each piece of the goodbye is followed by a numbered
     mark; when Twilio has played the latest one, Orbit hangs up."""
     result = Result()
+    hearing = Hearing()
     state = {"ending": False, "hung_up": False, "marks": 0}
 
     async def send_twilio(event: dict[str, Any]) -> None:
@@ -460,7 +509,9 @@ async def talk_elevenlabs(twilio: Twilio, stream_sid: str, ai: Realtime, start: 
                 return
             event = message.get("event")
             if event == "media":
-                await ai.send(json.dumps({"user_audio_chunk": (message.get("media") or {}).get("payload", "")}))
+                payload = (message.get("media") or {}).get("payload", "")
+                hearing.heard(payload)
+                await ai.send(json.dumps({"user_audio_chunk": payload}))
             elif event == "mark" and state["marks"] and (message.get("mark") or {}).get("name") == f"goodbye-{state['marks']}":
                 await end()
             elif event == "stop":
@@ -513,6 +564,7 @@ async def talk_elevenlabs(twilio: Twilio, stream_sid: str, ai: Realtime, start: 
         for task in tasks + timers:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
+    hearing.check(result)
     return result
 
 
