@@ -41,6 +41,10 @@ AGENT_TAG = "orbit"
 TOOL_MARK = " (Orbit)"
 # Speaks Arabic and English, with low delay: the model ElevenLabs asks for when an agent isn't English-only.
 TTS_MODEL = "eleven_flash_v2_5"
+# The model that hears what was said and decides the answer. Left unset, ElevenLabs picks its own default (a small
+# model); Gemini 3.8 Flash is stronger and still answers fast, with little thinking so a call has no long pauses.
+LLM = "gemini-3.8-flash"
+REASONING = "low"
 # The same limit as the OpenAI call, so a forgotten call doesn't keep spending the user's credit.
 MAX_SECONDS = 15 * 60
 FIRST_MESSAGE = {"ar": "هلا! وش أقدر أسوي لك؟", "en": "Hi! What can I do for you?"}
@@ -165,13 +169,17 @@ _PLATFORM = {
 }
 
 
+def _prompt(base_prompt: str, tool_ids: list[str]) -> dict[str, Any]:
+    return {"prompt": base_prompt, "tool_ids": tool_ids, "llm": LLM, "reasoning_effort": REASONING}
+
+
 def agent_config(tool_ids: list[str], base_prompt: str) -> dict[str, Any]:
     """The agent kept in the user's account. The prompt here is general: each call sends the real one as an override."""
     return {
         "name": AGENT_NAME,
         "tags": [AGENT_TAG],
         "conversation_config": {
-            "agent": {"first_message": FIRST_MESSAGE["ar"], "language": "ar", "prompt": {"prompt": base_prompt, "tool_ids": tool_ids}},
+            "agent": {"first_message": FIRST_MESSAGE["ar"], "language": "ar", "prompt": _prompt(base_prompt, tool_ids)},
             "tts": {"model_id": TTS_MODEL},
             "conversation": {"max_duration_seconds": MAX_SECONDS},
         },
@@ -185,7 +193,7 @@ def phone_agent_config(tool_ids: list[str], base_prompt: str, max_seconds: int) 
         "name": PHONE_AGENT_NAME,
         "tags": [AGENT_TAG],
         "conversation_config": {
-            "agent": {"language": "ar", "prompt": {"prompt": base_prompt, "tool_ids": tool_ids}},
+            "agent": {"language": "ar", "prompt": _prompt(base_prompt, tool_ids)},
             "asr": {"user_input_audio_format": PHONE_AUDIO},
             "tts": {"model_id": TTS_MODEL, "agent_output_audio_format": PHONE_AUDIO},
             "conversation": {"max_duration_seconds": max_seconds},

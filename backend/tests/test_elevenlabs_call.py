@@ -149,6 +149,9 @@ def test_a_session_makes_the_agent_once_and_hands_over_a_token(client: TestClien
     assert agent["platform_settings"]["privacy"] == {"record_voice": False}
     assert "حليب" not in json.dumps(agent, ensure_ascii=False)
     assert sorted(agent["conversation_config"]["agent"]["prompt"]["tool_ids"]) == sorted(eleven.tools)
+    # A stronger model than ElevenLabs' default, that still answers fast.
+    prompt = agent["conversation_config"]["agent"]["prompt"]
+    assert prompt["llm"] == "gemini-3.8-flash" and prompt["reasoning_effort"] == "low"
     assert all(t["type"] == "client" and t["expects_response"] and t["description"].endswith("(Orbit)") for t in eleven.tools.values())
 
     # The next call reuses it: only a new token.

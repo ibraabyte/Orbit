@@ -514,6 +514,7 @@ def test_phone_agent_through_elevenlabs(
     assert agent["conversation_config"]["asr"]["user_input_audio_format"] == "ulaw_8000"
     assert agent["conversation_config"]["tts"]["agent_output_audio_format"] == "ulaw_8000"
     assert agent["platform_settings"]["privacy"]["record_voice"] is False
+    assert agent["conversation_config"]["agent"]["prompt"]["llm"] == "gemini-3.8-flash"
     assert [t["name"] for t in eleven.tools.values()] == ["finish_call"]
     init = fake.sent[0]["conversation_config_override"]
     assert "Never pay" in init["agent"]["prompt"]["prompt"]
