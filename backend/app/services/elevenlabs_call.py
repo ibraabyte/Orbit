@@ -39,8 +39,9 @@ PHONE_AUDIO = "ulaw_8000"
 AGENT_TAG = "orbit"
 # Ends the description of every tool Orbit makes, so they are told apart from the user's own tools of the same name.
 TOOL_MARK = " (Orbit)"
-# Speaks Arabic and English, with low delay: the model ElevenLabs asks for when an agent isn't English-only.
-TTS_MODEL = "eleven_flash_v2_5"
+# ElevenLabs' newest voice for agents: sounds more natural in Arabic and English than Flash v2.5, built for live
+# calls so it still answers fast. It is also what ElevenLabs picks for a new agent.
+TTS_MODEL = "eleven_v4_turbo"
 # The model that hears what was said and decides the answer. Left unset, ElevenLabs picks its own default (a small
 # model); Gemini 3.8 Flash is stronger and still answers fast, with little thinking so a call has no long pauses.
 LLM = "gemini-3.8-flash"
