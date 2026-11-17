@@ -15,9 +15,11 @@ from urllib.parse import parse_qsl, urlencode
 import httpx2 as httpx
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.models import AiConnection, PhoneCall, PhoneConnection, Task
+from app.models.calls import ACTIVE_STATUSES
 from app.security import decrypt_secret, encrypt_secret
 from app.services import elevenlabs_call, phone_agent, twilio
 from tests.conftest import bearer, sign_up
@@ -273,6 +275,40 @@ def test_status_updates_must_be_signed(client: TestClient, auth: dict, twilio_ap
     assert after["status"] == "ended" and after["outcome"] == "no_answer" and after["ended_at"]
 
 
+def test_hang_up_ends_a_live_call_at_once(client: TestClient, auth: dict, twilio_api, db: Session):
+    """On the line: hanging up ends it in the app right away, not when (or if) Twilio's update comes."""
+    call = _started(client, auth, db)
+    row = db.get(PhoneCall, uuid.UUID(call["id"]))
+    row.status = "in_progress"
+    db.commit()
+    hung = client.post(f"/calls/{call['id']}/hang-up", headers=auth).json()
+    assert hung["status"] == "ended" and hung["ended_at"]
+    assert dict(parse_qsl(twilio_api[-1].content.decode())) == {"Status": "completed"}
+    # Twilio's "completed" afterwards still adds the duration.
+    assert _status(client, call["id"], CallStatus="completed", CallDuration="42") == 204
+    after = client.get(f"/calls/{call['id']}", headers=auth).json()
+    assert after["status"] == "ended" and after["duration_seconds"] == 42
+
+
+def test_hang_up_ends_even_if_twilio_says_its_over(
+    client: TestClient, auth: dict, twilio_api, db: Session, monkeypatch: pytest.MonkeyPatch
+):
+    call = _started(client, auth, db)
+    row = db.get(PhoneCall, uuid.UUID(call["id"]))
+    row.status = "in_progress"
+    db.commit()
+
+    def refuse(*args, **kwargs):
+        raise twilio.TwilioUnavailable("Twilio refused: Call is not in-progress. (Twilio error 21220)")
+
+    monkeypatch.setattr(twilio, "end_call", refuse)
+    hung = client.post(f"/calls/{call['id']}/hang-up", headers=auth)
+    assert hung.status_code == 200 and hung.json()["status"] == "ended"
+    # Nothing is left "on the line" to block the next call.
+    assert client.get(f"/calls/{call['id']}", headers=auth).json()["status"] == "ended"
+    assert db.scalar(select(func.count()).where(PhoneCall.status.in_(ACTIVE_STATUSES))) == 0
+
+
 def test_twilio_signature_matches_twilios_example():
     # The example from Twilio's webhook security docs.
     url = "https://mycompany.com/myapp.php?foo=1&bar=2"
@@ -368,6 +404,8 @@ def test_live_call_books_and_makes_a_task(client: TestClient, auth: dict, twilio
 
     done = client.get(f"/calls/{call['id']}", headers=auth).json()
     assert done["outcome"] == "booked"
+    # The stream closing ends the call, without waiting for Twilio's "completed".
+    assert done["status"] == "ended" and done["ended_at"]
     assert done["appointment_at"].startswith("2030-01-06T13:00")  # 16:00 in Riyadh
     assert [line["who"] for line in done["transcript"]] == ["agent", "them", "agent"]
     task = db.get(Task, uuid.UUID(done["task_id"]))
