@@ -7,6 +7,7 @@ here is made up.
 import asyncio
 import base64
 import json
+import time
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from contextlib import asynccontextmanager
@@ -495,6 +496,7 @@ def test_phone_agent_through_elevenlabs(
         yield fake
 
     monkeypatch.setattr(phone_agent, "open_elevenlabs", fake_open)
+    monkeypatch.setattr(phone_agent, "GOODBYE_QUIET_SECONDS", 0.05)
     start = {"event": "start", "start": {"streamSid": "MZ1", "customParameters": {"call_id": call["id"], "key": stream_key}}}
     with client.websocket_connect("/calls/stream") as socket:
         socket.send_json(start)
@@ -505,6 +507,7 @@ def test_phone_agent_through_elevenlabs(
         assert socket.receive_json() == {"event": "media", "media": {"payload": "QkFJ"}, "streamSid": "MZ1"}
         assert socket.receive_json() == {"event": "mark", "mark": {"name": "goodbye-1"}, "streamSid": "MZ1"}
         socket.send_json({"event": "mark", "mark": {"name": "goodbye-1"}})
+        time.sleep(0.3)  # nothing more came after the goodbye: Orbit hangs up
         socket.send_json({"event": "stop"})
         with pytest.raises(Exception):  # noqa: B017 - closed by the server
             socket.receive_json()
@@ -570,6 +573,7 @@ def test_silent_line_says_they_could_not_be_heard(
         yield fake
 
     monkeypatch.setattr(phone_agent, "open_elevenlabs", fake_open)
+    monkeypatch.setattr(phone_agent, "GOODBYE_QUIET_SECONDS", 0.05)
     start = {"event": "start", "start": {"streamSid": "MZ1", "customParameters": {"call_id": call["id"], "key": stream_key}}}
     with client.websocket_connect("/calls/stream") as socket:
         socket.send_json(start)
@@ -581,9 +585,137 @@ def test_silent_line_says_they_could_not_be_heard(
         assert socket.receive_json()["event"] == "media"
         assert socket.receive_json() == {"event": "mark", "mark": {"name": "goodbye-1"}, "streamSid": "MZ1"}
         socket.send_json({"event": "mark", "mark": {"name": "goodbye-1"}})
+        time.sleep(0.3)  # nothing more came after the goodbye: Orbit hangs up
         socket.send_json({"event": "stop"})
         with pytest.raises(Exception):  # noqa: B017 - closed by the server
             socket.receive_json()
 
     done = client.get(f"/calls/{call['id']}", headers=auth).json()
     assert done["status"] == "ended" and done["error"] == phone_agent.THEM_SILENT
+
+
+class ScriptedTwilio:
+    """Twilio's side of the stream, fed by the test; what Orbit sends it is kept in order."""
+
+    def __init__(self) -> None:
+        self.inbox: asyncio.Queue[str] = asyncio.Queue()
+        self.sent: list[dict] = []
+        self.got = asyncio.Event()
+
+    async def receive_text(self) -> str:
+        return await self.inbox.get()
+
+    async def send_text(self, data: str) -> None:
+        self.sent.append(json.loads(data))
+        self.got.set()
+
+    def tell(self, event: dict) -> None:
+        self.inbox.put_nowait(json.dumps(event))
+
+    async def wait_for(self, count: int) -> None:
+        while len(self.sent) < count:
+            self.got.clear()
+            await asyncio.wait_for(self.got.wait(), 2)
+
+
+class ScriptedAgent:
+    """An ElevenLabs agent socket the test speaks for."""
+
+    def __init__(self) -> None:
+        self.out: asyncio.Queue[dict | None] = asyncio.Queue()
+        self.sent: list[dict] = []
+
+    async def send(self, message: str) -> None:
+        self.sent.append(json.loads(message))
+
+    def say(self, event: dict | None) -> None:
+        self.out.put_nowait(event)
+
+    def __aiter__(self) -> AsyncIterator[str]:
+        return self._events()
+
+    async def _events(self) -> AsyncIterator[str]:
+        while (event := await self.out.get()) is not None:
+            yield json.dumps(event)
+
+
+def _audio(payload: str) -> dict:
+    return {"type": "audio", "audio_event": {"audio_base_64": payload}}
+
+
+FINISH = {
+    "type": "client_tool_call",
+    "client_tool_call": {"tool_name": "finish_call", "tool_call_id": "t1", "parameters": {"outcome": "not_booked", "summary": "x"}},
+}
+
+
+def test_goodbye_is_not_cut_between_its_sentences(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(phone_agent, "GOODBYE_QUIET_SECONDS", 0.2)
+    hung: list[float] = []
+
+    async def scenario() -> None:
+        twilio, agent = ScriptedTwilio(), ScriptedAgent()
+
+        async def hang_up() -> None:
+            hung.append(time.monotonic())
+            twilio.tell({"event": "stop"})
+
+        call = asyncio.create_task(
+            phone_agent.talk_elevenlabs(twilio, "MZ1", agent, {"type": "start"}, phone_agent.ZoneInfo("UTC"), hang_up)
+        )
+        agent.say(FINISH)
+        agent.say(_audio("AAA1"))  # "يعطيك العافية،"
+        await twilio.wait_for(2)
+        assert twilio.sent[1]["mark"]["name"] == "goodbye-1"
+        # The line caught up with the first sentence; the next one is still being made.
+        twilio.tell({"event": "mark", "mark": {"name": "goodbye-1"}})
+        await asyncio.sleep(0.1)
+        assert not hung
+        # They say "طيب" over the goodbye: what's already on the line isn't wiped.
+        agent.say({"type": "interruption", "interruption_event": {"event_id": 2}})
+        agent.say(_audio("AAA2"))  # "مع السلامة."
+        await twilio.wait_for(4)
+        assert [e["event"] for e in twilio.sent] == ["media", "mark", "media", "mark"]
+        await asyncio.sleep(0.2)
+        assert not hung
+        played = time.monotonic()
+        twilio.tell({"event": "mark", "mark": {"name": "goodbye-2"}})
+        result = await asyncio.wait_for(call, 2)
+        assert len(hung) == 1 and hung[0] - played >= 0.19
+        assert result.outcome == "not_booked"
+        assert json.loads(agent.sent[-1]["result"])["next"] == phone_agent.GOODBYE_NEXT
+
+    asyncio.run(scenario())
+
+
+def test_agent_closing_lets_its_last_words_play(monkeypatch: pytest.MonkeyPatch):
+    hung: list[bool] = []
+
+    async def scenario() -> None:
+        twilio, agent = ScriptedTwilio(), ScriptedAgent()
+
+        async def hang_up() -> None:
+            hung.append(True)
+            twilio.tell({"event": "stop"})
+
+        call = asyncio.create_task(
+            phone_agent.talk_elevenlabs(twilio, "MZ1", agent, {"type": "start"}, phone_agent.ZoneInfo("UTC"), hang_up)
+        )
+        agent.say(_audio("AAA1"))
+        agent.say(None)  # ElevenLabs closed its side (the time limit, say)
+        await twilio.wait_for(2)
+        assert twilio.sent[1] == {"event": "mark", "mark": {"name": "closing"}, "streamSid": "MZ1"}
+        await asyncio.sleep(0.05)
+        assert not hung  # still playing
+        twilio.tell({"event": "mark", "mark": {"name": "closing"}})
+        await asyncio.wait_for(call, 2)
+        assert hung == [True]
+
+    asyncio.run(scenario())
+
+
+def test_instructions_ask_for_patience_and_a_goodbye():
+    call = PhoneCall(request="احجز لي", business_name="الحلاق", goal="حجز", opening="هلا", caller_name="سالم")
+    text = phone_agent.instructions(call, phone_agent.ZoneInfo("Asia/Riyadh"))
+    assert "Never end the call because of a pause" in text
+    assert "مع السلامة" in text and "Never end the call without a goodbye" in text
