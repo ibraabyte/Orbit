@@ -274,7 +274,7 @@ export default function Capture() {
               <View key={`${action.kind}-${action.id ?? "new"}-${index}`} style={[styles.action, off && { opacity: 0.45 }]}>
                 <View style={styles.previewHead}>
                   <View style={[styles.previewMark, action.op === "delete" && { backgroundColor: colors.accentTint }]}>
-                    <Icon name={action.op === "delete" ? "trash-2" : action.op === "complete" ? "check" : action.op === "update" ? "edit-2" : "plus"} size={14} color={colors.urgentInk} />
+                    <Icon name={action.op === "delete" ? "trash-2" : action.op === "complete" ? "check" : action.op === "move" ? "clock" : action.op === "update" ? "edit-2" : "plus"} size={14} color={colors.urgentInk} />
                   </View>
                   <Text style={[type.title, { flex: 1 }]} numberOfLines={2}>
                     {opName(action.op, isArabic)} · {kindName(action.kind, isArabic)}

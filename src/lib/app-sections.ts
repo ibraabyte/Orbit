@@ -120,7 +120,15 @@ const KIND_SECTIONS: Record<string, SectionKey> = {
   habit: "habits",
   habit_log: "habits",
   note: "library",
-  capture: "library"
+  capture: "library",
+  medication: "medications",
+  document: "documents",
+  vehicle: "vehicles",
+  injury: "exercises",
+  body_measurement: "health",
+  workout_plan: "exercises",
+  planned_day: "exercises",
+  planned_exercise: "exercises"
 };
 export const kindHidden = (kind: string, hidden: Set<SectionKey>) => {
   const section = KIND_SECTIONS[kind];

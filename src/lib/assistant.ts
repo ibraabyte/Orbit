@@ -12,7 +12,7 @@ export const ACT_TEXT_MAX = 1000;
 export const ACT_HISTORY_TURNS = 10;
 export const ACT_TURN_MAX = 1500;
 
-export type ActionOp = "create" | "update" | "delete" | "complete";
+export type ActionOp = "create" | "update" | "delete" | "complete" | "move";
 export type ProposedAction = { op: ActionOp; kind: string; id: string | null; label: string; fields: Record<string, unknown> };
 export type ActReply = { reply: string; actions: ProposedAction[] };
 export type ActTurn = { role: "user" | "assistant"; content: string };
@@ -36,17 +36,34 @@ export const KIND_PATHS: Record<string, string> = {
   money_account: "/money-accounts",
   investment: "/investments",
   card: "/cards",
-  food: "/foods"
+  food: "/foods",
+  medication: "/medications",
+  document: "/documents",
+  vehicle: "/vehicles",
+  injury: "/injuries",
+  body_measurement: "/body-measurements",
+  planned_exercise: "/plan/exercises",
+  // The workout plan is one per person (PUT /plan, DELETE /plan); a planned day is only moved (POST /plan/days/{id}/move).
+  workout_plan: "/plan",
+  planned_day: "/plan/days"
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export type ActionRequest = { method: "POST" | "PATCH" | "DELETE"; path: string; body?: Record<string, unknown> };
+export type ActionRequest = { method: "POST" | "PUT" | "PATCH" | "DELETE"; path: string; body?: Record<string, unknown> };
 
 // The call that applies one confirmed change, or null when the change isn't one this app knows how to make.
 export function actionRequest(action: ProposedAction): ActionRequest | null {
   const base = KIND_PATHS[action.kind];
   if (!base || !action.fields || typeof action.fields !== "object") return null;
+  if (action.kind === "workout_plan") {
+    if (action.id !== null) return null;
+    if (action.op === "create" || action.op === "update") return Object.keys(action.fields).length ? { method: "PUT", path: base, body: action.fields } : null;
+    return action.op === "delete" ? { method: "DELETE", path: base } : null;
+  }
+  if (action.kind === "planned_day") {
+    return action.op === "move" && action.id && UUID.test(action.id) ? { method: "POST", path: `${base}/${action.id}/move` } : null;
+  }
   if (action.op === "create" && action.id === null && action.kind === "meal" && action.fields.food_id != null) {
     // A saved food is logged through its own route, which takes the numbers from the food and marks it used.
     const food = action.fields.food_id;
@@ -62,7 +79,7 @@ export function actionRequest(action: ProposedAction): ActionRequest | null {
   return null;
 }
 
-type Api = Pick<ApiClient, "post" | "patch" | "delete">;
+type Api = Pick<ApiClient, "post" | "put" | "patch" | "delete">;
 
 // Applies the confirmed changes one after another. A failed one doesn't stop the rest; each failure says which and why.
 export async function applyActions(api: Api, actions: ProposedAction[]) {
@@ -76,6 +93,7 @@ export async function applyActions(api: Api, actions: ProposedAction[]) {
     }
     try {
       if (request.method === "POST") await api.post(request.path, request.body);
+      else if (request.method === "PUT") await api.put(request.path, request.body);
       else if (request.method === "PATCH") await api.patch(request.path, request.body);
       else await api.delete(request.path);
       done += 1;
@@ -149,9 +167,14 @@ const KIND_NAMES: Record<string, [string, string]> = {
   budget: ["Budget", "ميزانية"], meal: ["Meal", "وجبة"], grocery: ["Grocery", "مشتريات"], workout: ["Workout", "تمرين"],
   sleep: ["Sleep", "نوم"], weight: ["Weight", "وزن"], habit: ["Habit", "عادة"], habit_log: ["Habit done", "إنجاز عادة"],
   note: ["Note", "ملاحظة"], money_account: ["Money place", "مكان فلوس"],
-  investment: ["Investment", "استثمار"], card: ["Card", "بطاقة"], food: ["Saved food", "أكلة محفوظة"]
+  investment: ["Investment", "استثمار"], card: ["Card", "بطاقة"], food: ["Saved food", "أكلة محفوظة"],
+  medication: ["Medicine", "دواء"], document: ["Document", "وثيقة"], vehicle: ["Car", "سيارة"], injury: ["Injury", "إصابة"],
+  body_measurement: ["Measurement", "قياس"], workout_plan: ["Workout plan", "جدول التمارين"], planned_day: ["Planned workout", "يوم تمرين"],
+  planned_exercise: ["Planned exercise", "تمرين في الجدول"]
 };
-const OP_NAMES: Record<ActionOp, [string, string]> = { create: ["Add", "إضافة"], update: ["Change", "تعديل"], delete: ["Delete", "حذف"], complete: ["Done", "إنجاز"] };
+const OP_NAMES: Record<ActionOp, [string, string]> = {
+  create: ["Add", "إضافة"], update: ["Change", "تعديل"], delete: ["Delete", "حذف"], complete: ["Done", "إنجاز"], move: ["Move to tomorrow", "تأجيل لبكرة"]
+};
 
 export const kindName = (kind: string, arabic: boolean) => (KIND_NAMES[kind] ?? [kind, kind])[arabic ? 1 : 0];
 export const opName = (op: ActionOp, arabic: boolean) => OP_NAMES[op][arabic ? 1 : 0];
@@ -167,15 +190,41 @@ const FIELD_NAMES: Record<string, [string, string]> = {
   invested: ["Invested", "المستثمر"], current_value: ["Value now", "القيمة الحالية"], kind: ["Type", "النوع"], last4: ["Last 4", "آخر 4"],
   meal_type: ["Meal", "الوجبة"], frequency: ["How often", "كم مرة"], target_count: ["Target", "الهدف"], type: ["Type", "النوع"], url: ["Link", "الرابط"],
   list_name: ["List", "القائمة"], steps: ["Checklist", "الخطوات"], autopay: ["Autopay", "دفع تلقائي"], network: ["Network", "الشبكة"], protein_g: ["Protein g", "بروتين غ"], carbs_g: ["Carbs g", "كارب غ"], fat_g: ["Fat g", "دهون غ"],
-  servings: ["Servings", "الحصص"], serving_label: ["Serving", "الحصة"], serving_grams: ["Grams per serving", "غرام للحصة"], brand: ["Brand", "الماركة"], barcode: ["Barcode", "الباركود"]
+  servings: ["Servings", "الحصص"], serving_label: ["Serving", "الحصة"], serving_grams: ["Grams per serving", "غرام للحصة"], brand: ["Brand", "الماركة"], barcode: ["Barcode", "الباركود"],
+  goal: ["Goal", "الهدف"], level: ["Level", "المستوى"], weekdays: ["Days", "الأيام"], exercise_id: ["Exercise", "التمرين"], sets: ["Sets", "الجولات"],
+  reps_low: ["Reps from", "العدات من"], reps_high: ["Reps to", "العدات إلى"], rest_seconds: ["Rest (sec)", "الراحة (ث)"], dose: ["Dose", "الجرعة"],
+  schedule: ["Schedule", "الجدول"], times: ["Times", "الأوقات"], every_hours: ["Every (hours)", "كل (ساعات)"], paused: ["Paused", "موقوف"],
+  stock: ["Stock", "المخزون"], per_dose: ["Per dose", "لكل جرعة"], low_stock_at: ["Low at", "تنبيه عند"], starts_on: ["Starts", "يبدأ"],
+  ends_on: ["Ends", "ينتهي"], holder: ["For", "صاحبها"], expires_on: ["Expires", "ينتهي"], remind_days: ["Remind days before", "التذكير قبل (أيام)"],
+  area: ["Area", "المكان"], active: ["Active", "نشطة"], started_on: ["Since", "من"], ended_on: ["Until", "إلى"], value: ["Value", "القيمة"],
+  measured_at: ["When", "الوقت"], plate: ["Plate", "اللوحة"], odometer_km: ["Odometer km", "العداد كم"], registration_expires_at: ["Registration ends", "الاستمارة تنتهي"],
+  insurance_expires_at: ["Insurance ends", "التأمين ينتهي"], inspection_expires_at: ["Inspection ends", "الفحص ينتهي"], next_oil_change_at: ["Next oil change", "تغيير الزيت القادم"],
+  next_oil_change_km: ["Oil change at km", "تغيير الزيت عند كم"]
 };
 // Ids are shown as the item they point at (the action's label) or not at all.
-const HIDDEN_FIELDS = new Set(["habit_id", "task_id", "card_id", "list_id", "food_id", "tags", "place_id"]);
+const HIDDEN_FIELDS = new Set(["habit_id", "task_id", "card_id", "list_id", "food_id", "tags", "place_id", "planned_workout_id"]);
 
 const MEAL_TYPES: Record<string, [string, string]> = {
   breakfast: ["Breakfast", "فطور"], lunch: ["Lunch", "غداء"], dinner: ["Dinner", "عشاء"], snack: ["Snack", "سناك"], other: ["Other", "أخرى"]
 };
 const mealTypeName = (value: string, arabic: boolean) => (MEAL_TYPES[value] ?? [value, value])[arabic ? 1 : 0];
+
+// The workout plan's words, and its weekdays (0 Monday … 6 Sunday, as the server counts them).
+const PLAN_WORDS: Record<string, [string, string]> = {
+  strength: ["Strength", "قوة"], muscle: ["Build muscle", "تضخيم"], fitness: ["Fitness", "لياقة"], fat_loss: ["Lose fat", "تنشيف"],
+  beginner: ["Beginner", "مبتدئ"], intermediate: ["Intermediate", "متوسط"], advanced: ["Advanced", "متقدم"]
+};
+const WEEKDAYS: [string, string][] = [["Mon", "الاثنين"], ["Tue", "الثلاثاء"], ["Wed", "الأربعاء"], ["Thu", "الخميس"], ["Fri", "الجمعة"], ["Sat", "السبت"], ["Sun", "الأحد"]];
+
+function special(key: string, value: unknown, arabic: boolean): string | null {
+  const pick = (pair: [string, string] | undefined) => (pair ? pair[arabic ? 1 : 0] : null);
+  if (key === "meal_type" && typeof value === "string") return mealTypeName(value, arabic);
+  if ((key === "goal" || key === "level") && typeof value === "string") return pick(PLAN_WORDS[value]) ?? value;
+  if (key === "weekdays" && Array.isArray(value)) return value.map((day) => (typeof day === "number" ? pick(WEEKDAYS[day]) ?? String(day) : String(day))).join(arabic ? "، " : ", ");
+  // A library id like "Dumbbell_Bench_Press" reads as its name.
+  if (key === "exercise_id" && typeof value === "string") return value.replace(/_/g, " ");
+  return null;
+}
 
 const ISO_TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -202,7 +251,7 @@ export function actionRows(action: ProposedAction, arabic: boolean, skip?: strin
   return Object.entries(action.fields)
     // The item's name is already its heading.
     .filter(([key, value]) => !HIDDEN_FIELDS.has(key) && key !== skip && !(key === "name" && value === action.label))
-    .map(([key, value]) => [(FIELD_NAMES[key] ?? [key, key])[arabic ? 1 : 0], key === "meal_type" && typeof value === "string" ? mealTypeName(value, arabic) : formatValue(value, locale)]);
+    .map(([key, value]) => [(FIELD_NAMES[key] ?? [key, key])[arabic ? 1 : 0], special(key, value, arabic) ?? formatValue(value, locale)]);
 }
 
 export const fieldName = (key: string, arabic: boolean) => (FIELD_NAMES[key] ?? [key, key])[arabic ? 1 : 0];
