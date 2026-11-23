@@ -519,7 +519,7 @@ def test_phone_agent_through_elevenlabs(
     assert agent["conversation_config"]["tts"]["agent_output_audio_format"] == "ulaw_8000"
     assert agent["conversation_config"]["tts"]["model_id"] == "eleven_v4_turbo"
     assert agent["platform_settings"]["privacy"]["record_voice"] is False
-    assert agent["conversation_config"]["agent"]["prompt"]["llm"] == "gemini-3.8-flash"
+    assert agent["conversation_config"]["agent"]["prompt"]["llm"] == "gemini-3.5-flash"
     assert [t["name"] for t in eleven.tools.values()] == ["finish_call"]
     init = fake.sent[0]["conversation_config_override"]
     assert "Never pay" in init["agent"]["prompt"]["prompt"]
@@ -719,3 +719,69 @@ def test_instructions_ask_for_patience_and_a_goodbye():
     text = phone_agent.instructions(call, phone_agent.ZoneInfo("Asia/Riyadh"))
     assert "Never end the call because of a pause" in text
     assert "مع السلامة" in text and "Never end the call without a goodbye" in text
+
+
+def test_they_speak_after_the_goodbye_and_are_answered(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(phone_agent, "GOODBYE_QUIET_SECONDS", 0.1)
+    monkeypatch.setattr(phone_agent, "REOPEN_SECONDS", 0.6)
+    hung: list[float] = []
+
+    async def scenario() -> None:
+        twilio, agent = ScriptedTwilio(), ScriptedAgent()
+
+        async def hang_up() -> None:
+            hung.append(time.monotonic())
+            twilio.tell({"event": "stop"})
+
+        call = asyncio.create_task(
+            phone_agent.talk_elevenlabs(twilio, "MZ1", agent, {"type": "start"}, phone_agent.ZoneInfo("UTC"), hang_up)
+        )
+        agent.say(FINISH)
+        agent.say(_audio("BYE1"))
+        await twilio.wait_for(2)
+        # "لا، لحظة، عندي سؤال": they are still talking, so the goodbye's mark no longer ends the call.
+        agent.say({"type": "user_transcript", "user_transcription_event": {"user_transcript": "لا، لحظة، عندي سؤال"}})
+        await asyncio.sleep(0.05)
+        twilio.tell({"event": "mark", "mark": {"name": "goodbye-1"}})
+        agent.say(_audio("ANS1"))  # the agent answers them, with no mark: the call goes on
+        await twilio.wait_for(3)
+        await asyncio.sleep(0.3)
+        assert not hung and twilio.sent[2] == {"event": "media", "media": {"payload": "ANS1"}, "streamSid": "MZ1"}
+        # Done again: finish_call, a goodbye, and then the hang-up.
+        agent.say(FINISH)
+        agent.say(_audio("BYE2"))
+        await twilio.wait_for(5)
+        assert twilio.sent[4]["mark"]["name"] == "goodbye-2"
+        twilio.tell({"event": "mark", "mark": {"name": "goodbye-2"}})
+        await asyncio.wait_for(call, 2)
+        assert len(hung) == 1
+
+    asyncio.run(scenario())
+
+
+def test_after_they_speak_a_quiet_line_still_ends(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(phone_agent, "REOPEN_SECONDS", 0.2)
+    hung: list[bool] = []
+
+    async def scenario() -> None:
+        twilio, agent = ScriptedTwilio(), ScriptedAgent()
+
+        async def hang_up() -> None:
+            hung.append(True)
+            twilio.tell({"event": "stop"})
+
+        call = asyncio.create_task(
+            phone_agent.talk_elevenlabs(twilio, "MZ1", agent, {"type": "start"}, phone_agent.ZoneInfo("UTC"), hang_up)
+        )
+        agent.say(FINISH)
+        agent.say({"type": "user_transcript", "user_transcription_event": {"user_transcript": "طيب"}})
+        # The agent never finishes again and nobody says anything more: Orbit hangs up.
+        await asyncio.wait_for(call, 2)
+        assert hung == [True]
+
+    asyncio.run(scenario())
+
+
+def test_calls_use_a_fast_model():
+    prompt = elevenlabs_call.phone_agent_config([], "x", 300)["conversation_config"]["agent"]["prompt"]
+    assert (prompt["llm"], prompt["reasoning_effort"]) == ("gemini-3.5-flash", "minimal")

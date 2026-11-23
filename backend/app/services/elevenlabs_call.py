@@ -42,10 +42,12 @@ TOOL_MARK = " (Orbit)"
 # ElevenLabs' newest voice for agents: sounds more natural in Arabic and English than Flash v2.5, built for live
 # calls so it still answers fast. It is also what ElevenLabs picks for a new agent.
 TTS_MODEL = "eleven_v4_turbo"
-# The model that hears what was said and decides the answer. Left unset, ElevenLabs picks its own default (a small
-# model); Gemini 3.8 Flash is stronger and still answers fast, with little thinking so a call has no long pauses.
-LLM = "gemini-3.8-flash"
-REASONING = "low"
+# The model that hears what was said and decides the answer. Gemini 3.8 Flash can't think less than "low": on calls
+# it spent 100-300 tokens thinking before each answer (2-5 s of silence), and its requests sometimes failed and fell
+# back after a 4 s wait. Gemini 3.5 Flash with minimal thinking answers in about a second, and is what ElevenLabs
+# already fell back to on those turns.
+LLM = "gemini-3.5-flash"
+REASONING = "minimal"
 # The same limit as the OpenAI call, so a forgotten call doesn't keep spending the user's credit.
 MAX_SECONDS = 15 * 60
 FIRST_MESSAGE = {"ar": "هلا! وش أقدر أسوي لك؟", "en": "Hi! What can I do for you?"}

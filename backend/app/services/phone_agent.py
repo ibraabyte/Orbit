@@ -52,11 +52,15 @@ GOODBYE_SECONDS = 15.0
 # ElevenLabs sends the goodbye in pieces, with short gaps between them. Orbit hangs up only once everything sent has
 # played and nothing more came for this long, so a gap between two sentences doesn't cut the goodbye off.
 GOODBYE_QUIET_SECONDS = 2.5
+# They spoke again after the goodbye: the call goes on. If the agent doesn't finish it again, Orbit hangs up once
+# they have said nothing more for this long.
+REOPEN_SECONDS = 20.0
 # When the AI's side closes while the call is on: how long the audio already sent may keep playing before the hang-up.
 CLOSE_SECONDS = 6.0
 GOODBYE_NEXT = (
     "Now say a short, warm goodbye in the language of the call, and stop there. In Arabic end with «مع السلامة», "
-    "for example «يعطيك العافية، مع السلامة». Don't hang up silently."
+    "for example «يعطيك العافية، مع السلامة». Don't hang up silently. If they say something more after your "
+    "goodbye, answer them; when the call is done again, call finish_call again."
 )
 TRANSCRIPT_MAX = 200
 
@@ -221,7 +225,9 @@ because of a pause. Wait; if the silence goes on, ask once whether they are stil
 - If it is voicemail, a recorded menu you can't get through, or nobody speaks at all, finish with outcome no_answer \
 without leaving a message.
 - When the call has reached its end, call finish_call, then always say a short polite goodbye before the line closes \
-(in Arabic, end with «مع السلامة»). Never end the call without a goodbye. Keep the whole call under four minutes."""
+(in Arabic, end with «مع السلامة»). Never end the call without a goodbye. Don't finish while they are still \
+talking or asking something: answer them first. If they speak again after your goodbye, answer, and call \
+finish_call again when it is really over. Keep the whole call under four minutes."""
 
 
 def session_update(call: m.PhoneCall, voice: str, zone: ZoneInfo, model: str = MODEL) -> dict[str, Any]:
@@ -499,10 +505,14 @@ async def talk_elevenlabs(twilio: Twilio, stream_sid: str, ai: Realtime, start: 
     The goodbye: after finish_call, each piece of audio is followed by a numbered mark, which Twilio sends back once
     that audio has played. ElevenLabs sends the goodbye sentence by sentence, so the latest mark coming back only means
     the line has caught up for now. Orbit hangs up once the latest mark has played and no more audio came for
-    GOODBYE_QUIET_SECONDS; new audio in that time starts the wait again. GOODBYE_SECONDS is the backstop."""
+    GOODBYE_QUIET_SECONDS; new audio in that time starts the wait again. GOODBYE_SECONDS is the backstop.
+
+    If they speak after finish_call ("لا، لحظة..."), the call isn't over: the hang-up is called off and the agent
+    answers them. It calls finish_call again when it is done; if it doesn't, Orbit hangs up once they have been quiet
+    for REOPEN_SECONDS."""
     result = Result()
     hearing = Hearing()
-    state: dict[str, Any] = {"ending": False, "hung_up": False, "marks": 0, "quiet": None}
+    state: dict[str, Any] = {"ending": False, "hung_up": False, "marks": 0, "backstop": None}
 
     async def send_twilio(event: dict[str, Any]) -> None:
         await twilio.send_text(json.dumps({**event, "streamSid": stream_sid}))
@@ -512,16 +522,23 @@ async def talk_elevenlabs(twilio: Twilio, stream_sid: str, ai: Realtime, start: 
             state["hung_up"] = True
             await hang_up()
 
-    async def end_later() -> None:
-        await asyncio.sleep(GOODBYE_SECONDS)
+    async def end_later(seconds: float) -> None:
+        await asyncio.sleep(seconds)
         await end()
 
     async def end_if_quiet(mark: int) -> None:
         await asyncio.sleep(GOODBYE_QUIET_SECONDS)
-        if state["marks"] == mark:
+        if state["ending"] and state["marks"] == mark:
             await end()
 
     timers: list[asyncio.Task] = []
+
+    def backstop(seconds: float) -> None:
+        if state["backstop"] is not None:
+            state["backstop"].cancel()
+        state["backstop"] = asyncio.create_task(end_later(seconds))
+        timers.append(state["backstop"])
+
     await ai.send(json.dumps(start))
 
     async def from_twilio() -> None:
@@ -539,7 +556,7 @@ async def talk_elevenlabs(twilio: Twilio, stream_sid: str, ai: Realtime, start: 
                 name = (message.get("mark") or {}).get("name")
                 if name == "closing":
                     await end()
-                elif state["marks"] and name == f"goodbye-{state['marks']}":
+                elif state["ending"] and name == f"goodbye-{state['marks']}":
                     timers.append(asyncio.create_task(end_if_quiet(state["marks"])))
             elif event == "stop":
                 return
@@ -564,7 +581,12 @@ async def talk_elevenlabs(twilio: Twilio, stream_sid: str, ai: Realtime, start: 
             elif kind == "agent_response":
                 result.said("agent", (event.get("agent_response_event") or {}).get("agent_response"))
             elif kind == "user_transcript":
-                result.said("them", (event.get("user_transcription_event") or {}).get("user_transcript"))
+                words = (event.get("user_transcription_event") or {}).get("user_transcript")
+                result.said("them", words)
+                if isinstance(words, str) and words.strip() and (state["ending"] or state["backstop"] is not None):
+                    # They are still talking: don't hang up on them. The agent answers; Orbit waits.
+                    state["ending"] = False
+                    backstop(REOPEN_SECONDS)
             elif kind == "client_tool_call":
                 tool = event.get("client_tool_call") or {}
                 reply = {"type": "client_tool_result", "tool_call_id": tool.get("tool_call_id"), "is_error": False}
@@ -580,7 +602,7 @@ async def talk_elevenlabs(twilio: Twilio, stream_sid: str, ai: Realtime, start: 
                 result.finished(args, zone)
                 if not state["ending"]:
                     state["ending"] = True
-                    timers.append(asyncio.create_task(end_later()))
+                    backstop(GOODBYE_SECONDS)
                 await ai.send(json.dumps({**reply, "result": json.dumps({"ok": True, "next": GOODBYE_NEXT})}))
 
     listening = asyncio.create_task(from_twilio())
