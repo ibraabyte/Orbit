@@ -417,8 +417,10 @@ def tools(hidden: frozenset[str] = frozenset()) -> list[Tool]:
             },
         ),
         Tool(
-            "propose_stop_workout_plan", "Propose turning the workout plan off. Logged workouts stay.", {"type": "object", "properties": {}}
-        ),  # noqa: E501
+            "propose_stop_workout_plan",
+            "Propose turning the workout plan off. Logged workouts stay.",
+            {"type": "object", "properties": {"reason": {"type": "string", "description": "Why, in a few words, if they said."}}},
+        ),
         Tool(
             "propose_move_workout_day",
             'Propose moving a coming planned day to the next day ("not going today"); the days after it shift as needed.',
