@@ -355,9 +355,8 @@ def _day_out(db: Session, user_id: uuid.UUID, row: PlannedWorkout) -> dict[str, 
 def add_planned_exercise(body: s.PlannedExerciseCreate, user_id: UserId, db: Db):
     row = _open_day(db, user_id, body.planned_workout_id)
     exercise = _swap_target(db, body.exercise_id)
-    last = db.scalar(
-        select(PlannedExercise.position).where(PlannedExercise.planned_workout_id == row.id).order_by(PlannedExercise.position.desc()).limit(1)
-    )
+    query = select(PlannedExercise.position).where(PlannedExercise.planned_workout_id == row.id)
+    last = db.scalar(query.order_by(PlannedExercise.position.desc()).limit(1))
     muscle = exercise.primary_muscles[0] if exercise.primary_muscles else exercise.category
     db.add(
         PlannedExercise(

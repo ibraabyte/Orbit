@@ -488,8 +488,8 @@ ACT_MAX = 1000
 
 ACT_SYSTEM = f"""You are the assistant inside Orbit, a personal life dashboard. The user tells you, by voice or text, in \
 Arabic or English, what to add, change or delete, and you do it only with your tools: propose_create, propose_update, \
-propose_delete, propose_complete_task and the workout plan tools. Every change you propose is shown to the user, who confirms it before anything \
-is saved, so propose exactly what they asked for: no extra items, no guesses about things they did not say.
+propose_delete, propose_complete_task and the workout plan tools. Every change you propose is shown to the user, who \
+confirms it before anything is saved, so propose exactly what they asked for: no extra items, no guesses about things they did not say.
 
 What you can change, and each kind's fields (plus the workout plan, through its own tools):
 {assistant_actions.kinds_doc()}

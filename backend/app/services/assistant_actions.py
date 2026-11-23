@@ -23,8 +23,8 @@ from sqlalchemy.orm import Session
 
 from app import models as m
 from app.models.plan import GOALS, LEVELS
-from app.schemas import domains as s
 from app.schemas import documents as document_schemas
+from app.schemas import domains as s
 from app.schemas import fitness as fitness_schemas
 from app.schemas import food as food_schemas
 from app.schemas import medications as medication_schemas
@@ -302,7 +302,11 @@ def _plan_items(run: Run) -> dict[str, Any]:
         return {"workout_plan": None}
     days = run.db.scalars(
         select(m.PlannedWorkout)
-        .where(m.PlannedWorkout.user_id == run.user_id, m.PlannedWorkout.plan_date >= local_today(run), m.PlannedWorkout.workout_id.is_(None))
+        .where(
+            m.PlannedWorkout.user_id == run.user_id,
+            m.PlannedWorkout.plan_date >= local_today(run),
+            m.PlannedWorkout.workout_id.is_(None),
+        )
         .order_by(m.PlannedWorkout.plan_date)
         .limit(wp.HORIZON_DAYS)
     ).all()
@@ -322,7 +326,8 @@ def _plan_items(run: Run) -> dict[str, Any]:
         for day in days
     ]
     weekdays = [date(2024, 1, 1 + number).strftime("%A") for number in plan.weekdays]  # 2024-01-01 is a Monday.
-    return {"workout_plan": {"goal": plan.goal, "level": plan.level, "weekdays": list(plan.weekdays), "days": weekdays}, "planned_day": shown_days}
+    shown_plan = {"goal": plan.goal, "level": plan.level, "weekdays": list(plan.weekdays), "days": weekdays}
+    return {"workout_plan": shown_plan, "planned_day": shown_days}
 
 
 def recent_items(run: Run) -> dict[str, Any]:
@@ -405,16 +410,18 @@ def tools(hidden: frozenset[str] = frozenset()) -> list[Tool]:
             {
                 "type": "object",
                 "properties": {
-                    "goal": {"type": "string", "enum": list(GOALS)},
-                    "level": {"type": "string", "enum": list(LEVELS)},
+                    "goal": {"type": "string", "enum": list(GOALS), "description": "What they train for."},
+                    "level": {"type": "string", "enum": list(LEVELS), "description": "How experienced they are."},
                     "weekdays": {"type": "array", "items": {"type": "integer", "minimum": 0, "maximum": 6}},
                 },
             },
         ),
-        Tool("propose_stop_workout_plan", "Propose turning the workout plan off. Logged workouts stay.", {"type": "object", "properties": {}}),
+        Tool(
+            "propose_stop_workout_plan", "Propose turning the workout plan off. Logged workouts stay.", {"type": "object", "properties": {}}
+        ),  # noqa: E501
         Tool(
             "propose_move_workout_day",
-            "Propose moving a coming planned day to the next day (\"not going today\"); the days after it shift as needed.",
+            'Propose moving a coming planned day to the next day ("not going today"); the days after it shift as needed.',
             {"type": "object", "properties": {"ref": ref}, "required": ["ref"]},
         ),
     ]

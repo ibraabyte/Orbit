@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.models import AiConnection, Task, User, VoiceConnection
 from app.security import encrypt_secret
 from app.services import assistant_actions, elevenlabs_call, voice_call
+from app.services.assistant_actions import PLAN_TOOLS
 
 EL_KEY = "made-up-elevenlabs-key-0001"
 OPENAI_KEY = "made-up-openai-key-0002"
@@ -136,7 +137,7 @@ def test_a_session_makes_the_agent_once_and_hands_over_a_token(client: TestClien
     body = response.json()
     assert body["provider"] == "elevenlabs" and body["conversation_token"] == TOKEN and body["client_secret"] == ""
     assert EL_KEY not in response.text
-    assert set(body["tools"]) == {"find_items", "propose_create", "propose_update", "propose_delete", "propose_complete_task"}
+    assert set(body["tools"]) == {"find_items", "propose_create", "propose_update", "propose_delete", "propose_complete_task", *PLAN_TOOLS}
     overrides = body["overrides"]
     assert overrides["tts"] == {"voiceId": ARABIC_VOICE}
     assert overrides["agent"]["language"] == "ar" and overrides["agent"]["firstMessage"]
@@ -166,7 +167,7 @@ def test_after_a_restart_the_agent_is_found_again(client: TestClient, auth: dict
     assert session(client, auth).status_code == 200
     monkeypatch.setattr(elevenlabs_call, "_setups", {})
     assert session(client, auth).status_code == 200
-    assert len(eleven.agents) == 1 and len(eleven.made("tools")) == 5
+    assert len(eleven.agents) == 1 and len(eleven.made("tools")) == 5 + len(PLAN_TOOLS)
 
 
 def test_a_removed_agent_is_made_again(client: TestClient, auth: dict, db: Session, eleven):
@@ -176,7 +177,7 @@ def test_a_removed_agent_is_made_again(client: TestClient, auth: dict, db: Sessi
     eleven.tools.clear()
     response = session(client, auth)
     assert response.status_code == 200, response.text
-    assert len(eleven.agents) == 1 and len(eleven.tools) == 5
+    assert len(eleven.agents) == 1 and len(eleven.tools) == 5 + len(PLAN_TOOLS)
 
 
 def test_hiding_a_section_updates_the_tools(client: TestClient, auth: dict, db: Session, eleven, monkeypatch):
