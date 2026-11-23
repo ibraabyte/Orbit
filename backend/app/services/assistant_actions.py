@@ -589,6 +589,8 @@ def handle(run: Run, call: Call) -> str:
             label = habit.label if habit else None
         elif kind.name in UNNAMED:
             label = f"{kind.name} · {checked.get(kind.shows[0])}"
+        elif kind.name == "document" and not label:
+            label = checked.get("kind")
         elif kind.name == "planned_exercise":
             exercise = run.db.get(m.Exercise, checked["exercise_id"])
             day = run.items.get(run.by_id.get(uuid.UUID(checked["planned_workout_id"]), ""))
