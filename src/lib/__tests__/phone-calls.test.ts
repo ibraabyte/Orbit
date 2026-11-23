@@ -45,3 +45,14 @@ describe("call badges", () => {
     expect(isActive({ status: "ended" })).toBe(false);
   });
 });
+
+describe("calling again and your own script", () => {
+  it("redials the same call and sends the script with the plan", async () => {
+    const post = vi.fn().mockResolvedValue({});
+    const patch = vi.fn().mockResolvedValue({});
+    await callsApi.redial({ post } as never, "call 1");
+    expect(post).toHaveBeenCalledWith("/calls/call%201/redial");
+    await callsApi.change({ patch } as never, "c2", { scenario: "اسأل عن أقرب موعد", caller_name: "خالد" });
+    expect(patch).toHaveBeenCalledWith("/calls/c2", { scenario: "اسأل عن أقرب موعد", caller_name: "خالد" });
+  });
+});

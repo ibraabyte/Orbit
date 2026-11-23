@@ -63,6 +63,14 @@ GOODBYE_NEXT = (
     "goodbye, answer them; when the call is done again, call finish_call again."
 )
 TRANSCRIPT_MAX = 200
+# On a redial: how many lines of the dropped call the agent is given.
+EARLIER_LINES = 40
+
+
+def redial_opening(arabic: bool) -> str:
+    """What the agent says after its fixed first words when it calls back after a dropped line."""
+    return "معليش، انقطع الخط قبل شوي، نكمل من وين وقفنا." if arabic else "Sorry, the line dropped a moment ago; let's carry on."
+
 
 FINISH_TOOL = {
     "type": "function",
@@ -130,12 +138,14 @@ class Plan:
     opening: str
     allowed: str | None
     task_title: str | None
+    # Whom the call is for, when the user said it is for someone else ("اتصل عن أمي"). None: the user themselves.
+    on_behalf_of: str | None = None
 
 
 PLAN_SYSTEM = """You prepare a short phone call that an automated assistant will make for the user, usually to book an \
 appointment at a business (barber, clinic, car service, restaurant). The user wrote what they want. Answer with one JSON \
 object only, no other text:
-{"business_name": "...", "goal": "...", "opening": "...", "allowed": "...", "task_title": "..."}
+{"business_name": "...", "goal": "...", "opening": "...", "allowed": "...", "task_title": "...", "on_behalf_of": "..."}
 - business_name: the kind of place or its name, short (e.g. "الحلاق").
 - goal: one sentence, what the call must achieve, with the concrete date (turn "tomorrow" into the real date from the \
 current time given).
@@ -144,6 +154,8 @@ Arabic (or English if the user wrote English). Don't introduce yourself here; th
 - allowed: what the assistant may agree to without asking the user: the acceptable days and time window, e.g. \
 "بكرا الأحد ١٥ نوفمبر بين ٣ العصر و٦ المغرب". Empty string if the user gave no limits.
 - task_title: a short task title for a booked appointment, e.g. "موعد الحلاق".
+- on_behalf_of: only when the user says the call is for someone else ("احجز لأمي", "اتصل نيابة عن خالد"), that \
+person's name or how to call them (e.g. "خالد", "والدة إبراهيم"). Empty string when it is for the user.
 Never add payments, deposits, personal details or anything the user didn't ask for."""
 
 
@@ -184,6 +196,7 @@ def make_plan(db: Session, user_id: uuid.UUID, request: str, business_name: str 
         opening=_text(data.get("opening"), 300) or base.opening,
         allowed=_text(data.get("allowed"), 300),
         task_title=_text(data.get("task_title"), 120),
+        on_behalf_of=_text(data.get("on_behalf_of"), 60),
     )
 
 
@@ -202,6 +215,20 @@ def instructions(call: m.PhoneCall, zone: ZoneInfo) -> str:
         else "Speak clear, polite English. If they answer in Arabic, switch to Saudi Arabic."
     )
     allowed = call.allowed or "Nothing beyond the goal itself; if they offer anything specific, check it fits the goal."
+    scenario = (
+        f"\nThe user's own script for this call. Follow it closely, within the rules below:\n{call.scenario}\n" if call.scenario else ""
+    )
+    earlier = ""
+    if call.earlier_transcript:
+        said = "\n".join(
+            f"{'You' if line.get('who') == 'agent' else 'Them'}: {line.get('text', '')}"
+            for line in call.earlier_transcript[-EARLIER_LINES:]
+            if isinstance(line, dict)
+        )
+        earlier = (
+            "\nThis is a second call: the line dropped during the first one. What was said before it dropped:\n"
+            f"{said}\nCarry on from where it stopped; don't start over or ask again what they already answered.\n"
+        )
     return f"""You are an automated phone assistant. You are on a live phone call with {call.business_name}, calling on \
 behalf of {who}. {language}
 
@@ -210,7 +237,7 @@ Your very first words, before anything else, must be: "{first}"
 Goal of the call: {call.goal}
 You may agree to, without asking {who}: {allowed}
 Current local time: {now:%A %Y-%m-%d %H:%M} ({zone.key}).
-
+{scenario}{earlier}
 Rules you always keep:
 - If anyone asks whether you are a person or a machine, say honestly that you are an automated assistant.
 - Never pay, never agree to pay or to a deposit, never give card numbers, ID or iqama numbers, addresses, codes, \

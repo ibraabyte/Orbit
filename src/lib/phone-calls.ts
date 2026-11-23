@@ -19,6 +19,10 @@ export type PhoneCall = {
   opening: string;
   allowed: string | null;
   caller_name: string | null;
+  // Your own script for the agent, on top of the plan.
+  scenario: string | null;
+  // A call back after a dropped line: the agent knows what was said before.
+  redial: boolean;
   status: CallStatus;
   outcome: CallOutcome | null;
   appointment_at: string | null;
@@ -47,7 +51,7 @@ export type PhoneSetup = {
 };
 
 export type SetupInput = { accountSid: string; authToken: string; fromNumber: string; voice: string };
-export type PlanChanges = Partial<Pick<PhoneCall, "business_name" | "to_number" | "goal" | "opening" | "allowed" | "caller_name">>;
+export type PlanChanges = Partial<Pick<PhoneCall, "business_name" | "to_number" | "goal" | "opening" | "allowed" | "caller_name" | "scenario">>;
 
 type Api = Pick<ApiClient, "get" | "post" | "put" | "patch" | "delete">;
 const path = (id: string) => `/calls/${encodeURIComponent(id)}`;
@@ -65,6 +69,8 @@ export const callsApi = {
   change: (api: Api, id: string, changes: PlanChanges) => api.patch<PhoneCall>(path(id), changes),
   start: (api: Api, id: string) => api.post<PhoneCall>(`${path(id)}/start`),
   hangUp: (api: Api, id: string) => api.post<PhoneCall>(`${path(id)}/hang-up`),
+  // The same plan, as a new call that rings at once.
+  redial: (api: Api, id: string) => api.post<PhoneCall>(`${path(id)}/redial`),
   remove: (api: Api, id: string) => api.delete(path(id))
 };
 
@@ -125,8 +131,14 @@ const en = {
   allowed: "It may agree to",
   allowedPh: "e.g. Sunday between 3 and 6 PM",
   allowedNone: "Nothing beyond the goal",
-  name: "Name it gives",
-  namePh: "Your name",
+  name: "Calling on behalf of",
+  namePh: "Your name, or someone else's",
+  scenario: "Your script (optional)",
+  scenarioPh: "e.g. Ask for the earliest morning slot. If they ask about insurance, say Bupa.",
+  redial: "Call again",
+  redialing: "Calling again…",
+  redialHint: "If the line dropped, the agent says so and carries on from where it stopped.",
+  redialBadge: "Call back",
   calling: "Calling",
   rules: "It always says it's an automated assistant. It never pays, agrees to a deposit, or gives card, ID or address details. If they offer something else, it asks you.",
   cost: "Your Twilio account and the agent's voice (OpenAI or ElevenLabs) are charged per minute. A call stops after 5 minutes.",
@@ -192,8 +204,14 @@ const ar: typeof en = {
   allowed: "يقدر يوافق على",
   allowedPh: "مثل: الأحد بين ٣ و٦ العصر",
   allowedNone: "ولا شي غير الهدف",
-  name: "الاسم اللي يعطيه",
-  namePh: "اسمك",
+  name: "يتصل نيابة عن",
+  namePh: "اسمك، أو اسم شخص ثاني",
+  scenario: "السيناريو حقك (اختياري)",
+  scenarioPh: "مثل: اسأل عن أقرب موعد الصبح. إذا سألوا عن التأمين قل بوبا.",
+  redial: "اتصل مرة ثانية",
+  redialing: "يتصل مرة ثانية…",
+  redialHint: "إذا انقطع الخط، يقول لهم إنه انقطع ويكمّل من وين وقف.",
+  redialBadge: "اتصال ثاني",
   calling: "يتصل على",
   rules: "دايم يقول إنه مساعد آلي. ما يدفع، ولا يوافق على عربون، ولا يعطي بطاقة أو هوية أو عنوان. إذا عرضوا شي ثاني يرجع لك.",
   cost: "تنحسب الدقايق من حسابك في Twilio وحساب صوت الوكيل (OpenAI أو ElevenLabs). المكالمة تنقطع بعد ٥ دقايق.",

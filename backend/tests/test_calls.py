@@ -58,7 +58,9 @@ def twilio_api(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[httpx.Request]]
                 return httpx.Response(403, json={"code": 20003, "message": "Permission Denied", "status": 403})
             if form["To"] == "+966500000007":
                 return httpx.Response(400, json={"code": 99999, "message": "Made-up   reason\nfrom Twilio", "status": 400})
-            return httpx.Response(201, json={"sid": CALL_SID})
+            made = sum(1 for r in calls if r.url.path.endswith("/Calls.json")) - 1
+            # Twilio gives every call its own SID.
+            return httpx.Response(201, json={"sid": CALL_SID if not made else f"{CALL_SID[:-3]}{made:03d}"})
         if "/Calls/" in path:
             return httpx.Response(200, json={"sid": CALL_SID, "status": "completed"})
         return httpx.Response(200, json={"sid": SID})
@@ -785,3 +787,64 @@ def test_after_they_speak_a_quiet_line_still_ends(monkeypatch: pytest.MonkeyPatc
 def test_calls_use_a_fast_model():
     prompt = elevenlabs_call.phone_agent_config([], "x", 300)["conversation_config"]["agent"]["prompt"]
     assert (prompt["llm"], prompt["reasoning_effort"]) == ("gemini-3.5-flash", "minimal")
+
+
+def test_plan_for_someone_else_and_a_script(client: TestClient, auth: dict, db: Session, monkeypatch: pytest.MonkeyPatch):
+    _openai(db, _user_id(client, auth))
+    answer = {"business_name": "العيادة", "goal": "موعد لأمي", "opening": "ودي أحجز موعد", "allowed": "", "on_behalf_of": "أم سالم"}
+    monkeypatch.setattr(phone_agent.assistant, "complete", lambda *args, **kwargs: json.dumps(answer, ensure_ascii=False))
+    call = _draft(client, auth, request="احجز لأمي موعد في العيادة")
+    # The request said it's for someone else: the agent says so, not the user's name.
+    assert call["caller_name"] == "أم سالم" and call["disclosure"].endswith("نيابة عن أم سالم.")
+    script = "إذا سألوا عن التأمين قل: بوبا. اسأل عن أقرب موعد الصباح."
+    changed = client.patch(f"/calls/{call['id']}", json={"scenario": script}, headers=auth)
+    assert changed.status_code == 200 and changed.json()["scenario"] == script
+    row = db.get(PhoneCall, uuid.UUID(call["id"]))
+    db.refresh(row)
+    text = phone_agent.instructions(row, phone_agent.ZoneInfo("Asia/Riyadh"))
+    assert "The user's own script" in text and script in text and "Never pay" in text
+    assert client.patch(f"/calls/{call['id']}", json={"scenario": "x" * 2001}, headers=auth).status_code == 422
+    assert client.patch(f"/calls/{call['id']}", json={"scenario": ""}, headers=auth).json()["scenario"] is None
+
+
+def test_redial_after_a_dropped_line(client: TestClient, auth: dict, twilio_api, db: Session):
+    _setup(client, auth)
+    _openai(db, _user_id(client, auth))
+    call = _draft(client, auth)
+    assert client.post(f"/calls/{call['id']}/redial", headers=auth).status_code == 409  # never rang
+    assert client.post(f"/calls/{call['id']}/start", headers=auth).status_code == 200
+    assert client.post(f"/calls/{call['id']}/redial", headers=auth).status_code == 409  # still on the line
+    row = db.get(PhoneCall, uuid.UUID(call["id"]))
+    row.status, row.scenario = "ended", "قل إن الموعد للحلاقة واللحية."
+    row.transcript = [{"who": "agent", "text": "السلام عليكم"}, {"who": "them", "text": "هلا، لحظة أشوف المواعيد"}]
+    db.commit()
+
+    again = client.post(f"/calls/{call['id']}/redial", headers=auth)
+    assert again.status_code == 201, again.text
+    body = again.json()
+    assert body["id"] != call["id"] and body["status"] == "calling" and body["redial"] is True
+    assert body["goal"] == call["goal"] and body["to_number"] == call["to_number"] and body["scenario"] == row.scenario
+    assert body["opening"] == phone_agent.redial_opening(True)
+    new = db.get(PhoneCall, uuid.UUID(body["id"]))
+    text = phone_agent.instructions(new, phone_agent.ZoneInfo("Asia/Riyadh"))
+    assert "the line dropped" in text and "Them: هلا، لحظة أشوف المواعيد" in text
+    assert len([r for r in twilio_api if r.url.path.endswith("/Calls.json")]) == 2
+    # The first call is kept as it was.
+    assert client.get(f"/calls/{call['id']}", headers=auth).json()["status"] == "ended"
+
+
+def test_redial_that_cant_ring_leaves_no_new_call(client: TestClient, auth: dict, twilio_api, db: Session):
+    _setup(client, auth)
+    _openai(db, _user_id(client, auth))
+    call = _draft(client, auth, to_number="+966500000009")  # Twilio refuses this number
+    row = db.get(PhoneCall, uuid.UUID(call["id"]))
+    row.status = "failed"
+    db.commit()
+    assert client.post(f"/calls/{call['id']}/redial", headers=auth).status_code == 502
+    assert len(client.get("/calls", headers=auth).json()) == 1
+
+
+def test_others_calls_cant_be_redialed(client: TestClient, auth: dict, twilio_api, db: Session):
+    call = _draft(client, auth)
+    other = bearer(sign_up(client, email="someone-else@example.com"))
+    assert client.post(f"/calls/{call['id']}/redial", headers=other).status_code == 404

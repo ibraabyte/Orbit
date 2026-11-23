@@ -55,6 +55,7 @@ class PhoneCall(Owned, Base):
         CheckConstraint("char_length(request) between 1 and 500", name="request_length"),
         CheckConstraint("char_length(goal) between 1 and 500", name="goal_length"),
         CheckConstraint("char_length(opening) between 1 and 300", name="opening_length"),
+        CheckConstraint("char_length(scenario) <= 2000", name="scenario_length"),
         # Booked only with a time: the task needs it.
         CheckConstraint("outcome is distinct from 'booked' or appointment_at is not null", name="booked_time"),
         # The booking's task, if one was made. Deleting the task keeps the call.
@@ -72,6 +73,10 @@ class PhoneCall(Owned, Base):
     opening: Mapped[str] = mapped_column(Text, nullable=False)
     allowed: Mapped[str | None] = mapped_column(Text)
     caller_name: Mapped[str | None] = mapped_column(Text)
+    # The user's own script for the agent (what to say, what to ask, how to answer), on top of the plan.
+    scenario: Mapped[str | None] = mapped_column(Text)
+    # A redial after a dropped line: what was said on the call before, so the agent carries on from there.
+    earlier_transcript: Mapped[list[Any] | None] = mapped_column(JSONB)
     task_title: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(Text, nullable=False, server_default="draft")
     outcome: Mapped[str | None] = mapped_column(Text)

@@ -135,6 +135,7 @@ class CallUpdate(BaseModel):
     opening: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=300)] | None = None
     allowed: Annotated[str, StringConstraints(strip_whitespace=True, max_length=300)] | None = None
     caller_name: Annotated[str, StringConstraints(strip_whitespace=True, max_length=60)] | None = None
+    scenario: Annotated[str, StringConstraints(strip_whitespace=True, max_length=2000)] | None = None
 
     _to = field_validator("to_number")(CallIn._to.__func__)  # type: ignore[attr-defined]
 
@@ -156,6 +157,9 @@ class CallOut(BaseModel):
     opening: str
     allowed: str | None
     caller_name: str | None
+    scenario: str | None
+    # A call back after a dropped line: the agent was given what was said before.
+    redial: bool
     status: str
     outcome: str | None
     appointment_at: datetime | None
@@ -170,8 +174,12 @@ class CallOut(BaseModel):
 
 
 def _out(call: PhoneCall) -> CallOut:
-    data = {name: getattr(call, name) for name in CallOut.model_fields if name != "disclosure"}
-    return CallOut(**data, disclosure=phone_agent.disclosure(call.caller_name, phone_agent.is_arabic(call.request)))
+    data = {name: getattr(call, name) for name in CallOut.model_fields if name not in ("disclosure", "redial")}
+    return CallOut(
+        **data,
+        redial=bool(call.earlier_transcript),
+        disclosure=phone_agent.disclosure(call.caller_name, phone_agent.is_arabic(call.request)),
+    )
 
 
 def _zone(db: Session, user_id: uuid.UUID) -> ZoneInfo:
@@ -276,7 +284,8 @@ def plan_call(body: CallIn, user_id: UserId, db: Db):
         goal=plan.goal,
         opening=plan.opening,
         allowed=plan.allowed,
-        caller_name=name or None,
+        # Someone else's name when the request said the call is for them; else the user's own.
+        caller_name=plan.on_behalf_of or name or None,
         task_title=plan.task_title,
     )
     db.add(call)
@@ -298,7 +307,7 @@ def change_plan(call_id: uuid.UUID, body: CallUpdate, user_id: UserId, db: Db):
     for name, value in body.model_dump(exclude_unset=True).items():
         if value is None and name in ("business_name", "to_number", "goal", "opening"):
             continue
-        setattr(call, name, value or None if name in ("allowed", "caller_name") else value)
+        setattr(call, name, value or None if name in ("allowed", "caller_name", "scenario") else value)
     db.commit()
     db.refresh(call)
     return _out(call)
@@ -333,6 +342,40 @@ def start_call(call_id: uuid.UUID, request: Request, user_id: UserId, db: Db):
     call = get_owned(db, PhoneCall, call_id, user_id)
     if call.status != "draft":
         raise HTTPException(status.HTTP_409_CONFLICT, "This call already started.")
+    return _ring(call, request, user_id, db)
+
+
+@router.post("/{call_id}/redial", response_model=CallOut, status_code=status.HTTP_201_CREATED)
+def redial(call_id: uuid.UUID, request: Request, user_id: UserId, db: Db):
+    """Call the same place again with the same approved plan, as a new call. When the first one dropped mid-way,
+    the agent gets what was said and says the line dropped, then carries on."""
+    earlier = get_owned(db, PhoneCall, call_id, user_id)
+    if earlier.status == "draft" or earlier.status in ACTIVE_STATUSES:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This call hasn't ended yet.")
+    said = list(earlier.transcript or [])
+    call = PhoneCall(
+        user_id=user_id,
+        business_name=earlier.business_name,
+        to_number=earlier.to_number,
+        request=earlier.request,
+        goal=earlier.goal,
+        opening=phone_agent.redial_opening(phone_agent.is_arabic(earlier.request)) if said else earlier.opening,
+        allowed=earlier.allowed,
+        caller_name=earlier.caller_name,
+        scenario=earlier.scenario,
+        task_title=earlier.task_title,
+        earlier_transcript=said or None,
+    )
+    db.add(call)
+    db.flush()
+    try:
+        return _ring(call, request, user_id, db)
+    except HTTPException:
+        db.rollback()
+        raise
+
+
+def _ring(call: PhoneCall, request: Request, user_id: uuid.UUID, db: Session) -> CallOut:
     setup = db.get(PhoneConnection, user_id)
     token = decrypt_secret(setup.auth_token) if setup else None
     if setup is None or not token:
