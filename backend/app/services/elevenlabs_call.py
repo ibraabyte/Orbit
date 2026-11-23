@@ -74,6 +74,22 @@ class Voice:
     name: str
     # Speaks Arabic well: an Arabic voice, or one ElevenLabs checked in Arabic.
     arabic: bool
+    # A Saudi voice from the ElevenLabs Voice Library, not in the account yet: picking it adds it (add_library_voice).
+    library: bool = False
+
+
+# Natural Saudi voices from the ElevenLabs Voice Library, offered even before they are in the user's account:
+# (voice id, name shown, what to search the library for to find its owner).
+SAUDI_VOICES: tuple[tuple[str, str, str], ...] = (
+    ("rpGHcNQJvO8dFNNFNj1v", "Fahad · Saudi, warm", "Fahad"),
+    ("O7RAXQn7KXIEqLr2JNyO", "Abu Fahad · Saudi customer care", "Abu Fahad"),
+    ("Hvlnv5DwiIO2CQ6oYMZ3", "Ali · Saudi", "Ali Saudi"),
+    ("5HAezIQAaoSgJypcI0NP", "Mansour · Saudi, natural", "Mansour"),
+    ("1JBaQCsLgMvVBlPQZx4M", "Dawood · Saudi", "Dawood"),
+    ("pNGUEZc2WLum9bjP611g", "Ziyad · Najdi", "Ziyad"),
+    ("zTcRBBu6y4yOo0AlR0sj", "Omar · Hijazi", "Omar"),
+    ("aMmeBf0lzDYlouyfqNjh", "Maryam · Saudi, female", "Maryam"),
+)
 
 
 @dataclass
@@ -329,3 +345,33 @@ def voices(api_key: str) -> list[Voice]:
         found.append(Voice(str(item["voice_id"]), name, _is_arabic(item)))
     found.sort(key=lambda voice: (not voice.arabic, voice.name.lower()))
     return found[:MAX_VOICES]
+
+
+def with_saudi_voices(found: list[Voice]) -> list[Voice]:
+    """The Saudi library voices that aren't in the account yet first, then the account's own voices."""
+    have = {voice.id for voice in found}
+    extra = [Voice(voice_id, name, True, library=True) for voice_id, name, _ in SAUDI_VOICES if voice_id not in have]
+    return extra + found
+
+
+def add_library_voice(api_key: str, voice_id: str) -> None:
+    """Adds one of SAUDI_VOICES to the user's ElevenLabs account ("Add to my voices"), so calls can speak with it."""
+    match = next((item for item in SAUDI_VOICES if item[0] == voice_id), None)
+    if match is None:
+        return
+    _, name, search = match
+    body = _request(api_key, "GET", "/v1/shared-voices", params={"search": search, "language": "ar", "page_size": 100})
+    owner = next(
+        (
+            str(item.get("public_owner_id") or "")
+            for item in body.get("voices") or []
+            if isinstance(item, dict) and item.get("voice_id") == voice_id
+        ),
+        "",
+    )
+    if not VOICE_ID.match(owner):
+        raise CallUnavailable("This voice isn't in the ElevenLabs Voice Library anymore. Pick another one.")
+    try:
+        _request(api_key, "POST", f"/v1/voices/add/{owner}/{voice_id}", json={"new_name": name.split(" · ")[0]})
+    except CallKeyRejected as exc:
+        raise CallKeyRejected("ElevenLabs refused to add the voice. Give the API key access to Voices in ElevenLabs.") from exc

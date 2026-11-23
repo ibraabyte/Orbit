@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { callBadge, callsApi, isActive, normalizePhone, phoneValid, setupReady } from "@/lib/phone-calls";
+import { callBadge, callsApi, isActive, normalizePhone, phoneValid, setupReady, voiceName } from "@/lib/phone-calls";
+import { pickedVoice } from "@/lib/voice-call";
 
 // Made-up numbers and accounts only.
 describe("phone numbers", () => {
@@ -54,5 +55,18 @@ describe("calling again and your own script", () => {
     expect(post).toHaveBeenCalledWith("/calls/call%201/redial");
     await callsApi.change({ patch } as never, "c2", { scenario: "اسأل عن أقرب موعد", caller_name: "خالد" });
     expect(patch).toHaveBeenCalledWith("/calls/c2", { scenario: "اسأل عن أقرب موعد", caller_name: "خالد" });
+  });
+});
+
+describe("ready-made Saudi voices", () => {
+  const fahad = { id: "rpGHcNQJvO8dFNNFNj1v", name: "Fahad · Saudi, warm", arabic: true, library: true };
+  const own = { id: "ownVoice0001", name: "Rakan", arabic: true };
+  it("shows Arabic names and keeps a library voice until you pick it", () => {
+    expect(voiceName(fahad, true)).toBe("فهد · سعودي دافي");
+    expect(voiceName(fahad, false)).toBe("Fahad · Saudi, warm");
+    expect(voiceName(own, true)).toBe("Rakan");
+    expect(pickedVoice([fahad, own], null)).toBe(own.id);
+    expect(pickedVoice([fahad, own], fahad.id)).toBe(fahad.id);
+    expect(pickedVoice([fahad], null)).toBe(fahad.id);
   });
 });

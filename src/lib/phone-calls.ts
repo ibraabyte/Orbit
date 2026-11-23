@@ -171,6 +171,7 @@ const en = {
   tokenSaved: "Auth token (saved, type to replace)",
   fromNumber: "Calls come from (your verified mobile)",
   fromHint: "Your own mobile, verified in Twilio under Phone Numbers > Verified Caller IDs, or a number you bought there.",
+  saudiVoice: "Saudi voice, ready to use. Saving adds it to your ElevenLabs voices.",
   voice: "Voice",
   saveSetup: "Save",
   savingSetup: "Checking with Twilio…",
@@ -244,6 +245,7 @@ const ar: typeof en = {
   tokenSaved: "رمز الدخول (محفوظ، اكتب لتغييره)",
   fromNumber: "يتصل من (جوالك الموثّق)",
   fromHint: "جوالك الموثّق في Twilio من Phone Numbers ثم Verified Caller IDs، أو رقم شريته منهم.",
+  saudiVoice: "صوت سعودي جاهز. لما تحفظ ينضاف لأصواتك في ElevenLabs.",
   voice: "الصوت",
   saveSetup: "حفظ",
   savingSetup: "أتأكد مع Twilio…",
@@ -257,3 +259,19 @@ const ar: typeof en = {
 };
 
 export const px = isArabic ? ar : en;
+
+// Arabic names for the ready-made Saudi voices the server offers (VoiceOption.library); other voices keep their own name.
+const SAUDI_NAMES_AR: Record<string, string> = {
+  rpGHcNQJvO8dFNNFNj1v: "فهد · سعودي دافي",
+  O7RAXQn7KXIEqLr2JNyO: "أبو فهد · خدمة عملاء",
+  Hvlnv5DwiIO2CQ6oYMZ3: "علي · سعودي",
+  "5HAezIQAaoSgJypcI0NP": "منصور · سعودي طبيعي",
+  "1JBaQCsLgMvVBlPQZx4M": "داود · سعودي",
+  pNGUEZc2WLum9bjP611g: "زياد · نجدي",
+  zTcRBBu6y4yOo0AlR0sj: "عمر · حجازي",
+  aMmeBf0lzDYlouyfqNjh: "مريم · سعودية"
+};
+
+export function voiceName(option: VoiceOption, arabic: boolean): string {
+  return (arabic && SAUDI_NAMES_AR[option.id]) || option.name;
+}

@@ -478,7 +478,15 @@ def test_phone_agent_through_elevenlabs(
     add_elevenlabs(db, user_id)
     before = client.get("/calls/setup", headers=auth).json()
     # No OpenAI key: the ElevenLabs voice model takes the calls, with its voices (Arabic first).
-    assert before["provider"] == "elevenlabs" and before["voice_options"][0] == {"id": ARABIC_VOICE, "name": "Rakan", "arabic": True}
+    saudi = len(elevenlabs_call.SAUDI_VOICES)
+    assert before["provider"] == "elevenlabs" and before["voice_options"][saudi] == {
+        "id": ARABIC_VOICE,
+        "name": "Rakan",
+        "arabic": True,
+        "library": False,
+    }
+    # Ready-made Saudi voices from the ElevenLabs library come first, before they are in the account.
+    assert before["voice_options"][0] == {"id": "rpGHcNQJvO8dFNNFNj1v", "name": "Fahad · Saudi, warm", "arabic": True, "library": True}
     body = {"account_sid": SID, "auth_token": TOKEN, "from_number": OWN_NUMBER, "voice": ARABIC_VOICE}
     saved = client.put("/calls/setup", json=body, headers=auth)
     assert saved.status_code == 200, saved.text
@@ -885,3 +893,17 @@ def test_a_failed_prepare_falls_back(monkeypatch: pytest.MonkeyPatch):
     call_id = uuid.uuid4()
     phone_agent.prepare_eleven(call_id, uuid.uuid4(), "k")
     assert phone_agent.ready_eleven_url(call_id, uuid.uuid4(), "k") == "wss://made-up/ok"
+
+
+def test_picking_a_saudi_library_voice_adds_it(client: TestClient, auth: dict, twilio_api, db: Session, eleven: FakeElevenLabs):
+    user_id = _user_id(client, auth)
+    add_elevenlabs(db, user_id)
+    fahad = elevenlabs_call.SAUDI_VOICES[0][0]
+    body = {"account_sid": SID, "auth_token": TOKEN, "from_number": OWN_NUMBER, "voice": fahad}
+    saved = client.put("/calls/setup", json=body, headers=auth)
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["voice"] == fahad
+    assert eleven.added == [f"owner{fahad[:6]}/{fahad}"]
+    # A voice already in the account isn't added again.
+    assert client.put("/calls/setup", json={**body, "voice": ARABIC_VOICE}, headers=auth).status_code == 200
+    assert len(eleven.added) == 1

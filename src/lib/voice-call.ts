@@ -20,7 +20,8 @@ export const MAX_CALL_SECONDS = 15 * 60;
 export const MAX_CAPTIONS = 24;
 
 export type CallRef = { kind: string; id: string; label: string };
-export type VoiceOption = { id: string; name: string; arabic: boolean };
+// library: a ready-made Saudi voice from the ElevenLabs Voice Library, added to the account when it is saved.
+export type VoiceOption = { id: string; name: string; arabic: boolean; library?: boolean };
 // provider and voice_options come from servers that know ElevenLabs.
 export type CallStatus = { available: boolean; source: "voice" | "ai" | null; voices: string[]; provider?: CallProvider | null; voice_options?: VoiceOption[] };
 export type SessionReply = {
@@ -59,11 +60,11 @@ export function voiceOptions(status: CallStatus | null): VoiceOption[] {
   return CALL_VOICES.map((id) => ({ id, name: id[0].toUpperCase() + id.slice(1), arabic: false }));
 }
 
-// The saved voice while it is still offered; else the first one (for ElevenLabs an Arabic one when there is). Null: the
-// server's default voice.
+// The saved voice while it is still offered; else the first one already in the account (for ElevenLabs an Arabic one
+// when there is), so a library voice is only added when you pick it. Null: the server's default voice.
 export function pickedVoice(options: VoiceOption[], saved: string | null | undefined): string | null {
   if (saved && options.some((option) => option.id === saved)) return saved;
-  return options[0]?.id ?? null;
+  return (options.find((option) => !option.library) ?? options[0])?.id ?? null;
 }
 
 // Arabic names a voice may carry, written in Arabic when the app is in Arabic.
