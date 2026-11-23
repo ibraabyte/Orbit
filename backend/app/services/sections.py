@@ -31,6 +31,13 @@ KIND_SECTIONS = {
     "habit": "habits",
     "habit_log": "habits",
     "note": "library",
+    "medication": "medications",
+    "document": "documents",
+    "vehicle": "vehicles",
+    "injury": "exercises",
+    "body_measurement": "health",
+    "planned_day": "exercises",
+    "planned_exercise": "exercises",
 }
 
 # Keys of the AI context dicts (brief, Ask Orbit, weekly summary), by section.

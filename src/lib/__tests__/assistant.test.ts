@@ -32,6 +32,10 @@ describe("applying what the person confirmed", () => {
         if (path === "/reminders") throw new Error("remind_at is required");
         return null as never;
       },
+      put: async (path: string) => {
+        calls.push(`PUT ${path}`);
+        return null as never;
+      },
       patch: async (path: string) => {
         calls.push(`PATCH ${path}`);
         return null as never;
@@ -41,9 +45,9 @@ describe("applying what the person confirmed", () => {
         return null;
       }
     };
-    const result = await applyActions(api, [action({ kind: "reminder" }), action(), action({ kind: "nope" }), action({ op: "delete", id: ID })]);
-    expect(calls).toEqual(["POST /reminders", "POST /expenses", `DELETE /expenses/${ID}`]);
-    expect(result.done).toBe(2);
+    const result = await applyActions(api, [action({ kind: "reminder" }), action(), action({ kind: "nope" }), action({ op: "delete", id: ID }), action({ kind: "workout_plan", fields: { goal: "fitness" } })]);
+    expect(calls).toEqual(["POST /reminders", "POST /expenses", `DELETE /expenses/${ID}`, "PUT /plan"]);
+    expect(result.done).toBe(3);
     expect(result.failed.map((item) => [item.action.kind, item.message])).toEqual([
       ["reminder", "remind_at is required"],
       ["nope", "Not a change Orbit can make."]
@@ -142,5 +146,34 @@ describe("a meal as the person reads it", () => {
     const meal = action({ kind: "meal", label: "Dates · 3", fields: { name: "Dates · 3", calories: 70, meal_type: "snack" } });
     expect(actionRows(meal, true)).toEqual([["السعرات", "70"], ["الوجبة", "سناك"]]);
     expect(actionRows(meal, false, "calories")).toEqual([["Meal", "Snack"]]);
+  });
+});
+
+describe("the workout plan and the other new kinds", () => {
+  it("sends the plan, a moved day and a planned exercise to their own routes", () => {
+    const plan = { goal: "muscle", level: "intermediate", weekdays: [0, 2, 3, 6] };
+    expect(actionRequest(action({ kind: "workout_plan", label: "Workout plan", fields: plan }))).toEqual({ method: "PUT", path: "/plan", body: plan });
+    expect(actionRequest(action({ op: "update", kind: "workout_plan", fields: plan }))).toEqual({ method: "PUT", path: "/plan", body: plan });
+    expect(actionRequest(action({ op: "delete", kind: "workout_plan", fields: {} }))).toEqual({ method: "DELETE", path: "/plan" });
+    expect(actionRequest(action({ op: "move", kind: "planned_day", id: ID, fields: {} }))).toEqual({ method: "POST", path: `/plan/days/${ID}/move` });
+    expect(actionRequest(action({ op: "update", kind: "planned_exercise", id: ID, fields: { sets: 5 } }))).toEqual({ method: "PATCH", path: `/plan/exercises/${ID}`, body: { sets: 5 } });
+    expect(actionRequest(action({ kind: "medication", fields: { name: "Vitamin D", times: ["09:00"] } }))).toEqual({ method: "POST", path: "/medications", body: { name: "Vitamin D", times: ["09:00"] } });
+    expect(actionRequest(action({ op: "delete", kind: "document", id: ID, fields: {} }))).toEqual({ method: "DELETE", path: `/documents/${ID}` });
+  });
+
+  it("refuses plan changes it can't place", () => {
+    expect(actionRequest(action({ op: "update", kind: "planned_day", id: ID, fields: { kind: "push" } }))).toBeNull();
+    expect(actionRequest(action({ op: "move", kind: "planned_day", id: "../plan", fields: {} }))).toBeNull();
+    expect(actionRequest(action({ op: "move", kind: "task", id: ID, fields: {} }))).toBeNull();
+    expect(actionRequest(action({ kind: "workout_plan", id: ID, fields: { goal: "muscle" } }))).toBeNull();
+  });
+
+  it("shows the plan's days and goal in words", () => {
+    const plan = action({ kind: "workout_plan", label: "Workout plan", fields: { goal: "muscle", level: "beginner", weekdays: [6, 0] } });
+    expect(actionRows(plan, true)).toEqual([["الهدف", "تضخيم"], ["المستوى", "مبتدئ"], ["الأيام", "الأحد، الاثنين"]]);
+    const swap = action({ op: "update", kind: "planned_exercise", id: ID, label: "Bench", fields: { exercise_id: "Dumbbell_Bench_Press", planned_workout_id: ID } });
+    expect(actionRows(swap, false)).toEqual([["Exercise", "Dumbbell Bench Press"]]);
+    expect(kindName("workout_plan", true)).toBe("جدول التمارين");
+    expect(opName("move", true)).toBe("تأجيل لبكرة");
   });
 });

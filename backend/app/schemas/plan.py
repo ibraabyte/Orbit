@@ -4,7 +4,7 @@ import uuid
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.models.plan import ADJUSTMENTS, DAY_KINDS, GOALS, LEVELS
 from app.schemas.tasks import Input
@@ -104,3 +104,39 @@ class Alternative(BaseModel):
     level: str
     image_url: str | None
     done_before: bool
+
+
+def _reps(low: int | None, high: int | None) -> None:
+    if low is not None and high is not None and high < low:
+        raise ValueError("reps_high can't be under reps_low.")
+
+
+class PlannedExerciseCreate(Input):
+    """Adds an exercise from the library to a coming day of the plan, at its end."""
+
+    planned_workout_id: uuid.UUID
+    exercise_id: str = Field(min_length=1, max_length=200)
+    sets: int = Field(default=3, ge=1, le=10)
+    reps_low: int = Field(default=8, ge=1, le=100)
+    reps_high: int = Field(default=12, ge=1, le=100)
+    rest_seconds: int = Field(default=90, ge=0, le=600)
+
+    @model_validator(mode="after")
+    def reps_fit(self):
+        _reps(self.reps_low, self.reps_high)
+        return self
+
+
+class PlannedExerciseUpdate(Input):
+    """Changes one exercise of a coming day. A new exercise_id swaps it for that library exercise (like /swap)."""
+
+    exercise_id: str | None = Field(default=None, min_length=1, max_length=200)
+    sets: int | None = Field(default=None, ge=1, le=10)
+    reps_low: int | None = Field(default=None, ge=1, le=100)
+    reps_high: int | None = Field(default=None, ge=1, le=100)
+    rest_seconds: int | None = Field(default=None, ge=0, le=600)
+
+    @model_validator(mode="after")
+    def reps_fit(self):
+        _reps(self.reps_low, self.reps_high)
+        return self

@@ -331,3 +331,77 @@ def session_swap(entry_id: uuid.UUID, body: s.SwapIn, user_id: UserId, db: Db):
 
 
 ROUTERS: list[APIRouter] = [router, session_router]
+
+
+# Changing a coming day by hand (the assistant uses these too): add, change or remove one of its exercises.
+
+
+def _open_day(db: Session, user_id: uuid.UUID, day_id: uuid.UUID) -> PlannedWorkout:
+    row = get_owned(db, PlannedWorkout, day_id, user_id)
+    if row.workout_id is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "This workout was already started; change it in the workout.")
+    if row.plan_date < user_today(db, user_id):
+        raise HTTPException(status.HTTP_409_CONFLICT, "This day has passed.")
+    return row
+
+
+def _day_out(db: Session, user_id: uuid.UUID, row: PlannedWorkout) -> dict[str, Any]:
+    today = user_today(db, user_id)
+    score = wp.today_recovery(db, user_id, today) if row.plan_date == today else None
+    return _days(db, [row], today, score)[0]
+
+
+@router.post("/exercises", response_model=s.PlannedDay, status_code=status.HTTP_201_CREATED)
+def add_planned_exercise(body: s.PlannedExerciseCreate, user_id: UserId, db: Db):
+    row = _open_day(db, user_id, body.planned_workout_id)
+    exercise = _swap_target(db, body.exercise_id)
+    query = select(PlannedExercise.position).where(PlannedExercise.planned_workout_id == row.id)
+    last = db.scalar(query.order_by(PlannedExercise.position.desc()).limit(1))
+    muscle = exercise.primary_muscles[0] if exercise.primary_muscles else exercise.category
+    db.add(
+        PlannedExercise(
+            user_id=user_id,
+            planned_workout_id=row.id,
+            exercise_id=exercise.id,
+            name=exercise.name[:160],
+            slot="custom",
+            muscle=muscle,
+            position=0 if last is None else last + 1,
+            sets=body.sets,
+            reps_low=body.reps_low,
+            reps_high=body.reps_high,
+            rest_seconds=body.rest_seconds,
+        )
+    )
+    db.commit()
+    return _day_out(db, user_id, row)
+
+
+@router.patch("/exercises/{entry_id}", response_model=s.PlannedDay)
+def change_planned_exercise(entry_id: uuid.UUID, body: s.PlannedExerciseUpdate, user_id: UserId, db: Db):
+    entry = get_owned(db, PlannedExercise, entry_id, user_id)
+    row = _open_day(db, user_id, entry.planned_workout_id)
+    changes = body.model_dump(exclude_unset=True)
+    if changes.get("exercise_id"):
+        exercise = _swap_target(db, changes["exercise_id"])
+        if entry.swapped_from is None and entry.exercise_id != exercise.id:
+            entry.swapped_from = entry.exercise_id
+        elif entry.swapped_from == exercise.id:
+            entry.swapped_from = None
+        entry.exercise_id, entry.name = exercise.id, exercise.name[:160]
+    for name in ("sets", "reps_low", "reps_high", "rest_seconds"):
+        if changes.get(name) is not None:
+            setattr(entry, name, changes[name])
+    if entry.reps_high < entry.reps_low:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "reps_high can't be under reps_low.")
+    db.commit()
+    return _day_out(db, user_id, row)
+
+
+@router.delete("/exercises/{entry_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_planned_exercise(entry_id: uuid.UUID, user_id: UserId, db: Db):
+    entry = get_owned(db, PlannedExercise, entry_id, user_id)
+    _open_day(db, user_id, entry.planned_workout_id)
+    db.delete(entry)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

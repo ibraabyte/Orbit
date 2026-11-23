@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.models import AiConnection, Expense, Task, User, VoiceConnection
 from app.security import encrypt_secret
 from app.services import voice_call
+from app.services.assistant_actions import PLAN_TOOLS
 from tests.conftest import bearer, sign_up
 
 AI_KEY = "made-up-openai-ai-key-0001"
@@ -115,7 +116,7 @@ def test_a_session_is_a_short_secret_with_the_assistants_tools(client: TestClien
     assert sent["model"] == "gpt-realtime" and sent["audio"]["output"]["voice"] == "cedar"
     assert sent["audio"]["input"]["turn_detection"]["interrupt_response"] is True
     assert sent["audio"]["input"]["transcription"]["language"] == "ar"
-    names = {"find_items", "propose_create", "propose_update", "propose_delete", "propose_complete_task"}
+    names = {"find_items", "propose_create", "propose_update", "propose_delete", "propose_complete_task", *PLAN_TOOLS}
     assert {t["name"] for t in sent["tools"]} == names
     assert all(t["type"] == "function" and "parameters" in t for t in sent["tools"])
     assert "اشتري حليب" in sent["instructions"] and "task-1" in sent["instructions"]
