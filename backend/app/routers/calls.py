@@ -71,6 +71,8 @@ class VoiceOption(BaseModel):
     id: str
     name: str
     arabic: bool
+    # A Saudi voice from the ElevenLabs Voice Library: saving it adds it to the user's ElevenLabs account.
+    library: bool = False
 
 
 class SetupStatus(BaseModel):
@@ -197,10 +199,10 @@ def _setup_status(db: Session, user_id: uuid.UUID) -> SetupStatus:
     voices: dict = {}
     if provider == "elevenlabs":
         try:
-            found = elevenlabs_call.voices(voice_call.elevenlabs_key(db, user_id) or "")
+            found = elevenlabs_call.with_saudi_voices(elevenlabs_call.voices(voice_call.elevenlabs_key(db, user_id) or ""))
         except elevenlabs_call.CallUnavailable:
             found = []  # the agent's default voice
-        options = [VoiceOption(id=v.id, name=v.name, arabic=v.arabic) for v in found]
+        options = [VoiceOption(id=v.id, name=v.name, arabic=v.arabic, library=v.library) for v in found]
         voices = {"voices": [v.id for v in found], "voice_options": options}
     common = {"openai": has_openai, "provider": provider, **voices}
     if row is None:
@@ -218,6 +220,20 @@ def _setup_status(db: Session, user_id: uuid.UUID) -> SetupStatus:
 def _twilio_failure(exc: twilio.TwilioUnavailable) -> HTTPException:
     # Never 401: the app would take that as "your Orbit session ended".
     return HTTPException(status.HTTP_409_CONFLICT if isinstance(exc, twilio.TwilioKeyRejected) else status.HTTP_502_BAD_GATEWAY, str(exc))
+
+
+def _add_saudi_voice(db: Session, user_id: uuid.UUID, voice: str) -> None:
+    """A Saudi library voice is added to the user's ElevenLabs account the first time it is picked."""
+    if _provider(db, user_id) != "elevenlabs" or voice not in {item[0] for item in elevenlabs_call.SAUDI_VOICES}:
+        return
+    api_key = voice_call.elevenlabs_key(db, user_id) or ""
+    try:
+        if voice not in {found.id for found in elevenlabs_call.voices(api_key)}:
+            elevenlabs_call.add_library_voice(api_key, voice)
+    except elevenlabs_call.CallKeyRejected as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except elevenlabs_call.CallUnavailable as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
 
 
 @router.get("/setup", response_model=SetupStatus)
@@ -244,6 +260,7 @@ def save_setup(body: SetupIn, user_id: UserId, db: Db):
             status.HTTP_422_UNPROCESSABLE_CONTENT,
             "This number isn't in your Twilio account. Buy it, or verify your own mobile under Phone Numbers > Verified Caller IDs.",
         )
+    _add_saudi_voice(db, user_id, body.voice)
     if row is None:
         row = PhoneConnection(user_id=user_id)
         db.add(row)

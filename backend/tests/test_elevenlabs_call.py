@@ -32,6 +32,7 @@ class FakeElevenLabs:
         self.tools: dict[str, dict] = {}
         self.agents: dict[str, dict] = {}
         self.refuse = False
+        self.added: list[str] = []
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         self.requests.append(request)
@@ -50,6 +51,16 @@ class FakeElevenLabs:
                     ]
                 },
             )
+        if path == "/v1/shared-voices":
+            return httpx.Response(
+                200,
+                json={
+                    "voices": [{"voice_id": v, "public_owner_id": "owner" + v[:6], "name": n} for v, n, _ in elevenlabs_call.SAUDI_VOICES]
+                },
+            )
+        if path.startswith("/v1/voices/add/") and method == "POST":
+            self.added.append(path.removeprefix("/v1/voices/add/"))
+            return httpx.Response(200, json={"voice_id": path.rsplit("/", 1)[1]})
         if path == "/v1/convai/tools" and method == "GET":
             return httpx.Response(200, json={"tools": [{"id": i, "tool_config": c} for i, c in self.tools.items()], "has_more": False})
         if path == "/v1/convai/tools" and method == "POST":
