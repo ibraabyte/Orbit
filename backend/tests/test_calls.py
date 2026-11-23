@@ -848,3 +848,40 @@ def test_others_calls_cant_be_redialed(client: TestClient, auth: dict, twilio_ap
     call = _draft(client, auth)
     other = bearer(sign_up(client, email="someone-else@example.com"))
     assert client.post(f"/calls/{call['id']}/redial", headers=other).status_code == 404
+
+
+def test_the_signed_url_is_ready_before_they_answer(monkeypatch: pytest.MonkeyPatch):
+    made: list[str] = []
+
+    def fake_url(user_id, api_key):
+        made.append(api_key)
+        return f"wss://made-up/{len(made)}"
+
+    monkeypatch.setattr(phone_agent, "eleven_url", fake_url)
+    monkeypatch.setattr(phone_agent, "_prepared", {})
+    call_id, user_id = uuid.uuid4(), uuid.uuid4()
+    phone_agent.prepare_eleven(call_id, user_id, "k1")
+    # They answer: the URL fetched while it rang is used, once.
+    assert phone_agent.ready_eleven_url(call_id, user_id, "k1") == "wss://made-up/1"
+    assert phone_agent.ready_eleven_url(call_id, user_id, "k1") == "wss://made-up/2"
+    # Too old (or never prepared): a fresh one.
+    phone_agent.prepare_eleven(call_id, user_id, "k1")
+    phone_agent._prepared[call_id].done.wait(2)
+    phone_agent._prepared[call_id].at -= phone_agent.PREPARED_SECONDS + 1
+    assert phone_agent.ready_eleven_url(call_id, user_id, "k1") == "wss://made-up/4"
+
+
+def test_a_failed_prepare_falls_back(monkeypatch: pytest.MonkeyPatch):
+    calls: list[int] = []
+
+    def flaky(user_id, api_key):
+        calls.append(1)
+        if len(calls) == 1:
+            raise elevenlabs_call.CallUnavailable("busy")
+        return "wss://made-up/ok"
+
+    monkeypatch.setattr(phone_agent, "eleven_url", flaky)
+    monkeypatch.setattr(phone_agent, "_prepared", {})
+    call_id = uuid.uuid4()
+    phone_agent.prepare_eleven(call_id, uuid.uuid4(), "k")
+    assert phone_agent.ready_eleven_url(call_id, uuid.uuid4(), "k") == "wss://made-up/ok"

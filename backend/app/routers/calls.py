@@ -409,6 +409,9 @@ def _ring(call: PhoneCall, request: Request, user_id: uuid.UUID, db: Session) ->
         raise _twilio_failure(exc) from exc
     call.status, call.twilio_sid, call.stream_key, call.started_at = "calling", sid, _hash(key), datetime.now(UTC)
     db.commit()
+    if _provider(db, user_id) == "elevenlabs" and (eleven_key := voice_call.elevenlabs_key(db, user_id)):
+        # So the agent speaks as soon as they answer.
+        phone_agent.prepare_eleven(call.id, user_id, eleven_key)
     db.refresh(call)
     return _out(call)
 
@@ -569,7 +572,7 @@ async def call_stream(socket: WebSocket):
         stream_sid = str(start.get("streamSid", ""))
         try:
             if provider == "elevenlabs":
-                url = await asyncio.to_thread(phone_agent.eleven_url, call.user_id, api_key)
+                url = await asyncio.to_thread(phone_agent.ready_eleven_url, call.id, call.user_id, api_key)
                 opening = phone_agent.eleven_start(call, zone, _eleven_voice(voice))
                 async with phone_agent.open_elevenlabs(url) as ai:
                     result = await phone_agent.talk_elevenlabs(socket, stream_sid, ai, opening, zone, hang_up_now)
