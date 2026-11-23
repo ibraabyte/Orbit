@@ -21,6 +21,8 @@ import binascii
 import contextlib
 import json
 import logging
+import threading
+import time
 import uuid
 from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
@@ -296,6 +298,53 @@ def eleven_start(call: m.PhoneCall, zone: ZoneInfo, voice_id: str | None) -> dic
 
 def eleven_url(user_id: uuid.UUID, api_key: str) -> str:
     return elevenlabs_call.phone_url(user_id, api_key, [FINISH], ELEVEN_PROMPT, TIME_LIMIT_SECONDS)
+
+
+# Getting the signed URL takes one to several requests to ElevenLabs (more after a restart, when the agent is checked
+# and updated). Done after they answer, that was silence on the line; so it starts while the phone rings, and the
+# stream picks it up. A URL older than this isn't used (ElevenLabs keeps them valid for a while longer).
+PREPARED_SECONDS = 240.0
+PREPARE_WAIT_SECONDS = 10.0
+
+
+@dataclass
+class _Prepared:
+    at: float
+    done: threading.Event = field(default_factory=threading.Event)
+    url: str | None = None
+
+
+_prepared: dict[uuid.UUID, _Prepared] = {}
+_prepared_lock = threading.Lock()
+
+
+def prepare_eleven(call_id: uuid.UUID, user_id: uuid.UUID, api_key: str) -> None:
+    """Fetches the call's signed URL in the background while the phone rings."""
+    entry = _Prepared(time.monotonic())
+    with _prepared_lock:
+        for old in [key for key, value in _prepared.items() if entry.at - value.at > PREPARED_SECONDS]:
+            del _prepared[old]
+        _prepared[call_id] = entry
+
+    def run() -> None:
+        try:
+            entry.url = eleven_url(user_id, api_key)
+        except Exception as exc:  # noqa: BLE001 - the stream tries again itself and reports the error.
+            log.warning("preparing the ElevenLabs call failed: %s", type(exc).__name__)
+        finally:
+            entry.done.set()
+
+    threading.Thread(target=run, daemon=True).start()
+
+
+def ready_eleven_url(call_id: uuid.UUID, user_id: uuid.UUID, api_key: str) -> str:
+    """The URL prepared while it rang, else a new one. Blocking: run it in a thread."""
+    with _prepared_lock:
+        entry = _prepared.pop(call_id, None)
+    fresh = entry is not None and entry.done.wait(PREPARE_WAIT_SECONDS) and time.monotonic() - entry.at < PREPARED_SECONDS
+    if fresh and entry.url:
+        return entry.url
+    return eleven_url(user_id, api_key)
 
 
 def appointment_time(value: Any, zone: ZoneInfo) -> datetime | None:
