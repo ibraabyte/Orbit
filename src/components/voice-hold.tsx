@@ -202,7 +202,7 @@ export function VoiceHold() {
               {result.reply.actions.map((action, index) => (
                 <View key={`${action.kind}-${index}`} style={styles.row}>
                   <View style={styles.mark}>
-                    <Icon name={action.op === "delete" ? "trash-2" : action.op === "update" ? "edit-2" : "plus"} size={16} color={colors.link} />
+                    <Icon name={action.op === "delete" ? "trash-2" : action.op === "update" ? "edit-2" : action.op === "move" ? "clock" : "plus"} size={16} color={colors.link} />
                   </View>
                   <Text style={[type.rowTitle, { flex: 1 }]} numberOfLines={2}>
                     {action.label}

@@ -32,6 +32,10 @@ describe("applying what the person confirmed", () => {
         if (path === "/reminders") throw new Error("remind_at is required");
         return null as never;
       },
+      put: async (path: string) => {
+        calls.push(`PUT ${path}`);
+        return null as never;
+      },
       patch: async (path: string) => {
         calls.push(`PATCH ${path}`);
         return null as never;
@@ -41,9 +45,9 @@ describe("applying what the person confirmed", () => {
         return null;
       }
     };
-    const result = await applyActions(api, [action({ kind: "reminder" }), action(), action({ kind: "nope" }), action({ op: "delete", id: ID })]);
-    expect(calls).toEqual(["POST /reminders", "POST /expenses", `DELETE /expenses/${ID}`]);
-    expect(result.done).toBe(2);
+    const result = await applyActions(api, [action({ kind: "reminder" }), action(), action({ kind: "nope" }), action({ op: "delete", id: ID }), action({ kind: "workout_plan", fields: { goal: "fitness" } })]);
+    expect(calls).toEqual(["POST /reminders", "POST /expenses", `DELETE /expenses/${ID}`, "PUT /plan"]);
+    expect(result.done).toBe(3);
     expect(result.failed.map((item) => [item.action.kind, item.message])).toEqual([
       ["reminder", "remind_at is required"],
       ["nope", "Not a change Orbit can make."]
